@@ -1,705 +1,776 @@
-# HarnessLab 产品需求文档
+# HarnessLab 产品设计文档
 
-> Benchmark your coding agents like software, not vibes.
->
-> 将 agent / harness 当作可演进的软件系统，通过可复现实验自动化完成横向对比、版本回归、能力画像与失败归因。
+> HarnessLab 是一个 harness 评测实验室：用尽量简单的一条命令，在本地隔离环境中运行主流 benchmark，评估一个完整 CLI Agent / harness 的真实任务表现，并生成可复现的实验记录报告。
 
 ## 1. 文档信息
 
 | 项目 | 内容 |
 |---|---|
 | 产品名 | HarnessLab |
-| 文档类型 | PRD / Product Requirement Document |
-| 当前阶段 | Concept / MVP Definition |
-| 目标用户 | Coding agent / agent harness 开发者、独立开发者、AI 工程团队、企业内部平台团队 |
-| 初始场景 | Coding agent / harness 的横向测评、版本回归、策略消融 |
-| 更新日期 | 2026-05-25 |
+| 文档类型 | 产品设计文档 / Product Design Document |
+| 阶段 | MVP 定义 |
+| 更新日期 | 2026-05-26 |
+| 第一用户 | HarnessLab 作者本人，以及需要评测 CLI coding agent 的个人开发者 |
+| 主要形态 | 开源框架 + CLI-first 本地工具 |
 
 ## 2. 一句话定位
 
-HarnessLab 是一个面向 agent / harness 的评测自动化平台：用户可以用配置文件注册任意 CLI agent，选择任务集与实验矩阵，系统自动运行、采集 trace、计算指标，并生成横向对比、版本回归和失败归因报告。
+HarnessLab 是一个 **harness 评测实验室**，用于评估完整 CLI Agent 在同一 benchmark 下的综合效果，帮助用户回答：
 
-## 3. 背景与问题
+1. 我应该在 Codex CLI、Claude Code、opencode、Pi Coding Agent 等 harness 中选择哪个？
+2. 我自己开发的 harness 相比竞品强在哪里、弱在哪里？
+3. 我的 harness 在版本演进或配置调整后，真实 benchmark 表现是否变好？
 
-当前 agent / harness 的质量判断仍高度依赖用户体感：
+## 3. 产品目标
 
-- 某个 coding agent “好不好用”，通常来自个人使用体验，而不是可控实验。
-- 不同 harness 之间的差异经常被模型能力、任务难度、预算上限、环境差异混在一起。
-- 自研 agent 或魔改 agent 接入现有 benchmark harness 的成本偏高，经常需要写专门 adapter。
-- harness 的多版本演进缺乏回归测试机制，无法稳定回答“新版本到底更强还是退步”。
-- agent 的失败原因缺乏结构化归因，常见情况是只知道任务失败，但不知道失败发生在规划、工具调用、状态跟踪、验证还是恢复阶段。
+### 3.1 MVP 目标
 
-HarnessLab 的核心判断是：未来 harness 会百花齐放，个人和企业都会基于通用基座模型定制自己的 agent / harness。这个趋势会带来一个新的基础设施需求：**像测试普通软件一样测试 agent / harness。**
+MVP 只解决一个核心闭环：
 
-## 4. 产品目标
+```text
+检测本机 CLI Agent -> 确认/编辑配置 -> 选择 benchmark -> 一条命令运行单个 run -> 生成单文件 HTML 实验报告 -> 支持复现和 resume
+```
 
-### 4.1 核心目标
+用户应能在 5 分钟内完成本机 agent 检测与配置确认，并启动一次 Terminal-Bench smoke 或其他已准备好数据的 benchmark run。
 
-1. 降低任意 agent / harness 接入评测系统的门槛。
-2. 支持多 agent、多模型、多任务、多预算、多版本的实验矩阵。
-3. 自动采集运行过程 trace，将 agent 行为过程转化为可比较数据。
-4. 生成横向对比、版本回归、策略消融和失败归因报告。
-5. 让 harness 质量从“体感判断”转向“实验条件下的可复现对比”。
+### 3.2 长期目标
 
-### 4.2 非目标
+HarnessLab 长期要成为 coding agent / harness 的本地评测基础设施，让 harness 的优劣从体感判断变成可复现实验记录。
 
-早期版本不追求：
+长期方向包括多 run 对比、版本趋势、私有任务集、企业内部评测、失败归因增强和更多 benchmark 生态接入，但这些都不进入 MVP 的产品边界。
 
-- 构建大型原创 benchmark 数据集。
-- 做复杂 Web SaaS 和多人权限系统。
-- 替代 Harbor、Terminal-Bench、SWE-bench 等现有任务/运行生态。
-- 做通用模型评测排行榜。
-- 一开始就覆盖所有 agent 类型，例如浏览器 agent、办公 agent、移动端 agent。
+## 4. 核心用户
 
-MVP 应专注于 **Coding Agent / Harness Regression Lab**。
+### 4.1 Agent 消费型用户
+
+这类用户已经在使用或准备选择 CLI coding agent，例如：
+
+- Codex CLI
+- Claude Code
+- opencode
+- Pi Coding Agent
+
+他们的问题是：不同 agent 或同一 agent 的不同配置在真实任务上到底谁更好，当前缺乏简单、公平、可复现的比较方式。
+
+### 4.2 Harness 开发者
+
+这类用户正在开发自己的 harness，需要验证：
+
+- 自研 harness 相比主流竞品表现如何。
+- 同一个 harness 在不同配置、skills、模型、权限模式下表现如何。
+- 版本迭代后是否真的提升，而不是只在主观体验上感觉更好。
+
+MVP 不要求系统理解 harness 内部结构。HarnessLab 评估的是完整 CLI Agent 配置的最终效果。
 
 ## 5. 产品原则
 
-| 原则 | 说明 |
+| 原则 | 产品要求 |
 |---|---|
-| Command-first | 优先支持通过命令行注册任意 CLI agent，而不是强迫用户写 SDK adapter。 |
-| Experiment-first | 产品中心不是单次 benchmark，而是实验矩阵、对照组、重复运行和版本对比。 |
-| Trace-first | 不只记录 pass/fail，更要记录 agent 如何完成或失败。 |
-| Reproducible | 同一配置应尽量可复现，包括任务环境、预算、版本、运行参数。 |
-| Harness-aware | 评测对象不是单纯模型，而是 model + harness + tools + policy + budget 的系统组合。 |
-| Backend-neutral | 初期可以复用 Harbor / Docker / local runner，但上层实验控制逻辑应保持独立。 |
+| 简单优先 | CLI 交互保持短路径，避免复杂 wizard。 |
+| 一键运行 | 初始化后，用户应主要通过一条 `run` 命令启动实验。 |
+| Benchmark-first | 不自创 benchmark，优先接入市场主流 benchmark。 |
+| Harness-level | 评测对象是完整 CLI Agent，不拆解模型、prompt、tools。 |
+| 配置可表达差异 | 同一 CLI Agent 的不同模型、skills、权限、模式都通过不同 agent profile 表达。 |
+| 本地隔离 | 默认在本地 Docker 隔离环境运行，用户不需要理解 Docker 细节。 |
+| 实验记录 | 报告优先服务复盘、排障和复现，而不是营销展示。 |
+| 原始评分优先 | benchmark 原始分数是主评分，耗时和 token/cost 是辅助指标。 |
 
-## 6. 核心概念
+## 6. 明确非目标
 
-| 概念 | 定义 |
+MVP 不做：
+
+- 自研 benchmark 数据集。
+- 多 run 总排行榜。
+- 版本趋势图。
+- Web SaaS。
+- 多用户、权限、团队协作。
+- 企业云端执行。
+- 人工评分系统。
+- LLM 自动总结报告。
+- 用户私有任务集运行。
+
+用户私有任务集是重要未来能力，MVP 需要保留扩展性，但不交付正式产品体验。
+
+## 7. 核心产品对象
+
+### 7.1 Agent Profile
+
+Agent Profile 是 HarnessLab 的评测对象。它代表一个完整 CLI Agent 配置，而不是单纯模型。
+
+例子：
+
+- `codex-default`
+- `codex-gpt5-high`
+- `claude-code-sonnet-default`
+- `claude-code-sonnet-skill-a`
+- `opencode-default`
+- `pi-coding-agent-default`
+
+同一个 CLI Agent 只要配置不同，就应注册成不同 profile。HarnessLab 不负责解释这些差异，只负责把它们作为可复现实验条件保存下来。
+
+### 7.2 Benchmark
+
+Benchmark 是任务来源与评分来源。MVP 必须支持：
+
+| Benchmark | MVP 要求 |
 |---|---|
-| Agent | 具体可执行的 agent 实例，例如 Claude Code、Codex CLI、OpenCode、WhaleCode、claude-ds。 |
-| Harness | 驱动 agent 工作的系统层，包括任务分解、上下文管理、工具调用、验证策略、恢复策略等。 |
-| Agent Registry | 注册 agent 的配置文件，描述安装方式、运行命令、环境变量、日志路径、能力约束等。 |
-| Taskset | 一组被测任务，可来自 Terminal-Bench、SWE-bench、本地任务集或企业内部任务集。 |
-| Experiment | 一次实验定义，包含 agent 矩阵、任务集、预算、重复次数、评测指标和报告设置。 |
-| Run | 某个 agent 在某个 task 上的一次实际运行。 |
-| Trial | 同一配置下的重复运行，用于评估稳定性和 pass@k。 |
-| Trace | agent 运行过程中的结构化事件流，包括命令、文件编辑、测试、工具调用、状态变化等。 |
-| Metric | 从结果和过程提取的指标，例如 pass_rate、cost、wall_time、failed_command_rate。 |
-| Report | 对实验结果的聚合分析，包括排行榜、回归表、失败分类、成本-质量曲线等。 |
+| Terminal-Bench | 必须完整跑通。这里指第三方 Terminal-Bench benchmark，而不是 HarnessLab 自建任务集。 |
+| SWE-bench Pro | 必须完整跑通。这里指 Scale AI 发布的 SWE-bench Pro benchmark，而不是 HarnessLab 自建 SWE 子集。 |
 
-## 7. 典型用户
+Harbor 是重要参考对象，但 MVP 不直接依赖 Harbor，也不把 Harbor 作为独立 P0 benchmark。本文中的 Harbor-style 只表示：HarnessLab 的 terminal task 体验应兼容 Harbor 常见的任务组织思路，便于未来导入或适配 Harbor 生态任务。
 
-### 7.1 独立 agent 开发者
+SWE-bench Pro 是 MVP 的明确验收目标。普通 SWE-bench 属于同一产品方向；如果数据和 evaluator 兼容，可以复用同一产品体验，但不作为独立 P0 验收项。
 
-例如 WhaleCode 这类自研 coding agent 的开发者，需要频繁验证：
+外部 benchmark 身份：
 
-- 新版本是否退步。
-- DeepSeek / Claude / GPT / Qwen 等不同模型在同一 harness 下表现如何。
-- task map、multi-agent、evidence-chain debug、external evaluator 等策略是否真的有效。
+| Benchmark | 外部来源 | HarnessLab 责任 |
+|---|---|---|
+| Terminal-Bench | [terminalbench.lol](https://terminalbench.lol/) 及其公开 benchmark 生态 | 提供本地运行、agent 接入、日志采集、报告和复现体验。 |
+| SWE-bench Pro | [Scale Labs SWE-bench Pro](https://labs.scale.com/papers/swe_bench_pro) | 提供本地运行、agent 接入、patch/diff 结果记录、报告和复现体验。 |
 
-### 7.2 企业内部 AI 平台团队
+### 7.3 Split
 
-企业可能会定制内部 coding agent / repo agent / devops agent，需要：
+Split 是 benchmark 对任务集合的逻辑分组，例如：
 
-- 在内部代码库和任务集上做私有评测。
-- 对不同模型、预算、工具权限进行可控实验。
-- 在 CI 中做 harness 回归测试。
-- 生成可审计的实验报告。
+- `smoke`：极小样本，用于验证配置和运行链路。
+- `public`：公开可运行任务集。
+- `full`：完整任务集。
 
-### 7.3 Agent 研究者 / Benchmark 构建者
+每个 benchmark 自己定义可用 split。用户通过 `harnesslab benchmark list` 或 `harnesslab benchmark info <benchmark>` 查看可用 split、任务数量、每个 split 的数据准备状态和预计运行成本。
 
-需要更容易地运行对照实验、消融实验和过程分析，而不是只看最终 pass/fail。
+### 7.4 Run
 
-## 8. 核心使用流程
+MVP 的 Run 是最小实验单位：
 
 ```text
-1. 注册 agent
-   └── 在 agents.yaml 中配置 whalecode、claude-ds、codex、opencode 等命令
-
-2. 选择任务集
-   └── Terminal-Bench 子集 / SWE-bench 子集 / 本地自定义任务
-
-3. 定义实验矩阵
-   └── agent × model × taskset × budget × version × runs_per_task
-
-4. 执行实验
-   └── HarnessLab 调用 backend runner，隔离环境，控制预算，采集日志
-
-5. 采集 trace
-   └── stdout / stderr / command events / file diffs / test events / cost / time
-
-6. 计算指标
-   └── pass_rate / pass@k / flaky_rate / cost / wall_time / process metrics
-
-7. 生成报告
-   └── leaderboard / regression / ablation / failure taxonomy / trace links
+1 个 agent profile x 1 个 benchmark x 1 个 split
 ```
 
-## 9. 系统架构
+MVP 不做多 agent 矩阵。用户要比较多个 agent 时，分别运行多个 run，并查看各自报告。跨 run 总排行后置。
 
-```mermaid
-flowchart TB
-  A[Experiment Spec] --> B[Agent Registry]
-  A --> C[Task Adapter Layer]
-  B --> D[Execution Engine]
-  C --> D
-  D --> E[Sandbox / Runtime Backend]
-  E --> F[Trace Collector]
-  F --> G[Evaluation Layer]
-  G --> H[Metrics Store]
-  H --> I[Report Generator]
-  F --> I
+MVP 内允许“人工多 run 对比”，但不做系统聚合能力：
 
-  subgraph Backend
-    E1[Local Docker]
-    E2[Harbor Backend]
-    E3[GitHub Actions]
-    E4[Remote Devbox]
-  end
+- run id 和目录名应包含 agent、benchmark、split 和时间戳，方便用户人工检索。
+- `report open latest` 默认打开全局最新 run。
+- 后续可支持按 agent 或 benchmark 筛选 latest，但不作为 MVP 必须项。
+- 报告首屏必须展示当前 `report.html` 路径，方便用户并列打开多个报告。
+- 不做跨 run 排名、自动 diff 或总榜。
 
-  E --> E1
-  E --> E2
-  E --> E3
-  E --> E4
-```
+### 7.5 Task Result
 
-## 10. MVP 范围
+Task Result 是报告中的明细单位。它记录某个 benchmark task 的执行结果、评分、耗时、token/cost、日志入口、失败类型和复现信息。
 
-### 10.1 P0 必须支持
+### 7.6 Report
 
-| 模块 | P0 要求 |
-|---|---|
-| Agent Registry | 通过 YAML 注册任意 CLI agent。 |
-| Command Agent | 支持 command 类型 agent，允许配置 install、env、run、cwd、timeout、logs。 |
-| Task Adapter | 支持本地任务集；可选接入 Terminal-Bench 子集。 |
-| Experiment Matrix | 支持多个 agent × 多个 task × runs_per_task。 |
-| Runner | 支持本地 Docker 或本地 workspace 执行。 |
-| Trace | 保存 stdout、stderr、exit code、wall time、文件 diff、测试命令结果。 |
-| Metrics | 计算 pass_rate、wall_time、failed_run、flaky_rate、basic cost 字段。 |
-| Report | 生成 Markdown / HTML 报告。 |
+Report 是单个 run 的实验记录。MVP 报告必须是单文件 HTML，便于打开、归档和分享。详细日志、大文件和 workspace artifact 可以保留在 run 目录，通过相对链接访问。
 
-### 10.2 P0 暂不支持
+## 8. 用户旅程
 
-| 暂不支持 | 原因 |
-|---|---|
-| 大规模云并发 | 过早，会拖慢 MVP。 |
-| 完整 Web UI | CLI + 静态 HTML 报告先验证需求。 |
-| 完整 LLM Judge 平台 | 先基于测试、规则和 trace 进行分析。 |
-| 企业权限系统 | 非早期核心。 |
-| 全 benchmark 生态覆盖 | 先做 coding agent 场景。 |
-
-## 11. Agent Registry 设计
-
-### 11.1 设计目标
-
-Agent Registry 的目标是让用户通过“填命令”接入 agent：
-
-```text
-填命令 → 跑实验 → 出报告
-```
-
-而不是：
-
-```text
-实现接口 → 写 adapter → 调试 runner → 再跑 benchmark
-```
-
-### 11.2 agents.yaml 示例
-
-```yaml
-version: 1
-
-defaults:
-  timeout_sec: 1800
-  cwd: "{workspace}"
-  prompt_delivery: file
-
-agents:
-  whalecode:
-    type: command
-    description: "WhaleCode coding agent"
-    install:
-      - npm install -g whalecode
-    env:
-      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}"
-    run: |
-      whalecode run \
-        --prompt-file "{instruction_file}" \
-        --workspace "{workspace}" \
-        --trajectory "{trace_file}" \
-        --no-interactive
-    logs:
-      stdout: "{logs_dir}/stdout.txt"
-      stderr: "{logs_dir}/stderr.txt"
-      trajectory: "{logs_dir}/trajectory.jsonl"
-
-  claude-ds:
-    type: command
-    description: "Claude Code routed to DeepSeek-compatible backend"
-    env:
-      ANTHROPIC_BASE_URL: "${DEEPSEEK_BASE_URL}"
-      ANTHROPIC_API_KEY: "${DEEPSEEK_API_KEY}"
-      ANTHROPIC_MODEL: "deepseek-chat"
-    run: |
-      claude-ds --print < "{instruction_file}"
-    logs:
-      stdout: "{logs_dir}/stdout.txt"
-      stderr: "{logs_dir}/stderr.txt"
-```
-
-### 11.3 Command Agent 最低要求
-
-为了稳定接入评测系统，CLI agent 最好满足：
-
-| 要求 | 说明 |
-|---|---|
-| 非交互模式 | 能无人值守运行。 |
-| prompt-file 或 stdin | 避免长 prompt 参数转义问题。 |
-| workspace 参数 | 能在指定任务目录内执行。 |
-| 明确退出 | 任务完成或失败后进程应退出。 |
-| 日志输出 | 至少支持 stdout / stderr，最好支持 trajectory。 |
-| 无强登录态依赖 | 避免依赖本机 Keychain、浏览器 OAuth、交互登录。 |
-
-## 12. Experiment Spec 设计
-
-### 12.1 实验矩阵
-
-```yaml
-experiment:
-  name: whalecode_debug_ablation
-  description: Compare WhaleCode harness variants on debugging tasks
-
-matrix:
-  agents:
-    - whalecode_baseline
-    - whalecode_evidence_chain
-    - whalecode_task_map
-    - claude_ds
-  tasksets:
-    - terminal_bench_debug_subset
-    - local_debug_tasks
-  runs_per_task: 3
-  timeout_sec: 1800
-  max_cost_usd: 5.00
-
-controls:
-  same_budget: true
-  reset_environment: true
-  collect_traces: true
-  randomize_task_order: true
-
-metrics:
-  outcome:
-    - pass_rate
-    - partial_score
-    - flaky_rate
-  efficiency:
-    - wall_time
-    - token_count
-    - cost_usd
-  process:
-    - command_count
-    - failed_command_rate
-    - test_run_count
-    - repeated_action_rate
-
-report:
-  format:
-    - markdown
-    - html
-  include:
-    - leaderboard
-    - regression_table
-    - ablation_summary
-    - failure_taxonomy
-    - trace_links
-    - cost_quality_frontier
-```
-
-### 12.2 关键实验类型
-
-| 实验类型 | 说明 |
-|---|---|
-| 横向对比 | 比较 Claude Code、Codex、OpenCode、WhaleCode、claude-ds 等 agent。 |
-| 版本回归 | 比较 whalecode v0.1.4 与 v0.1.5。 |
-| 模型替换 | 固定 harness，比较 DeepSeek、Claude、GPT、Qwen、Gemini。 |
-| 策略消融 | 关闭 / 开启 task map、evidence-chain、external evaluator。 |
-| 预算敏感性 | 比较 10min、30min、2h 或不同 token/cost 上限。 |
-| 稳定性测试 | 同一配置重复运行 N 次，计算 pass@k、flaky_rate。 |
-
-## 13. 指标体系
-
-### 13.1 结果指标
-
-| 指标 | 说明 |
-|---|---|
-| pass_rate | 任务成功率。 |
-| pass@k | 同一任务重复 k 次至少成功一次的概率。 |
-| strict_score | 完全通过测试或验证。 |
-| partial_score | 部分测试通过或部分目标达成。 |
-| regression_rate | 新版本相对旧版本退步比例。 |
-| flaky_rate | 同配置多次运行结果不稳定程度。 |
-
-### 13.2 过程指标
-
-| 指标 | 说明 |
-|---|---|
-| turn_count | agent step / message 数。 |
-| tool_call_count | 工具调用次数。 |
-| command_count | shell 命令数量。 |
-| edit_count | 文件编辑次数。 |
-| test_run_count | 自测次数。 |
-| failed_command_rate | 失败命令比例。 |
-| repeated_action_rate | 重复无效动作比例。 |
-| context_growth | 上下文增长速度。 |
-| recovery_events | 从错误中恢复的次数。 |
-
-### 13.3 成本指标
-
-| 指标 | 说明 |
-|---|---|
-| wall_time | 总耗时。 |
-| tokens_in | 输入 token 数。 |
-| tokens_out | 输出 token 数。 |
-| cost_usd | 估算成本。 |
-| cpu_usage | CPU 资源开销。 |
-| memory_peak | 峰值内存。 |
-| disk_io | 磁盘读写。 |
-
-### 13.4 Harness 质量指标
-
-| 指标 | 说明 |
-|---|---|
-| planning_quality | 是否形成合理计划和任务分解。 |
-| evidence_usage | 是否基于证据推进，而不是盲猜。 |
-| state_tracking | 是否维护任务状态和未完成事项。 |
-| tool_selection_quality | 工具选择是否合理。 |
-| self_debug_quality | 失败后是否有效排查。 |
-| verification_behavior | 是否主动验证结果。 |
-| loop_avoidance | 是否避免无效循环。 |
-| scope_control | 是否避免无关改动。 |
-| artifact_quality | 最终代码、配置、文档质量。 |
-
-P0 阶段可以先做可自动提取的指标；P1 再引入 LLM judge 或人工抽样标注。
-
-## 14. Trace Schema 初版
-
-Trace 是 HarnessLab 的核心壁垒。它不只记录“结果”，而是记录 agent 的运行过程。
-
-### 14.1 Trace Event 示例
-
-```json
-{
-  "run_id": "run_001",
-  "agent": "whalecode_task_map",
-  "task_id": "debug_async_deadlock",
-  "events": [
-    {
-      "type": "plan",
-      "timestamp": "2026-05-25T10:00:00Z",
-      "content": "Investigate failing async test"
-    },
-    {
-      "type": "command",
-      "timestamp": "2026-05-25T10:01:00Z",
-      "command": "pytest tests/test_async.py -q",
-      "exit_code": 1,
-      "duration_ms": 5400
-    },
-    {
-      "type": "file_edit",
-      "timestamp": "2026-05-25T10:03:00Z",
-      "path": "src/runner.py",
-      "diff_summary": "+12 -4"
-    },
-    {
-      "type": "verification",
-      "timestamp": "2026-05-25T10:05:00Z",
-      "command": "pytest -q",
-      "passed": true
-    }
-  ]
-}
-```
-
-### 14.2 P0 Trace Event 类型
-
-| 类型 | 说明 |
-|---|---|
-| run_started | 一次 run 开始。 |
-| run_finished | 一次 run 结束。 |
-| command | shell 命令执行。 |
-| file_edit | 文件修改。 |
-| test_run | 测试命令执行。 |
-| verification | 最终验证。 |
-| error | 执行异常。 |
-| budget_update | token、cost、time 更新。 |
-
-### 14.3 P1 Trace Event 类型
-
-| 类型 | 说明 |
-|---|---|
-| plan | 计划生成。 |
-| hypothesis | debug 假设。 |
-| evidence | 证据记录。 |
-| evaluator_feedback | 外部 evaluator 反馈。 |
-| task_node_created | 任务空间节点创建。 |
-| task_node_resolved | 任务空间节点完成。 |
-| reflection | 反思或策略调整。 |
-
-## 15. 失败归因体系
-
-P0 阶段先做粗粒度失败分类：
-
-| 失败类型 | 说明 |
-|---|---|
-| environment_setup_failure | 环境安装、依赖、路径、权限问题。 |
-| instruction_misread | 误读任务目标。 |
-| wrong_root_cause | debug 根因判断错误。 |
-| incomplete_solution | 解决方案未完成。 |
-| verification_missing | 未进行有效验证。 |
-| test_failure_remaining | 最终仍有测试失败。 |
-| timeout | 超时。 |
-| budget_exhausted | token / cost / step 预算耗尽。 |
-| loop_detected | 重复执行无效动作。 |
-| scope_drift | 偏离任务目标或做了无关改动。 |
-| infra_error | runner / sandbox / API 等基础设施异常。 |
-
-失败归因的目标不是一开始做到完全自动准确，而是先形成统一分类和报告结构，后续再通过规则、trace 分析、LLM judge、人工标注逐步提升准确率。
-
-## 16. 报告设计
-
-### 16.1 报告应回答的问题
-
-| 问题 | 报告模块 |
-|---|---|
-| 谁赢了？ | Leaderboard |
-| 赢在哪里？ | Metric breakdown |
-| 贵在哪里？ | Cost / quality frontier |
-| 稳定吗？ | pass@k / flaky_rate |
-| 新版本是否退步？ | Regression table |
-| 哪种 harness 策略有效？ | Ablation summary |
-| 为什么失败？ | Failure taxonomy |
-| 失败过程能否复盘？ | Trace links / run detail |
-
-### 16.2 报告示例
-
-```text
-Experiment: whalecode_debug_ablation
-
-Summary:
-- Best pass_rate: whalecode_task_map_eval
-- Best cost/performance: whalecode_evidence_chain
-- Most stable: claude_ds
-- Most common failure: incorrect diagnosis after first failed test
-
-Leaderboard:
-1. whalecode_task_map_eval    pass_rate 52%   cost $3.20/task
-2. claude_ds                  pass_rate 47%   cost $2.80/task
-3. whalecode_evidence_chain   pass_rate 44%   cost $2.10/task
-4. whalecode_baseline         pass_rate 31%   cost $1.60/task
-
-Regression:
-- whalecode v0.1.5 improved debugging tasks by +8%
-- but regressed setup/configuration tasks by -5%
-
-Failure Taxonomy:
-- environment setup failure: 18%
-- wrong root-cause hypothesis: 24%
-- stopped before verification: 21%
-- repeated ineffective commands: 14%
-- excessive context drift: 9%
-```
-
-## 17. CLI 设计草案
+### 8.1 首次使用
 
 ```bash
-# 初始化项目
 harnesslab init
-
-# 校验 agent 注册表
-harnesslab agents validate -f agents.yaml
-
-# 列出 agent
-harnesslab agents list
-
-# 运行实验
-harnesslab run -f experiments/debug_ablation.yaml
-
-# 只跑前 5 个任务做 smoke test
-harnesslab run -f experiments/debug_ablation.yaml --limit 5
-
-# 查看结果
-harnesslab report runs/2026-05-25-whalecode-debug-ablation
-
-# 对比两次实验
-harnesslab compare runs/baseline runs/new-version
 ```
 
-## 18. 推荐初始仓库结构
+初始化行为：
+
+1. 检测本机是否安装 Codex CLI、Claude Code、opencode、Pi Coding Agent。
+2. 在全局配置目录生成或更新 agent profile 草稿。
+3. 控制台打印检测结果和配置文件路径。
+4. 不启动复杂交互，不自动打开文档。
+
+内置 agent 检测标准：
+
+| Agent | 检测方式 |
+|---|---|
+| Codex CLI | `codex` 命令在 `PATH` 中可用。 |
+| Claude Code | `claude` 命令在 `PATH` 中可用；如果存在 `~/.claude`，则同时生成认证继承摘要。 |
+| opencode | `opencode` 命令在 `PATH` 中可用。 |
+| Pi Coding Agent | `pi` 命令在 `PATH` 中可用，且 `pi coding --version` 或等价版本检查可执行。 |
+
+初始化后的控制台体验应简洁，例如：
 
 ```text
-HarnessLab/
-  docs/
-    prd.md
-    architecture.md
-    trace-schema.md
-    agent-registry.md
-  examples/
-    agents.yaml
-    experiments/
-      debug-ablation.yaml
-    tasks/
-      hello-debug-task/
-  src/
-    harnesslab/
-      registry/
-      tasks/
-      runner/
-      trace/
-      metrics/
-      report/
-  tests/
-  README.md
+Detected agents:
+  - codex: found at /usr/local/bin/codex -> ~/.harnesslab/agents/codex-default.yaml
+  - claude-code: found at /usr/local/bin/claude -> ~/.harnesslab/agents/claude-code-default.yaml
+  - opencode: not found
+  - pi-coding-agent: not found
+
+Next:
+  1. Edit agent profiles in ~/.harnesslab/agents/
+  2. Run: harnesslab doctor
+  3. Run: harnesslab run --agent codex-default --benchmark terminal-bench --split smoke
 ```
 
-MVP 可以先只创建 `docs/prd.md`，后续按模块逐步补齐。
+### 8.2 运行前检查
 
-## 19. 与现有工具的关系
-
-HarnessLab 不需要正面替代现有 benchmark 或 runner。更合理的定位是：
-
-```text
-HarnessLab = Experiment Control Plane
-Harbor / Docker / Local Runner = Execution Backend
-Terminal-Bench / SWE-bench / Custom Tasks = Task Source
+```bash
+harnesslab doctor
 ```
 
-早期策略：
+Doctor 是第一次 run 前的强制产品体验。它应检查：
 
-1. 优先实现自有 local runner，保证最小闭环。
-2. 可选接入 Harbor 作为 backend，复用已有 benchmark 生态。
-3. 将差异化放在 agent registry、实验矩阵、trace schema、失败归因和报告系统。
+- Docker 是否可用。
+- 已注册 agent 命令是否存在。
+- agent profile 是否语法合法。
+- 必要认证路径或环境变量是否可继承。
+- benchmark adapter 和本地缓存状态是否正常。
+- smoke task 是否能启动。
+- 认证继承路径能否在 Docker dry-run 中被访问。
+- benchmark 数据集是否已准备；未准备时给出获取或下载指引。
 
-## 20. Roadmap
+Doctor 不应泄露密钥值，只展示路径和环境变量名称。
 
-### P0：本地 CLI MVP
+### 8.3 启动实验
 
-目标：任意 CLI agent 通过 YAML 注册后，可以在本地任务集上跑横向对比，并输出报告。
+推荐首页 demo 命令以 Terminal-Bench 为主，因为它最能体现 CLI Agent 的低成本接入，并且最符合“5 分钟内启动首次 run”的体验承诺：
 
-- agents.yaml 注册表。
-- command agent runner。
-- local taskset。
-- basic Docker / local workspace 执行。
-- stdout / stderr / exit code / wall time / file diff trace。
-- pass_rate / wall_time / flaky_rate。
-- Markdown / HTML 报告。
+```bash
+harnesslab init
+harnesslab doctor
+harnesslab run --agent codex-default --benchmark terminal-bench --split smoke
+harnesslab report open latest
+```
 
-### P1：Coding Agent Regression Lab
+SWE-bench Pro 是同等 P0 能力，但首次运行可能受外部数据集获取、授权、缓存体积和仓库下载影响，不纳入“5 分钟首次启动”的承诺。它应作为第二个示例：
 
-目标：成为 coding agent / harness 的版本回归测试工具。
+```bash
+harnesslab run --agent codex-default --benchmark swe-bench-pro --split public
+```
 
-- Terminal-Bench 子集 adapter。
-- Git repo task adapter。
-- 多版本 agent 对比。
-- ablation experiment。
-- cost / token 统计。
-- trace schema 标准化。
-- 初版 failure taxonomy。
-- GitHub Actions 集成。
+### 8.4 中断与恢复
 
-### P2：Harness Analysis Platform
+长 benchmark 运行中断后，用户应能恢复：
 
-目标：从结果评测进入过程评测。
+```bash
+harnesslab run resume <run-dir>
+```
 
-- LLM judge / evaluator 插件。
-- task map / evidence chain 可视化。
-- process quality metrics。
-- benchmark report dashboard。
-- 多 backend：Harbor、remote devbox、CI、cloud worker。
-- 团队共享报告。
+Resume 语义：
 
-### P3：Enterprise / Research Layer
+- 默认跳过状态为 `success` 和 `partial_success` 的 task。
+- 默认重跑 Execution Failure 和 Benchmark Failure，避免把运行链路故障或明确失败永久固化。
+- 用户可以通过显式参数要求重跑 partial task，但这不是默认行为。
+- 报告中必须标记该 run 是否经历过 resume。
+- Task 明细中应标记结果来自原始执行还是 resume 后的新执行。
 
-目标：支持企业内部私有任务集和研究级实验。
+### 8.5 复现
 
-- 私有任务集管理。
-- 权限、审计、成本预算。
-- 长期趋势分析。
-- 自定义失败分类器。
-- 人工标注闭环。
-- agent behavior dataset export。
+MVP 支持两种复现：
 
-## 21. 风险与应对
-
-| 风险 | 说明 | 应对 |
+| 类型 | 命令 | 语义 |
 |---|---|---|
-| 任务集建设过重 | 自建 benchmark 成本高。 | 早期复用现有任务集 + 少量本地 smoke tasks。 |
-| Trace 标准化困难 | 不同 agent 输出差异大。 | P0 从 stdout/stderr/file diff 抽象，P1 增加可选 trajectory schema。 |
-| 指标容易误导 | pass_rate 不能完全代表 harness 质量。 | 同时展示过程指标、成本指标和失败分类。 |
-| LLM judge 不稳定 | 自动归因可能误判。 | P0 用规则，P1 加 judge，P2 引入人工抽样校准。 |
-| Runner 工程量大 | 沙箱、并发、隔离都复杂。 | 初期 local runner + Docker，后续接 Harbor。 |
-| 用户配置成本高 | YAML 太复杂会劝退。 | 提供模板、init wizard、agent recipes。 |
+| 快照复现 | `harnesslab run replay <run-dir>` | 使用 run 目录内保存的完整配置快照复现，追求当时配置 100% 还原。Replay 创建新的 run 目录，不覆盖原 run。 |
+| 命令复现 | 报告中复制原始 run 命令 | 使用当前全局配置重新跑，适合用户主动测试新配置。 |
 
-## 22. 成功标准
+Replay 使用快照中的 agent 配置、benchmark 配置和 task 快照。如果必要数据集或缓存已经被用户清理，replay 应失败并给出明确错误，而不是静默退回到最新 benchmark 数据。
 
-### MVP 成功标准
+## 9. CLI 产品命令
 
-- 能用 YAML 注册 `whalecode` 和 `claude-ds`。
-- 能在同一任务集上运行至少 2 个 agent。
-- 能重复运行同一任务并计算稳定性。
-- 能生成包含 leaderboard、失败任务列表、trace 链接的报告。
-- 能用于 WhaleCode 的一次真实版本回归测试。
+MVP 命令集：
 
-### 进一步成功标准
-
-- 每次 WhaleCode 版本发布前都能跑 smoke benchmark。
-- 能清晰回答某个 harness 策略是否有效。
-- 能发现“体感上不明显但实验上明显”的回归。
-- 能让外部用户快速接入自己的 CLI agent。
-
-## 23. 初始 Milestones
-
-| Milestone | 目标 | 产出 |
-|---|---|---|
-| M1 | PRD 与核心抽象确定 | docs/prd.md、trace schema 草案、agent registry 草案 |
-| M2 | CLI 骨架 | harnesslab init / agents validate / run |
-| M3 | Command Agent Runner | 可运行 whalecode / claude-ds |
-| M4 | Local Task Adapter | 可定义本地任务和验证脚本 |
-| M5 | Basic Report | Markdown / HTML 对比报告 |
-| M6 | Dogfood | 用 HarnessLab 测 WhaleCode 的两个版本 |
-
-## 24. 开放问题
-
-1. 初始技术栈采用 Python、Node.js 还是 Rust？
-2. P0 是否直接依赖 Docker，还是同时支持无容器 local mode？
-3. agent trajectory 是否定义强 schema，还是先做宽松 JSONL？
-4. 是否优先接入 Terminal-Bench，还是先做自定义本地任务格式？
-5. WhaleCode 是否需要专门增加 eval-friendly CLI 参数？
-6. 报告系统先用静态 HTML，还是直接做轻量 Web UI？
-7. 是否将 HarnessLab 定位为独立产品，还是 WhaleCode 生态下的配套工具？
-
-## 25. 当前建议
-
-建议先做极窄 MVP：
-
-```text
-Command Agent Registry + Local Task Runner + Trace Collector + Markdown/HTML Report
+```bash
+harnesslab init
+harnesslab doctor
+harnesslab agent list
+harnesslab benchmark list
+harnesslab benchmark info <benchmark>
+harnesslab run --agent <agent-profile> --benchmark <benchmark> --split <split>
+harnesslab run resume <run-dir>
+harnesslab run replay <run-dir>
+harnesslab report open latest
+harnesslab report open <run-dir>
 ```
 
-第一批 dogfood 对象：
+### 9.1 不提供的命令
 
-- `whalecode_baseline`
-- `whalecode_evidence_chain`
-- `whalecode_task_map`
-- `claude-ds`
+MVP 不提供 `agent add`。Agent 配置文件由 `init` 生成草稿，用户在全局配置目录中手动编辑。
 
-第一批任务类型：
+### 9.2 Run 默认参数
 
-- 小型 repo debug task。
-- 依赖安装 / 配置修复 task。
-- 测试失败定位 task。
-- 简单 feature implementation task。
+| 参数 | 默认值 | 产品语义 |
+|---|---:|---|
+| `concurrency` | `4` | 默认并发 4 个 task，可通过命令或配置覆盖。 |
+| `attempts` | `1` | 默认每个 task 跑一次。需要稳定性评估时用户显式提高。 |
+| `timeout` | benchmark 或 profile 默认 | 超时应归类为执行失败。 |
+| `network` | enabled | 默认允许联网，用户可配置限制。 |
+| `usage` | optional | 未配置 token/cost parser 时显示 unknown，并明确提示不可比较。 |
 
-第一批报告重点：
+### 9.3 Benchmark 发现体验
 
-- pass_rate。
-- wall_time。
-- failed_command_rate。
-- test_run_count。
-- flaky_rate。
-- failure taxonomy。
+`harnesslab benchmark list` 应展示：
 
-核心判断：HarnessLab 的长期壁垒不是“能跑 benchmark”，而是 **把 agent / harness 的行为过程转化为可比较、可回归、可归因的实验数据**。
+- benchmark 名称。
+- 当前支持状态。
+- 可用 split。
+- 数据准备状态。
+- 是否需要用户额外获取数据集。
+
+`harnesslab benchmark info <benchmark>` 应展示指定 benchmark 的任务数量、split 说明、数据路径、缓存状态、估算运行规模和第一个可复制的 run 命令。
+
+## 10. 全局配置目录
+
+HarnessLab 是与被测项目无关的本地实验工具，配置默认保存在全局目录：
+
+```text
+~/.harnesslab/
+  config.yaml
+  agents/
+    codex-default.yaml
+    claude-code-default.yaml
+    opencode-default.yaml
+    pi-coding-agent-default.yaml
+  benchmarks/
+  runs/
+    <run-id>/
+```
+
+Run 目录永久保存，HarnessLab 不自动删除历史记录。清理由用户自己决定。未来可以提供安全清理命令，但不能默认自动清理。
+
+### 10.1 config.yaml 最小语义
+
+`config.yaml` 用于保存跨 agent 的默认偏好。MVP 至少定义：
+
+| 字段 | 默认值 | 说明 |
+|---|---:|---|
+| `default_concurrency` | `4` | 未在命令或 run 配置中指定时使用。 |
+| `default_attempts` | `1` | 未指定 attempts 时使用。 |
+| `runs_dir` | `~/.harnesslab/runs` | run 历史目录。 |
+| `benchmarks_dir` | `~/.harnesslab/benchmarks` | benchmark 数据和缓存目录。 |
+| `network_default` | `enabled` | 默认是否允许联网。 |
+| `usage_default` | `none` | 默认 usage 采集策略。 |
+
+MVP 不要求用户手写 `config.yaml`。默认文件由 `init` 生成，用户只在需要覆盖默认行为时编辑。
+
+## 11. Agent Profile 配置体验
+
+Agent 配置必须能用 YAML 表达，并给每个配置项提供详细说明、取值范围和示例。MVP 内置四类模板：
+
+- Codex CLI
+- Claude Code
+- opencode
+- Pi Coding Agent
+
+### 11.1 配置字段说明
+
+| 字段 | 必填 | 取值范围 | 说明 |
+|---|---|---|---|
+| `name` | 是 | 唯一字符串 | Agent profile 名称，也是 `--agent` 参数值。 |
+| `kind` | 是 | `codex` / `claude-code` / `opencode` / `pi-coding-agent` / `custom` | 用于选择内置检测和默认配置逻辑。 |
+| `display_name` | 否 | 字符串 | 报告中展示的可读名称。 |
+| `command` | 是 | 字符串或数组 | 实际启动 agent 的命令模板。 |
+| `input_mode` | 是 | `argument` / `stdin` / `file` / `tty` | 任务说明如何传给 agent。`tty` 表示通过伪终端无人值守注入任务文本，不表示人工交互。 |
+| `working_dir` | 否 | `workspace` / `repo_root` / 绝对路径模板 | agent 启动目录，默认是任务 workspace。 |
+| `timeout_sec` | 否 | 正整数 | 单 task 超时时间。 |
+| `env` | 否 | key/value | 额外环境变量，可覆盖继承值。 |
+| `auth.inherit` | 否 | `true` / `false` | 是否默认继承本机认证和配置。 |
+| `auth.include_paths` | 否 | 路径数组 | 只继承指定配置路径。 |
+| `auth.exclude_paths` | 否 | 路径数组 | 从默认继承路径中排除。 |
+| `skills.include` | 否 | 字符串数组 | 只启用指定 skills 或 profile 资源。仅在 agent kind 原生支持 skills/plugin/profile 概念时生效。 |
+| `skills.exclude` | 否 | 字符串数组 | 排除指定 skills 或 profile 资源。对不支持 skills 的 agent，doctor 应提示该字段被忽略。 |
+| `permissions.setup` | 否 | 命令数组 | run 预检查阶段需要执行的权限或模式配置命令。 |
+| `usage.parser` | 否 | `none` / `regex` / `json_path` | token/cost 采集方式。命令型 parser 后置到 P1。 |
+| `labels` | 否 | key/value | 报告展示用标签，例如模型名、模式、skills 名。 |
+
+### 11.2 命令模板变量
+
+| 变量 | 含义 | 典型适用场景 |
+|---|---|---|
+| `{{instruction}}` | task 说明文本，直接拼入命令行。 | `input_mode: argument` |
+| `{{instruction_file}}` | task 说明写入临时文件后的路径。 | `input_mode: file` |
+| `{{workspace}}` | 当前 task workspace 路径。 | agent 需要显式指定工作目录时使用。 |
+| `{{logs_dir}}` | 当前 task 日志目录。 | agent 支持输出 trajectory 或额外日志时使用。 |
+| `{{run_dir}}` | 当前 run 目录。 | 需要引用全局 run 产物时使用。 |
+
+### 11.3 Usage Parser 示例
+
+MVP 允许 usage parser 缺省，但配置了 parser 的 agent 应能把 token/cost 展示到报告中。示例：
+
+```yaml
+usage:
+  parser: regex
+  source: stderr
+  patterns:
+    input_tokens: "input_tokens=(\\d+)"
+    output_tokens: "output_tokens=(\\d+)"
+    cost_usd: "cost_usd=([0-9.]+)"
+```
+
+`regex` 默认从 stdout、stderr 或指定日志文件中提取；`json_path` 用于结构化日志。parser 失败只影响成本展示，不影响 benchmark 主评分，并应以 warning 形式呈现。
+
+### 11.4 Codex 示例
+
+```yaml
+name: codex-default
+kind: codex
+display_name: "Codex CLI Default"
+command: "codex exec --full-auto --model gpt-5 {{instruction}}"
+input_mode: argument
+working_dir: workspace
+timeout_sec: 3600
+auth:
+  inherit: true
+  include_paths:
+    - "~/.codex"
+env: {}
+usage:
+  parser: none
+labels:
+  model: "gpt-5"
+  permission_mode: "full-auto"
+```
+
+### 11.5 Claude Code 示例
+
+```yaml
+name: claude-code-default
+kind: claude-code
+display_name: "Claude Code Default"
+command: "claude -p < {{instruction_file}}"
+input_mode: file
+working_dir: workspace
+timeout_sec: 3600
+auth:
+  inherit: true
+  include_paths:
+    - "~/.claude"
+skills:
+  include: []
+  exclude: []
+usage:
+  parser: none
+labels:
+  model: "user-configured"
+```
+
+### 11.6 opencode 示例
+
+```yaml
+name: opencode-default
+kind: opencode
+display_name: "opencode Default"
+command: "opencode run --prompt-file {{instruction_file}}"
+input_mode: file
+working_dir: workspace
+timeout_sec: 3600
+auth:
+  inherit: true
+usage:
+  parser: none
+labels:
+  model: "user-configured"
+```
+
+### 11.7 Pi Coding Agent 示例
+
+```yaml
+name: pi-coding-agent-default
+kind: pi-coding-agent
+display_name: "Pi Coding Agent Default"
+command: "pi coding run --stdin"
+input_mode: stdin
+working_dir: workspace
+timeout_sec: 3600
+auth:
+  inherit: true
+usage:
+  parser: none
+labels:
+  model: "user-configured"
+```
+
+## 12. Benchmark 产品要求
+
+### 12.1 Terminal-Bench
+
+产品目标：
+
+- 验证 CLI Agent 在真实终端任务中的执行能力。
+- 兼容市场上已有 terminal benchmark 的任务组织方式，并参考 Harbor 的易用性经验。
+- 让用户无需写 adapter 就能运行第三方 Terminal-Bench 任务集。
+
+报告应展示 benchmark 原始得分、每个 task 的 pass/fail、失败分类、耗时和日志入口。
+
+### 12.2 SWE-bench Pro
+
+产品目标：
+
+- 验证 coding agent 在真实仓库修复任务中的能力。
+- 报告中应保留最终 diff、benchmark 评分结果、patch 失败原因和 verifier 日志入口。
+- 对用户隐藏 benchmark 执行复杂度，保持同一套 `harnesslab run` 体验。
+
+### 12.3 Benchmark 数据获取
+
+产品体验要求：
+
+- Terminal-Bench 数据可以由 HarnessLab 首次运行时自动准备，或在 `doctor` 中提示并自动触发准备步骤。
+- SWE-bench Pro 可能需要用户预先获取公开或授权数据集，也可能需要较长时间准备仓库缓存；`doctor` 必须明确提示缺失内容、期望路径和获取指引。
+- 所有 benchmark 数据和缓存默认放在 `~/.harnesslab/benchmarks/`。
+- 如果数据缺失，`run` 不能模糊失败，必须给出可操作错误。
+- 数据准备状态必须细化到 split 级别。例如 `smoke` 可用但 `full` 未准备时，CLI 应展示 split 级状态，而不是只展示 benchmark 整体状态。
+
+### 12.4 未来扩展
+
+MVP 不支持用户私有任务集，但产品结构必须允许未来新增：
+
+- 本地目录任务集。
+- 企业内部 repo benchmark。
+- 新的 terminal-style benchmark。
+- 新的 patch-style benchmark。
+
+## 13. 运行过程产品要求
+
+### 13.1 Docker 隔离
+
+默认在 Docker 隔离环境中运行。用户只需要确保本机安装 Docker，不需要理解镜像、挂载、网络和容器细节。
+
+高级配置可以覆盖网络权限和资源限制，但 MVP 文档应把这些放在高级配置中，不影响默认路径。
+
+### 13.2 认证继承
+
+默认自动检测并继承本机 agent 配置和认证信息。run 前控制台打印摘要：
+
+```text
+Auth/config inherited:
+  - ~/.codex
+  - env: OPENAI_API_KEY
+```
+
+不打印密钥值。用户可以在 agent profile 中通过 `include_paths`、`exclude_paths`、`env` 和 skills 配置覆盖默认继承行为。
+
+### 13.3 运行态输出
+
+控制台运行态应简洁：
+
+- 进度条。
+- 已完成 task 数。
+- 成功数。
+- 失败数。
+- 按失败原因分类的实时计数。
+- 当前 run 目录。
+
+详细 stdout、stderr、verifier 日志和 diff 只落文件，不默认刷屏。
+
+### 13.4 Token / Cost
+
+Token 和 cost 是可选但一等公民：
+
+- 数据模型、报告和 CLI 都预留字段。
+- 没有配置 parser 时显示 `unknown`。
+- 报告必须明确提示：当前 agent 未配置 usage parser，因此成本不可比较。
+- 耗时和 token/cost 不参与默认排名或 benchmark 主评分。
+
+## 14. 失败分类
+
+失败分类是 MVP 一级能力，必须帮助用户区分“环境/配置坏了”和“agent 真没做对”。
+
+### 14.1 一级分类
+
+| 分类 | 含义 |
+|---|---|
+| Execution Failure | 运行链路失败，不能直接说明 agent 能力差。 |
+| Benchmark Failure | agent 正常执行完成，但 benchmark 判断任务失败。 |
+| Partial Success | agent 正常执行完成，benchmark 给出非满分的部分得分。 |
+
+### 14.2 Execution Failure
+
+| 失败码 | 说明 |
+|---|---|
+| `docker_unavailable` | Docker 不可用或容器启动失败。 |
+| `agent_command_missing` | agent 命令不存在。 |
+| `auth_failed` | 认证或凭据不可用。 |
+| `setup_failed` | benchmark 或任务环境准备失败。 |
+| `agent_crashed` | agent 进程异常退出。 |
+| `timeout` | 单 task 超时。 |
+| `unknown_execution_error` | 未归类执行异常。 |
+
+### 14.3 Warning
+
+Warning 不计入 Execution Failure，也不影响 benchmark 主评分。
+
+| 警告码 | 说明 |
+|---|---|
+| `usage_parser_failed` | token/cost 解析失败，成本不可比较。 |
+| `usage_unknown` | 未配置 usage parser。 |
+
+### 14.4 Benchmark Failure
+
+| 失败码 | 说明 |
+|---|---|
+| `test_failed` | verifier 或测试未通过。 |
+| `patch_apply_failed` | SWE 类任务中 patch 无法应用。 |
+| `no_valid_diff` | agent 未产生有效代码变更。 |
+| `wrong_answer` | benchmark 判断最终答案错误。 |
+| `unknown_benchmark_failure` | 未归类 benchmark 失败。 |
+
+### 14.5 Partial Success
+
+Partial Success 不计入 Execution Failure，也不应被简单等同于失败。报告必须展示原始分数，并在汇总中单独统计 partial task 数量。
+
+## 15. HTML 报告设计
+
+报告定位是实验记录。MVP 报告必须是单文件 HTML。
+
+### 15.1 首屏
+
+首屏展示：
+
+- Run ID。
+- Agent profile 名称。
+- Benchmark、split、attempts、concurrency。
+- Benchmark 原始总分。
+- 成功 task 数、失败 task 数。
+- Execution Failure 数量。
+- Benchmark Failure 数量。
+- Partial Success 数量。
+- 平均耗时和总耗时。
+- token/cost 总量；缺失时明确显示不可比较。
+- run 目录和复现命令。
+- 报告生成时写入的 `report.html` 绝对路径；CLI 也必须在 run 结束时打印该路径。
+
+### 15.2 Agent 配置快照
+
+报告必须展示运行时使用的 agent 配置摘要，包括：
+
+- `name`
+- `kind`
+- `display_name`
+- 命令模板。
+- 输入模式。
+- timeout。
+- 认证继承摘要。
+- labels。
+- usage parser 状态。
+
+敏感 env 值必须脱敏。
+
+### 15.3 Task 明细
+
+每个 task 至少展示：
+
+- task id。
+- benchmark 原始结果。
+- failure class。
+- failure code。
+- 耗时。
+- token/cost。
+- 退出码。
+- stdout/stderr 链接。
+- verifier 日志链接。
+- diff 链接；仅 patch-style benchmark 如 SWE-bench Pro 必须产生。
+- 复现信息。
+
+### 15.4 报告不做的事
+
+MVP 报告不做：
+
+- 跨 run 排名。
+- 自动自然语言结论。
+- LLM 失败分析。
+- Web dashboard。
+- 在线分享服务。
+
+## 16. Run 产物
+
+每个 run 目录至少保存：
+
+```text
+~/.harnesslab/runs/<agent>-<benchmark>-<split>-<timestamp>/
+  run.yaml
+  command.txt
+  agent-profile.snapshot.yaml
+  benchmark.snapshot.yaml
+  report.html
+  results.json
+  tasks/
+    <task-id>/
+      task.snapshot.yaml
+      stdout.log
+      stderr.log
+      verifier.log
+      diff.patch
+      result.json
+```
+
+`diff.patch` 对 Terminal-Bench 等不产生代码 diff 的任务可以缺省。`benchmark.snapshot.yaml` 和 `task.snapshot.yaml` 用于 replay；如果 replay 所需的外部数据被用户清理，系统必须明确报错。
+
+这些产物服务于：
+
+- 完整 replay。
+- 问题排查。
+- 长期实验记录。
+- 后续导入多 run 对比系统。
+
+## 17. MVP 验收标准
+
+MVP 必须同时满足：
+
+1. `harnesslab init` 能检测并生成 Codex CLI、Claude Code、opencode、Pi Coding Agent 的配置草稿。
+2. `harnesslab doctor` 能检查 Docker、agent 命令、认证继承、配置合法性和 smoke task。
+3. 用户能用一条 `harnesslab run` 命令运行 Terminal-Bench benchmark。
+4. 用户能用一条 `harnesslab run` 命令运行 SWE-bench Pro。
+5. Run 默认 Docker 隔离，默认并发 4，支持 attempts 配置。
+6. Run 支持中断后 resume。
+7. Run 保存完整配置快照、命令快照、任务快照、日志、diff、评分和失败分类。
+8. Run 完成后生成单文件 HTML 报告。
+9. 报告明确区分 Execution Failure、Benchmark Failure 和 Partial Success。
+10. 报告支持 replay 命令和原始命令复制。
+11. token/cost 缺失时明确提示不可比较。
+12. 历史 run 永久保存，不自动删除。
+
+一句话验收：
+
+```text
+用户在 5 分钟内完成本机 CLI Agent 检测与配置确认，并用一条命令在 Terminal-Bench 或已准备好数据的 SWE-bench Pro 上启动一个隔离、可复现、可 resume 的单 run，结束后得到包含原始评分、耗时、token/cost、配置快照、失败详情和 replay 能力的单文件 HTML 报告。
+```
+
+## 18. Roadmap
+
+### P0：单 Run MVP
+
+- CLI init / doctor / run / resume / replay / report open。
+- 四个内置 agent profile 模板。
+- Terminal-Bench 跑通。
+- SWE-bench Pro 跑通。
+- 单 run HTML 报告。
+- 失败分类。
+- token/cost 可选采集。
+
+### P1：多 Run 对比
+
+- 多 run 汇总页。
+- agent 横向排行榜。
+- 同 agent 不同 profile 对比。
+- 多 attempts 稳定性视图。
+- 成本/效果散点图。
+
+### P2：回归与私有任务集
+
+- 用户本地私有任务集。
+- harness 版本回归视图。
+- CI 集成。
+- 更细粒度失败归因。
+- 可选 LLM 失败分析。
+
+### P3：团队与平台化
+
+- 共享报告。
+- 长期趋势。
+- 企业内部 benchmark 管理。
+- 任务集和运行记录导出。
+
+## 19. 文档边界
+
+本文档只定义产品目标、用户体验、核心对象、MVP 边界和验收标准。
+
+不在本文档中定义：
+
+- 具体技术栈。
+- runner 内部实现。
+- Docker 镜像构建细节。
+- benchmark adapter 内部协议。
+- 数据库或文件格式最终实现。
+- HTML 报告前端实现方案。
+
+这些内容应在后续技术设计文档中单独展开。
