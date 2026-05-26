@@ -33,6 +33,22 @@ requirements = ["cli_run_resume_replay_nested"]
 contracts = ["CLI"]
 
 [[tests]]
+id = "CLI-008"
+title = "Doctor status priority covers ok warning and error"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select CLI-008"
+file_patterns = ["crates/harnesslab-cli/src/app.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["doctor_json_stable"]
+contracts = ["Doctor"]
+
+[[tests]]
 id = "DOC-001"
 title = "Doctor JSON stable shape"
 layer = "integration"
@@ -47,6 +63,70 @@ section = "12"
 [tests.verifies]
 requirements = ["doctor_json_stable"]
 contracts = ["DoctorOutput"]
+
+[[tests]]
+id = "DOC-003"
+title = "Doctor reports invalid agent profiles"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-003"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["doctor_json_stable", "config_agent_registry"]
+contracts = ["DoctorOutput", "AgentProfile"]
+
+[[tests]]
+id = "DOC-004"
+title = "Doctor reports benchmark readiness"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-004"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["doctor_json_stable", "benchmark_adapter_contract"]
+contracts = ["DoctorOutput", "BenchmarkDescriptor"]
+
+[[tests]]
+id = "DOC-005"
+title = "Doctor reports agent profile warnings"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-005"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["doctor_json_stable", "config_agent_registry"]
+contracts = ["DoctorOutput", "AgentProfile"]
+
+[[tests]]
+id = "DOC-006"
+title = "Doctor reports agent profile load errors"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-006"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["doctor_json_stable", "config_agent_registry"]
+contracts = ["DoctorOutput", "AgentProfile"]
 
 [[tests]]
 id = "CORE-001"
@@ -209,6 +289,26 @@ requirements = ["benchmark_adapter_contract"]
 contracts = ["PatchStyleAdapter"]
 
 [[tests]]
+id = "C-BENCH-004"
+title = "Terminal-Bench and SWE-bench Pro smoke adapters"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-004"
+file_patterns = [
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "18"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["BenchmarkAdapter", "TaskPlan"]
+
+[[tests]]
 id = "C-SBOX-001"
 title = "Docker health check is structured"
 layer = "contract"
@@ -239,6 +339,152 @@ section = "8.2"
 [tests.verifies]
 requirements = ["execution_runtime"]
 contracts = ["HostProcessExecutor"]
+
+[[tests]]
+id = "C-SBOX-004"
+title = "Docker create args include isolation contract"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-004"
+file_patterns = ["crates/harnesslab-infra/src/docker.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-005"
+title = "Docker exec copy destroy cleanup args are stable"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-005"
+file_patterns = ["crates/harnesslab-infra/src/docker.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-006"
+title = "Docker provider handles successful lifecycle outputs"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-006"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-007"
+title = "Docker provider rejects failed create outputs"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-007"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-008"
+title = "Docker provider removes orphan containers by run label"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-008"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-009"
+title = "Docker provider error paths are structured"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-009"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-010"
+title = "Docker exec returns structured process record when CLI is missing"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-010"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-011"
+title = "Docker create args cover privilege and name sanitization"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-011"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
 
 [[tests]]
 id = "ART-003"
@@ -287,6 +533,162 @@ section = "11"
 [tests.verifies]
 requirements = ["report_html"]
 contracts = ["ReportService"]
+
+[[tests]]
+id = "ORCH-004"
+title = "Run orchestrator expands configured attempts"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-004"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-cli/src/runner/shell.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
+id = "ORCH-005"
+title = "Run orchestrator builds Docker sandbox request"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-005"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-cli/src/runner/sandbox.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["execution_runtime", "fake_benchmark_runtime"]
+contracts = ["RunOrchestrator", "SandboxProvider"]
+
+[[tests]]
+id = "ORCH-006"
+title = "Run orchestrator keeps host fixture path Docker-free"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-006"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-cli/src/runner/sandbox.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["RunOrchestrator", "SandboxProvider"]
+
+[[tests]]
+id = "ORCH-007"
+title = "Run orchestrator executes host agent inside workspace"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-007"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-cli/src/runner/sandbox.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["RunOrchestrator", "AgentRunner"]
+
+[[tests]]
+id = "ORCH-008"
+title = "Sandbox failure writes structured logs"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-008"
+file_patterns = ["crates/harnesslab-cli/src/runner/sandbox.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "AgentRunner"]
+
+[[tests]]
+id = "ORCH-009"
+title = "Sandbox command renderer covers input modes"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-009"
+file_patterns = ["crates/harnesslab-cli/src/runner/sandbox.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["config_agent_registry", "fake_benchmark_runtime"]
+contracts = ["AgentProfile", "AgentRunner"]
+
+[[tests]]
+id = "ORCH-010"
+title = "Sandbox agent timeout override is deterministic"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-010"
+file_patterns = ["crates/harnesslab-cli/src/runner/sandbox.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["AgentRunner"]
+
+[[tests]]
+id = "ORCH-011"
+title = "Run shell helper reports failed commands"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-011"
+file_patterns = ["crates/harnesslab-cli/src/runner_tests.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
+id = "ORCH-012"
+title = "Parallel panic messages preserve payloads"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-012"
+file_patterns = ["crates/harnesslab-cli/src/runner_tests.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator"]
 
 [[tests]]
 id = "INT-001"
@@ -383,6 +785,137 @@ section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime"]
 contracts = ["Replay"]
+
+[[tests]]
+id = "INT-011"
+title = "Terminal-Bench smoke reports missing Docker as sandbox failure"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-011"
+file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+required_artifacts = ["results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "18"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract", "execution_runtime"]
+contracts = ["BenchmarkAdapter", "SandboxProvider", "RunOrchestrator"]
+
+[[tests]]
+id = "INT-012"
+title = "Replay text output succeeds"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-012"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["report.html", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Replay"]
+
+[[tests]]
+id = "INT-013"
+title = "Replay falls back when benchmark snapshot is missing"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-013"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["report.html", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Replay", "BenchmarkAdapter"]
+
+[[tests]]
+id = "REPLAY-002"
+title = "Resume preserves completed attempts"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-002"
+file_patterns = ["crates/harnesslab-cli/src/runner_tests.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Resume", "RunOrchestrator"]
+
+[[tests]]
+id = "REPLAY-003"
+title = "Replay spec preserves source execution config"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-003"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-cli/src/runner/replay.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Replay", "RunSpec"]
+
+[[tests]]
+id = "ORCH-013"
+title = "Run sandbox cleanup is enabled only for container tasks"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-013"
+file_patterns = ["crates/harnesslab-cli/src/runner/cleanup.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator", "DockerSandbox"]
+
+[[tests]]
+id = "ORCH-014"
+title = "Docker sandbox guard drops without surfacing cleanup errors"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-014"
+file_patterns = ["crates/harnesslab-cli/src/runner/sandbox.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["DockerSandbox"]
+
+[[tests]]
+id = "INT-014"
+title = "Resume validates profile snapshot before execution"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-014"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["agent-profile.snapshot.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime", "config_agent_registry"]
+contracts = ["Resume", "AgentProfile"]
 
 [[tests]]
 id = "META-002"

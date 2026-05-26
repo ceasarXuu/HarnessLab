@@ -38,3 +38,18 @@ scripts/test-after-change.sh
 - 当前 function coverage 在 M0 被编码化 waiver 替代，因为 cargo-llvm-cov 会把 CLI binary integration test 中未执行的重复 monomorphization 计入函数总数。
 - 该 waiver 记录在 `coverage-critical.toml`，不是人工跳过。
 - 新增生产 Rust 文件必须出现在 LCOV 中；纯 DTO / type-only 文件允许没有 executable line 记录。
+
+## Docker / External Benchmark Smoke
+
+当前开发机可能没有安装 Docker CLI。遇到这种环境时不要伪造真实 Docker smoke 成功，应验证两类信号：
+
+- `harnesslab doctor --json` 明确报告 `docker.daemon` 为 `error`，message 为 Docker CLI/daemon 的真实状态。
+- `terminal-bench` / `swe-bench-pro` 的 smoke adapter 可以生成 run plan；若运行时 Docker 不存在，run 应落到结构化 `sandbox_create_failed`，并写入 `results.json` 与 HTML 报告。
+
+测试策略：
+
+- Docker 命令构造和生命周期用可注入 fake runner 覆盖，不依赖本机 Docker。
+- 外部 benchmark smoke 的本机负路径用 CLI 黑盒测试覆盖，确保缺 Docker 时用户看到配置/环境问题，而不是进程崩溃。
+- run 执行前后会按 `harnesslab.run_id` 做 best-effort Docker orphan cleanup，并把结果写入 `events.jsonl` 的 `docker_cleanup` 事件；Docker 缺失时 cleanup warning 不应阻断报告生成。
+- `input_mode = "file"` 的 instruction 文件必须写入 workspace。容器任务传入 `/workspace/instruction.txt`，host 任务传入宿主机 workspace 内路径，避免 agent 看到未挂载的宿主机路径。
+- 真 Docker 正向 smoke 只应在 Docker CLI 和 daemon 可用时执行，不能作为本地 coverage gate 的必要条件。

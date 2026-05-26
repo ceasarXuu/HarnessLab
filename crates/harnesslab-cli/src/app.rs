@@ -8,7 +8,9 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use harnesslab_adapters::built_in_descriptors;
-use harnesslab_core::{AgentKind, AgentProfile, GlobalConfig, default_agent_profile};
+use harnesslab_core::{
+    AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
+};
 use harnesslab_infra::{DockerCliProvider, command_exists, first_command_word, latest_run_dir};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -104,16 +106,73 @@ fn doctor(home: &Path, json: bool) -> Result<i32> {
         "error",
         &docker.message,
     ));
-    for profile in load_profiles(home).unwrap_or_default() {
-        let status = first_command_word(&profile.command)
-            .map(command_exists)
-            .unwrap_or(false);
-        checks.push(check(
-            &format!("agent.{}", profile.name),
-            if status { "ok" } else { "error" },
+    for descriptor in built_in_descriptors() {
+        for split in descriptor.splits {
+            let blocked = data_state_blocks_run(split.data_state);
+            checks.push(check_with_details(
+                &format!("benchmark.{}.{}", descriptor.name, split.name),
+                if blocked { "warning" } else { "ok" },
+                "warning",
+                if blocked {
+                    "Benchmark split is not ready locally"
+                } else {
+                    "Benchmark split is ready"
+                },
+                serde_json::json!({
+                    "data_state": split.data_state,
+                    "task_count": split.task_count,
+                }),
+            ));
+        }
+    }
+    match load_profiles(home) {
+        Ok(profiles) => {
+            for profile in profiles {
+                match profile.validate() {
+                    Ok(warnings) => {
+                        if warnings.is_empty() {
+                            checks.push(check(
+                                &format!("agent.{}.validation", profile.name),
+                                "ok",
+                                "error",
+                                "Agent profile configuration is valid",
+                            ));
+                        } else {
+                            checks.push(check_with_details(
+                                &format!("agent.{}.validation", profile.name),
+                                "warning",
+                                "warning",
+                                "Agent profile configuration has warnings",
+                                serde_json::json!({ "warnings": warnings.iter().map(|warning| &warning.code).collect::<Vec<_>>() }),
+                            ));
+                        }
+                    }
+                    Err(error) => checks.push(check_with_details(
+                        &format!("agent.{}.validation", profile.name),
+                        "error",
+                        "error",
+                        &error.to_string(),
+                        serde_json::json!({ "error": error.to_string() }),
+                    )),
+                }
+                let status = first_command_word(&profile.command)
+                    .map(command_exists)
+                    .unwrap_or(false);
+                checks.push(check(
+                    &format!("agent.{}", profile.name),
+                    if status { "ok" } else { "error" },
+                    "error",
+                    "Agent command availability checked",
+                ));
+            }
+        }
+        Err(error) => checks.push(check_with_details(
+            "agents.load",
             "error",
-            "Agent command availability checked",
-        ));
+            "error",
+            "Agent profiles failed to load",
+            serde_json::json!({ "error": error.to_string() }),
+        )),
     }
     let status = overall_status(&checks);
     if json {
@@ -264,6 +323,22 @@ fn check(id: &str, status: &str, severity: &str, message: &str) -> DoctorCheck {
     }
 }
 
+fn check_with_details(
+    id: &str,
+    status: &str,
+    severity: &str,
+    message: &str,
+    details: serde_json::Value,
+) -> DoctorCheck {
+    DoctorCheck {
+        id: id.to_string(),
+        status: status.to_string(),
+        severity: severity.to_string(),
+        message: message.to_string(),
+        details,
+    }
+}
+
 fn overall_status(checks: &[DoctorCheck]) -> &'static str {
     if checks.iter().any(|check| check.status == "error") {
         "error"
@@ -271,5 +346,29 @@ fn overall_status(checks: &[DoctorCheck]) -> &'static str {
         "warning"
     } else {
         "ok"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn app_001_overall_status_prioritizes_error_then_warning() {
+        assert_eq!(overall_status(&[check("a", "ok", "info", "ok")]), "ok");
+        assert_eq!(
+            overall_status(&[
+                check("a", "ok", "info", "ok"),
+                check("b", "warning", "warning", "warn"),
+            ]),
+            "warning"
+        );
+        assert_eq!(
+            overall_status(&[
+                check("a", "warning", "warning", "warn"),
+                check("b", "error", "error", "err"),
+            ]),
+            "error"
+        );
     }
 }

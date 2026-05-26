@@ -1,6 +1,5 @@
 use harnesslab_core::{
-    BenchmarkDescriptor, BenchmarkIdentity, BenchmarkPlan, BenchmarkSplit, BenchmarkStyle,
-    DataState, RunConfigOverrides, TaskPlan,
+    BenchmarkDescriptor, BenchmarkIdentity, BenchmarkPlan, RunConfigOverrides, TaskPlan,
 };
 
 pub trait BenchmarkAdapter {
@@ -12,20 +11,8 @@ pub fn built_in_descriptors() -> Vec<BenchmarkDescriptor> {
     vec![
         crate::FakeTerminalAdapter.descriptor(),
         crate::FakePatchAdapter.descriptor(),
-        external_descriptor(
-            "terminal-bench",
-            BenchmarkStyle::Terminal,
-            "2.x",
-            "https://terminalbench.lol/",
-            DataState::NotDownloaded,
-        ),
-        external_descriptor(
-            "swe-bench-pro",
-            BenchmarkStyle::Patch,
-            "2026",
-            "https://www.swebench.com/",
-            DataState::RequiresAuth,
-        ),
+        crate::TerminalBenchAdapter.descriptor(),
+        crate::SweBenchProAdapter.descriptor(),
     ]
 }
 
@@ -33,6 +20,8 @@ pub fn adapter_for(name: &str) -> Option<Box<dyn BenchmarkAdapter>> {
     match name {
         "fake-terminal" => Some(Box::new(crate::FakeTerminalAdapter)),
         "fake-patch" => Some(Box::new(crate::FakePatchAdapter)),
+        "terminal-bench" => Some(Box::new(crate::TerminalBenchAdapter)),
+        "swe-bench-pro" => Some(Box::new(crate::SweBenchProAdapter)),
         _ => None,
     }
 }
@@ -58,33 +47,6 @@ pub fn plan_from_tasks(
     }
 }
 
-fn external_descriptor(
-    name: &str,
-    style: BenchmarkStyle,
-    version: &str,
-    homepage: &str,
-    state: DataState,
-) -> BenchmarkDescriptor {
-    BenchmarkDescriptor {
-        name: name.to_string(),
-        style,
-        version: version.to_string(),
-        homepage: homepage.to_string(),
-        splits: vec![
-            BenchmarkSplit {
-                name: "smoke".to_string(),
-                task_count: 1,
-                data_state: state,
-            },
-            BenchmarkSplit {
-                name: "full".to_string(),
-                task_count: 0,
-                data_state: state,
-            },
-        ],
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,5 +62,20 @@ mod tests {
         assert!(names.contains(&"fake-patch".to_string()));
         assert!(names.contains(&"terminal-bench".to_string()));
         assert!(names.contains(&"swe-bench-pro".to_string()));
+    }
+
+    #[test]
+    fn c_bench_004_required_external_smoke_adapters_are_available() {
+        let terminal = adapter_for("terminal-bench")
+            .unwrap()
+            .plan("smoke")
+            .unwrap();
+        let swe = adapter_for("swe-bench-pro").unwrap().plan("smoke").unwrap();
+
+        assert_eq!(terminal.tasks.len(), 1);
+        assert_eq!(terminal.tasks[0].sandbox_spec.image, "ubuntu:24.04");
+        assert!(terminal.tasks[0].patch_spec.is_none());
+        assert_eq!(swe.tasks.len(), 1);
+        assert!(swe.tasks[0].patch_spec.is_some());
     }
 }

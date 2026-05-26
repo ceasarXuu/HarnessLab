@@ -12,11 +12,11 @@ fn agt_001_renderer_covers_argument_and_file_modes() {
     let task = test_task();
     let mut profile = default_agent_profile("fake", AgentKind::Fake, "echo {{instruction}}");
     profile.input_mode = InputMode::Argument;
-    let rendered = render_command(&profile, &task, tmp.path()).unwrap();
+    let rendered = render_command(&profile, &task, tmp.path(), false).unwrap();
     assert!(rendered.contains("'instruction'"));
 
     profile.input_mode = InputMode::File;
-    let rendered = render_command(&profile, &task, tmp.path()).unwrap();
+    let rendered = render_command(&profile, &task, tmp.path(), false).unwrap();
     assert!(rendered.contains("instruction.txt"));
 }
 
@@ -104,6 +104,144 @@ fn core_contracts_are_exercised_from_cli_crate_context() {
     assert_eq!(derive_exit_code(&[partial], false), 4);
 }
 
+#[test]
+fn run_004_planned_attempts_repeat_each_task_by_configured_attempts() {
+    let plan = test_plan(vec![task_with_id("task-a"), task_with_id("task-b")]);
+
+    let attempts = planned_attempts(&plan, 2);
+    let keys = attempts
+        .iter()
+        .map(|attempt| (attempt.task.task_id.as_str(), attempt.attempt))
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        keys,
+        vec![("task-a", 1), ("task-a", 2), ("task-b", 1), ("task-b", 2)]
+    );
+}
+
+#[test]
+fn replay_002_resume_keeps_completed_attempts_and_schedules_missing_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    let plan = test_plan(vec![task_with_id("task-a")]);
+    let completed = attempt(FailureClass::None, None);
+    atomic_write_json(
+        &attempt_result_path(tmp.path(), "task-a", 1),
+        &TaskAttemptResult {
+            task_id: "task-a".to_string(),
+            attempt: 1,
+            ..completed
+        },
+    )
+    .unwrap();
+
+    let (loaded, pending) = partition_attempts(tmp.path(), &plan, 2).unwrap();
+
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].task_id, "task-a");
+    assert_eq!(loaded[0].attempt, 1);
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].task.task_id, "task-a");
+    assert_eq!(pending[0].attempt, 2);
+}
+
+#[test]
+fn replay_003_replay_spec_preserves_execution_config_and_links_source() {
+    let mut source = valid_spec();
+    source.run_id = "source-run".to_string();
+    source.execution.attempts = 3;
+    source.execution.concurrency = 7;
+    source.execution.network = NetworkPolicy::Full;
+    let run_dir = std::path::PathBuf::from("/tmp/replay-run");
+
+    let replay = replay_spec_from_source(
+        &source,
+        "replay-run".to_string(),
+        "2026-05-27T00:00:00Z".to_string(),
+        &run_dir,
+    );
+
+    assert_eq!(replay.run_id, "replay-run");
+    assert_eq!(replay.created_at, "2026-05-27T00:00:00Z");
+    assert_eq!(replay.execution, source.execution);
+    assert_eq!(replay.agent_profile_ref, source.agent_profile_ref);
+    assert_eq!(replay.benchmark, source.benchmark);
+    assert_eq!(replay.replay_source_run_id, Some("source-run".to_string()));
+    assert_eq!(replay.paths.run_dir, "/tmp/replay-run");
+}
+
+#[test]
+fn run_005_docker_request_uses_run_network_and_task_sandbox_spec() {
+    let workspace = std::path::PathBuf::from("/tmp/ws");
+    let mut spec = valid_spec();
+    spec.execution.network = NetworkPolicy::Full;
+    let mut task = task_with_id("task/docker");
+    task.sandbox_spec.image = "ubuntu:24.04".to_string();
+    task.sandbox_spec.mounts = vec!["/cache:/cache:ro".to_string()];
+    task.sandbox_spec.env_vars = vec!["A=B".to_string()];
+    task.sandbox_spec.resource_limits.cpu_cores = 3;
+
+    let request = docker_create_request(&spec, &task, 2, &workspace);
+
+    assert_eq!(request.run_id, "run-1");
+    assert_eq!(request.task_id, "task/docker");
+    assert_eq!(request.attempt, 2);
+    assert_eq!(request.image, "ubuntu:24.04");
+    assert_eq!(request.workspace_host_path, workspace);
+    assert_eq!(request.workspace_container_path, "/workspace");
+    assert_eq!(request.network, NetworkPolicy::Full);
+    assert_eq!(request.mounts, vec!["/cache:/cache:ro"]);
+    assert_eq!(request.env_vars, vec!["A=B"]);
+    assert_eq!(request.cpu_cores, 3);
+}
+
+#[test]
+fn run_005_host_fixture_does_not_request_docker() {
+    let task = test_task();
+
+    assert!(!task_requires_docker(&task));
+
+    let mut docker_task = task_with_id("docker-task");
+    docker_task.sandbox_spec.image = "debian:stable-slim".to_string();
+    assert!(task_requires_docker(&docker_task));
+}
+
+#[test]
+fn run_006_run_agent_host_executes_inside_workspace() {
+    let tmp = tempfile::tempdir().unwrap();
+    let workspace = tmp.path().join("workspace");
+    let profile = default_agent_profile("fake", AgentKind::Fake, "printf ok > result.txt");
+    let task = test_task();
+
+    let result = run_agent(&valid_spec(), &profile, &task, 1, tmp.path(), &workspace).unwrap();
+
+    assert_eq!(result.process.exit_code, Some(0));
+    assert_eq!(
+        std::fs::read_to_string(workspace.join("result.txt")).unwrap(),
+        "ok"
+    );
+    assert!(result.sandbox_failure.is_none());
+}
+
+#[test]
+fn run_007_run_shell_reports_failed_command() {
+    let tmp = tempfile::tempdir().unwrap();
+
+    let error = run_shell(tmp.path(), "exit 9").unwrap_err().to_string();
+
+    assert!(error.contains("command failed"));
+}
+
+#[test]
+fn run_008_panic_message_preserves_string_payloads() {
+    assert_eq!(panic_message(Box::new("borrowed panic")), "borrowed panic");
+    assert_eq!(
+        panic_message(Box::new("owned panic".to_string())),
+        "owned panic"
+    );
+    assert_eq!(panic_message(Box::new(7_u8)), "non-string panic payload");
+}
+
 fn process(exit_code: Option<i32>) -> ProcessRecord {
     ProcessRecord {
         exit_code,
@@ -176,6 +314,29 @@ fn test_task() -> TaskPlan {
             max_size_bytes: 1,
         },
         patch_spec: None,
+    }
+}
+
+fn task_with_id(task_id: &str) -> TaskPlan {
+    let mut task = test_task();
+    task.task_id = task_id.to_string();
+    task
+}
+
+fn test_plan(tasks: Vec<TaskPlan>) -> harnesslab_core::BenchmarkPlan {
+    harnesslab_core::BenchmarkPlan {
+        benchmark: harnesslab_core::BenchmarkIdentity {
+            name: "fake-terminal".to_string(),
+            version: "fixture".to_string(),
+        },
+        split: "success".to_string(),
+        prepared_benchmark_ref: "fixture".to_string(),
+        tasks,
+        run_config_overrides: harnesslab_core::RunConfigOverrides {
+            timeout_sec: None,
+            network: None,
+        },
+        warnings: Vec::new(),
     }
 }
 
