@@ -2,12 +2,11 @@ schema_version = 1
 
 [[requirements]]
 id = "cli_help_stable"
-title = "CLI help exposes the M0 command surface"
+title = "CLI help exposes the command surface"
 area = "cli"
 risk = "critical"
 expected_layers = ["integration"]
 required_runtime_proof = false
-
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "4"
@@ -19,7 +18,6 @@ area = "cli"
 risk = "critical"
 expected_layers = ["integration"]
 required_runtime_proof = false
-
 [requirements.source]
 doc = "docs/technology-decisions.md"
 section = "4"
@@ -31,10 +29,97 @@ area = "cli"
 risk = "high"
 expected_layers = ["integration"]
 required_runtime_proof = false
-
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "12"
+
+[[requirements]]
+id = "core_models"
+title = "Core state, failure and exit-code contracts are deterministic"
+area = "core"
+risk = "critical"
+expected_layers = ["unit"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "5"
+
+[[requirements]]
+id = "config_agent_registry"
+title = "Global config and agent profiles parse, validate and initialize"
+area = "config"
+risk = "critical"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "6"
+
+[[requirements]]
+id = "benchmark_adapter_contract"
+title = "Benchmark descriptors and task plans are serializable"
+area = "adapter"
+risk = "critical"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+
+[[requirements]]
+id = "execution_runtime"
+title = "Host execution captures stdout, stderr, timeout and structured status"
+area = "execution"
+risk = "critical"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"
+
+[[requirements]]
+id = "artifact_event_store"
+title = "Artifacts and events are durable, atomic and redacted"
+area = "artifact"
+risk = "critical"
+expected_layers = ["unit"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "9"
+
+[[requirements]]
+id = "report_html"
+title = "HTML report renders summary, task rows, links and usage wording"
+area = "report"
+risk = "high"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "11"
+
+[[requirements]]
+id = "fake_benchmark_runtime"
+title = "Fake terminal and fake patch benchmarks run through real CLI artifacts"
+area = "integration"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+
+[[requirements]]
+id = "replay_runtime"
+title = "Replay creates a new run from stored snapshots"
+area = "replay"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
 
 [[requirements]]
 id = "secret_redaction"
@@ -43,7 +128,6 @@ area = "security"
 risk = "critical"
 expected_layers = ["unit"]
 required_runtime_proof = false
-
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "17"
@@ -55,7 +139,6 @@ area = "test-engineering"
 risk = "critical"
 expected_layers = ["gate"]
 required_runtime_proof = true
-
 [requirements.source]
 doc = "docs/test-engineering.md"
 section = "5"
@@ -67,7 +150,6 @@ area = "test-engineering"
 risk = "critical"
 expected_layers = ["gate"]
 required_runtime_proof = true
-
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "14"

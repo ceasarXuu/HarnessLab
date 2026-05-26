@@ -13,8 +13,15 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+harnesslab-adapters = { path = "../harnesslab-adapters" }
+harnesslab-core = { path = "../harnesslab-core" }
+harnesslab-infra = { path = "../harnesslab-infra" }
+harnesslab-report = { path = "../harnesslab-report" }
 serde.workspace = true
 serde_json.workspace = true
+time.workspace = true
+toml.workspace = true
+walkdir.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true

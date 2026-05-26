@@ -1,11 +1,7 @@
-pub const CRATE_PURPOSE: &str = "benchmark adapters";
+pub mod fake_patch;
+pub mod fake_terminal;
+pub mod registry;
 
-#[cfg(test)]
-mod tests {
-    use super::CRATE_PURPOSE;
-
-    #[test]
-    fn exposes_crate_purpose() {
-        assert_eq!(CRATE_PURPOSE, "benchmark adapters");
-    }
-}
+pub use fake_patch::*;
+pub use fake_terminal::*;
+pub use registry::*;

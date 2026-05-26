@@ -191,6 +191,9 @@ pub fn assert_new_file_coverage(
         } else {
             workspace_root.join(file)
         };
+        if !has_executable_rust_items(&absolute_file)? {
+            continue;
+        }
         let Some(record) = records
             .iter()
             .find(|record| same_path(&record.source_file, &absolute_file))
@@ -352,9 +355,28 @@ fn parse_counter(value: &str, label: &str) -> Result<u64> {
 
 fn is_production_source_file(path: &Path) -> bool {
     let normalized = path.to_string_lossy();
+    if path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with("_tests.rs"))
+    {
+        return false;
+    }
     normalized.starts_with("crates/")
         && normalized.contains("/src/")
         && path.extension().and_then(|extension| extension.to_str()) == Some("rs")
+}
+
+fn has_executable_rust_items(path: &Path) -> Result<bool> {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("read source file {}", path.display()))?;
+    Ok(content.lines().any(|line| {
+        let trimmed = line.trim_start();
+        trimmed.starts_with("fn ")
+            || trimmed.starts_with("pub fn ")
+            || trimmed.starts_with("pub(crate) fn ")
+            || trimmed.starts_with("impl ")
+    }))
 }
 
 fn path_starts_with(path: &Path, prefix: &Path) -> bool {
@@ -381,98 +403,5 @@ pub fn percent(hit: u64, found: u64) -> f64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn coverage_001_module_thresholds_are_enforced() {
-        let records = parse_lcov(
-            "\
-SF:/repo/crates/harnesslab-cli/src/lib.rs
-LF:100
-LH:94
-BRF:10
-BRH:10
-end_of_record
-",
-        )
-        .unwrap();
-        let modules = [ModuleThreshold {
-            name: "cli".to_string(),
-            path: PathBuf::from("crates/harnesslab-cli/src"),
-            threshold: CoverageThreshold {
-                line: 95.0,
-                branch: 95.0,
-            },
-        }];
-
-        let error = assert_thresholds(
-            &records,
-            CoverageThreshold {
-                line: 0.0,
-                branch: 0.0,
-            },
-            &modules,
-            Path::new("/repo"),
-        )
-        .unwrap_err()
-        .to_string();
-
-        assert!(error.contains("module cli line coverage 94.00%"));
-    }
-
-    #[test]
-    fn coverage_002_branch_threshold_requires_branch_data() {
-        let records = parse_lcov(
-            "\
-SF:/repo/crates/harnesslab-core/src/lib.rs
-LF:10
-LH:10
-BRF:0
-BRH:0
-end_of_record
-",
-        )
-        .unwrap();
-
-        let error = assert_thresholds(
-            &records,
-            CoverageThreshold {
-                line: 95.0,
-                branch: 95.0,
-            },
-            &[],
-            Path::new("/repo"),
-        )
-        .unwrap_err()
-        .to_string();
-
-        assert!(error.contains("branch coverage has no branch data"));
-    }
-
-    #[test]
-    fn coverage_003_new_files_must_appear_in_lcov() {
-        let records = parse_lcov(
-            "\
-SF:/repo/crates/harnesslab-core/src/lib.rs
-LF:10
-LH:10
-BRF:0
-BRH:0
-end_of_record
-",
-        )
-        .unwrap();
-
-        let error = assert_new_file_coverage(
-            &records,
-            &[PathBuf::from("crates/harnesslab-cli/src/lib.rs")],
-            95.0,
-            Path::new("/repo"),
-        )
-        .unwrap_err()
-        .to_string();
-
-        assert!(error.contains("missing coverage for new production file"));
-    }
-}
+#[path = "coverage_tests.rs"]
+mod tests;

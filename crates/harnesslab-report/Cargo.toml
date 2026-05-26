@@ -7,3 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+askama = "0.14"
+harnesslab-core = { path = "../harnesslab-core" }
