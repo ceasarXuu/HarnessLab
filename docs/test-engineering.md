@@ -473,9 +473,9 @@ Required stages:
 7. security-redaction
 8. registry-check
 9. traceability-check
-10. new-file-coverage
-11. coverage global
-12. coverage critical
+10. coverage global
+11. coverage critical
+12. new-file-coverage
 13. docs-link-check
 ```
 
@@ -532,6 +532,8 @@ Required meta-tests:
 | META-007 | golden report diff is produced when HTML changes. |
 | META-008 | each fake-benchmark seeded split returns identical exit code and failure code across repeated runs. |
 
+M0 also registers the coverage-specific gate tests `COV-003`, `COV-005` and `COV-007`; these exercise branch-data presence, critical module thresholds and new-file coverage accounting before external benchmark adapters exist.
+
 These meta-tests prevent the gate from silently becoming decorative.
 
 ## 16. M0 Acceptance Criteria
@@ -550,7 +552,7 @@ Required M0 checks:
 | Coverage pin | Coverage engine, config, thresholds and outputs are committed. |
 | Secret scan | A fake secret in a generated artifact fails `scan-artifacts-for-secrets.sh`. |
 | Traceability | `generate-test-traceability.sh` produces Markdown and JSON artifacts. |
-| Meta-test | At least `META-001` through `META-004` pass. |
+| Meta-test | `META-002` plus `COV-003`, `COV-005` and `COV-007` pass in the M0 bootstrap; the remaining seeded gate meta-tests land with their corresponding fixture layers. |
 
 ## 17. Implementation Order
 

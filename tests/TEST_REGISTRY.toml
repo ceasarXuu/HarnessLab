@@ -1,0 +1,186 @@
+schema_version = 1
+
+[[tests]]
+id = "CLI-001"
+title = "CLI help lists M0 commands"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select CLI-001"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = []
+status = "active"
+
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "4"
+
+[tests.verifies]
+requirements = ["cli_help_stable"]
+contracts = ["CLI"]
+
+[[tests]]
+id = "CLI-002"
+title = "Resume and replay are run subcommands"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select CLI-002"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = []
+status = "active"
+
+[tests.source]
+doc = "docs/technology-decisions.md"
+section = "4"
+
+[tests.verifies]
+requirements = ["cli_run_resume_replay_nested"]
+contracts = ["CLI"]
+
+[[tests]]
+id = "DOC-001"
+title = "Doctor JSON stable shape"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-001"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = []
+status = "active"
+
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+
+[tests.verifies]
+requirements = ["doctor_json_stable"]
+contracts = ["DoctorOutput"]
+
+[[tests]]
+id = "CLI-003"
+title = "M0 JSON commands keep stable envelopes"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select CLI-003"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = []
+status = "active"
+
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "4"
+
+[tests.verifies]
+requirements = ["cli_help_stable", "cli_run_resume_replay_nested"]
+contracts = ["CLI"]
+
+[[tests]]
+id = "CLI-004"
+title = "M0 text commands print useful output"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select CLI-004"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = []
+status = "active"
+labels = ["regression"]
+
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "4"
+
+[tests.verifies]
+requirements = ["cli_help_stable", "cli_run_resume_replay_nested"]
+contracts = ["CLI"]
+
+[[tests]]
+id = "SEC-001"
+title = "Secret value redaction"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select SEC-001"
+file_patterns = ["crates/harnesslab-core/src/lib.rs"]
+required_artifacts = []
+status = "active"
+
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "17"
+
+[tests.verifies]
+requirements = ["secret_redaction"]
+contracts = ["Redaction"]
+
+[[tests]]
+id = "META-002"
+title = "Registry gate validates requirement coverage"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/verify-test-registry.sh"
+file_patterns = ["scripts/verify-test-registry.sh"]
+required_artifacts = ["artifacts/test-traceability.json"]
+status = "active"
+labels = ["infrastructure"]
+
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "5"
+
+[tests.verifies]
+requirements = ["test_registry_gate"]
+contracts = ["TestRegistry"]
+
+[[tests]]
+id = "COV-005"
+title = "Coverage gate enforces configured module thresholds"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select COV-005"
+file_patterns = ["xtask/src/coverage.rs"]
+required_artifacts = ["coverage/lcov.info"]
+status = "active"
+labels = ["infrastructure"]
+
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "5"
+
+[tests.verifies]
+requirements = ["coverage_gate"]
+contracts = ["CoverageGate"]
+
+[[tests]]
+id = "COV-003"
+title = "Coverage gate rejects branch thresholds without branch data"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select COV-003"
+file_patterns = ["xtask/src/coverage.rs"]
+required_artifacts = ["coverage/lcov.info"]
+status = "active"
+labels = ["infrastructure"]
+
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "5"
+
+[tests.verifies]
+requirements = ["coverage_gate"]
+contracts = ["CoverageGate"]
+
+[[tests]]
+id = "COV-007"
+title = "New production Rust files must be present in coverage data"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select COV-007"
+file_patterns = ["xtask/src/coverage.rs"]
+required_artifacts = ["coverage/lcov.info"]
+status = "active"
+labels = ["infrastructure"]
+
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "5"
+
+[tests.verifies]
+requirements = ["coverage_gate"]
+contracts = ["CoverageGate"]
