@@ -2,7 +2,7 @@
 
 > 本文定义 HarnessLab 的核心架构。目标不是一次性写出所有实现细节，而是先确定稳定的系统边界、模块职责、扩展点和数据流，避免后续实现被某个 benchmark、某个 CLI agent 或某种 Docker 细节绑死。
 
-更细的开发切片、测试编号、通过标准和本地/CI gate 见 `docs/mvp-development-spec.md`。本文只保留架构边界和关键 contract。
+更细的开发切片、测试编号、通过标准和本地/CI gate 见 `docs/mvp-development-spec.md`。防止测试丢失、跑偏和自欺的测试工程见 `docs/test-engineering.md`。本文只保留架构边界和关键 contract。
 
 ## 1. 架构目标
 
@@ -873,6 +873,15 @@ MVP 实现时测试按边界设计：
 
 Fake benchmark 不对用户开放为正式 benchmark，只作为测试工具，避免违反“不自创 benchmark”的产品定位。
 
+测试架构必须接入 `docs/test-engineering.md` 定义的 Test Registry、Traceability Matrix、Runtime Proof、Seeded Failure、Coverage + Mutation 和 PR Evidence Chain。架构 contract 发生变化时，同一 PR 必须更新对应测试 ID、registry entry 和 traceability row。
+
+关键路径组件必须具备可测试注入点，避免负向控制只能靠脆弱 monkey patch：
+
+- `FailureClassifier` 和 `TaskAttemptAssembler` 通过构造参数接收 failure priority policy，用于测试 exit code priority inversion。
+- `RunOrchestrator` 通过 clock、interrupt source、executor factory 注入，保证 timeout、resume 和 retry 测试可确定复现。
+- `ReplayValidator` 通过 checksum provider 和 artifact resolver 注入，保证缺失数据、checksum mismatch、旧配置还原可被 fixture 精确触发。
+- 这些注入点只改变依赖，不允许绕过生产状态机或生产 artifact layout。
+
 ## 17. 推荐模块边界
 
 ```text
@@ -939,6 +948,10 @@ HarnessLab
 | 报告变成技术债 | Report model 独立于 HTML renderer，HTML 可替换。 |
 
 ## 20. 开发顺序建议
+
+开发顺序以 `docs/mvp-development-spec.md` Section 3 和 `docs/test-engineering.md` Section 17 为准。架构建议不能绕过 M0 测试工程。
+
+前置步骤：M0 testing project、registry、requirement manifest、traceability、coverage gate、local gate。
 
 1. Core models、artifact layout、state machine。
 2. Config loader、agent registry、doctor 基础检查。

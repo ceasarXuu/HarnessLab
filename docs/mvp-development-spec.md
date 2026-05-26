@@ -9,6 +9,7 @@
 | `docs/prd.md` | 定义产品方向、用户体验、MVP 边界。 |
 | `docs/architecture.md` | 定义核心架构、模块边界、关键 contract。 |
 | `docs/mvp-development-spec.md` | 定义具体开发切片、测试矩阵、通过标准和交付 gate。 |
+| `docs/test-engineering.md` | 定义防止测试丢失、跑偏和自欺的测试工程、registry、traceability、runtime proof 和 meta-test 体系。 |
 
 本文不重新讨论产品取舍。默认所有产品决策以 PRD 为准，所有模块边界以 architecture 为准。
 
@@ -27,7 +28,8 @@ MVP 只有在以下条件全部满足时才算完成：
 9. `replay` 能基于快照创建新 run，并在数据缺失时给出明确 blocker。
 10. 单文件 HTML 报告能离线打开，首屏和 task 明细满足 PRD。
 11. 测试覆盖率满足硬性 coverage gate：生产代码整体 line、branch、function/method coverage 均不低于 95%；若所选工具无法原生统计 function/method coverage，则按 Section 14.1 的替代规则执行更高 line/branch 阈值。
-12. 所有测试 gate 通过，工作区无未提交变更。
+12. `docs/test-engineering.md` 定义的 test registry、traceability、runtime proof、meta-test 和 secret scan gate 全部通过。
+13. 所有测试 gate 通过，工作区无未提交变更。
 
 ## 3. 开发切片
 
@@ -435,7 +437,7 @@ workspace_spec:
   target_path: /workspace
   clean: true
 sandbox_spec:
-  image: harnesslab/fake-terminal:latest
+  image: harnesslab/fake-terminal:0.1.0@sha256:<fixture-image-digest>
   mounts: []
   env_vars: []
   network: none
@@ -827,9 +829,15 @@ Minimum responsibilities:
 4. Contract tests.
 5. Fast integration tests with fake benchmarks.
 6. Report golden tests.
-7. Coverage check.
+7. Security redaction scan.
+8. Test registry check.
+9. Traceability check.
+10. New-file coverage check.
+11. Coverage check.
 
 Docker-dependent tests must be included in the default gate once Docker provider exists. Before then, the script must print `SKIP` with a concrete reason, not silently omit them.
+
+`docs/test-engineering.md` is the source of truth for the concrete test project layout, registry schema, anti-self-deception rules, meta-tests, and M0 acceptance criteria.
 
 ### 14.1 Coverage Gate
 
@@ -913,6 +921,10 @@ unit
 contract
 integration-fast
 report-golden
+security-redaction
+registry-check
+traceability-check
+new-file-coverage
 coverage
 docs-link-check
 ```
@@ -930,8 +942,10 @@ Coverage scope for CI:
 Nightly or manual CI should run:
 
 ```text
+docker-full
 terminal-bench-smoke
 swe-bench-pro-smoke
+mutation-critical
 resume-replay-e2e
 ```
 
@@ -1078,6 +1092,9 @@ Every implementation PR must answer:
 8. Attach or reference the `scripts/test-after-change.sh` output showing the coverage summary.
 9. If any metric dropped, what tests were added or what documented exclusion explains it?
 10. If any file is excluded from coverage, what is the checked-in exclusion reason?
+11. Which `tests/TEST_REGISTRY.yaml` entries and traceability rows changed?
+12. Which `tests/REQUIREMENTS.yaml` requirements changed or were added?
+13. Which runtime proof artifact demonstrates that runtime-sensitive behavior still works?
 
 No PR should be accepted with only static tests if it changes runtime behavior. Runtime-sensitive changes require fake benchmark or Docker smoke coverage.
 
@@ -1085,15 +1102,16 @@ No PR should be accepted with only static tests if it changes runtime behavior. 
 
 Recommended first tasks:
 
-1. Create project skeleton, pin coverage engine/config, and create `scripts/test-after-change.sh`.
-2. Implement schema validation for `RunSpec`, `AgentProfile`, `TaskPlan`, `TaskAttemptResult`.
-3. Implement artifact store with atomic JSON write and event append.
-4. Implement fake-terminal adapter without Docker, using host executor only for tests.
-5. Implement Docker provider health check and echo command.
-6. Implement AgentCommandRenderer for `argument`, `file`, `stdin`.
-7. Implement orchestrator for one fake-terminal success task.
-8. Add report model and minimal HTML.
-9. Add failure path fixtures.
-10. Add resume/replay after attempt directories are stable.
+1. Create the testing project skeleton and pass the M0 acceptance criteria in `docs/test-engineering.md`.
+2. Create CLI/project skeleton and wire it into the already guarded local test gate.
+3. Implement schema validation for `RunSpec`, `AgentProfile`, `TaskPlan`, `TaskAttemptResult`.
+4. Implement artifact store with atomic JSON write and event append.
+5. Implement fake-terminal adapter without Docker, using host executor only for tests.
+6. Implement Docker provider health check and echo command.
+7. Implement AgentCommandRenderer for `argument`, `file`, `stdin`.
+8. Implement orchestrator for one fake-terminal success task.
+9. Add report model and minimal HTML.
+10. Add failure path fixtures.
+11. Add resume/replay after attempt directories are stable.
 
 Each task must land with tests and must not leave the repo with uncommitted changes.
