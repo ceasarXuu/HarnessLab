@@ -2,6 +2,8 @@
 
 > 本文定义 HarnessLab 的核心架构。目标不是一次性写出所有实现细节，而是先确定稳定的系统边界、模块职责、扩展点和数据流，避免后续实现被某个 benchmark、某个 CLI agent 或某种 Docker 细节绑死。
 
+更细的开发切片、测试编号、通过标准和本地/CI gate 见 `docs/mvp-development-spec.md`。本文只保留架构边界和关键 contract。
+
 ## 1. 架构目标
 
 HarnessLab 的架构必须优先满足四件事：
@@ -283,7 +285,7 @@ TaskAssignment(task_id, attempt, resource_reservation)
 
 ### 5.7 Evaluation Coordinator
 
-Evaluation Coordinator 统一执行 benchmark verifier/evaluator。它不决定评分逻辑，只负责在正确环境中调用 adapter 的 evaluate contract。
+Evaluation Coordinator 统一执行 benchmark verifier/evaluator。它拥有执行环境选择和 verifier/evaluator 进程生命周期；BenchmarkAdapter 只负责把原始输出解析为标准 `EvaluationResult`。
 
 ```text
 evaluate(task_plan, sandbox_handle, agent_result, artifacts) -> EvaluationResult
@@ -307,10 +309,10 @@ Evaluation Coordinator 负责：
 - 根据 `verifier_spec.environment_mode` 选择执行环境。
 - 调用 verifier command 或 benchmark evaluator。
 - 捕获 verifier stdout/stderr、退出码、duration。
-- 把 adapter-specific evaluator 输出标准化为 `EvaluationResult`。
+- 调用 adapter 的 `parse_evaluation(...)`，把 adapter-specific evaluator 输出标准化为 `EvaluationResult`。
 - 保证 separate verifier sandbox 的 cleanup，即使 verifier 失败也必须先收集 artifacts。
 
-BenchmarkAdapter 的 `evaluate()` 负责解释 benchmark 原始输出；Evaluation Coordinator 负责执行和收集。
+BenchmarkAdapter 的 `parse_evaluation()` 负责解释 benchmark 原始输出；Evaluation Coordinator 负责执行和收集。
 
 ### 5.8 Usage Collector
 
@@ -392,7 +394,7 @@ inspect_data() -> BenchmarkDataState
 prepare(split) -> PreparedBenchmark
 list_tasks(split) -> list[TaskDescriptor]
 create_task_plan(task, run_context) -> TaskPlan
-evaluate(task, task_artifacts) -> EvaluationResult
+parse_evaluation(raw_stdout, raw_stderr, exit_code, parser_config) -> EvaluationResult
 snapshot(task) -> TaskSnapshot
 ```
 
@@ -464,6 +466,8 @@ prepare workspace -> agent mutates workspace -> verifier/evaluator reads workspa
 ```
 
 Artifacts 和 verifier 输出是两个 collection pass：verifier 输出用于评分，artifacts 用于复盘和报告。
+
+Verifier stdout/stderr 由 Evaluation Coordinator 直接捕获到 `verifier/stdout.log` 和 `verifier/stderr.log`，不属于 Artifact Collector 的 best-effort collection。Artifact Collector 只处理用户可见产物、diff、prediction 和额外文件。
 
 `WorkspaceSpec.type` 语义：
 
@@ -631,6 +635,7 @@ benchmark_failure
 execution_failure
 warning_only
 skipped
+interrupted
 ```
 
 状态必须增量写入 `<task-id>/result.json`。Resume 时：
@@ -638,6 +643,7 @@ skipped
 - 跳过 `success` 和 `partial_success`。
 - 默认重跑 `execution_failure` 和 `benchmark_failure`。
 - 保留旧 result 为 attempt history。
+- 中间状态 attempt 在 resume 前标记为 `interrupted`。
 
 ## 10. Artifact Store
 
@@ -728,7 +734,7 @@ Resume 读取原 run 目录：
 3. 扫描 task result 和未完成 attempt。
 4. 跳过 `success` 和 `partial_success`。
 5. 将失败或中断 task 新建 attempt。
-6. 增量更新 `results.json` 和 `report.html`。
+6. 增量更新 `results.json`，然后从 artifact store 重新生成 `report.html`。
 
 Resume 修改原 run 目录，因为它表示继续同一个 run。
 
