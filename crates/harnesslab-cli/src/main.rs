@@ -1,6 +1,9 @@
 fn main() {
-    if let Err(error) = harnesslab_cli::run() {
-        eprintln!("error: {error}");
-        std::process::exit(1);
+    match harnesslab_cli::run() {
+        Ok(code) => std::process::exit(code),
+        Err(error) => {
+            eprintln!("error: {error:#}");
+            std::process::exit(3);
+        }
     }
 }

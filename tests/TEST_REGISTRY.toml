@@ -2,18 +2,16 @@ schema_version = 1
 
 [[tests]]
 id = "CLI-001"
-title = "CLI help lists M0 commands"
+title = "CLI help lists commands"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select CLI-001"
 file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
 required_artifacts = []
 status = "active"
-
 [tests.source]
 doc = "docs/mvp-development-spec.md"
 section = "4"
-
 [tests.verifies]
 requirements = ["cli_help_stable"]
 contracts = ["CLI"]
@@ -27,11 +25,9 @@ command = "scripts/test-after-change.sh --select CLI-002"
 file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
 required_artifacts = []
 status = "active"
-
 [tests.source]
 doc = "docs/technology-decisions.md"
 section = "4"
-
 [tests.verifies]
 requirements = ["cli_run_resume_replay_nested"]
 contracts = ["CLI"]
@@ -45,51 +41,92 @@ command = "scripts/test-after-change.sh --select DOC-001"
 file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
 required_artifacts = []
 status = "active"
-
 [tests.source]
 doc = "docs/mvp-development-spec.md"
 section = "12"
-
 [tests.verifies]
 requirements = ["doctor_json_stable"]
 contracts = ["DoctorOutput"]
 
 [[tests]]
-id = "CLI-003"
-title = "M0 JSON commands keep stable envelopes"
-layer = "integration"
-owner_module = "harnesslab-cli"
-command = "scripts/test-after-change.sh --select CLI-003"
-file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+id = "CORE-001"
+title = "State machine accepts normal lifecycle"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select CORE-001"
+file_patterns = ["crates/harnesslab-core/src/model.rs"]
 required_artifacts = []
 status = "active"
-
 [tests.source]
 doc = "docs/mvp-development-spec.md"
-section = "4"
-
+section = "5"
 [tests.verifies]
-requirements = ["cli_help_stable", "cli_run_resume_replay_nested"]
-contracts = ["CLI"]
+requirements = ["core_models"]
+contracts = ["TaskState"]
 
 [[tests]]
-id = "CLI-004"
-title = "M0 text commands print useful output"
-layer = "integration"
-owner_module = "harnesslab-cli"
-command = "scripts/test-after-change.sh --select CLI-004"
-file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+id = "CORE-003"
+title = "Failure classifier maps agent timeout"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select CORE-003"
+file_patterns = ["crates/harnesslab-core/src/model.rs"]
 required_artifacts = []
 status = "active"
-labels = ["regression"]
-
 [tests.source]
 doc = "docs/mvp-development-spec.md"
-section = "4"
-
+section = "5.3"
 [tests.verifies]
-requirements = ["cli_help_stable", "cli_run_resume_replay_nested"]
-contracts = ["CLI"]
+requirements = ["core_models"]
+contracts = ["FailureMapping"]
+
+[[tests]]
+id = "ORCH-003"
+title = "Exit code priority"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select ORCH-003"
+file_patterns = ["crates/harnesslab-core/src/model.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "5.4"
+[tests.verifies]
+requirements = ["core_models"]
+contracts = ["RunExitCode"]
+
+[[tests]]
+id = "CFG-001"
+title = "Valid global config parses"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select CFG-001"
+file_patterns = ["crates/harnesslab-core/src/config.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6"
+[tests.verifies]
+requirements = ["config_agent_registry"]
+contracts = ["GlobalConfig"]
+
+[[tests]]
+id = "AGT-005"
+title = "Docker socket warning"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select AGT-005"
+file_patterns = ["crates/harnesslab-core/src/config.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+[tests.verifies]
+requirements = ["config_agent_registry"]
+contracts = ["AgentProfile"]
 
 [[tests]]
 id = "SEC-001"
@@ -97,17 +134,255 @@ title = "Secret value redaction"
 layer = "unit"
 owner_module = "harnesslab-core"
 command = "scripts/test-after-change.sh --select SEC-001"
-file_patterns = ["crates/harnesslab-core/src/lib.rs"]
+file_patterns = ["crates/harnesslab-core/src/redaction.rs"]
 required_artifacts = []
 status = "active"
-
 [tests.source]
 doc = "docs/mvp-development-spec.md"
 section = "17"
-
 [tests.verifies]
 requirements = ["secret_redaction"]
 contracts = ["Redaction"]
+
+[[tests]]
+id = "USE-002"
+title = "Usage parser extracts tokens"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select USE-002"
+file_patterns = ["crates/harnesslab-core/src/usage.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.1"
+[tests.verifies]
+requirements = ["core_models"]
+contracts = ["UsageRecord"]
+
+[[tests]]
+id = "C-BENCH-001"
+title = "Built-in benchmark descriptors"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-001"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["BenchmarkAdapter"]
+
+[[tests]]
+id = "C-BENCH-002"
+title = "Fake terminal task plan serializes"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-002"
+file_patterns = ["crates/harnesslab-adapters/src/fake_terminal.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["TaskPlan"]
+
+[[tests]]
+id = "C-BENCH-003"
+title = "Fake patch task plan has patch spec"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-003"
+file_patterns = ["crates/harnesslab-adapters/src/fake_patch.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["PatchStyleAdapter"]
+
+[[tests]]
+id = "C-SBOX-001"
+title = "Docker health check is structured"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-001"
+file_patterns = ["crates/harnesslab-infra/src/docker.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["SandboxProvider"]
+
+[[tests]]
+id = "C-SBOX-002"
+title = "Host exec captures stdout"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-002"
+file_patterns = ["crates/harnesslab-infra/src/process.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor"]
+
+[[tests]]
+id = "ART-003"
+title = "Atomic JSON write"
+layer = "unit"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select ART-003"
+file_patterns = ["crates/harnesslab-infra/src/artifact.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.5"
+[tests.verifies]
+requirements = ["artifact_event_store"]
+contracts = ["ArtifactStore"]
+
+[[tests]]
+id = "LOG-003"
+title = "Event redaction"
+layer = "unit"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select LOG-003"
+file_patterns = ["crates/harnesslab-infra/src/event.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "20"
+[tests.verifies]
+requirements = ["artifact_event_store", "secret_redaction"]
+contracts = ["EventLog"]
+
+[[tests]]
+id = "RPT-001"
+title = "HTML report summary and links"
+layer = "unit"
+owner_module = "harnesslab-report"
+command = "scripts/test-after-change.sh --select RPT-001"
+file_patterns = ["crates/harnesslab-report/src/lib.rs"]
+required_artifacts = ["coverage/coverage.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "11"
+[tests.verifies]
+requirements = ["report_html"]
+contracts = ["ReportService"]
+
+[[tests]]
+id = "INT-001"
+title = "Init empty home"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-001"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["artifacts/test-traceability.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+[tests.verifies]
+requirements = ["config_agent_registry"]
+contracts = ["InitFlow"]
+
+[[tests]]
+id = "INT-003"
+title = "Fake terminal success"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-003"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["report.html", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime", "report_html"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
+id = "INT-004"
+title = "Fake terminal benchmark failure"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-004"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["FailureMapping"]
+
+[[tests]]
+id = "INT-005"
+title = "Fake terminal agent timeout"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-005"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["AgentRunner"]
+
+[[tests]]
+id = "INT-006"
+title = "Fake patch success saves diff"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-006"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["patch.diff", "prediction.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "13.3"
+[tests.verifies]
+requirements = ["fake_benchmark_runtime"]
+contracts = ["PatchStyleAdapter"]
+
+[[tests]]
+id = "INT-009"
+title = "Replay success"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-009"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["report.html", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Replay"]
 
 [[tests]]
 id = "META-002"
@@ -119,11 +394,9 @@ file_patterns = ["scripts/verify-test-registry.sh"]
 required_artifacts = ["artifacts/test-traceability.json"]
 status = "active"
 labels = ["infrastructure"]
-
 [tests.source]
 doc = "docs/test-engineering.md"
 section = "5"
-
 [tests.verifies]
 requirements = ["test_registry_gate"]
 contracts = ["TestRegistry"]
@@ -138,11 +411,9 @@ file_patterns = ["xtask/src/coverage.rs"]
 required_artifacts = ["coverage/lcov.info"]
 status = "active"
 labels = ["infrastructure"]
-
 [tests.source]
 doc = "docs/test-engineering.md"
 section = "5"
-
 [tests.verifies]
 requirements = ["coverage_gate"]
 contracts = ["CoverageGate"]
@@ -157,11 +428,9 @@ file_patterns = ["xtask/src/coverage.rs"]
 required_artifacts = ["coverage/lcov.info"]
 status = "active"
 labels = ["infrastructure"]
-
 [tests.source]
 doc = "docs/test-engineering.md"
 section = "5"
-
 [tests.verifies]
 requirements = ["coverage_gate"]
 contracts = ["CoverageGate"]
@@ -176,11 +445,9 @@ file_patterns = ["xtask/src/coverage.rs"]
 required_artifacts = ["coverage/lcov.info"]
 status = "active"
 labels = ["infrastructure"]
-
 [tests.source]
 doc = "docs/test-engineering.md"
 section = "5"
-
 [tests.verifies]
 requirements = ["coverage_gate"]
 contracts = ["CoverageGate"]

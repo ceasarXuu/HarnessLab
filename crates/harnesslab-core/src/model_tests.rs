@@ -1,0 +1,253 @@
+use super::*;
+use crate::UsageRecord;
+
+#[test]
+fn core_001_state_machine_allows_expected_lifecycle() {
+    let path = [
+        TaskState::Pending,
+        TaskState::Preparing,
+        TaskState::AgentRunning,
+        TaskState::Evaluating,
+        TaskState::Collecting,
+        TaskState::Success,
+    ];
+
+    for pair in path.windows(2) {
+        assert!(ensure_transition(pair[0], pair[1]).is_ok());
+    }
+}
+
+#[test]
+fn core_001_state_machine_allows_failure_and_interrupt_edges() {
+    let transitions = [
+        (TaskState::Collecting, TaskState::PartialSuccess),
+        (TaskState::Collecting, TaskState::Failure),
+        (TaskState::Preparing, TaskState::Failure),
+        (TaskState::AgentRunning, TaskState::Failure),
+        (TaskState::Evaluating, TaskState::Failure),
+        (TaskState::Preparing, TaskState::Interrupted),
+        (TaskState::AgentRunning, TaskState::Interrupted),
+        (TaskState::Evaluating, TaskState::Interrupted),
+        (TaskState::Collecting, TaskState::Interrupted),
+    ];
+
+    for (from, to) in transitions {
+        assert!(can_transition(from, to));
+    }
+    assert!(!can_transition(TaskState::Success, TaskState::Failure));
+}
+
+#[test]
+fn core_002_state_machine_rejects_terminal_to_running() {
+    assert_eq!(
+        ensure_transition(TaskState::Success, TaskState::AgentRunning),
+        Err(ModelError::InvalidTransition {
+            from: TaskState::Success,
+            to: TaskState::AgentRunning
+        })
+    );
+}
+
+#[test]
+fn core_003_failure_classifier_maps_agent_timeout() {
+    let result = ProcessRecord {
+        exit_code: None,
+        termination_reason: TerminationReason::Timeout,
+        stdout_path: "agent/stdout.log".to_string(),
+        stderr_path: "agent/stderr.log".to_string(),
+    };
+
+    let failure = classify_agent_process(&result);
+
+    assert_eq!(failure.class, FailureClass::Execution);
+    assert_eq!(failure.code, Some(FailureCode::AgentTimeout));
+}
+
+#[test]
+fn core_004_failure_classifier_maps_failed_verifier() {
+    let result = EvaluationRecord {
+        exit_code: Some(0),
+        raw_score: 0.0,
+        stdout_path: "verifier/stdout.log".to_string(),
+        stderr_path: "verifier/stderr.log".to_string(),
+    };
+
+    let failure = classify_evaluation_process(&result);
+
+    assert_eq!(failure.class, FailureClass::Benchmark);
+    assert_eq!(failure.code, Some(FailureCode::TestFailed));
+}
+
+#[test]
+fn orch_003_exit_code_priority_prefers_execution_over_benchmark() {
+    let results = vec![
+        attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed)),
+        attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout)),
+    ];
+
+    assert_eq!(derive_exit_code(&results, false), 1);
+}
+
+#[test]
+fn orch_003_exit_code_covers_runlevel_interrupted_and_partial() {
+    assert_eq!(derive_exit_code(&[], true), 3);
+    assert_eq!(derive_exit_code(&[], false), 3);
+    assert_eq!(
+        derive_exit_code(&[attempt(FailureClass::None, None)], false),
+        0
+    );
+    let mut interrupted = attempt(FailureClass::None, None);
+    interrupted.state = TaskState::Interrupted;
+    assert_eq!(derive_exit_code(&[interrupted], false), 130);
+    let mut partial = attempt(FailureClass::None, None);
+    partial.outcome = Outcome::PartialSuccess;
+    assert_eq!(derive_exit_code(&[partial], false), 4);
+}
+
+#[test]
+fn orch_001_summary_counts_partial_and_interrupted() {
+    let mut partial = attempt(FailureClass::None, None);
+    partial.outcome = Outcome::PartialSuccess;
+    partial.benchmark_score = 0.5;
+    partial.duration_ms = 7;
+    let mut interrupted = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+    interrupted.state = TaskState::Interrupted;
+    interrupted.duration_ms = 3;
+
+    let results = summarize_results("run", vec![partial, interrupted]);
+
+    assert_eq!(results.summary.partial_success, 1);
+    assert_eq!(results.summary.execution_failure, 1);
+    assert_eq!(results.summary.interrupted, 1);
+    assert_eq!(results.summary.total_duration_ms, 10);
+    assert_eq!(results.summary.total_score, 0.5);
+}
+
+#[test]
+fn core_001_metadata_is_empty_until_schema_requires_fields() {
+    assert!(metadata().is_empty());
+}
+
+#[test]
+fn core_003_failure_classifier_maps_spawn_signal_and_nonzero() {
+    for (reason, exit_code, expected) in [
+        (
+            TerminationReason::SpawnError,
+            None,
+            FailureCode::AgentSpawnError,
+        ),
+        (
+            TerminationReason::Signaled,
+            None,
+            FailureCode::AgentSignaled,
+        ),
+        (
+            TerminationReason::Completed,
+            Some(2),
+            FailureCode::AgentNonzeroExit,
+        ),
+    ] {
+        let failure = classify_agent_process(&ProcessRecord {
+            exit_code,
+            termination_reason: reason,
+            stdout_path: "stdout.log".to_string(),
+            stderr_path: "stderr.log".to_string(),
+        });
+        assert_eq!(failure.code, Some(expected));
+    }
+    let missing_exit = classify_agent_process(&ProcessRecord {
+        exit_code: None,
+        termination_reason: TerminationReason::Completed,
+        stdout_path: "stdout.log".to_string(),
+        stderr_path: "stderr.log".to_string(),
+    });
+    assert_eq!(missing_exit.code, Some(FailureCode::AgentNonzeroExit));
+}
+
+#[test]
+fn core_001_run_spec_validation_rejects_invalid_inputs() {
+    let mut spec = valid_spec();
+    spec.schema_version = 2;
+    assert_eq!(
+        validate_run_spec(&spec),
+        Err(ModelError::UnsupportedSchema(2))
+    );
+    spec = valid_spec();
+    spec.run_id = "bad/id".to_string();
+    assert!(matches!(
+        validate_run_spec(&spec),
+        Err(ModelError::UnsafeRunId(_))
+    ));
+    spec = valid_spec();
+    spec.run_id.clear();
+    assert!(matches!(
+        validate_run_spec(&spec),
+        Err(ModelError::UnsafeRunId(_))
+    ));
+    spec = valid_spec();
+    spec.agent_profile_ref.clear();
+    assert_eq!(validate_run_spec(&spec), Err(ModelError::MissingAgent));
+    spec = valid_spec();
+    spec.benchmark.name.clear();
+    assert_eq!(validate_run_spec(&spec), Err(ModelError::MissingBenchmark));
+    spec = valid_spec();
+    spec.benchmark.split.clear();
+    assert_eq!(validate_run_spec(&spec), Err(ModelError::MissingBenchmark));
+    spec = valid_spec();
+    spec.execution.attempts = 0;
+    assert_eq!(validate_run_spec(&spec), Err(ModelError::InvalidExecution));
+    spec = valid_spec();
+    spec.execution.concurrency = 0;
+    assert_eq!(validate_run_spec(&spec), Err(ModelError::InvalidExecution));
+}
+
+fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult {
+    TaskAttemptResult {
+        schema_version: 1,
+        task_id: "task".to_string(),
+        attempt: 1,
+        state: if class == FailureClass::None {
+            TaskState::Success
+        } else {
+            TaskState::Failure
+        },
+        outcome: if class == FailureClass::None {
+            Outcome::Success
+        } else {
+            Outcome::Failure
+        },
+        failure_class: class,
+        failure_code: code,
+        benchmark_score: 0.0,
+        duration_ms: 10,
+        agent: None,
+        evaluation: None,
+        patch: None,
+        usage: UsageRecord::unknown(),
+        warnings: Vec::new(),
+    }
+}
+
+fn valid_spec() -> RunSpec {
+    RunSpec {
+        schema_version: 1,
+        run_id: "run-1".to_string(),
+        created_at: "2026-05-26T00:00:00Z".to_string(),
+        agent_profile_ref: "fake".to_string(),
+        benchmark: BenchmarkRef {
+            name: "fake-terminal".to_string(),
+            version: "fixture".to_string(),
+            split: "success".to_string(),
+        },
+        execution: ExecutionConfig {
+            concurrency: 1,
+            attempts: 1,
+            network: NetworkPolicy::None,
+            timeout_sec: None,
+        },
+        paths: RunPaths {
+            run_dir: "run".to_string(),
+        },
+        replay_source_run_id: None,
+    }
+}

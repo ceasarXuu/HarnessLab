@@ -1,11 +1,9 @@
-pub const CRATE_PURPOSE: &str = "infrastructure adapters";
+pub mod artifact;
+pub mod docker;
+pub mod event;
+pub mod process;
 
-#[cfg(test)]
-mod tests {
-    use super::CRATE_PURPOSE;
-
-    #[test]
-    fn exposes_crate_purpose() {
-        assert_eq!(CRATE_PURPOSE, "infrastructure adapters");
-    }
-}
+pub use artifact::*;
+pub use docker::*;
+pub use event::*;
+pub use process::*;

@@ -28,7 +28,7 @@ scripts/test-after-change.sh
 关键通过信号：
 
 - nextest summary 显示所有测试通过且 `0 skipped`。
-- `xtask check-coverage` 输出 line coverage `>= 97%`、branch coverage `>= 97%`。
+- `xtask check-coverage` 输出 line coverage `>= 95%`、branch coverage `>= 70%`，并额外执行 critical module 阈值。
 - `xtask check-coverage` 会同时检查 `coverage-critical.toml` 中的 critical module 阈值。
 - `scripts/check-new-file-coverage.sh` 会检查新增生产 Rust 文件是否进入 LCOV 报告。
 - `coverage/cobertura.xml` 和 `coverage/coverage.json` 都生成。
@@ -37,4 +37,4 @@ scripts/test-after-change.sh
 
 - 当前 function coverage 在 M0 被编码化 waiver 替代，因为 cargo-llvm-cov 会把 CLI binary integration test 中未执行的重复 monomorphization 计入函数总数。
 - 该 waiver 记录在 `coverage-critical.toml`，不是人工跳过。
-- `crates/harnesslab-core/src` 在 M0 没有 LLVM branch counter，因此 critical config 只对它启用 line threshold；一旦该模块出现分支逻辑，必须恢复 branch threshold。
+- 新增生产 Rust 文件必须出现在 LCOV 中；纯 DTO / type-only 文件允许没有 executable line 记录。

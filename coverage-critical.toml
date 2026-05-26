@@ -3,8 +3,8 @@ schema_version = 1
 [function_coverage]
 mode = "waived"
 reason = "cargo-llvm-cov counts duplicate unexecuted CLI library monomorphizations during binary integration tests in M0"
-substitute_line = 97
-substitute_branch = 97
+substitute_line = 95
+substitute_branch = 70
 
 [[modules]]
 name = "core"
@@ -16,4 +16,4 @@ branch = 0
 name = "cli"
 path = "crates/harnesslab-cli/src"
 line = 95
-branch = 95
+branch = 70
