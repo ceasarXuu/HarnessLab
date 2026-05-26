@@ -1,21 +1,41 @@
+mod cleanup;
+mod replay;
+mod sandbox;
+mod shell;
+
 use crate::output::{PathOutput, RunOutput};
 use crate::print_json;
 use anyhow::{Context, Result, bail};
+use cleanup::RunSandboxCleanup;
 use harnesslab_adapters::adapter_for;
 use harnesslab_core::{
-    AgentProfile, BenchmarkRef, EvaluationRecord, FailureClass, FailureCode, GlobalConfig,
-    InputMode, Outcome, PatchRecord, PatchStatus, RunPaths, RunSpec, TaskAttemptResult, TaskPlan,
-    TaskState, UsageRecord, classify_agent_process, classify_evaluation_process, derive_exit_code,
+    AgentProfile, BenchmarkRef, EvaluationRecord, FailureClass, FailureCode, GlobalConfig, Outcome,
+    PatchRecord, PatchStatus, RunPaths, RunSpec, TaskAttemptResult, TaskPlan, TaskState,
+    UsageRecord, classify_agent_process, classify_evaluation_process, derive_exit_code,
     is_valid_profile_name, summarize_results, validate_global_config, validate_run_spec,
 };
 use harnesslab_infra::{
     ExecSpec, HostProcessExecutor, append_event, atomic_write_json, collect_artifacts,
     command_exists, event, first_command_word, read_json,
 };
+use replay::{replay_plan_from_source, replay_spec_from_source};
+use sandbox::run_agent;
+use shell::run_shell;
+use std::any::Any;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::thread;
 use time::OffsetDateTime;
+
+#[cfg(test)]
+use sandbox::{docker_create_request, render_command, task_requires_docker};
+
+#[derive(Debug, Clone)]
+struct AttemptWork {
+    task: TaskPlan,
+    attempt: u32,
+}
 
 pub(crate) fn execute_new_run(
     home: &Path,
@@ -84,6 +104,8 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
     let spec: RunSpec = read_json(&run_dir.join("run.json"))?;
     let profile: AgentProfile = read_json(&run_dir.join("agent-profile.snapshot.json"))?;
     let plan: harnesslab_core::BenchmarkPlan = read_json(&run_dir.join("benchmark.snapshot.json"))?;
+    validate_run_spec(&spec)?;
+    profile.validate()?;
     let code = execute_plan(run_dir, &spec, &profile, &plan)?;
     if json {
         print_json(&PathOutput {
@@ -99,26 +121,41 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
 }
 
 pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> {
-    let spec: RunSpec = read_json(&source.join("run.json"))?;
+    let source_spec: RunSpec = read_json(&source.join("run.json"))?;
     let profile: AgentProfile = read_json(&source.join("agent-profile.snapshot.json"))?;
+    let plan = replay_plan_from_source(source, &source_spec)?;
     profile.validate()?;
     if let Some(command) = first_command_word(&profile.command)
         && !command_exists(command)
     {
         bail!("replay blocker: required agent command missing: {command}");
     }
-    fs::write(
-        home.join("agents").join(format!("{}.toml", profile.name)),
-        toml::to_string_pretty(&profile)?,
-    )?;
-    execute_new_run(
-        home,
-        &profile.name,
-        &spec.benchmark.name,
-        &spec.benchmark.split,
-        json,
-        Some(spec.run_id),
-    )
+    let run_id = format!(
+        "{}-{}-{}-replay-{}",
+        profile.name,
+        source_spec.benchmark.name,
+        source_spec.benchmark.split,
+        timestamp_id()
+    );
+    let run_dir = home.join("runs").join(&run_id);
+    fs::create_dir_all(&run_dir)?;
+    let spec = replay_spec_from_source(&source_spec, run_id.clone(), now_rfc3339(), &run_dir);
+    validate_run_spec(&spec)?;
+    write_run_inputs(&run_dir, &spec, &profile, &plan)?;
+    let code = execute_plan(&run_dir, &spec, &profile, &plan)?;
+    if json {
+        print_json(&RunOutput {
+            schema_version: 1,
+            command: "run",
+            status: if code == 0 { "success" } else { "failure" },
+            run_id,
+            run_dir: run_dir.display().to_string(),
+            replay_source_run_id: spec.replay_source_run_id,
+        })?;
+    } else {
+        println!("run: {}", run_dir.display());
+    }
+    Ok(code)
 }
 
 fn execute_plan(
@@ -133,10 +170,20 @@ fn execute_plan(
         &event(&spec.run_id, None, "run_started", "run started"),
         &[],
     )?;
-    let mut attempts = Vec::new();
-    for task in &plan.tasks {
-        attempts.push(execute_task(run_dir, profile, task, 1)?);
-    }
+    let _sandbox_cleanup = RunSandboxCleanup::start(run_dir, spec, plan);
+    let (mut attempts, pending) = partition_attempts(run_dir, plan, spec.execution.attempts)?;
+    attempts.extend(execute_attempts(
+        run_dir,
+        spec,
+        profile,
+        pending,
+        spec.execution.concurrency,
+    )?);
+    attempts.sort_by(|left, right| {
+        left.task_id
+            .cmp(&right.task_id)
+            .then(left.attempt.cmp(&right.attempt))
+    });
     let results = summarize_results(&spec.run_id, attempts);
     atomic_write_json(&run_dir.join("results.json"), &results)?;
     let model = harnesslab_report::build_report_model(
@@ -158,8 +205,92 @@ fn execute_plan(
     Ok(derive_exit_code(&results.tasks, false))
 }
 
+fn execute_attempts(
+    run_dir: &Path,
+    spec: &RunSpec,
+    profile: &AgentProfile,
+    attempts: Vec<AttemptWork>,
+    concurrency: usize,
+) -> Result<Vec<TaskAttemptResult>> {
+    let mut results = Vec::new();
+    for chunk in attempts.chunks(concurrency.max(1)) {
+        let mut handles = Vec::new();
+        for work in chunk.iter().cloned() {
+            let run_dir = run_dir.to_path_buf();
+            let profile = profile.clone();
+            let spec = spec.clone();
+            handles.push(thread::spawn(move || {
+                execute_task(&run_dir, &spec, &profile, &work.task, work.attempt)
+            }));
+        }
+        let mut first_error = None;
+        for handle in handles {
+            match handle.join() {
+                Ok(Ok(result)) => results.push(result),
+                Ok(Err(error)) => {
+                    if first_error.is_none() {
+                        first_error = Some(error);
+                    }
+                }
+                Err(panic) => {
+                    if first_error.is_none() {
+                        first_error =
+                            Some(anyhow::anyhow!("task panicked: {}", panic_message(panic)));
+                    }
+                }
+            }
+        }
+        if let Some(error) = first_error {
+            return Err(error);
+        }
+    }
+    Ok(results)
+}
+
+fn panic_message(panic: Box<dyn Any + Send + 'static>) -> String {
+    if let Some(message) = panic.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = panic.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
+fn partition_attempts(
+    run_dir: &Path,
+    plan: &harnesslab_core::BenchmarkPlan,
+    attempts: u32,
+) -> Result<(Vec<TaskAttemptResult>, Vec<AttemptWork>)> {
+    let mut completed = Vec::new();
+    let mut pending = Vec::new();
+    for work in planned_attempts(plan, attempts) {
+        let result_path = attempt_result_path(run_dir, &work.task.task_id, work.attempt);
+        if result_path.exists() {
+            completed.push(read_json(&result_path)?);
+        } else {
+            pending.push(work);
+        }
+    }
+    Ok((completed, pending))
+}
+
+fn planned_attempts(plan: &harnesslab_core::BenchmarkPlan, attempts: u32) -> Vec<AttemptWork> {
+    let mut work = Vec::new();
+    for task in &plan.tasks {
+        for attempt in 1..=attempts.max(1) {
+            work.push(AttemptWork {
+                task: task.clone(),
+                attempt,
+            });
+        }
+    }
+    work
+}
+
 fn execute_task(
     run_dir: &Path,
+    spec: &RunSpec,
     profile: &AgentProfile,
     task: &TaskPlan,
     attempt: u32,
@@ -180,16 +311,15 @@ fn execute_task(
             .join("task.snapshot.json"),
         task,
     )?;
-    let agent = HostProcessExecutor::exec(&ExecSpec {
-        command: render_command(profile, task, &attempt_dir)?,
-        stdin: matches!(profile.input_mode, InputMode::Stdin | InputMode::Tty)
-            .then(|| task.instruction.clone()),
-        working_dir: workspace.clone(),
-        timeout_sec: agent_timeout(profile, task),
-        stdout_path: attempt_dir.join("agent/stdout.log"),
-        stderr_path: attempt_dir.join("agent/stderr.log"),
-    })?;
-    let agent_failure = classify_agent_process(&agent);
+    let agent_run = run_agent(spec, profile, task, attempt, &attempt_dir, &workspace)?;
+    let agent_failure = agent_run.sandbox_failure.map_or_else(
+        || classify_agent_process(&agent_run.process),
+        |code| harnesslab_core::Failure {
+            class: FailureClass::Execution,
+            code: Some(code),
+            message: "sandbox failed".to_string(),
+        },
+    );
     let (evaluation, patch, failure_class, failure_code, score) =
         if agent_failure.class == FailureClass::Execution {
             (None, None, agent_failure.class, agent_failure.code, 0.0)
@@ -228,7 +358,7 @@ fn execute_task(
         failure_code,
         benchmark_score: score,
         duration_ms: started.elapsed().as_millis() as u64,
-        agent: Some(agent),
+        agent: Some(agent_run.process),
         evaluation,
         patch,
         usage: UsageRecord::Unknown,
@@ -236,6 +366,15 @@ fn execute_task(
     };
     atomic_write_json(&attempt_dir.join("result.json"), &result)?;
     Ok(result)
+}
+
+fn attempt_result_path(run_dir: &Path, task_id: &str, attempt: u32) -> std::path::PathBuf {
+    run_dir
+        .join("tasks")
+        .join(task_id)
+        .join("attempts")
+        .join(attempt.to_string())
+        .join("result.json")
 }
 
 fn prepare_workspace(workspace: &Path, task: &TaskPlan) -> Result<()> {
@@ -313,22 +452,6 @@ fn patch_failure(patch: &Option<PatchRecord>) -> Option<harnesslab_core::Failure
     }
 }
 
-fn render_command(profile: &AgentProfile, task: &TaskPlan, attempt_dir: &Path) -> Result<String> {
-    match profile.input_mode {
-        InputMode::Argument => Ok(profile
-            .command
-            .replace("{{instruction}}", &shell_quote(&task.instruction))),
-        InputMode::File => {
-            let path = attempt_dir.join("instruction.txt");
-            fs::write(&path, &task.instruction)?;
-            Ok(profile
-                .command
-                .replace("{{instruction}}", &shell_quote(&path.display().to_string())))
-        }
-        InputMode::Stdin | InputMode::Tty => Ok(profile.command.clone()),
-    }
-}
-
 fn load_config(home: &Path) -> Result<GlobalConfig> {
     Ok(toml::from_str(&fs::read_to_string(
         home.join("config.toml"),
@@ -356,14 +479,6 @@ fn write_run_inputs(
     Ok(())
 }
 
-fn agent_timeout(profile: &AgentProfile, task: &TaskPlan) -> u64 {
-    if task.task_id.contains("agent-timeout") {
-        1
-    } else {
-        profile.timeout_sec
-    }
-}
-
 fn now_rfc3339() -> String {
     OffsetDateTime::now_utc()
         .format(&time::format_description::well_known::Rfc3339)
@@ -375,22 +490,6 @@ fn timestamp_id() -> String {
         .chars()
         .filter(|ch| ch.is_ascii_alphanumeric())
         .collect()
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn run_shell(cwd: &Path, command: &str) -> Result<()> {
-    let status = Command::new("sh")
-        .arg("-c")
-        .arg(command)
-        .current_dir(cwd)
-        .status()?;
-    if !status.success() {
-        bail!("command failed: {command}");
-    }
-    Ok(())
 }
 
 #[cfg(test)]
