@@ -253,8 +253,11 @@ No React/Vue/Svelte for MVP report. It would add build tooling and dependency we
 The default coverage gate:
 
 ```text
-cargo llvm-cov nextest --workspace --all-features --branch --cobertura --output-path coverage/cobertura.xml
-cargo llvm-cov report --json --output-path coverage/coverage.json
+cargo +nightly-2026-05-26 llvm-cov test --workspace --all-features --exclude xtask --branch --no-report
+cargo +nightly-2026-05-26 llvm-cov report --lcov --output-path coverage/lcov.info
+cargo run -p xtask -- check-coverage --lcov coverage/lcov.info --min-line 97 --min-branch 97
+cargo +nightly-2026-05-26 llvm-cov report --cobertura --output-path coverage/cobertura.xml
+cargo +nightly-2026-05-26 llvm-cov report --json --output-path coverage/coverage.json
 ```
 
 Branch coverage may require a pinned coverage toolchain until stable Rust exposes the required instrumentation cleanly. Production builds stay on stable Rust; the coverage toolchain is test-only and recorded in `rust-toolchain.coverage.toml` if needed.
@@ -264,7 +267,9 @@ Required thresholds remain:
 - line coverage `>= 95%`
 - branch coverage `>= 95%`
 - function coverage `>= 95%`
-- critical modules as defined in `coverage-critical.toml`: `>= 98%` line and `>= 95%` branch, matching `docs/mvp-development-spec.md` Section 14.1.
+- critical modules as defined in `coverage-critical.toml`: `>= 98%` line and `>= 95%` branch where LLVM branch counters exist, matching `docs/mvp-development-spec.md` Section 14.1.
+
+M0 activates the documented function-coverage waiver in `coverage-critical.toml` and substitutes a stricter line/branch gate of `>= 97%`. This is temporary until the Rust coverage path can report function coverage without duplicate unexecuted binary-test monomorphizations.
 
 ### Mutation
 
@@ -350,6 +355,7 @@ M0 must commit:
 
 ```text
 rust-toolchain.toml
+rust-toolchain.coverage.toml
 tools.versions.toml
 Cargo.toml
 crates/harnesslab-*/Cargo.toml

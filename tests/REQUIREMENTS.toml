@@ -1,0 +1,73 @@
+schema_version = 1
+
+[[requirements]]
+id = "cli_help_stable"
+title = "CLI help exposes the M0 command surface"
+area = "cli"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "4"
+
+[[requirements]]
+id = "cli_run_resume_replay_nested"
+title = "Resume and replay are nested under run"
+area = "cli"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+
+[requirements.source]
+doc = "docs/technology-decisions.md"
+section = "4"
+
+[[requirements]]
+id = "doctor_json_stable"
+title = "Doctor JSON has a stable machine-readable shape"
+area = "cli"
+risk = "high"
+expected_layers = ["integration"]
+required_runtime_proof = false
+
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+
+[[requirements]]
+id = "secret_redaction"
+title = "Known secret values are redacted from rendered output"
+area = "security"
+risk = "critical"
+expected_layers = ["unit"]
+required_runtime_proof = false
+
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "17"
+
+[[requirements]]
+id = "test_registry_gate"
+title = "Test registry validates requirement coverage"
+area = "test-engineering"
+risk = "critical"
+expected_layers = ["gate"]
+required_runtime_proof = true
+
+[requirements.source]
+doc = "docs/test-engineering.md"
+section = "5"
+
+[[requirements]]
+id = "coverage_gate"
+title = "Coverage gate enforces global, critical-module and new-file thresholds"
+area = "test-engineering"
+risk = "critical"
+expected_layers = ["gate"]
+required_runtime_proof = true
+
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "14"

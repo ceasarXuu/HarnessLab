@@ -869,6 +869,7 @@ M0 must pin the Rust toolchain and coverage engine before any production feature
 ```text
 coverage.engine: cargo-llvm-cov
 coverage.version: pinned in tools.versions.toml
+coverage.toolchain: rust-toolchain.coverage.toml
 coverage.command: scripts/test-after-change.sh
 coverage.config: coverage-critical.toml
 coverage.outputs:
@@ -877,6 +878,8 @@ coverage.outputs:
 ```
 
 If the selected coverage toolchain cannot report function/method coverage natively, M0 must either add an equivalent symbol-level coverage check or tighten both global line and branch thresholds to `>= 97%`. The waiver must be encoded in the coverage config, not handled manually.
+
+M0 uses this encoded waiver in `coverage-critical.toml`: Rust function coverage is deferred because the current cargo-llvm-cov path counts duplicate unexecuted CLI library monomorphizations during binary integration tests. The active M0 substitute gate is line `>= 97%` and branch `>= 97%`, enforced by `xtask check-coverage` over LCOV output. Critical modules are checked from the same LCOV file; branch thresholds apply only to modules with LLVM branch counters in the current code shape.
 
 Minimum thresholds for production code:
 
