@@ -10,6 +10,7 @@
 | `docs/architecture.md` | 定义核心架构、模块边界、关键 contract。 |
 | `docs/mvp-development-spec.md` | 定义具体开发切片、测试矩阵、通过标准和交付 gate。 |
 | `docs/test-engineering.md` | 定义防止测试丢失、跑偏和自欺的测试工程、registry、traceability、runtime proof 和 meta-test 体系。 |
+| `docs/technology-decisions.md` | 定义开发与测试工程关键技术选型、文件格式、依赖预算和 CI 工具。 |
 
 本文不重新讨论产品取舍。默认所有产品决策以 PRD 为准，所有模块边界以 architecture 为准。
 
@@ -96,21 +97,16 @@ flowchart TB
 
 ## 4. Repository Layout Target
 
-语言未最终决定前，先按模块边界约束目录。若选择 Python，可映射为包；若选择 Rust/Node，保持同等边界。
+MVP 使用 `docs/technology-decisions.md` 锁定的 Rust workspace。目录按模块边界拆分，禁止把 CLI、core、infra、adapter 和 report 混在同一 crate。
 
 ```text
-src/harnesslab/
-  cli/
-  app/
-  core/
-  config/
-  agents/
-  benchmarks/
-  sandbox/
-  artifacts/
-  usage/
-  report/
-  testing/
+crates/
+  harnesslab-cli/
+  harnesslab-core/
+  harnesslab-adapters/
+  harnesslab-infra/
+  harnesslab-report/
+xtask/
 tests/
   unit/
   contract/
@@ -130,22 +126,27 @@ scripts/
 
 ### 5.1 RunSpec
 
-```yaml
-schema_version: 1
-run_id: codex-default-terminal-bench-smoke-20260526T120000Z
-created_at: "2026-05-26T12:00:00Z"
-agent_profile_ref: codex-default
-benchmark:
-  name: terminal-bench
-  version: "2.x"
-  split: smoke
-execution:
-  concurrency: 4
-  attempts: 1
-  network: full
-  timeout_sec: null
-paths:
-  run_dir: "~/.harnesslab/runs/..."
+```json
+{
+  "schema_version": 1,
+  "run_id": "codex-default-terminal-bench-smoke-20260526T120000Z",
+  "created_at": "2026-05-26T12:00:00Z",
+  "agent_profile_ref": "codex-default",
+  "benchmark": {
+    "name": "terminal-bench",
+    "version": "2.x",
+    "split": "smoke"
+  },
+  "execution": {
+    "concurrency": 4,
+    "attempts": 1,
+    "network": "full",
+    "timeout_sec": null
+  },
+  "paths": {
+    "run_dir": "~/.harnesslab/runs/..."
+  }
+}
 ```
 
 Validation rules:
@@ -255,15 +256,16 @@ Rules:
 
 ### 6.1 Global Config
 
-```yaml
-schema_version: 1
-default_concurrency: 4
-default_attempts: 1
-runs_dir: "~/.harnesslab/runs"
-benchmarks_dir: "~/.harnesslab/benchmarks"
-network_default: full
-usage_default:
-  parser: none
+```toml
+schema_version = 1
+default_concurrency = 4
+default_attempts = 1
+runs_dir = "~/.harnesslab/runs"
+benchmarks_dir = "~/.harnesslab/benchmarks"
+network_default = "full"
+
+[usage_default]
+parser = "none"
 ```
 
 Validation:
@@ -274,29 +276,30 @@ Validation:
 
 ### 6.2 Agent Profile Schema
 
-```yaml
-schema_version: 1
-name: codex-default
-kind: codex
-display_name: Codex Default
-command: "codex exec --full-auto {{instruction}}"
-input_mode: argument
-working_dir: workspace
-timeout_sec: 3600
-auth:
-  inherit: true
-  inherit_env:
-    - OPENAI_API_KEY
-  include_paths:
-    - "~/.codex"
-  exclude_paths: []
-  mount_ssh_socket: false
-  mount_docker_socket: false
-usage:
-  parser: none
-labels:
-  model: user-configured
-version_command: "codex --version"
+```toml
+schema_version = 1
+name = "codex-default"
+kind = "codex"
+display_name = "Codex Default"
+command = "codex exec --full-auto {{instruction}}"
+input_mode = "argument"
+working_dir = "workspace"
+timeout_sec = 3600
+version_command = "codex --version"
+
+[auth]
+inherit = true
+inherit_env = ["OPENAI_API_KEY"]
+include_paths = ["~/.codex"]
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[usage]
+parser = "none"
+
+[labels]
+model = "user-configured"
 ```
 
 Validation:
@@ -313,10 +316,10 @@ Validation:
 
 | Agent | Detection | Generated profile |
 |---|---|---|
-| Codex CLI | executable `codex` in PATH. | `codex-default.yaml` |
-| Claude Code | executable `claude` in PATH. | `claude-code-default.yaml` |
-| opencode | executable `opencode` in PATH. | `opencode-default.yaml` |
-| Pi Coding Agent | executable `pi` in PATH and version command succeeds. | `pi-coding-agent-default.yaml` |
+| Codex CLI | executable `codex` in PATH. | `codex-default.toml` |
+| Claude Code | executable `claude` in PATH. | `claude-code-default.toml` |
+| opencode | executable `opencode` in PATH. | `opencode-default.toml` |
+| Pi Coding Agent | executable `pi` in PATH and version command succeeds. | `pi-coding-agent-default.toml` |
 
 Detection must be non-destructive and must not invoke model APIs.
 
@@ -363,17 +366,20 @@ Benchmark data state mapping:
 
 Returned by `BenchmarkAdapter.prepare(split)`:
 
-```yaml
-descriptor:
-  name: terminal-bench
-  style: terminal
-split: smoke
-data_state: ready
-prepared_at: "2026-05-26T12:00:00Z"
-task_count: 1
-cache_manifest_path: "~/.harnesslab/benchmarks/terminal-bench/manifest.json"
-size_bytes: 123456
-warnings: []
+```json
+{
+  "descriptor": {
+    "name": "terminal-bench",
+    "style": "terminal"
+  },
+  "split": "smoke",
+  "data_state": "ready",
+  "prepared_at": "2026-05-26T12:00:00Z",
+  "task_count": 1,
+  "cache_manifest_path": "~/.harnesslab/benchmarks/terminal-bench/manifest.json",
+  "size_bytes": 123456,
+  "warnings": []
+}
 ```
 
 Pass criteria:
@@ -384,17 +390,21 @@ Pass criteria:
 
 ### 7.3 TaskDescriptor
 
-```yaml
-task_id: fake-terminal-success
-split: smoke
-estimated_timeout_sec: 60
-resource_hint:
-  cpu_cores: 1
-  memory_mb: 1024
-source_ref:
-  benchmark: fake-terminal
-  upstream_id: success
-  checksum: sha256:...
+```json
+{
+  "task_id": "fake-terminal-success",
+  "split": "smoke",
+  "estimated_timeout_sec": 60,
+  "resource_hint": {
+    "cpu_cores": 1,
+    "memory_mb": 1024
+  },
+  "source_ref": {
+    "benchmark": "fake-terminal",
+    "upstream_id": "success",
+    "checksum": "sha256:..."
+  }
+}
 ```
 
 Pass criteria:
@@ -407,63 +417,74 @@ Pass criteria:
 
 Output of `BenchmarkRegistry.plan_run()`:
 
-```yaml
-benchmark:
-  name: terminal-bench
-  version: "2.x"
-split: smoke
-prepared_benchmark_ref: "~/.harnesslab/benchmarks/terminal-bench/manifest.json"
-tasks:
-  - task_id: fake-terminal-success
-run_config_overrides:
-  timeout_sec: null
-  network: none
-warnings: []
+```json
+{
+  "benchmark": {
+    "name": "terminal-bench",
+    "version": "2.x"
+  },
+  "split": "smoke",
+  "prepared_benchmark_ref": "~/.harnesslab/benchmarks/terminal-bench/manifest.json",
+  "tasks": [
+    { "task_id": "fake-terminal-success" }
+  ],
+  "run_config_overrides": {
+    "timeout_sec": null,
+    "network": "none"
+  },
+  "warnings": []
+}
 ```
 
 Pass criteria:
 
 - Plan contains only serializable data.
-- Plan is written into `benchmark.snapshot.yaml`.
+- Plan is written into `benchmark.snapshot.json`.
 - Plan contains all tasks selected by split and any CLI limit/filter.
 
 ### 7.5 TaskPlan
 
-```yaml
-task_id: fake-terminal-success
-instruction: "Create /workspace/result.txt with content ok"
-workspace_spec:
-  type: empty
-  target_path: /workspace
-  clean: true
-sandbox_spec:
-  image: harnesslab/fake-terminal:0.1.0@sha256:<fixture-image-digest>
-  mounts: []
-  env_vars: []
-  network: none
-  privileged: false
-  resource_limits:
-    cpu_cores: 1
-    memory_mb: 1024
-verifier_spec:
-  command: "bash /tests/test.sh"
-  working_dir: /workspace
-  timeout_sec: 60
-  expected_exit_codes: [0]
-  environment_mode: same_sandbox
-  output_parser: reward_file
-artifact_spec:
-  base_dir: /workspace
-  globs:
-    - "**/*"
-  required_paths: []
-  max_size_bytes: 10485760
+```json
+{
+  "task_id": "fake-terminal-success",
+  "instruction": "Create /workspace/result.txt with content ok",
+  "workspace_spec": {
+    "type": "empty",
+    "target_path": "/workspace",
+    "clean": true
+  },
+  "sandbox_spec": {
+    "image": "harnesslab/fake-terminal:0.1.0@sha256:<fixture-image-digest>",
+    "mounts": [],
+    "env_vars": [],
+    "network": "none",
+    "privileged": false,
+    "resource_limits": {
+      "cpu_cores": 1,
+      "memory_mb": 1024
+    }
+  },
+  "verifier_spec": {
+    "command": "bash /tests/test.sh",
+    "working_dir": "/workspace",
+    "timeout_sec": 60,
+    "expected_exit_codes": [0],
+    "environment_mode": "same_sandbox",
+    "output_parser": "reward_file"
+  },
+  "artifact_spec": {
+    "base_dir": "/workspace",
+    "globs": ["**/*"],
+    "required_paths": [],
+    "max_size_bytes": 10485760
+  }
+}
 ```
 
 Pass criteria:
 
 - Every supported benchmark task can be represented by TaskPlan.
-- TaskPlan can be serialized into `task.snapshot.yaml`.
+- TaskPlan can be serialized into `task.snapshot.json`.
 - TaskPlan contains no live process handle or non-serializable object.
 
 ### 7.6 Terminal-Style Adapter
@@ -667,7 +688,7 @@ Expected:
 - Replay fails before execution if required sandbox image tag/digest is unavailable.
 - If `version_command` exists and output differs from snapshot, replay readiness reports blocker or warning according to profile policy.
 - Replay readiness output lists blockers with stage/code/detail.
-- Replay `run.yaml` contains `replay_source_run_id`; report displays source run id as text because source path may not exist.
+- Replay `run.json` contains `replay_source_run_id`; report displays source run id as text because source path may not exist.
 
 ## 11. Report Acceptance
 
@@ -843,19 +864,19 @@ Docker-dependent tests must be included in the default gate once Docker provider
 
 Coverage is a hard engineering gate, not an informational metric.
 
-M0 must pin the implementation language and coverage engine before any production feature code lands. The selected coverage engine, version range, command, config file, and output formats must be recorded in the repository, for example:
+M0 must pin the Rust toolchain and coverage engine before any production feature code lands. The selected coverage engine, version range, command, config file, and output formats must be recorded in the repository, for example:
 
 ```text
-coverage.engine: coverage.py + pytest-cov
-coverage.version: >=7.0
+coverage.engine: cargo-llvm-cov
+coverage.version: pinned in tools.versions.toml
 coverage.command: scripts/test-after-change.sh
-coverage.config: .coveragerc
+coverage.config: coverage-critical.toml
 coverage.outputs:
   - coverage/cobertura.xml
   - coverage/coverage.json
 ```
 
-If the chosen language/toolchain cannot report function/method coverage natively, M0 must either add an equivalent symbol-level coverage check or tighten both global line and branch thresholds to `>= 97%`. The waiver must be encoded in the coverage config, not handled manually.
+If the selected coverage toolchain cannot report function/method coverage natively, M0 must either add an equivalent symbol-level coverage check or tighten both global line and branch thresholds to `>= 97%`. The waiver must be encoded in the coverage config, not handled manually.
 
 Minimum thresholds for production code:
 
@@ -876,9 +897,9 @@ Critical modules have stricter expectations:
 
 Coverage scope:
 
-- Included: all production source under `src/harnesslab/`.
+- Included: all production source under `crates/harnesslab-*/src/`.
 - Excluded by default: test files, generated files, vendored dependencies, type-only declarations, and benchmark fixture data.
-- HTML/CSS templates under `src/harnesslab/` are included when rendered at runtime by report code. Pure static assets can be excluded only with path-specific reasons.
+- HTML/CSS templates under `crates/harnesslab-report/` are included when rendered at runtime by report code. Pure static assets can be excluded only with path-specific reasons.
 - `scripts/test-after-change.sh` is covered by `GATE-M0` functional tests. If future gate logic moves into production source, it is included in coverage accounting.
 - Exclusions must be explicit in the coverage config and must include a one-line reason.
 - New production files must enter coverage accounting in the same PR that creates them.
@@ -901,7 +922,7 @@ Coverage artifacts:
 
 Critical module enforcement:
 
-- Critical thresholds must be represented in a checked-in config, for example `coverage-critical.yaml`.
+- Critical thresholds must be represented in a checked-in config, for example `coverage-critical.toml`.
 - The local gate must run both global coverage thresholds and critical-module thresholds.
 - A pass requires both global and critical coverage checks to pass.
 
@@ -1002,7 +1023,7 @@ Security tests must:
 
 1. Inject a known fake secret value, for example `HARNESSLAB_TEST_SECRET=test-secret-12345`.
 2. Run a fake benchmark that would expose the env if redaction failed.
-3. Scan generated `.yaml`, `.json`, `.jsonl`, `.html`, and `.txt` files for the literal fake secret.
+3. Scan generated `.toml`, `.json`, `.jsonl`, `.html`, and `.txt` files for the literal fake secret.
 4. Pass only if the literal secret is absent and the env var name appears with `[REDACTED]` where expected.
 
 ### 17.3 Test Cases
@@ -1014,7 +1035,7 @@ Security tests must:
 | SEC-003 | profile requests docker socket | warning emitted |
 | SEC-004 | report generated | no known secret values in HTML |
 | SEC-005 | artifact collection | manifest does not inline file content |
-| SEC-006 | config snapshot generated | `config.snapshot.yaml` does not contain known fake secret |
+| SEC-006 | config snapshot generated | `config.snapshot.json` does not contain known fake secret |
 | SEC-007 | task result generated | `result.json` does not contain known fake secret |
 | SEC-008 | raw agent logs contain secret | report links raw log but does not inline secret content |
 | SEC-009 | command snapshot generated | `command.txt` does not contain known fake secret |
@@ -1092,8 +1113,8 @@ Every implementation PR must answer:
 8. Attach or reference the `scripts/test-after-change.sh` output showing the coverage summary.
 9. If any metric dropped, what tests were added or what documented exclusion explains it?
 10. If any file is excluded from coverage, what is the checked-in exclusion reason?
-11. Which `tests/TEST_REGISTRY.yaml` entries and traceability rows changed?
-12. Which `tests/REQUIREMENTS.yaml` requirements changed or were added?
+11. Which `tests/TEST_REGISTRY.toml` entries and traceability rows changed?
+12. Which `tests/REQUIREMENTS.toml` requirements changed or were added?
 13. Which runtime proof artifact demonstrates that runtime-sensitive behavior still works?
 
 No PR should be accepted with only static tests if it changes runtime behavior. Runtime-sensitive changes require fake benchmark or Docker smoke coverage.
