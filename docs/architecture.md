@@ -124,8 +124,8 @@ CLI 不负责构建 Docker 命令，也不直接拼 report HTML。
 负责读写：
 
 ```text
-~/.harnesslab/config.yaml
-~/.harnesslab/agents/*.yaml
+~/.harnesslab/config.toml
+~/.harnesslab/agents/*.toml
 ~/.harnesslab/benchmarks/
 ~/.harnesslab/runs/
 ```
@@ -148,25 +148,26 @@ CLI 不负责构建 Docker 命令，也不直接拼 report HTML。
 
 Agent profile 是 opaque execution unit。核心字段：
 
-```yaml
-schema_version: 1
-name: codex-default
-kind: codex
-command: "codex exec --full-auto {{instruction}}"
-input_mode: argument
-working_dir: workspace
-timeout_sec: 3600
-auth:
-  inherit: true
-  inherit_env:
-    - OPENAI_API_KEY
-  include_paths:
-    - ~/.codex
-  mount_ssh_socket: false
-  mount_docker_socket: false
-usage:
-  parser: none
-labels: {}
+```toml
+schema_version = 1
+name = "codex-default"
+kind = "codex"
+command = "codex exec --full-auto {{instruction}}"
+input_mode = "argument"
+working_dir = "workspace"
+timeout_sec = 3600
+
+[auth]
+inherit = true
+inherit_env = ["OPENAI_API_KEY"]
+include_paths = ["~/.codex"]
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[usage]
+parser = "none"
+
+[labels]
 ```
 
 `auth.inherit` 是快捷开关，表示使用该 `kind` 的内置默认继承规则。规则展开后必须落到显式字段：
@@ -651,19 +652,19 @@ interrupted
 
 ```text
 ~/.harnesslab/runs/<agent>-<benchmark>-<split>-<timestamp>/
-  run.yaml
+  run.json
   command.txt
   snapshots/
-    config.snapshot.yaml
-    agent-profile.snapshot.yaml
-    benchmark.snapshot.yaml
+    config.snapshot.json
+    agent-profile.snapshot.json
+    benchmark.snapshot.json
     environment.snapshot.json
   results.json
   events.jsonl
   report.html
   tasks/
     <task-id>/
-      task.snapshot.yaml
+      task.snapshot.json
       attempts/
         1/
           instruction.md
@@ -684,7 +685,7 @@ interrupted
 
 原则：
 
-- 任何可复现输入都进入 `snapshots/` 或 `task.snapshot.yaml`。
+- 任何可复现输入都进入 `snapshots/` 或 `task.snapshot.json`。
 - 任何执行输出都进入 task attempt。
 - 顶层 `results.json` 是聚合索引，可以重建。
 - `events.jsonl` 是 append-only 操作日志，服务排障和未来可视化。
@@ -906,7 +907,7 @@ HarnessLab
   Test Fixtures
 ```
 
-具体语言和文件树后置到实现方案。无论选择 Python、Rust 还是 Node，以上模块边界和 contract 不应改变。
+MVP 技术栈和文件树以 `docs/technology-decisions.md` 为准：Rust workspace、TOML 用户配置、JSON/JSONL run artifacts。以上模块边界和 contract 不应因具体 crate 调整而改变。
 
 ## 18. 关键 ADR
 
