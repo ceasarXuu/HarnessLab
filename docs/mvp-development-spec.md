@@ -26,7 +26,8 @@ MVP 只有在以下条件全部满足时才算完成：
 8. `resume` 能从中断 run 继续，并不会覆盖旧 attempt。
 9. `replay` 能基于快照创建新 run，并在数据缺失时给出明确 blocker。
 10. 单文件 HTML 报告能离线打开，首屏和 task 明细满足 PRD。
-11. 所有测试 gate 通过，工作区无未提交变更。
+11. 测试覆盖率满足硬性 coverage gate：生产代码整体 line、branch、function/method coverage 均不低于 95%；若所选工具无法原生统计 function/method coverage，则按 Section 14.1 的替代规则执行更高 line/branch 阈值。
+12. 所有测试 gate 通过，工作区无未提交变更。
 
 ## 3. 开发切片
 
@@ -89,6 +90,7 @@ flowchart TB
 | `PATCH-*` | fake patch diff capture, prediction JSONL, patch failure cases. |
 | `SWEPRO-*` | SWE-bench Pro data readiness, smoke instance, evaluator mapping. |
 | `SEC-*` | secret redaction, docker socket warning, report/artifact scan. |
+| `COV-*` | coverage report generated, global thresholds enforced, exclusions audited. |
 
 ## 4. Repository Layout Target
 
@@ -825,8 +827,81 @@ Minimum responsibilities:
 4. Contract tests.
 5. Fast integration tests with fake benchmarks.
 6. Report golden tests.
+7. Coverage check.
 
 Docker-dependent tests must be included in the default gate once Docker provider exists. Before then, the script must print `SKIP` with a concrete reason, not silently omit them.
+
+### 14.1 Coverage Gate
+
+Coverage is a hard engineering gate, not an informational metric.
+
+M0 must pin the implementation language and coverage engine before any production feature code lands. The selected coverage engine, version range, command, config file, and output formats must be recorded in the repository, for example:
+
+```text
+coverage.engine: coverage.py + pytest-cov
+coverage.version: >=7.0
+coverage.command: scripts/test-after-change.sh
+coverage.config: .coveragerc
+coverage.outputs:
+  - coverage/cobertura.xml
+  - coverage/coverage.json
+```
+
+If the chosen language/toolchain cannot report function/method coverage natively, M0 must either add an equivalent symbol-level coverage check or tighten both global line and branch thresholds to `>= 97%`. The waiver must be encoded in the coverage config, not handled manually.
+
+Minimum thresholds for production code:
+
+| Metric | Threshold |
+|---|---:|
+| Line coverage | `>= 95%` |
+| Branch coverage | `>= 95%` |
+| Function / method coverage | `>= 95%` |
+
+Critical modules have stricter expectations:
+
+| Module area | Minimum |
+|---|---:|
+| Core models, state machine, failure classifier | `>= 98% line`, `>= 95% branch` |
+| Config validation and redaction | `>= 98% line`, `>= 95% branch` |
+| Run orchestrator, resume, replay validator | `>= 98% line`, `>= 95% branch` |
+| Usage parser and report model | `>= 95% line`, `>= 95% branch` |
+
+Coverage scope:
+
+- Included: all production source under `src/harnesslab/`.
+- Excluded by default: test files, generated files, vendored dependencies, type-only declarations, and benchmark fixture data.
+- HTML/CSS templates under `src/harnesslab/` are included when rendered at runtime by report code. Pure static assets can be excluded only with path-specific reasons.
+- `scripts/test-after-change.sh` is covered by `GATE-M0` functional tests. If future gate logic moves into production source, it is included in coverage accounting.
+- Exclusions must be explicit in the coverage config and must include a one-line reason.
+- New production files must enter coverage accounting in the same PR that creates them.
+
+Anti-gaming rules:
+
+- Do not raise coverage by testing only trivial import paths.
+- Do not exclude a file merely because it is hard to test.
+- Runtime behavior changes require at least one unit/contract test and, when applicable, a fake benchmark or Docker smoke test.
+- Coverage regressions below threshold fail `scripts/test-after-change.sh` and CI.
+- Critical modules must include error-path and edge-case tests, not only import or happy-path tests.
+- Starting at M13 hardening, critical modules must pass mutation testing with kill rate `>= 80%`, or the milestone must explicitly document why the selected language/toolchain cannot support mutation testing yet.
+
+Coverage artifacts:
+
+- Local gate must print a human-readable summary.
+- CI must produce Cobertura XML at `coverage/cobertura.xml` and JSON summary at `coverage/coverage.json`, or equivalent files documented by the pinned coverage engine.
+- CI must retain coverage artifacts according to repository CI retention policy; default target is at least 90 days.
+- Coverage report must include uncovered lines and branches for failed thresholds.
+
+Critical module enforcement:
+
+- Critical thresholds must be represented in a checked-in config, for example `coverage-critical.yaml`.
+- The local gate must run both global coverage thresholds and critical-module thresholds.
+- A pass requires both global and critical coverage checks to pass.
+
+New file enforcement:
+
+- CI must compare changed files against the merge base, for example `git merge-base origin/main HEAD`.
+- Any new file under production source that is missing from the coverage report fails CI.
+- This check should live in a script such as `scripts/check-new-file-coverage.sh` and run inside `scripts/test-after-change.sh` or CI.
 
 ## 15. CI Gate
 
@@ -838,10 +913,19 @@ unit
 contract
 integration-fast
 report-golden
+coverage
 docs-link-check
 ```
 
 CI may skip external Terminal-Bench and SWE-bench Pro smoke by default if data or runtime is too heavy, but must run fake terminal and fake patch every time.
+
+CI must fail if coverage drops below the thresholds in Section 14.1.
+
+Coverage scope for CI:
+
+- The required coverage gate is computed from unit, contract, report golden, and fast fake-benchmark integration tests.
+- External benchmark smoke jobs are not required to pass before the coverage gate can be evaluated.
+- If the toolchain supports coverage merge, external smoke coverage may be merged into the report, but thresholds must already pass without relying on external benchmark jobs.
 
 Nightly or manual CI should run:
 
@@ -923,7 +1007,24 @@ Security tests must:
 
 Security tests must use fake secret values and scan generated artifacts for those exact values.
 
-## 18. Performance Baselines
+## 18. Coverage Tests
+
+Coverage test IDs are gate assertions over the test suite itself:
+
+| ID | Scenario | Expected |
+|---|---|---|
+| COV-001 | coverage report generated | machine-readable and human-readable reports exist |
+| COV-002 | global line coverage | production code line coverage `>= 95%`, or active substituted threshold if function coverage is unavailable |
+| COV-003 | global branch coverage | production code branch coverage `>= 95%`, or active substituted threshold if function coverage is unavailable |
+| COV-004 | global function/method coverage | production code function/method coverage `>= 95%`, unless an encoded M0 waiver activates the line/branch substitution |
+| COV-005 | critical module coverage | critical module thresholds in Section 14.1 pass |
+| COV-006 | exclusion audit | every excluded production path has an explicit reason |
+| COV-007 | new file coverage | newly added production files are included in coverage accounting |
+| COV-008 | coverage tool pinned | engine, version range, command, config, and outputs are documented |
+| COV-009 | coverage artifacts | Cobertura XML and JSON summary, or documented equivalents, are generated |
+| COV-010 | critical config | checked-in critical module threshold config is enforced |
+
+## 19. Performance Baselines
 
 MVP does not optimize for large-scale throughput, but must avoid obvious regressions.
 
@@ -937,7 +1038,7 @@ MVP does not optimize for large-scale throughput, but must avoid obvious regress
 
 Performance tests are soft assertions until M13 hardening. Starting at M13, the baselines above become hard assertions unless the milestone explicitly revises them with evidence.
 
-## 19. Logging Standards
+## 20. Logging Standards
 
 Every structured event must include:
 
@@ -963,7 +1064,7 @@ Pass criteria:
 - Every task has `task_started` and terminal `task_finished` or `task_interrupted`.
 - Run has terminal `run_finished`, `run_failed`, or `run_paused`.
 
-## 20. Review Checklist For Each PR
+## 21. Review Checklist For Each PR
 
 Every implementation PR must answer:
 
@@ -974,14 +1075,17 @@ Every implementation PR must answer:
 5. Are artifacts and logs redacted?
 6. Does resume/replay behavior remain valid?
 7. Does the change preserve `docs/architecture.md` dependency direction?
+8. Attach or reference the `scripts/test-after-change.sh` output showing the coverage summary.
+9. If any metric dropped, what tests were added or what documented exclusion explains it?
+10. If any file is excluded from coverage, what is the checked-in exclusion reason?
 
 No PR should be accepted with only static tests if it changes runtime behavior. Runtime-sensitive changes require fake benchmark or Docker smoke coverage.
 
-## 21. First Implementation Task List
+## 22. First Implementation Task List
 
 Recommended first tasks:
 
-1. Create project skeleton and `scripts/test-after-change.sh`.
+1. Create project skeleton, pin coverage engine/config, and create `scripts/test-after-change.sh`.
 2. Implement schema validation for `RunSpec`, `AgentProfile`, `TaskPlan`, `TaskAttemptResult`.
 3. Implement artifact store with atomic JSON write and event append.
 4. Implement fake-terminal adapter without Docker, using host executor only for tests.

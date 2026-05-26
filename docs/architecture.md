@@ -864,6 +864,7 @@ MVP 实现时测试按边界设计：
 | Integration | Docker smoke sandbox、fake terminal benchmark、fake patch benchmark。 |
 | Golden | report model -> HTML snapshot。 |
 | Resume/Replay | crash 后 resume、snapshot replay、缺失数据错误。 |
+| Coverage | production code line、branch、function/method coverage 均不低于 95%；若工具链无法原生统计 function/method coverage，按 `docs/mvp-development-spec.md` 的替代阈值执行。 |
 
 必须先内置 fake benchmark：
 
