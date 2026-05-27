@@ -84,3 +84,21 @@ target/debug/harnesslab --home <external-temp-home> run --agent fake --benchmark
 - `docker info` 能返回 server 信息。
 - HarnessLab `doctor --json` 中 `docker.daemon` 为 `ok`。
 - `terminal-bench` smoke run 返回 `status = success`，`results.json` 中 `success = 1`。
+
+## Local Benchmark Data
+
+项目内 benchmark 数据放在 `.benchmarks/`，该目录必须被 `.gitignore` 忽略，避免把大体积数据集、上游任务文件或下载缓存提交进仓库。
+
+已下载数据：
+
+- Terminal-Bench: `.benchmarks/terminal-bench/terminal-bench-core-0.1.1`
+  - 下载命令：`uvx --from terminal-bench tb datasets download --dataset terminal-bench-core==0.1.1 --output-dir .benchmarks/terminal-bench/terminal-bench-core-0.1.1 --overwrite`
+  - 校验信号：`find .benchmarks/terminal-bench/terminal-bench-core-0.1.1 -name task.yaml | wc -l` 输出 `80`。
+- SWE-bench Pro: `.benchmarks/swe-bench-pro/ScaleAI__SWE-bench_Pro`
+  - 下载命令：`huggingface-cli download ScaleAI/SWE-bench_Pro --repo-type dataset --local-dir .benchmarks/swe-bench-pro/ScaleAI__SWE-bench_Pro --max-workers 4`
+  - 校验信号：`data/test-00000-of-00001.parquet` 有 `731` 行。
+
+注意：
+
+- Terminal-Bench 官方 registry 的 `terminal-bench-core==head` 当前下载会尝试复制临时 clone 下不存在的 `tasks/` 目录；本地使用固定版本 `0.1.1`，避免 head 漂移影响复现。
+- 下载日志可以临时放在 `.benchmarks/_logs/`，同样不追踪。
