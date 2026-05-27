@@ -1,19 +1,32 @@
 use harnesslab_core::{BenchmarkPlan, RunSpec};
-use harnesslab_infra::{DockerCliProvider, append_event, event};
+use harnesslab_infra::{CleanupResult, DockerCliProvider, append_event, event};
 use std::path::{Path, PathBuf};
+
+type CleanupFn = fn(&str) -> Result<CleanupResult, String>;
 
 pub(super) struct RunSandboxCleanup {
     run_id: String,
     events_path: PathBuf,
     enabled: bool,
+    cleanup_orphans: CleanupFn,
 }
 
 impl RunSandboxCleanup {
     pub(super) fn start(run_dir: &Path, spec: &RunSpec, plan: &BenchmarkPlan) -> Self {
+        Self::start_with_cleanup(run_dir, spec, plan, docker_cleanup_orphans)
+    }
+
+    fn start_with_cleanup(
+        run_dir: &Path,
+        spec: &RunSpec,
+        plan: &BenchmarkPlan,
+        cleanup_orphans: CleanupFn,
+    ) -> Self {
         let cleanup = Self {
             run_id: spec.run_id.clone(),
             events_path: run_dir.join("events.jsonl"),
             enabled: plan_requires_docker(plan),
+            cleanup_orphans,
         };
         cleanup.cleanup("pre_run");
         cleanup
@@ -23,7 +36,7 @@ impl RunSandboxCleanup {
         if !self.enabled {
             return;
         }
-        let message = match DockerCliProvider::cleanup_orphans(&self.run_id) {
+        let message = match (self.cleanup_orphans)(&self.run_id) {
             Ok(result) => format!(
                 "docker cleanup {phase}: removed {} sandbox container(s)",
                 result.removed.len()
@@ -36,6 +49,10 @@ impl RunSandboxCleanup {
             &[],
         );
     }
+}
+
+fn docker_cleanup_orphans(run_id: &str) -> Result<CleanupResult, String> {
+    DockerCliProvider::cleanup_orphans(run_id).map_err(|error| error.to_string())
 }
 
 impl Drop for RunSandboxCleanup {
@@ -54,8 +71,9 @@ pub(super) fn plan_requires_docker(plan: &BenchmarkPlan) -> bool {
 mod tests {
     use super::*;
     use harnesslab_core::{
-        ArtifactSpec, BenchmarkIdentity, ResourceHint, RunConfigOverrides, SandboxSpec, TaskPlan,
-        VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+        ArtifactSpec, BenchmarkIdentity, BenchmarkRef, ExecutionConfig, NetworkPolicy,
+        ResourceHint, RunConfigOverrides, RunPaths, SandboxSpec, TaskPlan, VerifierEnvironment,
+        VerifierSpec, WorkspaceSpec, WorkspaceType,
     };
 
     #[test]
@@ -63,6 +81,109 @@ mod tests {
         assert!(!plan_requires_docker(&plan_with_image("host")));
         assert!(!plan_requires_docker(&plan_with_image("host-fixture")));
         assert!(plan_requires_docker(&plan_with_image("ubuntu:24.04")));
+    }
+
+    #[test]
+    fn cleanup_002_docker_plan_writes_pre_and_post_cleanup_events() {
+        let run_dir = tempfile::tempdir().unwrap();
+        let spec = run_spec(run_dir.path());
+        let plan = plan_with_image("ubuntu:24.04");
+
+        {
+            let _cleanup =
+                RunSandboxCleanup::start_with_cleanup(run_dir.path(), &spec, &plan, ok_cleanup);
+        }
+
+        let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
+        let records = events
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(events.lines().count(), 2);
+        assert_eq!(records[0]["event"], "docker_cleanup");
+        assert_eq!(
+            records[0]["message"],
+            "docker cleanup pre_run: removed 1 sandbox container(s)"
+        );
+        assert_eq!(records[1]["event"], "docker_cleanup");
+        assert_eq!(
+            records[1]["message"],
+            "docker cleanup post_run: removed 1 sandbox container(s)"
+        );
+    }
+
+    #[test]
+    fn cleanup_003_non_docker_plan_writes_no_events() {
+        let run_dir = tempfile::tempdir().unwrap();
+        let spec = run_spec(run_dir.path());
+        let plan = plan_with_image("host-fixture");
+
+        {
+            let _cleanup =
+                RunSandboxCleanup::start_with_cleanup(run_dir.path(), &spec, &plan, panic_cleanup);
+        }
+
+        assert!(!run_dir.path().join("events.jsonl").exists());
+    }
+
+    #[test]
+    fn cleanup_004_cleanup_warning_is_recorded() {
+        let run_dir = tempfile::tempdir().unwrap();
+        let spec = run_spec(run_dir.path());
+        let plan = plan_with_image("ubuntu:24.04");
+
+        {
+            let _cleanup = RunSandboxCleanup::start_with_cleanup(
+                run_dir.path(),
+                &spec,
+                &plan,
+                warning_cleanup,
+            );
+        }
+
+        let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
+        assert!(events.contains("docker cleanup pre_run warning: cleanup unavailable"));
+        assert!(events.contains("docker cleanup post_run warning: cleanup unavailable"));
+    }
+
+    fn run_spec(run_dir: &Path) -> RunSpec {
+        RunSpec {
+            schema_version: 1,
+            run_id: "cleanup-test".to_string(),
+            created_at: "2026-05-27T00:00:00Z".to_string(),
+            agent_profile_ref: "fake".to_string(),
+            benchmark: BenchmarkRef {
+                name: "fake".to_string(),
+                version: "fixture".to_string(),
+                split: "smoke".to_string(),
+            },
+            execution: ExecutionConfig {
+                concurrency: 1,
+                attempts: 1,
+                network: NetworkPolicy::None,
+                timeout_sec: None,
+            },
+            paths: RunPaths {
+                run_dir: run_dir.display().to_string(),
+            },
+            replay_source_run_id: None,
+        }
+    }
+
+    fn ok_cleanup(run_id: &str) -> Result<CleanupResult, String> {
+        assert_eq!(run_id, "cleanup-test");
+        Ok(CleanupResult {
+            removed: vec!["container-1".to_string()],
+        })
+    }
+
+    fn panic_cleanup(_run_id: &str) -> Result<CleanupResult, String> {
+        panic!("cleanup must not run for host plans")
+    }
+
+    fn warning_cleanup(run_id: &str) -> Result<CleanupResult, String> {
+        assert_eq!(run_id, "cleanup-test");
+        Err("cleanup unavailable".to_string())
     }
 
     fn plan_with_image(image: &str) -> BenchmarkPlan {

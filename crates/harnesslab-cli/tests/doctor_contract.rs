@@ -3,6 +3,50 @@ use predicates::prelude::*;
 use std::fs;
 use std::path::Path;
 
+const MISSING_DOCKER_HOST: &str = "unix:///tmp/harnesslab-test-missing-docker.sock";
+
+#[test]
+fn doc_001_doctor_json_has_stable_shape() {
+    let home = tempfile::tempdir().unwrap();
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    assert_eq!(json["schema_version"], 1);
+    assert!(matches!(
+        json["status"].as_str(),
+        Some("ok" | "warning" | "error")
+    ));
+    let checks = json["checks"].as_array().unwrap();
+    assert!(!checks.is_empty());
+    let check = &checks[0];
+    assert!(check["id"].as_str().is_some());
+    assert!(check["status"].as_str().is_some());
+    assert!(check["severity"].as_str().is_some());
+    assert!(check["message"].as_str().is_some());
+    assert!(check["details"].is_object());
+}
+
+#[test]
+fn doc_002_doctor_text_reports_missing_home_config() {
+    let home = tempfile::tempdir().unwrap();
+
+    Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor"])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::contains("doctor: error"));
+}
+
 #[test]
 fn doc_003_doctor_reports_semantically_invalid_agent_profiles() {
     let home = tempfile::tempdir().unwrap();
@@ -34,6 +78,7 @@ parser = "none"
 
     Command::cargo_bin("harnesslab")
         .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
         .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
         .assert()
         .code(3)
@@ -48,6 +93,7 @@ fn doc_004_doctor_reports_builtin_benchmark_readiness() {
 
     Command::cargo_bin("harnesslab")
         .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
         .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
         .assert()
         .code(3)
@@ -86,6 +132,7 @@ parser = "none"
 
     Command::cargo_bin("harnesslab")
         .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
         .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
         .assert()
         .code(3)
@@ -101,6 +148,7 @@ fn doc_006_doctor_reports_agent_profile_load_errors() {
 
     Command::cargo_bin("harnesslab")
         .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
         .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
         .assert()
         .code(3)
