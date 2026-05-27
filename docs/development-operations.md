@@ -53,3 +53,34 @@ scripts/test-after-change.sh
 - run 执行前后会按 `harnesslab.run_id` 做 best-effort Docker orphan cleanup，并把结果写入 `events.jsonl` 的 `docker_cleanup` 事件；Docker 缺失时 cleanup warning 不应阻断报告生成。
 - `input_mode = "file"` 的 instruction 文件必须写入 workspace。容器任务传入 `/workspace/instruction.txt`，host 任务传入宿主机 workspace 内路径，避免 agent 看到未挂载的宿主机路径。
 - 真 Docker 正向 smoke 只应在 Docker CLI 和 daemon 可用时执行，不能作为本地 coverage gate 的必要条件。
+
+## Local Colima Setup
+
+本机使用轻量 Docker 方案：
+
+```bash
+brew install colima docker
+colima start --cpu 4 --memory 8 --disk 60 --runtime docker --vm-type vz --mount-type virtiofs --mount /Users/xuzhang:w --mount /Volumes/XU-1TB-NPM:w --save-config
+```
+
+存储约束：
+
+- `~/.colima` 软链接到 `/Volumes/XU-1TB-NPM/devtools/containers/colima`。
+- `~/.lima` 软链接到 `/Volumes/XU-1TB-NPM/devtools/containers/lima`。
+- VM、Docker 镜像、容器层和 Colima 数据都应落在外置盘；Docker CLI 配置 `~/.docker` 保留在 home，体积很小。
+- 必须显式挂载 `/Volumes/XU-1TB-NPM:w`，否则 Docker 容器里看不到外置盘项目目录，HarnessLab 的 bind mount 会变成空目录。
+
+已验证命令：
+
+```bash
+docker run --rm hello-world
+docker run --rm -v /Volumes/XU-1TB-NPM/projects/HarnessLab:/workspace -w /workspace alpine:3.20 sh -lc 'test -f Cargo.toml'
+target/debug/harnesslab --home <external-temp-home> run --agent fake --benchmark terminal-bench --split smoke --json
+```
+
+关键通过信号：
+
+- `colima list` 显示 default profile 为 `Running`，`4` CPU、`8GiB` memory、`60GiB` disk、runtime 为 `docker`。
+- `docker info` 能返回 server 信息。
+- HarnessLab `doctor --json` 中 `docker.daemon` 为 `ok`。
+- `terminal-bench` smoke run 返回 `status = success`，`results.json` 中 `success = 1`。
