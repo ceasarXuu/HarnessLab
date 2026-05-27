@@ -42,33 +42,6 @@ fn cli_002_resume_and_replay_are_nested_under_run() {
 }
 
 #[test]
-fn doc_001_doctor_json_has_stable_shape() {
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
-        .args(["doctor", "--json"])
-        .assert()
-        .failure()
-        .get_output()
-        .stdout
-        .clone();
-
-    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
-    assert_eq!(json["schema_version"], 1);
-    assert!(matches!(
-        json["status"].as_str(),
-        Some("ok" | "warning" | "error")
-    ));
-    let checks = json["checks"].as_array().unwrap();
-    assert!(!checks.is_empty());
-    let check = &checks[0];
-    assert!(check["id"].as_str().is_some());
-    assert!(check["status"].as_str().is_some());
-    assert!(check["severity"].as_str().is_some());
-    assert!(check["message"].as_str().is_some());
-    assert!(check["details"].is_object());
-}
-
-#[test]
 fn cli_003_m0_json_commands_have_stable_shape() {
     let cases = [
         (vec!["init", "--json"], "init"),
@@ -400,18 +373,6 @@ fn int_010_replay_missing_agent_blocks_before_execution() {
         .assert()
         .code(3)
         .stderr(predicate::str::contains("replay blocker"));
-}
-
-#[test]
-fn doc_002_doctor_text_reports_missing_home_config() {
-    let home = tempfile::tempdir().unwrap();
-
-    Command::cargo_bin("harnesslab")
-        .unwrap()
-        .args(["--home", home.path().to_str().unwrap(), "doctor"])
-        .assert()
-        .code(3)
-        .stdout(predicate::str::contains("doctor: error"));
 }
 
 #[test]

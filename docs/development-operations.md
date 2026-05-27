@@ -60,6 +60,7 @@ scripts/test-after-change.sh
 
 ```bash
 brew install colima docker
+brew install docker-compose docker-buildx
 colima start --cpu 4 --memory 8 --disk 60 --runtime docker --vm-type vz --mount-type virtiofs --mount <home>:w --mount <external-volume>:w --save-config
 ```
 
@@ -69,6 +70,7 @@ colima start --cpu 4 --memory 8 --disk 60 --runtime docker --vm-type vz --mount-
 - `~/.lima` 软链接到 `<external-volume>/devtools/containers/lima`。
 - VM、Docker 镜像、容器层和 Colima 数据都应落在外置盘；Docker CLI 配置 `~/.docker` 保留在 home，体积很小。
 - 必须显式挂载 `<external-volume>:w`，否则 Docker 容器里看不到外置盘项目目录，HarnessLab 的 bind mount 会变成空目录。
+- Docker Compose/buildx 是官方 Terminal-Bench CLI 的实际依赖。Homebrew 插件安装后，`~/.docker/config.json` 需要包含 `/opt/homebrew/lib/docker/cli-plugins` 作为 `cliPluginsExtraDirs`。
 
 已验证命令：
 
@@ -102,3 +104,30 @@ target/debug/harnesslab --home <external-temp-home> run --agent fake --benchmark
 
 - Terminal-Bench 官方 registry 的 `terminal-bench-core==head` 当前下载会尝试复制临时 clone 下不存在的 `tasks/` 目录；本地使用固定版本 `0.1.1`，避免 head 漂移影响复现。
 - 下载日志可以临时放在 `.benchmarks/_logs/`，同样不追踪。
+- 当前 HarnessLab 仍只内置 smoke adapter；`terminal-bench full` 和 `swe-bench-pro full` 还没有把 `.benchmarks/` 的真实数据接入 run plan。下载完成只说明本地数据可用，不代表 HarnessLab full split 已 ready。
+
+## Official Terminal-Bench Run
+
+官方 Terminal-Bench CLI 在 Colima 上运行时，Python Docker SDK 不会自动继承 Docker CLI context。执行 `tb run` 前需要显式设置 socket：
+
+```bash
+export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
+uvx --from terminal-bench tb run \
+  --dataset-path .benchmarks/terminal-bench/terminal-bench-core-0.1.1 \
+  --task-id hello-world \
+  --agent oracle \
+  --n-concurrent 1 \
+  --n-attempts 1 \
+  --output-path .benchmarks/_runs/terminal-bench-official \
+  --run-id oracle-hello-world-compose-timeout600 \
+  --no-upload-results \
+  --global-agent-timeout-sec 120 \
+  --global-test-timeout-sec 600 \
+  --log-level info
+```
+
+已验证信号：
+
+- Docker/Compose/buildx 可用后，`hello-world` + `oracle` 能完整跑完，`results.json` 中 `accuracy = 1.0`、`n_resolved = 1`。
+- 首次运行时容器内测试阶段可能卡在 Debian apt 下载；120 秒曾触发 `test_timeout`，600 秒完成。不要把这个误判为 agent 或 HarnessLab runner 失败。
+- 结果文件位于 `.benchmarks/_runs/terminal-bench-official/<run-id>/results.json`，容器内 agent/test 日志在同级任务目录下。
