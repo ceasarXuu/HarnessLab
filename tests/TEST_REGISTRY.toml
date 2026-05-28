@@ -309,6 +309,84 @@ requirements = ["benchmark_adapter_contract"]
 contracts = ["BenchmarkAdapter", "TaskPlan"]
 
 [[tests]]
+id = "C-BENCH-005"
+title = "Terminal-Bench local data discovery"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select C-BENCH-005"
+file_patterns = [
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["BenchmarkDescriptor", "DataState"]
+
+[[tests]]
+id = "C-BENCH-006"
+title = "SWE-bench Pro local data discovery"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select C-BENCH-006"
+file_patterns = [
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract"]
+contracts = ["BenchmarkDescriptor", "DataState"]
+
+[[tests]]
+id = "C-BENCH-007"
+title = "Unsupported full split is blocked before planning"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select C-BENCH-007"
+file_patterns = [
+  "crates/harnesslab-cli/src/benchmark_data.rs",
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract", "execution_runtime"]
+contracts = ["BenchmarkDescriptor", "DataState", "RunPreflight"]
+
+[[tests]]
+id = "C-BENCH-008"
+title = "SWE-bench Pro unsupported full split is blocked before planning"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select C-BENCH-008"
+file_patterns = [
+  "crates/harnesslab-cli/src/benchmark_data.rs",
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract", "execution_runtime"]
+contracts = ["BenchmarkDescriptor", "DataState", "RunPreflight"]
+
+[[tests]]
 id = "C-SBOX-001"
 title = "Docker health check is structured"
 layer = "contract"

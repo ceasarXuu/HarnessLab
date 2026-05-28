@@ -31,6 +31,10 @@ if [[ "${1:-}" == "--select" ]]; then
     C-BENCH-002) package="harnesslab-adapters"; test_name="fake_terminal::tests::c_bench_002_fake_terminal_task_plan_is_serializable" ;;
     C-BENCH-003) package="harnesslab-adapters"; test_name="fake_patch::tests::c_bench_003_fake_patch_plan_has_patch_spec" ;;
     C-BENCH-004) package="harnesslab-adapters"; test_name="registry::tests::c_bench_004_required_external_smoke_adapters_are_available" ;;
+    C-BENCH-005) package="harnesslab-cli"; test_name="bench_001_terminal_bench_info_uses_local_data_root" ;;
+    C-BENCH-006) package="harnesslab-cli"; test_name="bench_002_swe_bench_pro_info_uses_local_data_root" ;;
+    C-BENCH-007) package="harnesslab-cli"; test_name="bench_003_run_blocks_unsupported_local_full_split_before_planning" ;;
+    C-BENCH-008) package="harnesslab-cli"; test_name="bench_004_run_blocks_swe_bench_pro_full_before_planning" ;;
     ART-003) package="harnesslab-infra"; test_name="artifact::tests::art_003_atomic_json_write_produces_valid_json" ;;
     LOG-003) package="harnesslab-infra"; test_name="event::tests::log_003_events_are_redacted" ;;
     C-SBOX-001) package="harnesslab-infra"; test_name="docker::tests::c_sbox_001_health_check_is_structured" ;;

@@ -98,7 +98,8 @@ fn doc_004_doctor_reports_builtin_benchmark_readiness() {
         .assert()
         .code(3)
         .stdout(predicate::str::contains("benchmark.terminal-bench.smoke"))
-        .stdout(predicate::str::contains("benchmark.swe-bench-pro.full"));
+        .stdout(predicate::str::contains("benchmark.swe-bench-pro.full"))
+        .stdout(predicate::str::contains("data_state=requires_auth"));
 }
 
 #[test]
