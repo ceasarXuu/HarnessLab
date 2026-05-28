@@ -3,11 +3,12 @@ mod replay;
 mod sandbox;
 mod shell;
 
+use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
 use crate::output::{PathOutput, RunOutput};
 use crate::print_json;
 use anyhow::{Context, Result, bail};
 use cleanup::RunSandboxCleanup;
-use harnesslab_adapters::adapter_for;
+use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
     AgentProfile, BenchmarkRef, EvaluationRecord, FailureClass, FailureCode, GlobalConfig, Outcome,
     PatchRecord, PatchStatus, RunPaths, RunSpec, TaskAttemptResult, TaskPlan, TaskState,
@@ -49,8 +50,10 @@ pub(crate) fn execute_new_run(
     validate_global_config(&config)?;
     let profile = load_profile(home, agent_name)?;
     profile.validate()?;
-    let adapter = adapter_for(benchmark_name)
+    let benchmark_root = resolve_benchmarks_dir(home, Some(&config));
+    let adapter = adapter_for_with_root(benchmark_name, benchmark_root.as_deref())
         .with_context(|| format!("unknown benchmark {benchmark_name}"))?;
+    ensure_split_runnable(adapter.as_ref(), benchmark_name, split)?;
     let plan = adapter.plan(split).map_err(anyhow::Error::msg)?;
     let run_id = format!(
         "{}-{}-{}-{}",

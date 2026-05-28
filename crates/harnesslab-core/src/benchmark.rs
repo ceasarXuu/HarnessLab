@@ -36,6 +36,21 @@ pub enum DataState {
     Unsupported,
 }
 
+impl std::fmt::Display for DataState {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(match self {
+            DataState::NotDownloaded => "not_downloaded",
+            DataState::Downloading => "downloading",
+            DataState::Partial => "partial",
+            DataState::Ready => "ready",
+            DataState::Corrupted => "corrupted",
+            DataState::RequiresAuth => "requires_auth",
+            DataState::AuthFailed => "auth_failed",
+            DataState::Unsupported => "unsupported",
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PreparedBenchmark {
     pub descriptor: BenchmarkDescriptor,
@@ -188,8 +203,39 @@ mod tests {
 
     #[test]
     fn c_bench_001_data_state_blocking_policy_is_stable() {
-        assert!(!data_state_blocks_run(DataState::Ready));
-        assert!(!data_state_blocks_run(DataState::Partial));
-        assert!(data_state_blocks_run(DataState::NotDownloaded));
+        let runnable = [DataState::Ready, DataState::Partial];
+        let blocked = [
+            DataState::NotDownloaded,
+            DataState::Downloading,
+            DataState::Corrupted,
+            DataState::RequiresAuth,
+            DataState::AuthFailed,
+            DataState::Unsupported,
+        ];
+
+        for state in runnable {
+            assert!(!data_state_blocks_run(state), "{state} should be runnable");
+        }
+        for state in blocked {
+            assert!(data_state_blocks_run(state), "{state} should block run");
+        }
+    }
+
+    #[test]
+    fn c_bench_001_data_state_display_matches_json_names() {
+        let cases = [
+            (DataState::NotDownloaded, "not_downloaded"),
+            (DataState::Downloading, "downloading"),
+            (DataState::Partial, "partial"),
+            (DataState::Ready, "ready"),
+            (DataState::Corrupted, "corrupted"),
+            (DataState::RequiresAuth, "requires_auth"),
+            (DataState::AuthFailed, "auth_failed"),
+            (DataState::Unsupported, "unsupported"),
+        ];
+
+        for (state, expected) in cases {
+            assert_eq!(state.to_string(), expected);
+        }
     }
 }

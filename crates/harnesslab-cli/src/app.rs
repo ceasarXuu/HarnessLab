@@ -1,3 +1,4 @@
+use crate::benchmark_data::resolve_benchmarks_dir;
 use crate::output::{
     BenchmarkInfoOutput, BenchmarkListOutput, DoctorCheck, DoctorOutput, InitOutput, ListOutput,
     PathOutput,
@@ -7,7 +8,7 @@ use crate::{
     AgentCommand, BenchmarkCommand, Cli, Command, ReportCommand, RunAction, RunArgs, print_json,
 };
 use anyhow::{Context, Result};
-use harnesslab_adapters::built_in_descriptors;
+use harnesslab_adapters::built_in_descriptors_with_root;
 use harnesslab_core::{
     AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
 };
@@ -24,8 +25,8 @@ pub(crate) fn dispatch(cli: Cli) -> Result<i32> {
         },
         Command::Doctor { json } => doctor(&home, json),
         Command::Benchmark { command } => match command {
-            BenchmarkCommand::List { json } => benchmark_list(json),
-            BenchmarkCommand::Info { benchmark, json } => benchmark_info(&benchmark, json),
+            BenchmarkCommand::List { json } => benchmark_list(&home, json),
+            BenchmarkCommand::Info { benchmark, json } => benchmark_info(&home, &benchmark, json),
         },
         Command::Run(args) => run_command(&home, args),
         Command::Report { command } => match command {
@@ -106,18 +107,24 @@ fn doctor(home: &Path, json: bool) -> Result<i32> {
         "error",
         &docker.message,
     ));
-    for descriptor in built_in_descriptors() {
+    let config = load_config(home).ok();
+    let benchmark_root = resolve_benchmarks_dir(home, config.as_ref());
+    for descriptor in built_in_descriptors_with_root(benchmark_root.as_deref()) {
         for split in descriptor.splits {
             let blocked = data_state_blocks_run(split.data_state);
+            let message = if blocked {
+                format!(
+                    "Benchmark split is not ready locally (data_state={})",
+                    split.data_state
+                )
+            } else {
+                format!("Benchmark split is ready (data_state={})", split.data_state)
+            };
             checks.push(check_with_details(
                 &format!("benchmark.{}.{}", descriptor.name, split.name),
                 if blocked { "warning" } else { "ok" },
                 "warning",
-                if blocked {
-                    "Benchmark split is not ready locally"
-                } else {
-                    "Benchmark split is ready"
-                },
+                &message,
                 serde_json::json!({
                     "data_state": split.data_state,
                     "task_count": split.task_count,
@@ -187,8 +194,10 @@ fn doctor(home: &Path, json: bool) -> Result<i32> {
     Ok(if status == "error" { 3 } else { 0 })
 }
 
-fn benchmark_list(json: bool) -> Result<i32> {
-    let descriptors = built_in_descriptors();
+fn benchmark_list(home: &Path, json: bool) -> Result<i32> {
+    let config = load_config(home).ok();
+    let benchmark_root = resolve_benchmarks_dir(home, config.as_ref());
+    let descriptors = built_in_descriptors_with_root(benchmark_root.as_deref());
     if json {
         print_json(&BenchmarkListOutput {
             schema_version: 1,
@@ -204,8 +213,10 @@ fn benchmark_list(json: bool) -> Result<i32> {
     Ok(0)
 }
 
-fn benchmark_info(name: &str, json: bool) -> Result<i32> {
-    let descriptor = built_in_descriptors()
+fn benchmark_info(home: &Path, name: &str, json: bool) -> Result<i32> {
+    let config = load_config(home).ok();
+    let benchmark_root = resolve_benchmarks_dir(home, config.as_ref());
+    let descriptor = built_in_descriptors_with_root(benchmark_root.as_deref())
         .into_iter()
         .find(|descriptor| descriptor.name == name)
         .with_context(|| format!("unknown benchmark {name}"))?;
@@ -311,6 +322,12 @@ fn resolve_home(home: Option<PathBuf>) -> PathBuf {
     home.or_else(|| std::env::var_os("HARNESSLAB_HOME").map(PathBuf::from))
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".harnesslab")))
         .unwrap_or_else(|| PathBuf::from(".harnesslab"))
+}
+
+fn load_config(home: &Path) -> Result<GlobalConfig> {
+    Ok(toml::from_str(&fs::read_to_string(
+        home.join("config.toml"),
+    )?)?)
 }
 
 fn check(id: &str, status: &str, severity: &str, message: &str) -> DoctorCheck {

@@ -104,7 +104,8 @@ target/debug/harnesslab --home <external-temp-home> run --agent fake --benchmark
 
 - Terminal-Bench 官方 registry 的 `terminal-bench-core==head` 当前下载会尝试复制临时 clone 下不存在的 `tasks/` 目录；本地使用固定版本 `0.1.1`，避免 head 漂移影响复现。
 - 下载日志可以临时放在 `.benchmarks/_logs/`，同样不追踪。
-- 当前 HarnessLab 仍只内置 smoke adapter；`terminal-bench full` 和 `swe-bench-pro full` 还没有把 `.benchmarks/` 的真实数据接入 run plan。下载完成只说明本地数据可用，不代表 HarnessLab full split 已 ready。
+- HarnessLab 已能发现 `.benchmarks/` 下的真实数据，并在 `benchmark info` 中报告本地 task count：Terminal-Bench `80`，SWE-bench Pro `731`。
+- 当前真实数据只完成 discovery；`terminal-bench full` 和 `swe-bench-pro full` 的执行 adapter 仍未实现，因此 `data_state` 会显示 `unsupported`，`run` 预检查会在生成执行计划前拒绝启动 full run。
 
 ## Official Terminal-Bench Run
 

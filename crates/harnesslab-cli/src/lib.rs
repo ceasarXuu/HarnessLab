@@ -1,4 +1,5 @@
 mod app;
+mod benchmark_data;
 mod output;
 mod runner;
 

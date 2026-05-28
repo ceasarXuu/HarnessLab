@@ -1,6 +1,7 @@
 use harnesslab_core::{
     BenchmarkDescriptor, BenchmarkIdentity, BenchmarkPlan, RunConfigOverrides, TaskPlan,
 };
+use std::path::Path;
 
 pub trait BenchmarkAdapter {
     fn descriptor(&self) -> BenchmarkDescriptor;
@@ -11,17 +12,30 @@ pub fn built_in_descriptors() -> Vec<BenchmarkDescriptor> {
     vec![
         crate::FakeTerminalAdapter.descriptor(),
         crate::FakePatchAdapter.descriptor(),
-        crate::TerminalBenchAdapter.descriptor(),
-        crate::SweBenchProAdapter.descriptor(),
+        crate::TerminalBenchAdapter::new().descriptor(),
+        crate::SweBenchProAdapter::new().descriptor(),
+    ]
+}
+
+pub fn built_in_descriptors_with_root(root: Option<&Path>) -> Vec<BenchmarkDescriptor> {
+    vec![
+        crate::FakeTerminalAdapter.descriptor(),
+        crate::FakePatchAdapter.descriptor(),
+        crate::TerminalBenchAdapter::with_data_root(root).descriptor(),
+        crate::SweBenchProAdapter::with_data_root(root).descriptor(),
     ]
 }
 
 pub fn adapter_for(name: &str) -> Option<Box<dyn BenchmarkAdapter>> {
+    adapter_for_with_root(name, None)
+}
+
+pub fn adapter_for_with_root(name: &str, root: Option<&Path>) -> Option<Box<dyn BenchmarkAdapter>> {
     match name {
         "fake-terminal" => Some(Box::new(crate::FakeTerminalAdapter)),
         "fake-patch" => Some(Box::new(crate::FakePatchAdapter)),
-        "terminal-bench" => Some(Box::new(crate::TerminalBenchAdapter)),
-        "swe-bench-pro" => Some(Box::new(crate::SweBenchProAdapter)),
+        "terminal-bench" => Some(Box::new(crate::TerminalBenchAdapter::with_data_root(root))),
+        "swe-bench-pro" => Some(Box::new(crate::SweBenchProAdapter::with_data_root(root))),
         _ => None,
     }
 }
