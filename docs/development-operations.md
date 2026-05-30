@@ -105,7 +105,7 @@ target/debug/harnesslab --home <external-temp-home> run --agent fake --benchmark
 - Terminal-Bench 官方 registry 的 `terminal-bench-core==head` 当前下载会尝试复制临时 clone 下不存在的 `tasks/` 目录；本地使用固定版本 `0.1.1`，避免 head 漂移影响复现。
 - 下载日志可以临时放在 `.benchmarks/_logs/`，同样不追踪。
 - HarnessLab 已能发现 `.benchmarks/` 下的真实数据，并在 `benchmark info` 中报告本地 task count：Terminal-Bench `80`，SWE-bench Pro `731`。
-- 当前真实数据只完成 discovery；`terminal-bench full` 和 `swe-bench-pro full` 的执行 adapter 仍未实现，因此 `data_state` 会显示 `unsupported`，`run` 预检查会在生成执行计划前拒绝启动 full run。
+- 当前真实数据已接入 HarnessLab external runner。`terminal-bench` 通过官方 `tb run` 执行，`swe-bench-pro` 通过官方 local Docker evaluator 执行；`smoke` 用于快速真实链路验证，`full` 会基于本地数据枚举完整 task 集。
 
 ## Official Terminal-Bench Run
 
@@ -130,6 +130,7 @@ uvx --from terminal-bench tb run \
 已验证信号：
 
 - Docker/Compose/buildx 可用后，`hello-world` + `oracle` 能完整跑完，`results.json` 中 `accuracy = 1.0`、`n_resolved = 1`。
+- HarnessLab external runner 已能用 `tb-oracle` profile 跑通真实 `terminal-bench/smoke`，并在 run 目录同时保存官方 `results.json`、agent/test 日志、HarnessLab `results.json` 和 `report.html`。
 - 首次运行时容器内测试阶段可能卡在 Debian apt 下载；120 秒曾触发 `test_timeout`，600 秒完成。不要把这个误判为 agent 或 HarnessLab runner 失败。
 - 结果文件位于 `.benchmarks/_runs/terminal-bench-official/<run-id>/results.json`，容器内 agent/test 日志在同级任务目录下。
 - `run-id` 必须全小写；Docker Compose 会把它拼进 project name，包含大写 `T/Z` 的时间戳会触发 `invalid project name`。
@@ -166,4 +167,5 @@ DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" uv run \
 - 官方 evaluator 使用 `jefzda/sweap-images:<dockerhub_tag>` 预构建镜像，不需要本机构建全部镜像。
 - Apple Silicon 上必须显式使用 `--docker_platform linux/amd64`，否则可能拉取不到匹配镜像。
 - gold patch 首条 instance 输出 `Overall accuracy: 1.0`，结果在 `.benchmarks/_runs/swe-bench-pro-official/gold-first/`。
+- HarnessLab external runner 已能用 `swe-gold` profile 跑通真实 `swe-bench-pro/smoke`，从 parquet 抽取 instance metadata，准备官方 Docker image `/app` workspace，捕获 `patch.diff`/`prediction.json`，调用官方 evaluator，并生成 HarnessLab `results.json` 和 `report.html`。
 - `uv run` 过程中如果宿主 Python 环境泄漏出 NumPy 1.x 编译扩展 warning，只要 evaluator 继续运行且最终 accuracy 输出正常，不要误判为官方 evaluator 失败；后续可通过更干净的 uv venv 固化。

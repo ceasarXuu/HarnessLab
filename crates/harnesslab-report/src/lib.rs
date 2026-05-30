@@ -34,6 +34,8 @@ pub struct TaskRow {
     pub has_patch: bool,
     pub stdout_link: String,
     pub stderr_link: String,
+    pub verifier_stdout_link: String,
+    pub verifier_stderr_link: String,
 }
 
 #[derive(Debug, Clone)]
@@ -85,7 +87,7 @@ pub struct ReportContext {
         <td>{{ row.duration_ms }} ms</td>
         <td>{{ row.usage }}</td>
         <td>{% if row.has_patch %}<a href="{{ row.patch_href }}">diff</a>{% else %}n/a{% endif %}</td>
-        <td><a href="{{ row.stdout_link }}">stdout</a> <a href="{{ row.stderr_link }}">stderr</a></td>
+        <td><a href="{{ row.stdout_link }}">agent stdout</a> <a href="{{ row.stderr_link }}">agent stderr</a> <a href="{{ row.verifier_stdout_link }}">verifier stdout</a> <a href="{{ row.verifier_stderr_link }}">verifier stderr</a></td>
       </tr>
     {% endfor %}
     </tbody>
@@ -129,6 +131,16 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
                 ),
                 stderr_link: format!(
                     "tasks/{}/attempts/{}/agent/stderr.log",
+                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
+                    task.attempt
+                ),
+                verifier_stdout_link: format!(
+                    "tasks/{}/attempts/{}/verifier/stdout.log",
+                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
+                    task.attempt
+                ),
+                verifier_stderr_link: format!(
+                    "tasks/{}/attempts/{}/verifier/stderr.log",
                     task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
                     task.attempt
                 ),
@@ -249,6 +261,7 @@ mod tests {
         assert!(html.contains("HarnessLab Run Report"));
         assert!(html.contains("cost not comparable"));
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
+        assert!(html.contains("tasks/task-1/attempts/1/verifier/stdout.log"));
     }
 
     #[test]

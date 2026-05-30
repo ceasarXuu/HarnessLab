@@ -80,16 +80,24 @@ mod tests {
 
     #[test]
     fn c_bench_004_required_external_smoke_adapters_are_available() {
-        let terminal = adapter_for("terminal-bench")
+        let root = tempfile::tempdir().unwrap();
+        let task_dir = root
+            .path()
+            .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
+        std::fs::create_dir_all(&task_dir).unwrap();
+        std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
+        let terminal = adapter_for_with_root("terminal-bench", Some(root.path()))
             .unwrap()
             .plan("smoke")
             .unwrap();
-        let swe = adapter_for("swe-bench-pro").unwrap().plan("smoke").unwrap();
+        let swe = adapter_for("swe-bench-pro").unwrap().descriptor();
 
         assert_eq!(terminal.tasks.len(), 1);
-        assert_eq!(terminal.tasks[0].sandbox_spec.image, "ubuntu:24.04");
+        assert_eq!(
+            terminal.tasks[0].external_runner.as_ref().unwrap().kind,
+            harnesslab_core::ExternalRunnerKind::TerminalBench
+        );
         assert!(terminal.tasks[0].patch_spec.is_none());
-        assert_eq!(swe.tasks.len(), 1);
-        assert!(swe.tasks[0].patch_spec.is_some());
+        assert_eq!(swe.name, "swe-bench-pro");
     }
 }

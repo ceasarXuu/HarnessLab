@@ -1,4 +1,5 @@
 mod cleanup;
+mod external;
 mod patch;
 mod replay;
 mod sandbox;
@@ -66,6 +67,7 @@ pub(crate) fn execute_new_run(
     ensure_split_runnable(adapter.as_ref(), benchmark_name, split)?;
     let plan = adapter.plan(split).map_err(anyhow::Error::msg)?;
     validate_benchmark_plan(&plan)?;
+    external::validate_profile_for_plan(&profile, &plan.tasks)?;
     let run_id = format!(
         "{}-{}-{}-{}",
         agent_name,
@@ -122,6 +124,7 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
     validate_run_spec(&spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
+    external::validate_profile_for_plan(&profile, &plan.tasks)?;
     let code = execute_plan(run_dir, &spec, &profile, &plan, ExecutionMode::Resume)?;
     if json {
         print_json(&PathOutput {
@@ -143,6 +146,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     let plan = replay_plan_from_source(source, &source_spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
+    external::validate_profile_for_plan(&profile, &plan.tasks)?;
     if let Some(command) = first_command_word(&profile.command)
         && !command_exists(command)
     {
@@ -352,6 +356,18 @@ fn execute_task(
             .join("task.snapshot.json"),
         task,
     )?;
+    if external::is_external_task(task) {
+        return external::execute_external_task(external::ExternalTaskExecution {
+            run_dir,
+            spec,
+            profile,
+            task,
+            attempt,
+            provenance,
+            attempt_dir: &attempt_dir,
+            started,
+        });
+    }
     let agent_run = run_agent(spec, profile, task, attempt, &attempt_dir, &workspace)?;
     let agent_failure = agent_run.sandbox_failure.map_or_else(
         || classify_agent_process(&agent_run.process),

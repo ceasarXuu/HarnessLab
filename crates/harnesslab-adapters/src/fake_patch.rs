@@ -87,6 +87,7 @@ fn patch_task(id: &str, instruction: &str, verifier: &str) -> TaskPlan {
             diff_path: "patch.diff".to_string(),
             prediction_path: "prediction.jsonl".to_string(),
         }),
+        external_runner: None,
     }
 }
 
