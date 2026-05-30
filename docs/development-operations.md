@@ -132,3 +132,38 @@ uvx --from terminal-bench tb run \
 - Docker/Compose/buildx 可用后，`hello-world` + `oracle` 能完整跑完，`results.json` 中 `accuracy = 1.0`、`n_resolved = 1`。
 - 首次运行时容器内测试阶段可能卡在 Debian apt 下载；120 秒曾触发 `test_timeout`，600 秒完成。不要把这个误判为 agent 或 HarnessLab runner 失败。
 - 结果文件位于 `.benchmarks/_runs/terminal-bench-official/<run-id>/results.json`，容器内 agent/test 日志在同级任务目录下。
+- `run-id` 必须全小写；Docker Compose 会把它拼进 project name，包含大写 `T/Z` 的时间戳会触发 `invalid project name`。
+
+## Official SWE-bench Pro Run
+
+SWE-bench Pro 官方仓库和运行产物放在 `.benchmarks/` 下，避免进入 git 跟踪：
+
+```bash
+git clone --depth 1 https://github.com/scaleapi/SWE-bench_Pro-os.git .benchmarks/_src/SWE-bench_Pro-os
+```
+
+本机已验证 local Docker evaluator 能跑通 public 数据第一条 instance 的 gold patch：
+
+```bash
+cd .benchmarks/_src/SWE-bench_Pro-os
+DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" uv run \
+  --with docker --with pandas --with tqdm --with pyarrow --with modal --with datasets \
+  python swe_bench_pro_eval.py \
+  --raw_sample_path ../../_runs/swe-bench-pro-official/gold-first/raw_sample.csv \
+  --patch_path ../../_runs/swe-bench-pro-official/gold-first/gold_patches.json \
+  --output_dir ../../_runs/swe-bench-pro-official/gold-first/eval \
+  --scripts_dir run_scripts \
+  --dockerhub_username jefzda \
+  --use_local_docker \
+  --docker_platform linux/amd64 \
+  --num_workers 1 \
+  --redo
+```
+
+已验证信号：
+
+- 本地数据 `.benchmarks/swe-bench-pro/ScaleAI__SWE-bench_Pro/data/test-00000-of-00001.parquet` 有 `731` 行。
+- 官方 evaluator 使用 `jefzda/sweap-images:<dockerhub_tag>` 预构建镜像，不需要本机构建全部镜像。
+- Apple Silicon 上必须显式使用 `--docker_platform linux/amd64`，否则可能拉取不到匹配镜像。
+- gold patch 首条 instance 输出 `Overall accuracy: 1.0`，结果在 `.benchmarks/_runs/swe-bench-pro-official/gold-first/`。
+- `uv run` 过程中如果宿主 Python 环境泄漏出 NumPy 1.x 编译扩展 warning，只要 evaluator 继续运行且最终 accuracy 输出正常，不要误判为官方 evaluator 失败；后续可通过更干净的 uv venv 固化。

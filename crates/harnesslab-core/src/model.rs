@@ -106,6 +106,8 @@ pub struct TaskAttemptResult {
     pub schema_version: u32,
     pub task_id: String,
     pub attempt: u32,
+    #[serde(default)]
+    pub provenance: AttemptProvenance,
     pub state: TaskState,
     pub outcome: Outcome,
     pub failure_class: FailureClass,
@@ -117,6 +119,15 @@ pub struct TaskAttemptResult {
     pub patch: Option<PatchRecord>,
     pub usage: crate::UsageRecord,
     pub warnings: Vec<FailureCode>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AttemptProvenance {
+    #[default]
+    Original,
+    Resumed,
+    Recovery,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -189,6 +200,10 @@ pub enum ModelError {
     MissingAgent,
     #[error("benchmark name and split are required")]
     MissingBenchmark,
+    #[error("unsafe task_id {0}")]
+    UnsafeTaskId(String),
+    #[error("unsafe artifact path {0}")]
+    UnsafeArtifactPath(String),
     #[error("attempts and concurrency must be >= 1")]
     InvalidExecution,
     #[error("invalid transition {from:?} -> {to:?}")]
@@ -210,6 +225,27 @@ pub fn validate_run_spec(spec: &RunSpec) -> Result<(), ModelError> {
     }
     if spec.execution.attempts == 0 || spec.execution.concurrency == 0 {
         return Err(ModelError::InvalidExecution);
+    }
+    Ok(())
+}
+
+pub fn validate_benchmark_plan(plan: &crate::BenchmarkPlan) -> Result<(), ModelError> {
+    for task in &plan.tasks {
+        if crate::task_dir_name(&task.task_id).is_err() {
+            return Err(ModelError::UnsafeTaskId(task.task_id.clone()));
+        }
+        for path in &task.artifact_spec.required_paths {
+            if crate::report_artifact_path(path).is_err() {
+                return Err(ModelError::UnsafeArtifactPath(path.clone()));
+            }
+        }
+        if let Some(patch) = &task.patch_spec {
+            for path in [&patch.diff_path, &patch.prediction_path] {
+                if crate::report_artifact_path(path).is_err() {
+                    return Err(ModelError::UnsafeArtifactPath(path.clone()));
+                }
+            }
+        }
     }
     Ok(())
 }
@@ -268,25 +304,26 @@ pub fn derive_exit_code(results: &[TaskAttemptResult], run_level_failed: bool) -
     if run_level_failed || results.is_empty() {
         return 3;
     }
-    if results
+    let effective = effective_attempts(results);
+    if effective
         .iter()
         .any(|result| result.state == TaskState::Interrupted)
     {
         return 130;
     }
-    if results
+    if effective
         .iter()
         .any(|result| result.failure_class == FailureClass::Execution)
     {
         return 1;
     }
-    if results
+    if effective
         .iter()
         .any(|result| result.failure_class == FailureClass::Benchmark)
     {
         return 2;
     }
-    if results
+    if effective
         .iter()
         .any(|result| result.outcome == Outcome::PartialSuccess)
     {
@@ -296,8 +333,9 @@ pub fn derive_exit_code(results: &[TaskAttemptResult], run_level_failed: bool) -
 }
 
 pub fn summarize_results(run_id: impl Into<String>, tasks: Vec<TaskAttemptResult>) -> RunResults {
+    let effective = effective_attempts(&tasks);
     let mut summary = RunSummary {
-        total_tasks: tasks.len(),
+        total_tasks: effective.len(),
         success: 0,
         partial_success: 0,
         benchmark_failure: 0,
@@ -306,7 +344,7 @@ pub fn summarize_results(run_id: impl Into<String>, tasks: Vec<TaskAttemptResult
         total_duration_ms: 0,
         total_score: 0.0,
     };
-    for task in &tasks {
+    for task in effective {
         match task.outcome {
             Outcome::Success => summary.success += 1,
             Outcome::PartialSuccess => summary.partial_success += 1,
@@ -329,6 +367,21 @@ pub fn summarize_results(run_id: impl Into<String>, tasks: Vec<TaskAttemptResult
         tasks,
         summary,
     }
+}
+
+fn effective_attempts(results: &[TaskAttemptResult]) -> Vec<&TaskAttemptResult> {
+    let mut latest = BTreeMap::new();
+    for result in results {
+        latest
+            .entry(result.task_id.as_str())
+            .and_modify(|current: &mut &TaskAttemptResult| {
+                if result.attempt > current.attempt {
+                    *current = result;
+                }
+            })
+            .or_insert(result);
+    }
+    latest.into_values().collect()
 }
 
 pub fn metadata() -> BTreeMap<String, String> {

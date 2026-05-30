@@ -16,6 +16,16 @@ pub struct GlobalConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UsageConfig {
     pub parser: String,
+    #[serde(default = "default_usage_source")]
+    pub source: String,
+    #[serde(default = "default_input_tokens_key")]
+    pub input_tokens_key: String,
+    #[serde(default = "default_output_tokens_key")]
+    pub output_tokens_key: String,
+    #[serde(default = "default_total_tokens_key")]
+    pub total_tokens_key: String,
+    #[serde(default = "default_cost_usd_key")]
+    pub cost_usd_key: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,9 +111,20 @@ impl Default for GlobalConfig {
             runs_dir: "~/.harnesslab/runs".to_string(),
             benchmarks_dir: "~/.harnesslab/benchmarks".to_string(),
             network_default: crate::NetworkPolicy::Full,
-            usage_default: UsageConfig {
-                parser: "none".to_string(),
-            },
+            usage_default: UsageConfig::default(),
+        }
+    }
+}
+
+impl Default for UsageConfig {
+    fn default() -> Self {
+        Self {
+            parser: "none".to_string(),
+            source: default_usage_source(),
+            input_tokens_key: default_input_tokens_key(),
+            output_tokens_key: default_output_tokens_key(),
+            total_tokens_key: default_total_tokens_key(),
+            cost_usd_key: default_cost_usd_key(),
         }
     }
 }
@@ -185,11 +206,29 @@ pub fn default_agent_profile(name: &str, kind: AgentKind, command: &str) -> Agen
             mount_ssh_socket: false,
             mount_docker_socket: false,
         },
-        usage: UsageConfig {
-            parser: "none".to_string(),
-        },
+        usage: UsageConfig::default(),
         labels: std::collections::BTreeMap::new(),
     }
+}
+
+fn default_usage_source() -> String {
+    "agent_logs".to_string()
+}
+
+fn default_input_tokens_key() -> String {
+    "input_tokens".to_string()
+}
+
+fn default_output_tokens_key() -> String {
+    "output_tokens".to_string()
+}
+
+fn default_total_tokens_key() -> String {
+    "total_tokens".to_string()
+}
+
+fn default_cost_usd_key() -> String {
+    "cost_usd".to_string()
 }
 
 pub fn is_valid_profile_name(value: &str) -> bool {

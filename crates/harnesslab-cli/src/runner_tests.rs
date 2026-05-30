@@ -1,9 +1,9 @@
 use super::*;
 use harnesslab_core::{
-    AgentKind, AuthConfig, EvaluationRecord, FailureClass, FailureCode, InputMode, ModelError,
-    NetworkPolicy, Outcome, ProcessRecord, TerminationReason, UsageConfig, WorkingDirMode,
-    classify_agent_process, classify_evaluation_process, default_agent_profile, derive_exit_code,
-    validate_run_spec,
+    AgentKind, AttemptProvenance, AuthConfig, EvaluationRecord, FailureClass, FailureCode,
+    InputMode, ModelError, NetworkPolicy, Outcome, ProcessRecord, TerminationReason, UsageConfig,
+    UsageRecord, WorkingDirMode, classify_agent_process, classify_evaluation_process,
+    default_agent_profile, derive_exit_code, validate_run_spec,
 };
 
 #[test]
@@ -58,9 +58,7 @@ fn agt_004_manual_profile_can_be_serialized() {
             mount_ssh_socket: false,
             mount_docker_socket: false,
         },
-        usage: UsageConfig {
-            parser: "none".to_string(),
-        },
+        usage: UsageConfig::default(),
         labels: Default::default(),
     };
 
@@ -143,6 +141,82 @@ fn replay_002_resume_keeps_completed_attempts_and_schedules_missing_only() {
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].task.task_id, "task-a");
     assert_eq!(pending[0].attempt, 2);
+}
+
+#[test]
+fn replay_002_resume_failed_completed_attempt_schedules_recovery_attempt() {
+    let tmp = tempfile::tempdir().unwrap();
+    let plan = test_plan(vec![task_with_id("task-a")]);
+    let mut failed = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+    failed.state = TaskState::Failure;
+    failed.outcome = Outcome::Failure;
+    atomic_write_json(
+        &attempt_result_path(tmp.path(), "task-a", 1),
+        &TaskAttemptResult {
+            task_id: "task-a".to_string(),
+            attempt: 1,
+            ..failed
+        },
+    )
+    .unwrap();
+
+    let (loaded, pending) = partition_attempts(tmp.path(), &plan, 1).unwrap();
+
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].task.task_id, "task-a");
+    assert_eq!(pending[0].attempt, 2);
+}
+
+#[test]
+fn replay_002_resume_does_not_create_unbounded_recovery_attempts() {
+    let tmp = tempfile::tempdir().unwrap();
+    let plan = test_plan(vec![task_with_id("task-a")]);
+    for attempt_number in [1, 2] {
+        let mut failed = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+        failed.state = TaskState::Failure;
+        failed.outcome = Outcome::Failure;
+        atomic_write_json(
+            &attempt_result_path(tmp.path(), "task-a", attempt_number),
+            &TaskAttemptResult {
+                task_id: "task-a".to_string(),
+                attempt: attempt_number,
+                ..failed
+            },
+        )
+        .unwrap();
+    }
+
+    let (loaded, pending) = partition_attempts(tmp.path(), &plan, 1).unwrap();
+
+    assert_eq!(loaded.len(), 2);
+    assert!(pending.is_empty());
+}
+
+#[test]
+fn replay_002_resume_uses_encoded_task_dir_for_slash_bearing_task_ids() {
+    let tmp = tempfile::tempdir().unwrap();
+    let plan = test_plan(vec![task_with_id("task/slash")]);
+    let completed = attempt(FailureClass::None, None);
+    atomic_write_json(
+        &attempt_result_path(tmp.path(), "task/slash", 1),
+        &TaskAttemptResult {
+            task_id: "task/slash".to_string(),
+            attempt: 1,
+            ..completed
+        },
+    )
+    .unwrap();
+
+    let (loaded, pending) = partition_attempts(tmp.path(), &plan, 1).unwrap();
+
+    assert_eq!(loaded[0].task_id, "task/slash");
+    assert!(
+        tmp.path()
+            .join("tasks/task%2Fslash/attempts/1/result.json")
+            .exists()
+    );
+    assert!(pending.is_empty());
 }
 
 #[test]
@@ -265,6 +339,7 @@ fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult 
         schema_version: 1,
         task_id: "task".to_string(),
         attempt: 1,
+        provenance: AttemptProvenance::Original,
         state: TaskState::Success,
         outcome: Outcome::Success,
         failure_class: class,

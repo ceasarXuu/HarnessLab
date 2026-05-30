@@ -320,7 +320,8 @@ fn int_008_resume_text_output_succeeds() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("run resume:"));
+        .stdout(predicate::str::contains("run resume:"))
+        .stdout(predicate::str::contains("report.html"));
 }
 
 #[test]
@@ -444,6 +445,7 @@ fn init_home(home: &Path) {
 }
 
 fn write_agent(home: &Path, command: &str, timeout_sec: u64) {
+    let command = command.replace('\\', "\\\\").replace('"', "\\\"");
     let content = format!(
         r#"schema_version = 1
 name = "fake"
