@@ -54,7 +54,7 @@ title = "Doctor JSON stable shape"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select DOC-001"
-file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
 required_artifacts = []
 status = "active"
 [tests.source]
@@ -853,7 +853,7 @@ title = "Init empty home"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-001"
-file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/init_contract.rs"]
 required_artifacts = ["artifacts/test-traceability.json"]
 status = "active"
 [tests.source]
@@ -870,7 +870,7 @@ layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-003"
 file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
-required_artifacts = ["report.html", "results.json"]
+required_artifacts = ["report.html", "results.json", "agent-profile.runtime.json", "agent-profile.snapshot.json"]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"
@@ -934,7 +934,7 @@ layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-009"
 file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
-required_artifacts = ["report.html", "results.json"]
+required_artifacts = ["report.html", "results.json", "agent-profile.runtime.json", "agent-profile.snapshot.json"]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"
@@ -974,6 +974,54 @@ section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime"]
 contracts = ["Replay"]
+
+[[tests]]
+id = "INT-017"
+title = "Replay redacts public artifacts without current env"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-017"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["report.html", "command.txt", "events.jsonl", "agent-profile.runtime.json", "agent-profile.snapshot.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "17"
+[tests.verifies]
+requirements = ["replay_runtime", "secret_redaction"]
+contracts = ["Replay", "Report"]
+
+[[tests]]
+id = "INT-018"
+title = "Replay rejects missing runtime profile snapshot"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-018"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["agent-profile.snapshot.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime", "config_agent_registry"]
+contracts = ["Replay", "AgentProfile"]
+
+[[tests]]
+id = "INT-019"
+title = "Resume report marks missing original command"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-019"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["report.html"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Resume", "Report"]
 
 [[tests]]
 id = "INT-013"
@@ -1124,7 +1172,7 @@ layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-014"
 file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
-required_artifacts = ["agent-profile.snapshot.json"]
+required_artifacts = ["agent-profile.runtime.json", "agent-profile.snapshot.json"]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"
@@ -1132,6 +1180,22 @@ section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime", "config_agent_registry"]
 contracts = ["Resume", "AgentProfile"]
+
+[[tests]]
+id = "INT-020"
+title = "Resume redacts public artifacts without current env"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-020"
+file_patterns = ["crates/harnesslab-cli/tests/resume_contract.rs"]
+required_artifacts = ["report.html", "command.txt", "events.jsonl", "agent-profile.runtime.json", "agent-profile.snapshot.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "17"
+[tests.verifies]
+requirements = ["replay_runtime", "secret_redaction"]
+contracts = ["Resume", "Report"]
 
 [[tests]]
 id = "INT-015"

@@ -88,22 +88,6 @@ fn cli_004_m0_text_commands_succeed() {
 }
 
 #[test]
-fn int_001_init_empty_home_creates_config_and_profiles() {
-    let home = tempfile::tempdir().unwrap();
-
-    Command::cargo_bin("harnesslab")
-        .unwrap()
-        .args(["--home", home.path().to_str().unwrap(), "init", "--json"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\"command\":\"init\""));
-
-    assert!(home.path().join("config.toml").exists());
-    assert!(home.path().join("agents/codex-default.toml").exists());
-    assert!(home.path().join("runs").exists());
-}
-
-#[test]
 fn int_003_fake_terminal_success_creates_report_and_results() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
@@ -131,8 +115,30 @@ fn int_003_fake_terminal_success_creates_report_and_results() {
 
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
-    assert!(run_dir.join("results.json").exists());
-    assert!(run_dir.join("report.html").exists());
+    for path in [
+        "results.json",
+        "report.html",
+        "command.txt",
+        "agent-profile.runtime.json",
+        "tasks/fake-terminal-success/attempts/1/agent/command.txt",
+    ] {
+        assert!(run_dir.join(path).exists());
+    }
+    let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
+    assert!(report.contains("Agent config:"));
+    assert!(report.contains("agent-profile.snapshot.json"));
+    assert!(report.contains("command.txt"));
+    assert!(report.contains("harnesslab run replay"));
+    assert!(report.contains(&run_dir.display().to_string()));
+    assert!(report.contains("--home"));
+    let command = fs::read_to_string(run_dir.join("command.txt")).unwrap();
+    assert!(command.contains("original_command=harnesslab --home"));
+    assert!(command.contains("replay_command=harnesslab run replay"));
+    let agent_command = fs::read_to_string(
+        run_dir.join("tasks/fake-terminal-success/attempts/1/agent/command.txt"),
+    )
+    .unwrap();
+    assert!(agent_command.contains("rendered=printf ok > result.txt"));
 
     Command::cargo_bin("harnesslab")
         .unwrap()
@@ -356,7 +362,7 @@ fn int_010_replay_missing_agent_blocks_before_execution() {
     let output = run_success(home.path());
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let source = Path::new(json["run_dir"].as_str().unwrap());
-    let profile = source.join("agent-profile.snapshot.json");
+    let profile = source.join("agent-profile.runtime.json");
     let mut value: serde_json::Value =
         serde_json::from_slice(&fs::read(&profile).unwrap()).unwrap();
     value["command"] = serde_json::json!("missing-harnesslab-agent");

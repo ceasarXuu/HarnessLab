@@ -1,3 +1,4 @@
+mod attempts;
 mod cleanup;
 mod external;
 mod patch;
@@ -12,6 +13,7 @@ use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
 use crate::output::{PathOutput, RunOutput};
 use crate::print_json;
 use anyhow::{Context, Result, bail};
+use attempts::execute_attempts;
 use cleanup::RunSandboxCleanup;
 use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
@@ -27,14 +29,11 @@ use harnesslab_infra::{
 use patch::{capture_patch, patch_failure};
 use replay::{replay_plan_from_source, replay_spec_from_source};
 use sandbox::run_agent;
-use schedule::{AttemptWork, partition_attempts};
+use schedule::partition_attempts;
 use shell::run_shell;
-use std::any::Any;
 use std::fs;
 use std::path::Path;
-use std::thread;
 use store::{load_config, load_profile, write_run_inputs};
-use time::OffsetDateTime;
 use usage::collect_usage;
 
 #[derive(Debug, Clone, Copy)]
@@ -44,6 +43,8 @@ enum ExecutionMode {
     Replay,
 }
 
+#[cfg(test)]
+use attempts::panic_message;
 #[cfg(test)]
 use sandbox::{docker_create_request, render_command, task_requires_docker};
 #[cfg(test)]
@@ -73,14 +74,14 @@ pub(crate) fn execute_new_run(
         agent_name,
         benchmark_name,
         split,
-        timestamp_id()
+        store::timestamp_id()
     );
     let run_dir = home.join("runs").join(&run_id);
     fs::create_dir_all(&run_dir)?;
     let spec = RunSpec {
         schema_version: 1,
         run_id: run_id.clone(),
-        created_at: now_rfc3339(),
+        created_at: store::now_rfc3339(),
         agent_profile_ref: agent_name.to_string(),
         benchmark: BenchmarkRef {
             name: benchmark_name.to_string(),
@@ -99,8 +100,24 @@ pub(crate) fn execute_new_run(
         replay_source_run_id: replay_source,
     };
     validate_run_spec(&spec)?;
-    write_run_inputs(&run_dir, &spec, &profile, &plan)?;
-    let code = execute_plan(&run_dir, &spec, &profile, &plan, ExecutionMode::New)?;
+    let original_command = store::original_run_command(home, agent_name, benchmark_name, split);
+    let report_profile = store::public_profile_snapshot(&profile);
+    write_run_inputs(
+        &run_dir,
+        &spec,
+        &profile,
+        &report_profile,
+        &plan,
+        &original_command,
+    )?;
+    let code = execute_plan(
+        &run_dir,
+        &spec,
+        &profile,
+        &report_profile,
+        &plan,
+        ExecutionMode::New,
+    )?;
     if json {
         print_json(&RunOutput {
             schema_version: 1,
@@ -119,13 +136,22 @@ pub(crate) fn execute_new_run(
 
 pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32> {
     let spec: RunSpec = read_json(&run_dir.join("run.json"))?;
-    let profile: AgentProfile = read_json(&run_dir.join("agent-profile.snapshot.json"))?;
+    let (profile, profile_source) = store::load_run_profile(run_dir)?;
+    let report_profile = store::load_report_profile(run_dir)?;
     let plan: harnesslab_core::BenchmarkPlan = read_json(&run_dir.join("benchmark.snapshot.json"))?;
     validate_run_spec(&spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;
-    let code = execute_plan(run_dir, &spec, &profile, &plan, ExecutionMode::Resume)?;
+    store::log_profile_snapshot_loaded(run_dir, &spec.run_id, profile_source.as_str(), "resume")?;
+    let code = execute_plan(
+        run_dir,
+        &spec,
+        &profile,
+        &report_profile,
+        &plan,
+        ExecutionMode::Resume,
+    )?;
     if json {
         print_json(&PathOutput {
             schema_version: 1,
@@ -142,7 +168,8 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
 
 pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> {
     let source_spec: RunSpec = read_json(&source.join("run.json"))?;
-    let profile: AgentProfile = read_json(&source.join("agent-profile.snapshot.json"))?;
+    let (profile, profile_source) = store::load_run_profile(source)?;
+    let report_profile = store::load_report_profile(source)?;
     let plan = replay_plan_from_source(source, &source_spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
@@ -157,14 +184,31 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         profile.name,
         source_spec.benchmark.name,
         source_spec.benchmark.split,
-        timestamp_id()
+        store::timestamp_id()
     );
     let run_dir = home.join("runs").join(&run_id);
     fs::create_dir_all(&run_dir)?;
-    let spec = replay_spec_from_source(&source_spec, run_id.clone(), now_rfc3339(), &run_dir);
+    let spec =
+        replay_spec_from_source(&source_spec, run_id.clone(), store::now_rfc3339(), &run_dir);
     validate_run_spec(&spec)?;
-    write_run_inputs(&run_dir, &spec, &profile, &plan)?;
-    let code = execute_plan(&run_dir, &spec, &profile, &plan, ExecutionMode::Replay)?;
+    let original_command = store::original_replay_command(home, source);
+    write_run_inputs(
+        &run_dir,
+        &spec,
+        &profile,
+        &report_profile,
+        &plan,
+        &original_command,
+    )?;
+    store::log_profile_snapshot_loaded(&run_dir, &spec.run_id, profile_source.as_str(), "replay")?;
+    let code = execute_plan(
+        &run_dir,
+        &spec,
+        &profile,
+        &report_profile,
+        &plan,
+        ExecutionMode::Replay,
+    )?;
     if json {
         print_json(&RunOutput {
             schema_version: 1,
@@ -185,6 +229,7 @@ fn execute_plan(
     run_dir: &Path,
     spec: &RunSpec,
     profile: &AgentProfile,
+    report_profile: &AgentProfile,
     plan: &harnesslab_core::BenchmarkPlan,
     mode: ExecutionMode,
 ) -> Result<i32> {
@@ -239,6 +284,7 @@ fn execute_plan(
         run_dir,
         spec,
         profile,
+        report_profile,
         pending,
         spec.execution.concurrency,
     )?);
@@ -253,9 +299,12 @@ fn execute_plan(
         harnesslab_report::ReportContext {
             run_id: spec.run_id.clone(),
             agent: spec.agent_profile_ref.clone(),
+            agent_config_summary: store::agent_config_summary(spec, report_profile),
             benchmark: spec.benchmark.name.clone(),
             split: spec.benchmark.split.clone(),
             report_path: run_dir.join("report.html").display().to_string(),
+            replay_command: store::replay_command(spec),
+            original_command: store::original_command_from_snapshot(run_dir),
             resumed: matches!(mode, ExecutionMode::Resume),
         },
         results.clone(),
@@ -272,69 +321,11 @@ fn execute_plan(
     Ok(derive_exit_code(&results.tasks, false))
 }
 
-fn execute_attempts(
-    run_dir: &Path,
-    spec: &RunSpec,
-    profile: &AgentProfile,
-    attempts: Vec<AttemptWork>,
-    concurrency: usize,
-) -> Result<Vec<TaskAttemptResult>> {
-    let mut results = Vec::new();
-    for chunk in attempts.chunks(concurrency.max(1)) {
-        let mut handles = Vec::new();
-        for work in chunk.iter().cloned() {
-            let run_dir = run_dir.to_path_buf();
-            let profile = profile.clone();
-            let spec = spec.clone();
-            handles.push(thread::spawn(move || {
-                execute_task(
-                    &run_dir,
-                    &spec,
-                    &profile,
-                    &work.task,
-                    work.attempt,
-                    work.provenance,
-                )
-            }));
-        }
-        let mut first_error = None;
-        for handle in handles {
-            match handle.join() {
-                Ok(Ok(result)) => results.push(result),
-                Ok(Err(error)) => {
-                    if first_error.is_none() {
-                        first_error = Some(error);
-                    }
-                }
-                Err(panic) => {
-                    if first_error.is_none() {
-                        first_error =
-                            Some(anyhow::anyhow!("task panicked: {}", panic_message(panic)));
-                    }
-                }
-            }
-        }
-        if let Some(error) = first_error {
-            return Err(error);
-        }
-    }
-    Ok(results)
-}
-
-fn panic_message(panic: Box<dyn Any + Send + 'static>) -> String {
-    if let Some(message) = panic.downcast_ref::<&str>() {
-        (*message).to_string()
-    } else if let Some(message) = panic.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_string()
-    }
-}
-
 fn execute_task(
     run_dir: &Path,
     spec: &RunSpec,
     profile: &AgentProfile,
+    report_profile: &AgentProfile,
     task: &TaskPlan,
     attempt: u32,
     provenance: AttemptProvenance,
@@ -361,6 +352,7 @@ fn execute_task(
             run_dir,
             spec,
             profile,
+            report_profile,
             task,
             attempt,
             provenance,
@@ -368,7 +360,15 @@ fn execute_task(
             started,
         });
     }
-    let agent_run = run_agent(spec, profile, task, attempt, &attempt_dir, &workspace)?;
+    let agent_run = run_agent(
+        spec,
+        profile,
+        report_profile,
+        task,
+        attempt,
+        &attempt_dir,
+        &workspace,
+    )?;
     let agent_failure = agent_run.sandbox_failure.map_or_else(
         || classify_agent_process(&agent_run.process),
         |code| harnesslab_core::Failure {
@@ -476,19 +476,6 @@ fn run_verifier(workspace: &Path, attempt_dir: &Path, task: &TaskPlan) -> Result
         stdout_path: "verifier/stdout.log".to_string(),
         stderr_path: "verifier/stderr.log".to_string(),
     })
-}
-
-fn now_rfc3339() -> String {
-    OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
-}
-
-fn timestamp_id() -> String {
-    now_rfc3339()
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .collect()
 }
 
 #[cfg(test)]

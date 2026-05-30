@@ -16,6 +16,7 @@ pub struct ReportModel {
     pub summary: harnesslab_core::RunSummary,
     pub rows: Vec<TaskRow>,
     pub total_usage: String,
+    pub agent_config_summary: String,
     pub replay_command: String,
     pub original_command: String,
 }
@@ -42,9 +43,12 @@ pub struct TaskRow {
 pub struct ReportContext {
     pub run_id: String,
     pub agent: String,
+    pub agent_config_summary: String,
     pub benchmark: String,
     pub split: String,
     pub report_path: String,
+    pub replay_command: String,
+    pub original_command: String,
     pub resumed: bool,
 }
 
@@ -68,6 +72,7 @@ pub struct ReportContext {
   <p>Run <code>{{ model.run_id }}</code> using {{ model.agent }} on {{ model.benchmark }} / {{ model.split }}.</p>
   <p>Report: <code>{{ model.report_path }}</code></p>
   <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
+  <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, command: <a href="command.txt">command.txt</a>.</p>
   <h2>Summary</h2>
   <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, score {{ model.summary.total_score }}.</p>
   <p>Usage: {{ model.total_usage }}</p>
@@ -158,14 +163,9 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
         summary: results.summary,
         rows,
         total_usage: total_usage_text(&results.tasks),
-        replay_command: format!(
-            "harnesslab run replay ~/.harnesslab/runs/{}",
-            context.run_id
-        ),
-        original_command: format!(
-            "harnesslab run --agent {} --benchmark {} --split {}",
-            context.agent, context.benchmark, context.split
-        ),
+        agent_config_summary: context.agent_config_summary,
+        replay_command: context.replay_command,
+        original_command: context.original_command,
     }
 }
 
@@ -260,6 +260,9 @@ mod tests {
 
         assert!(html.contains("HarnessLab Run Report"));
         assert!(html.contains("cost not comparable"));
+        assert!(html.contains("Agent config:"));
+        assert!(html.contains("agent-profile.snapshot.json"));
+        assert!(html.contains("command.txt"));
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
         assert!(html.contains("tasks/task-1/attempts/1/verifier/stdout.log"));
     }
@@ -310,9 +313,16 @@ mod tests {
         ReportContext {
             run_id: "run-1".to_string(),
             agent: "fake".to_string(),
+            agent_config_summary:
+                "kind=fake; input_mode=stdin; timeout_sec=3600; concurrency=4; attempts=1; network=full"
+                    .to_string(),
             benchmark: "fake-terminal".to_string(),
             split: "success".to_string(),
             report_path: "/runs/run-1/report.html".to_string(),
+            replay_command: "harnesslab run replay /runs/run-1".to_string(),
+            original_command:
+                "harnesslab --home /tmp/home run --agent fake --benchmark fake-terminal --split success"
+                    .to_string(),
             resumed,
         }
     }

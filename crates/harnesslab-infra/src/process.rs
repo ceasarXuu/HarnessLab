@@ -105,6 +105,16 @@ pub fn command_exists(command: &str) -> bool {
         .is_ok_and(|status| status.success())
 }
 
+pub fn command_succeeds(command: &str) -> bool {
+    Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
 pub fn first_command_word(command: &str) -> Option<&str> {
     command.split_whitespace().next()
 }
@@ -171,5 +181,7 @@ mod tests {
     fn c_run_001_command_detection_helpers_are_stable() {
         assert_eq!(first_command_word("sh -c true"), Some("sh"));
         assert!(command_exists("sh"));
+        assert!(command_succeeds("true"));
+        assert!(!command_succeeds("false"));
     }
 }
