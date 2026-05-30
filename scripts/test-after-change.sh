@@ -81,6 +81,10 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;
     INT-015) package="harnesslab-cli"; test_name="int_008_resume_failed_run_recovers_once_and_reports_latest_attempt" ;;
     INT-016) package="harnesslab-cli"; test_name="int_016_resume_interrupted_attempt_schedules_recovery_attempt" ;;
+    INT-017) package="harnesslab-cli"; test_name="int_017_replay_redacts_public_artifacts_without_current_env" ;;
+    INT-018) package="harnesslab-cli"; test_name="int_018_replay_rejects_redacted_legacy_profile_without_runtime_snapshot" ;;
+    INT-019) package="harnesslab-cli"; test_name="int_019_resume_report_marks_missing_original_command" ;;
+    INT-020) package="harnesslab-cli"; test_name="int_020_resume_redacts_public_artifacts_without_current_env" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;

@@ -197,17 +197,60 @@ pub fn default_agent_profile(name: &str, kind: AgentKind, command: &str) -> Agen
         input_mode: InputMode::Stdin,
         working_dir: WorkingDirMode::Workspace,
         timeout_sec: 3600,
-        version_command: None,
-        auth: AuthConfig {
-            inherit: true,
-            inherit_env: Vec::new(),
-            include_paths: Vec::new(),
-            exclude_paths: Vec::new(),
-            mount_ssh_socket: false,
-            mount_docker_socket: false,
-        },
+        version_command: default_version_command(kind),
+        auth: default_auth_config(kind),
         usage: UsageConfig::default(),
         labels: std::collections::BTreeMap::new(),
+    }
+}
+
+fn default_version_command(kind: AgentKind) -> Option<String> {
+    match kind {
+        AgentKind::PiCodingAgent => Some("pi coding --version || pi --version".to_string()),
+        _ => None,
+    }
+}
+
+pub fn default_auth_config(kind: AgentKind) -> AuthConfig {
+    let (inherit_env, include_paths): (&[&str], &[&str]) = match kind {
+        AgentKind::Codex => (
+            &["OPENAI_API_KEY", "CODEX_HOME"],
+            &["~/.codex:/root/.codex:ro"],
+        ),
+        AgentKind::ClaudeCode => (&["ANTHROPIC_API_KEY"], &["~/.claude:/root/.claude:ro"]),
+        AgentKind::Opencode => (
+            &[
+                "OPENCODE_API_KEY",
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+                "GOOGLE_API_KEY",
+                "GEMINI_API_KEY",
+                "OPENROUTER_API_KEY",
+            ],
+            &[
+                "~/.config/opencode:/root/.config/opencode:ro",
+                "~/.opencode:/root/.opencode:ro",
+            ],
+        ),
+        AgentKind::PiCodingAgent => (
+            &["PI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"],
+            &["~/.pi:/root/.pi:ro"],
+        ),
+        AgentKind::Fake | AgentKind::Custom => (&[], &[]),
+    };
+    AuthConfig {
+        inherit: true,
+        inherit_env: inherit_env
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect(),
+        include_paths: include_paths
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect(),
+        exclude_paths: Vec::new(),
+        mount_ssh_socket: false,
+        mount_docker_socket: false,
     }
 }
 
@@ -337,5 +380,29 @@ mod tests {
         let warnings = profile.validate().unwrap();
 
         assert_eq!(warnings[0].code, "docker_socket_requested");
+    }
+
+    #[test]
+    fn agt_006_builtin_profiles_expand_auth_defaults() {
+        let codex = default_agent_profile("codex-default", AgentKind::Codex, "codex -");
+        assert!(
+            codex
+                .auth
+                .inherit_env
+                .contains(&"OPENAI_API_KEY".to_string())
+        );
+        assert!(
+            codex
+                .auth
+                .include_paths
+                .contains(&"~/.codex:/root/.codex:ro".to_string())
+        );
+
+        let pi = default_agent_profile("pi-coding-agent-default", AgentKind::PiCodingAgent, "pi -");
+        assert_eq!(
+            pi.version_command.as_deref(),
+            Some("pi coding --version || pi --version")
+        );
+        assert!(pi.auth.inherit_env.contains(&"PI_API_KEY".to_string()));
     }
 }

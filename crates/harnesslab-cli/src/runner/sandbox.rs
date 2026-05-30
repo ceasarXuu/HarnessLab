@@ -12,14 +12,18 @@ pub(super) struct AgentExecution {
 pub(super) fn run_agent(
     spec: &RunSpec,
     profile: &AgentProfile,
+    report_profile: &AgentProfile,
     task: &TaskPlan,
     attempt: u32,
     attempt_dir: &Path,
     workspace: &Path,
 ) -> Result<AgentExecution> {
     let uses_docker = task_requires_docker(task);
+    let command = render_command(profile, task, workspace, uses_docker)?;
+    let report_command = render_command(report_profile, task, workspace, uses_docker)?;
+    write_agent_command_snapshot(attempt_dir, report_profile, &report_command)?;
     let exec_spec = ExecSpec {
-        command: render_command(profile, task, workspace, uses_docker)?,
+        command,
         stdin: matches!(profile.input_mode, InputMode::Stdin | InputMode::Tty)
             .then(|| task.instruction.clone()),
         working_dir: workspace.to_path_buf(),
@@ -34,7 +38,7 @@ pub(super) fn run_agent(
         });
     }
 
-    let request = docker_create_request(spec, task, attempt, workspace);
+    let request = docker_create_request(spec, profile, task, attempt, workspace);
     let handle = match DockerCliProvider::create(&request) {
         Ok(handle) => handle,
         Err(error) => return sandbox_failure(attempt_dir, error),
@@ -73,6 +77,7 @@ fn normalize_agent_paths(
 
 pub(super) fn docker_create_request(
     spec: &RunSpec,
+    profile: &AgentProfile,
     task: &TaskPlan,
     attempt: u32,
     workspace: &Path,
@@ -85,11 +90,119 @@ pub(super) fn docker_create_request(
         workspace_host_path: workspace.to_path_buf(),
         workspace_container_path: "/workspace".to_string(),
         network: spec.execution.network,
-        env_vars: task.sandbox_spec.env_vars.clone(),
-        mounts: task.sandbox_spec.mounts.clone(),
+        env_vars: merged_env_vars(profile, task),
+        mounts: merged_mounts(profile, task),
         privileged: task.sandbox_spec.privileged,
         cpu_cores: task.sandbox_spec.resource_limits.cpu_cores,
         memory_mb: task.sandbox_spec.resource_limits.memory_mb,
+    }
+}
+
+fn write_agent_command_snapshot(
+    attempt_dir: &Path,
+    profile: &AgentProfile,
+    rendered_command: &str,
+) -> Result<()> {
+    let agent_dir = attempt_dir.join("agent");
+    fs::create_dir_all(&agent_dir)?;
+    fs::write(
+        agent_dir.join("command.txt"),
+        format!(
+            "template={}\nrendered={}\ninput_mode={:?}\n",
+            profile.command,
+            redacted_rendered_command(profile, rendered_command),
+            profile.input_mode
+        ),
+    )?;
+    Ok(())
+}
+
+fn redacted_rendered_command(profile: &AgentProfile, rendered_command: &str) -> String {
+    if matches!(profile.input_mode, InputMode::Argument) {
+        return "[INSTRUCTION_ARGUMENT_REDACTED]".to_string();
+    }
+    rendered_command.to_string()
+}
+
+fn merged_env_vars(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
+    let mut values = task.sandbox_spec.env_vars.clone();
+    if !profile.auth.inherit {
+        return values;
+    }
+    for name in &profile.auth.inherit_env {
+        if !values.contains(name) {
+            values.push(name.clone());
+        }
+    }
+    values
+}
+
+fn merged_mounts(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
+    let mut mounts = task.sandbox_spec.mounts.clone();
+    if !profile.auth.inherit {
+        return mounts;
+    }
+    let excluded_hosts = profile
+        .auth
+        .exclude_paths
+        .iter()
+        .map(|path| normalized_host_path(path))
+        .collect::<Vec<_>>();
+    for path in &profile.auth.include_paths {
+        if let Some(auth) = auth_mount(path)
+            && !excluded_hosts.contains(&auth.host)
+            && !mounts.contains(&auth.mount)
+        {
+            mounts.push(auth.mount);
+        }
+    }
+    mounts
+}
+
+struct AuthMount {
+    host: String,
+    mount: String,
+}
+
+fn auth_mount(value: &str) -> Option<AuthMount> {
+    let parts = value.split(':').collect::<Vec<_>>();
+    match parts.as_slice() {
+        [host] => {
+            let expanded = normalized_host_path(host);
+            Some(AuthMount {
+                host: expanded.clone(),
+                mount: format!("{expanded}:{expanded}:ro"),
+            })
+        }
+        [host, container] => {
+            let expanded = normalized_host_path(host);
+            Some(AuthMount {
+                host: expanded.clone(),
+                mount: format!("{expanded}:{container}:ro"),
+            })
+        }
+        [host, container, mode] => {
+            let expanded = normalized_host_path(host);
+            Some(AuthMount {
+                host: expanded.clone(),
+                mount: format!("{expanded}:{container}:{mode}"),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn normalized_host_path(value: &str) -> String {
+    let host = value.split(':').next().unwrap_or(value);
+    let home = std::env::var("HOME").unwrap_or_default();
+    if host == "~" {
+        home
+    } else if let Some(rest) = host.strip_prefix("~/") {
+        format!("{home}/{rest}")
+    } else if let Some(rest) = value.strip_prefix("~/") {
+        format!("{home}/{rest}")
+    } else {
+        host.to_string()
     }
 }
 
@@ -221,6 +334,59 @@ mod tests {
                 .unwrap()
                 .contains("'/workspace/instruction.txt'")
         );
+    }
+
+    #[test]
+    fn command_snapshot_redacts_argument_instruction() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut profile = default_agent_profile("fake", AgentKind::Fake, "agent {{instruction}}");
+        profile.input_mode = InputMode::Argument;
+
+        write_agent_command_snapshot(tmp.path(), &profile, "agent 'secret task text'").unwrap();
+
+        let content = fs::read_to_string(tmp.path().join("agent/command.txt")).unwrap();
+        assert!(content.contains("[INSTRUCTION_ARGUMENT_REDACTED]"));
+        assert!(!content.contains("secret task text"));
+    }
+
+    #[test]
+    fn docker_request_respects_auth_inherit_and_exclude_paths() {
+        let workspace = std::path::PathBuf::from("/tmp/ws");
+        let spec = RunSpec {
+            schema_version: 1,
+            run_id: "run-1".to_string(),
+            created_at: "2026-05-30T00:00:00Z".to_string(),
+            agent_profile_ref: "fake".to_string(),
+            benchmark: harnesslab_core::BenchmarkRef {
+                name: "fake-terminal".to_string(),
+                version: "0".to_string(),
+                split: "success".to_string(),
+            },
+            execution: harnesslab_core::ExecutionConfig {
+                concurrency: 4,
+                attempts: 1,
+                network: NetworkPolicy::Full,
+                timeout_sec: None,
+            },
+            paths: harnesslab_core::RunPaths {
+                run_dir: "/tmp/run".to_string(),
+            },
+            replay_source_run_id: None,
+        };
+        let task = task();
+        let mut profile = default_agent_profile("fake", AgentKind::Fake, "agent");
+        profile.auth.inherit_env = vec!["OPENAI_API_KEY".to_string()];
+        profile.auth.include_paths = vec!["~/.codex:/root/.codex:ro".to_string()];
+        profile.auth.exclude_paths = vec!["~/.codex".to_string()];
+
+        let excluded = docker_create_request(&spec, &profile, &task, 1, &workspace);
+        assert_eq!(excluded.env_vars, vec!["OPENAI_API_KEY"]);
+        assert!(excluded.mounts.is_empty());
+
+        profile.auth.inherit = false;
+        let disabled = docker_create_request(&spec, &profile, &task, 1, &workspace);
+        assert!(disabled.env_vars.is_empty());
+        assert!(disabled.mounts.is_empty());
     }
 
     #[test]

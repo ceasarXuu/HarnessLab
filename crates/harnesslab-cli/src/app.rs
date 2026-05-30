@@ -12,7 +12,9 @@ use harnesslab_adapters::built_in_descriptors_with_root;
 use harnesslab_core::{
     AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
 };
-use harnesslab_infra::{DockerCliProvider, command_exists, first_command_word, latest_run_dir};
+use harnesslab_infra::{
+    DockerCliProvider, command_exists, command_succeeds, first_command_word, latest_run_dir,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -45,13 +47,13 @@ fn init(home: &Path, json: bool) -> Result<i32> {
     )?;
 
     let mut detected = Vec::new();
-    for (name, kind, executable, command) in default_profiles() {
-        if command_exists(executable) {
-            detected.push(name.to_string());
+    for profile in default_profiles() {
+        if profile.is_detected() {
+            detected.push(profile.name.to_string());
         }
-        let profile = default_agent_profile(name, kind, command);
+        let profile = default_agent_profile(profile.name, profile.kind, profile.command);
         write_if_missing(
-            &home.join("agents").join(format!("{name}.toml")),
+            &home.join("agents").join(format!("{}.toml", profile.name)),
             &toml::to_string_pretty(&profile)?,
         )?;
     }
@@ -67,12 +69,16 @@ fn init(home: &Path, json: bool) -> Result<i32> {
     } else {
         println!("init: ok home={}", home.display());
         println!("Detected agents:");
-        for (name, _, executable, _) in default_profiles() {
-            let profile_path = home.join("agents").join(format!("{name}.toml"));
-            if command_exists(executable) {
-                println!("  - {name}: found -> {}", profile_path.display());
+        for profile in default_profiles() {
+            let profile_path = home.join("agents").join(format!("{}.toml", profile.name));
+            if profile.is_detected() {
+                println!("  - {}: found -> {}", profile.name, profile_path.display());
             } else {
-                println!("  - {name}: not found -> {}", profile_path.display());
+                println!(
+                    "  - {}: not found -> {}",
+                    profile.name,
+                    profile_path.display()
+                );
             }
         }
         println!("Next:");
@@ -294,32 +300,52 @@ fn load_profiles(home: &Path) -> Result<Vec<AgentProfile>> {
     Ok(profiles)
 }
 
-fn default_profiles() -> Vec<(&'static str, AgentKind, &'static str, &'static str)> {
+struct BuiltInProfile {
+    name: &'static str,
+    kind: AgentKind,
+    executable: &'static str,
+    command: &'static str,
+    detection_command: Option<&'static str>,
+}
+
+impl BuiltInProfile {
+    fn is_detected(&self) -> bool {
+        command_exists(self.executable) && self.detection_command.is_none_or(command_succeeds)
+    }
+}
+
+fn default_profiles() -> Vec<BuiltInProfile> {
     vec![
-        (
-            "codex-default",
-            AgentKind::Codex,
-            "codex",
-            "codex exec --full-auto -",
-        ),
-        (
-            "claude-code-default",
-            AgentKind::ClaudeCode,
-            "claude",
-            "claude -p -",
-        ),
-        (
-            "opencode-default",
-            AgentKind::Opencode,
-            "opencode",
-            "opencode run -",
-        ),
-        (
-            "pi-coding-agent-default",
-            AgentKind::PiCodingAgent,
-            "pi",
-            "pi -",
-        ),
+        BuiltInProfile {
+            name: "codex-default",
+            kind: AgentKind::Codex,
+            executable: "codex",
+            command: "codex exec --full-auto -",
+            detection_command: None,
+        },
+        BuiltInProfile {
+            name: "claude-code-default",
+            kind: AgentKind::ClaudeCode,
+            executable: "claude",
+            command: "claude -p -",
+            detection_command: None,
+        },
+        BuiltInProfile {
+            name: "opencode-default",
+            kind: AgentKind::Opencode,
+            executable: "opencode",
+            command: "opencode run -",
+            detection_command: None,
+        },
+        BuiltInProfile {
+            name: "pi-coding-agent-default",
+            kind: AgentKind::PiCodingAgent,
+            executable: "pi",
+            command: "pi -",
+            detection_command: Some(
+                "pi coding --version >/dev/null 2>&1 || pi --version >/dev/null 2>&1",
+            ),
+        },
     ]
 }
 

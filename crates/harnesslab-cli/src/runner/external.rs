@@ -34,6 +34,7 @@ pub(super) struct ExternalTaskExecution<'a> {
     pub(super) run_dir: &'a Path,
     pub(super) spec: &'a RunSpec,
     pub(super) profile: &'a AgentProfile,
+    pub(super) report_profile: &'a AgentProfile,
     pub(super) task: &'a TaskPlan,
     pub(super) attempt: u32,
     pub(super) provenance: AttemptProvenance,
@@ -89,6 +90,16 @@ fn execute_terminal_bench(
         ctx.profile,
         ctx.task,
     );
+    let report_command = terminal_bench_command(
+        dataset_path,
+        &ctx.task.task_id,
+        &agent,
+        &output_root,
+        &official_run_id,
+        ctx.report_profile,
+        ctx.task,
+    );
+    write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
     let process = normalize_agent_paths(HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,
@@ -175,6 +186,23 @@ fn execute_terminal_bench(
         &result,
     )?;
     Ok(result)
+}
+
+pub(super) fn write_external_command_snapshot(
+    attempt_dir: &Path,
+    profile: &AgentProfile,
+    command: &str,
+) -> Result<()> {
+    let agent_dir = attempt_dir.join("agent");
+    fs::create_dir_all(&agent_dir)?;
+    fs::write(
+        agent_dir.join("command.txt"),
+        format!(
+            "template={}\nrendered={}\ninput_mode=external\n",
+            profile.command, command
+        ),
+    )?;
+    Ok(())
 }
 
 fn terminal_bench_command(

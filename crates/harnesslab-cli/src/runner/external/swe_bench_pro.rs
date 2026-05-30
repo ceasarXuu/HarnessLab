@@ -2,7 +2,7 @@ use super::ExternalTaskExecution;
 use anyhow::{Context, Result, bail};
 use harnesslab_core::{
     AgentProfile, EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
-    ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord,
+    ProcessRecord, TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord,
     classify_agent_process,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
@@ -42,15 +42,7 @@ pub(super) fn execute(
         return setup_failure_result(ctx, &format!("workspace preparation failed: {error}"));
     }
     let agent_task = task_with_real_instruction(ctx.task, &instance);
-    let agent = run_agent(
-        ctx.profile,
-        ctx.spec,
-        &agent_task,
-        ctx.attempt,
-        ctx.attempt_dir,
-        &workspace,
-        &instance,
-    )?;
+    let agent = run_agent(ctx, &agent_task, &workspace, &instance)?;
     let agent_failure = classify_agent_process(&agent);
     let (evaluation, patch, failure_class, failure_code, score) =
         if agent_failure.class == FailureClass::Execution {
@@ -269,35 +261,41 @@ fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -
 }
 
 fn run_agent(
-    profile: &AgentProfile,
-    spec: &RunSpec,
+    ctx: &ExternalTaskExecution<'_>,
     task: &TaskPlan,
-    attempt: u32,
-    attempt_dir: &Path,
     workspace: &Path,
     instance: &SweInstance,
 ) -> Result<ProcessRecord> {
-    if profile
+    if ctx
+        .profile
         .labels
         .get("swe_bench_pro_agent")
         .map(String::as_str)
         == Some("gold")
     {
-        return apply_gold_patch(attempt_dir, workspace, instance);
+        return apply_gold_patch(ctx.attempt_dir, workspace, instance, ctx.report_profile);
     }
-    Ok(
-        super::super::sandbox::run_agent(spec, profile, task, attempt, attempt_dir, workspace)?
-            .process,
-    )
+    Ok(super::super::sandbox::run_agent(
+        ctx.spec,
+        ctx.profile,
+        ctx.report_profile,
+        task,
+        ctx.attempt,
+        ctx.attempt_dir,
+        workspace,
+    )?
+    .process)
 }
 
 fn apply_gold_patch(
     attempt_dir: &Path,
     workspace: &Path,
     instance: &SweInstance,
+    profile: &AgentProfile,
 ) -> Result<ProcessRecord> {
     let agent_dir = attempt_dir.join("agent");
     fs::create_dir_all(&agent_dir)?;
+    super::write_external_command_snapshot(attempt_dir, profile, "git apply -")?;
     let status = Command::new("git")
         .arg("apply")
         .arg("-")

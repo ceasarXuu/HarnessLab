@@ -64,6 +64,96 @@ fn int_008_resume_failed_run_recovers_once_and_reports_latest_attempt() {
 }
 
 #[test]
+fn int_008_resume_uses_unredacted_runtime_profile_snapshot() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_inherit_env(
+        home.path(),
+        "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac",
+        &["HARNESSLAB_REDACT_RESUME_TEST"],
+    );
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("HARNESSLAB_REDACT_RESUME_TEST", "ok")
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "fake",
+            "--benchmark",
+            "fake-terminal",
+            "--split",
+            "success",
+            "--json",
+        ])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    assert!(
+        fs::read_to_string(run_dir.join("agent-profile.snapshot.json"))
+            .unwrap()
+            .contains("printf [REDACTED] > result.txt")
+    );
+
+    resume_success_with_env(
+        home.path(),
+        run_dir,
+        Some(("HARNESSLAB_REDACT_RESUME_TEST", "ok")),
+    );
+
+    let results: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
+    assert_eq!(results["summary"]["success"], 1);
+}
+
+#[test]
+fn int_020_resume_redacts_public_artifacts_without_current_env() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_inherit_env(
+        home.path(),
+        "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac # sk-resume-secret",
+        &["HARNESSLAB_SECRET_RESUME_TEST"],
+    );
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("HARNESSLAB_SECRET_RESUME_TEST", "sk-resume-secret")
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "fake",
+            "--benchmark",
+            "fake-terminal",
+            "--split",
+            "success",
+            "--json",
+        ])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+
+    resume_success_with_env(home.path(), run_dir, None);
+
+    assert_public_artifacts_do_not_contain(run_dir, "sk-resume-secret");
+    assert!(
+        fs::read_to_string(run_dir.join("events.jsonl"))
+            .unwrap()
+            .contains("profile_snapshot_loaded")
+    );
+}
+
+#[test]
 fn int_008_resume_missing_planned_attempt_reports_resumed_provenance() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
@@ -168,8 +258,15 @@ fn int_016_resume_interrupted_attempt_schedules_recovery_attempt() {
 }
 
 fn resume_success(home: &Path, run_dir: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    resume_success_with_env(home, run_dir, None);
+}
+
+fn resume_success_with_env(home: &Path, run_dir: &Path, env: Option<(&str, &str)>) {
+    let mut command = Command::cargo_bin("harnesslab").unwrap();
+    if let Some((key, value)) = env {
+        command.env(key, value);
+    }
+    command
         .args([
             "--home",
             home.to_str().unwrap(),
@@ -226,7 +323,16 @@ fn init_home(home: &Path) {
 }
 
 fn write_agent(home: &Path, command: &str) {
+    write_agent_with_inherit_env(home, command, &[]);
+}
+
+fn write_agent_with_inherit_env(home: &Path, command: &str, inherit_env: &[&str]) {
     let command = command.replace('\\', "\\\\").replace('"', "\\\"");
+    let inherit_env = inherit_env
+        .iter()
+        .map(|name| format!("\"{name}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
     let content = format!(
         r#"schema_version = 1
 name = "fake"
@@ -239,7 +345,7 @@ timeout_sec = 5
 
 [auth]
 inherit = false
-inherit_env = []
+inherit_env = [{inherit_env}]
 include_paths = []
 exclude_paths = []
 mount_ssh_socket = false
@@ -250,4 +356,29 @@ parser = "none"
 "#
     );
     fs::write(home.join("agents/fake.toml"), content).unwrap();
+}
+
+fn assert_public_artifacts_do_not_contain(run_dir: &Path, secret: &str) {
+    let mut stack = vec![run_dir.to_path_buf()];
+    while let Some(path) = stack.pop() {
+        for entry in fs::read_dir(&path).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if path.file_name().and_then(|name| name.to_str()) == Some("agent-profile.runtime.json")
+            {
+                continue;
+            }
+            let bytes = fs::read(&path).unwrap();
+            let content = String::from_utf8_lossy(&bytes);
+            assert!(
+                !content.contains(secret),
+                "public artifact {} leaked secret",
+                path.display()
+            );
+        }
+    }
 }

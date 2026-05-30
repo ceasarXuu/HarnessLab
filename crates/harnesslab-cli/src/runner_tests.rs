@@ -254,8 +254,11 @@ fn run_005_docker_request_uses_run_network_and_task_sandbox_spec() {
     task.sandbox_spec.mounts = vec!["/cache:/cache:ro".to_string()];
     task.sandbox_spec.env_vars = vec!["A=B".to_string()];
     task.sandbox_spec.resource_limits.cpu_cores = 3;
+    let mut profile = default_agent_profile("fake", AgentKind::Fake, "true");
+    profile.auth.inherit_env = vec!["OPENAI_API_KEY".to_string()];
+    profile.auth.include_paths = vec!["/auth:/root/.auth:ro".to_string()];
 
-    let request = docker_create_request(&spec, &task, 2, &workspace);
+    let request = docker_create_request(&spec, &profile, &task, 2, &workspace);
 
     assert_eq!(request.run_id, "run-1");
     assert_eq!(request.task_id, "task/docker");
@@ -264,8 +267,11 @@ fn run_005_docker_request_uses_run_network_and_task_sandbox_spec() {
     assert_eq!(request.workspace_host_path, workspace);
     assert_eq!(request.workspace_container_path, "/workspace");
     assert_eq!(request.network, NetworkPolicy::Full);
-    assert_eq!(request.mounts, vec!["/cache:/cache:ro"]);
-    assert_eq!(request.env_vars, vec!["A=B"]);
+    assert_eq!(
+        request.mounts,
+        vec!["/cache:/cache:ro", "/auth:/root/.auth:ro"]
+    );
+    assert_eq!(request.env_vars, vec!["A=B", "OPENAI_API_KEY"]);
     assert_eq!(request.cpu_cores, 3);
 }
 
@@ -287,7 +293,16 @@ fn run_006_run_agent_host_executes_inside_workspace() {
     let profile = default_agent_profile("fake", AgentKind::Fake, "printf ok > result.txt");
     let task = test_task();
 
-    let result = run_agent(&valid_spec(), &profile, &task, 1, tmp.path(), &workspace).unwrap();
+    let result = run_agent(
+        &valid_spec(),
+        &profile,
+        &profile,
+        &task,
+        1,
+        tmp.path(),
+        &workspace,
+    )
+    .unwrap();
 
     assert_eq!(result.process.exit_code, Some(0));
     assert_eq!(
