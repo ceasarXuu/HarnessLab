@@ -90,7 +90,7 @@ pub fn latest_run_dir(runs_dir: &Path) -> Result<Option<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use harnesslab_core::{Outcome, TaskAttemptResult, TaskState, UsageRecord};
+    use harnesslab_core::{AttemptProvenance, Outcome, TaskAttemptResult, TaskState, UsageRecord};
 
     #[test]
     fn art_003_atomic_json_write_produces_valid_json() {
@@ -100,6 +100,7 @@ mod tests {
             schema_version: 1,
             task_id: "t".to_string(),
             attempt: 1,
+            provenance: AttemptProvenance::Original,
             state: TaskState::Success,
             outcome: Outcome::Success,
             failure_class: harnesslab_core::FailureClass::None,

@@ -1,5 +1,8 @@
 use askama::Template;
-use harnesslab_core::{FailureClass, RunResults, UsageRecord};
+use harnesslab_core::{
+    AttemptProvenance, FailureClass, RunResults, TaskAttemptResult, UsageRecord,
+    report_artifact_path, task_dir_name,
+};
 
 #[derive(Debug, Clone)]
 pub struct ReportModel {
@@ -8,8 +11,11 @@ pub struct ReportModel {
     pub agent: String,
     pub benchmark: String,
     pub split: String,
+    pub report_path: String,
+    pub resumed: bool,
     pub summary: harnesslab_core::RunSummary,
     pub rows: Vec<TaskRow>,
+    pub total_usage: String,
     pub replay_command: String,
     pub original_command: String,
 }
@@ -17,13 +23,27 @@ pub struct ReportModel {
 #[derive(Debug, Clone)]
 pub struct TaskRow {
     pub task_id: String,
+    pub attempt: u32,
+    pub resumed_marker: String,
     pub outcome: String,
     pub failure: String,
     pub score: String,
     pub duration_ms: u64,
     pub usage: String,
+    pub patch_href: String,
+    pub has_patch: bool,
     pub stdout_link: String,
     pub stderr_link: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReportContext {
+    pub run_id: String,
+    pub agent: String,
+    pub benchmark: String,
+    pub split: String,
+    pub report_path: String,
+    pub resumed: bool,
 }
 
 #[derive(Template)]
@@ -44,21 +64,27 @@ pub struct TaskRow {
 <body>
   <h1>{{ model.title }}</h1>
   <p>Run <code>{{ model.run_id }}</code> using {{ model.agent }} on {{ model.benchmark }} / {{ model.split }}.</p>
+  <p>Report: <code>{{ model.report_path }}</code></p>
+  <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
   <h2>Summary</h2>
-  <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}.</p>
-  <p>Usage marked unknown is cost not comparable.</p>
+  <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, score {{ model.summary.total_score }}.</p>
+  <p>Usage: {{ model.total_usage }}</p>
+  <p>Score uses the latest attempt per task. Usage sums all recorded attempts. Usage marked unknown is cost not comparable.</p>
   <h2>Tasks</h2>
   <table>
-    <thead><tr><th>Task</th><th>Outcome</th><th>Failure</th><th>Score</th><th>Duration</th><th>Usage</th><th>Logs</th></tr></thead>
+    <thead><tr><th>Task</th><th>Attempt</th><th>Resume</th><th>Outcome</th><th>Failure</th><th>Score</th><th>Duration</th><th>Usage</th><th>Patch</th><th>Logs</th></tr></thead>
     <tbody>
     {% for row in model.rows %}
       <tr>
         <td>{{ row.task_id }}</td>
+        <td>{{ row.attempt }}</td>
+        <td>{{ row.resumed_marker }}</td>
         <td>{{ row.outcome }}</td>
         <td>{{ row.failure }}</td>
         <td>{{ row.score }}</td>
         <td>{{ row.duration_ms }} ms</td>
         <td>{{ row.usage }}</td>
+        <td>{% if row.has_patch %}<a href="{{ row.patch_href }}">diff</a>{% else %}n/a{% endif %}</td>
         <td><a href="{{ row.stdout_link }}">stdout</a> <a href="{{ row.stderr_link }}">stderr</a></td>
       </tr>
     {% endfor %}
@@ -75,13 +101,7 @@ struct HtmlTemplate<'a> {
     model: &'a ReportModel,
 }
 
-pub fn build_report_model(
-    run_id: &str,
-    agent: &str,
-    benchmark: &str,
-    split: &str,
-    results: RunResults,
-) -> ReportModel {
+pub fn build_report_model(context: ReportContext, results: RunResults) -> ReportModel {
     let rows = results
         .tasks
         .iter()
@@ -90,35 +110,49 @@ pub fn build_report_model(
                 FailureClass::None => "none".to_string(),
                 class => format!("{class:?}/{:?}", task.failure_code),
             };
+            let patch_href = patch_href(task);
             TaskRow {
                 task_id: task.task_id.clone(),
+                attempt: task.attempt,
+                resumed_marker: provenance_text(task.provenance).to_string(),
                 outcome: format!("{:?}", task.outcome),
                 failure,
                 score: format!("{:.3}", task.benchmark_score),
                 duration_ms: task.duration_ms,
                 usage: usage_text(&task.usage),
+                has_patch: patch_href != "n/a",
+                patch_href,
                 stdout_link: format!(
                     "tasks/{}/attempts/{}/agent/stdout.log",
-                    task.task_id, task.attempt
+                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
+                    task.attempt
                 ),
                 stderr_link: format!(
                     "tasks/{}/attempts/{}/agent/stderr.log",
-                    task.task_id, task.attempt
+                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
+                    task.attempt
                 ),
             }
         })
         .collect();
     ReportModel {
         title: "HarnessLab Run Report".to_string(),
-        run_id: run_id.to_string(),
-        agent: agent.to_string(),
-        benchmark: benchmark.to_string(),
-        split: split.to_string(),
+        run_id: context.run_id.clone(),
+        agent: context.agent.clone(),
+        benchmark: context.benchmark.clone(),
+        split: context.split.clone(),
+        report_path: context.report_path,
+        resumed: context.resumed,
         summary: results.summary,
         rows,
-        replay_command: format!("harnesslab run replay ~/.harnesslab/runs/{run_id}"),
+        total_usage: total_usage_text(&results.tasks),
+        replay_command: format!(
+            "harnesslab run replay ~/.harnesslab/runs/{}",
+            context.run_id
+        ),
         original_command: format!(
-            "harnesslab run --agent {agent} --benchmark {benchmark} --split {split}"
+            "harnesslab run --agent {} --benchmark {} --split {}",
+            context.agent, context.benchmark, context.split
         ),
     }
 }
@@ -131,19 +165,84 @@ fn usage_text(usage: &UsageRecord) -> String {
     match usage {
         UsageRecord::Unknown => "unknown; cost not comparable".to_string(),
         UsageRecord::ParseError { message } => format!("parse error: {message}"),
-        UsageRecord::Parsed { total_tokens, .. } => format!("{total_tokens} tokens"),
+        UsageRecord::Parsed {
+            total_tokens,
+            cost_usd,
+            ..
+        } => match cost_usd {
+            Some(cost) => format!("{total_tokens} tokens; ${cost:.6}"),
+            None => format!("{total_tokens} tokens"),
+        },
+    }
+}
+
+fn total_usage_text(tasks: &[TaskAttemptResult]) -> String {
+    let mut total = 0;
+    let mut cost = 0.0;
+    let mut has_cost = false;
+    let mut unknown = false;
+    for task in tasks {
+        match &task.usage {
+            UsageRecord::Parsed {
+                total_tokens,
+                cost_usd,
+                ..
+            } => {
+                total += total_tokens;
+                if let Some(value) = cost_usd {
+                    has_cost = true;
+                    cost += value;
+                }
+            }
+            _ => unknown = true,
+        }
+    }
+    let cost_text = if has_cost {
+        format!("; ${cost:.6}")
+    } else {
+        String::new()
+    };
+    if total > 0 && !unknown {
+        format!("{total} tokens{cost_text}")
+    } else if total > 0 {
+        format!("{total} tokens{cost_text}; some attempts unknown")
+    } else {
+        "unknown; cost not comparable".to_string()
+    }
+}
+
+fn patch_href(task: &TaskAttemptResult) -> String {
+    match &task.patch {
+        Some(patch) => match (
+            task_dir_name(&task.task_id),
+            report_artifact_path(&patch.diff_path),
+        ) {
+            (Ok(task_dir), Ok(diff_path)) => {
+                format!("tasks/{task_dir}/attempts/{}/{}", task.attempt, diff_path)
+            }
+            _ => "n/a".to_string(),
+        },
+        None => "n/a".to_string(),
+    }
+}
+
+fn provenance_text(provenance: AttemptProvenance) -> &'static str {
+    match provenance {
+        AttemptProvenance::Original => "original",
+        AttemptProvenance::Resumed => "resumed",
+        AttemptProvenance::Recovery => "recovery",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use harnesslab_core::{Outcome, TaskAttemptResult, TaskState};
+    use harnesslab_core::{Outcome, PatchRecord, PatchStatus, TaskAttemptResult, TaskState};
 
     #[test]
     fn rpt_001_report_html_contains_summary_and_relative_links() {
         let results = harnesslab_core::summarize_results("run-1", vec![attempt()]);
-        let model = build_report_model("run-1", "fake", "fake-terminal", "success", results);
+        let model = build_report_model(context(false), results);
 
         let html = render_html(&model).unwrap();
 
@@ -152,11 +251,34 @@ mod tests {
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
     }
 
+    #[test]
+    fn rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links() {
+        let mut result = attempt();
+        result.task_id = "task/slash".to_string();
+        result.provenance = AttemptProvenance::Recovery;
+        result.patch = Some(PatchRecord {
+            diff_path: "../patch.diff".to_string(),
+            prediction_path: None,
+            status: PatchStatus::Captured,
+        });
+        let results = harnesslab_core::summarize_results("run-1", vec![result]);
+        let model = build_report_model(context(true), results);
+
+        let html = render_html(&model).unwrap();
+
+        assert!(html.contains("task/slash"));
+        assert!(html.contains("<td>recovery</td>"));
+        assert!(html.contains("tasks/task%2Fslash/attempts/1/agent/stdout.log"));
+        assert!(html.contains("<td>n/a</td>"));
+        assert!(!html.contains("../patch.diff"));
+    }
+
     fn attempt() -> TaskAttemptResult {
         TaskAttemptResult {
             schema_version: 1,
             task_id: "task-1".to_string(),
             attempt: 1,
+            provenance: AttemptProvenance::Original,
             state: TaskState::Success,
             outcome: Outcome::Success,
             failure_class: FailureClass::None,
@@ -168,6 +290,17 @@ mod tests {
             patch: None,
             usage: UsageRecord::Unknown,
             warnings: Vec::new(),
+        }
+    }
+
+    fn context(resumed: bool) -> ReportContext {
+        ReportContext {
+            run_id: "run-1".to_string(),
+            agent: "fake".to_string(),
+            benchmark: "fake-terminal".to_string(),
+            split: "success".to_string(),
+            report_path: "/runs/run-1/report.html".to_string(),
+            resumed,
         }
     }
 }

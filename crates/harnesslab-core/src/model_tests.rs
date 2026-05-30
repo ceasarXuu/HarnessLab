@@ -80,10 +80,11 @@ fn core_004_failure_classifier_maps_failed_verifier() {
 
 #[test]
 fn orch_003_exit_code_priority_prefers_execution_over_benchmark() {
-    let results = vec![
-        attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed)),
-        attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout)),
-    ];
+    let mut benchmark = attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed));
+    benchmark.task_id = "benchmark-task".to_string();
+    let mut execution = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+    execution.task_id = "execution-task".to_string();
+    let results = vec![benchmark, execution];
 
     assert_eq!(derive_exit_code(&results, false), 1);
 }
@@ -111,6 +112,7 @@ fn orch_001_summary_counts_partial_and_interrupted() {
     partial.benchmark_score = 0.5;
     partial.duration_ms = 7;
     let mut interrupted = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+    interrupted.task_id = "interrupted".to_string();
     interrupted.state = TaskState::Interrupted;
     interrupted.duration_ms = 3;
 
@@ -121,6 +123,27 @@ fn orch_001_summary_counts_partial_and_interrupted() {
     assert_eq!(results.summary.interrupted, 1);
     assert_eq!(results.summary.total_duration_ms, 10);
     assert_eq!(results.summary.total_score, 0.5);
+}
+
+#[test]
+fn orch_001_summary_and_exit_code_use_latest_attempt_per_task() {
+    let mut failed = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
+    failed.attempt = 1;
+    failed.duration_ms = 3;
+    let mut recovered = attempt(FailureClass::None, None);
+    recovered.attempt = 2;
+    recovered.benchmark_score = 1.0;
+    recovered.duration_ms = 5;
+
+    let results = vec![failed, recovered];
+
+    assert_eq!(derive_exit_code(&results, false), 0);
+    let summary = summarize_results("run", results).summary;
+    assert_eq!(summary.total_tasks, 1);
+    assert_eq!(summary.success, 1);
+    assert_eq!(summary.execution_failure, 0);
+    assert_eq!(summary.total_duration_ms, 5);
+    assert_eq!(summary.total_score, 1.0);
 }
 
 #[test]
@@ -201,11 +224,32 @@ fn core_001_run_spec_validation_rejects_invalid_inputs() {
     assert_eq!(validate_run_spec(&spec), Err(ModelError::InvalidExecution));
 }
 
+#[test]
+fn core_001_benchmark_plan_validation_rejects_empty_task_and_escape_paths() {
+    let mut plan = valid_plan();
+    plan.tasks[0].task_id = "repo/task".to_string();
+    assert_eq!(validate_benchmark_plan(&plan), Ok(()));
+
+    plan.tasks[0].task_id = " ".to_string();
+    assert!(matches!(
+        validate_benchmark_plan(&plan),
+        Err(ModelError::UnsafeTaskId(_))
+    ));
+
+    plan = valid_plan();
+    plan.tasks[0].artifact_spec.required_paths = vec!["../escape".to_string()];
+    assert!(matches!(
+        validate_benchmark_plan(&plan),
+        Err(ModelError::UnsafeArtifactPath(_))
+    ));
+}
+
 fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult {
     TaskAttemptResult {
         schema_version: 1,
         task_id: "task".to_string(),
         attempt: 1,
+        provenance: AttemptProvenance::Original,
         state: if class == FailureClass::None {
             TaskState::Success
         } else {
@@ -249,5 +293,56 @@ fn valid_spec() -> RunSpec {
             run_dir: "run".to_string(),
         },
         replay_source_run_id: None,
+    }
+}
+
+fn valid_plan() -> crate::BenchmarkPlan {
+    crate::BenchmarkPlan {
+        benchmark: crate::BenchmarkIdentity {
+            name: "fake".to_string(),
+            version: "fixture".to_string(),
+        },
+        split: "success".to_string(),
+        prepared_benchmark_ref: "fixture".to_string(),
+        tasks: vec![crate::TaskPlan {
+            task_id: "task-1".to_string(),
+            instruction: "do it".to_string(),
+            workspace_spec: crate::WorkspaceSpec {
+                workspace_type: crate::WorkspaceType::Empty,
+                target_path: ".".to_string(),
+                clean: true,
+            },
+            sandbox_spec: crate::SandboxSpec {
+                image: "host".to_string(),
+                mounts: Vec::new(),
+                env_vars: Vec::new(),
+                network: NetworkPolicy::None,
+                privileged: false,
+                resource_limits: crate::ResourceHint {
+                    cpu_cores: 1,
+                    memory_mb: 512,
+                },
+            },
+            verifier_spec: crate::VerifierSpec {
+                command: "true".to_string(),
+                working_dir: ".".to_string(),
+                timeout_sec: 1,
+                expected_exit_codes: vec![0],
+                environment_mode: crate::VerifierEnvironment::HostProcess,
+                output_parser: "exit_code".to_string(),
+            },
+            artifact_spec: crate::ArtifactSpec {
+                base_dir: ".".to_string(),
+                globs: Vec::new(),
+                required_paths: vec!["result.txt".to_string()],
+                max_size_bytes: 1024,
+            },
+            patch_spec: None,
+        }],
+        run_config_overrides: crate::RunConfigOverrides {
+            timeout_sec: None,
+            network: None,
+        },
+        warnings: Vec::new(),
     }
 }

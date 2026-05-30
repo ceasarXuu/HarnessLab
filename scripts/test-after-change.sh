@@ -27,6 +27,9 @@ if [[ "${1:-}" == "--select" ]]; then
     USE-001) package="harnesslab-core"; test_name="usage::tests::use_001_parser_none_is_unknown" ;;
     USE-002) package="harnesslab-core"; test_name="usage::tests::use_002_regex_parser_extracts_tokens" ;;
     USE-004) package="harnesslab-core"; test_name="usage::tests::use_004_attempts_aggregate_parsed_usage" ;;
+    USE-005) package="harnesslab-cli"; test_name="use_005_usage_regex_parser_records_tokens_and_report_text" ;;
+    USE-006) package="harnesslab-cli"; test_name="use_005_usage_json_path_parser_records_cost_and_report_text" ;;
+    USE-007) package="harnesslab-cli"; test_name="use_005_usage_parser_failure_is_persisted_and_reported" ;;
     C-BENCH-001) package="harnesslab-adapters"; test_name="registry::tests::c_bench_001_built_in_descriptors_include_required_benchmarks" ;;
     C-BENCH-002) package="harnesslab-adapters"; test_name="fake_terminal::tests::c_bench_002_fake_terminal_task_plan_is_serializable" ;;
     C-BENCH-003) package="harnesslab-adapters"; test_name="fake_patch::tests::c_bench_003_fake_patch_plan_has_patch_spec" ;;
@@ -49,6 +52,7 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-010) package="harnesslab-infra"; test_name="docker::tests::c_sbox_010_exec_without_docker_returns_process_record" ;;
     C-SBOX-011) package="harnesslab-infra"; test_name="docker::tests::c_sbox_011_create_args_cover_privileged_full_network_and_sanitized_names" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
+    RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
     ORCH-005) package="harnesslab-cli"; test_name="runner::tests::run_005_docker_request_uses_run_network_and_task_sandbox_spec" ;;
     ORCH-006) package="harnesslab-cli"; test_name="runner::tests::run_005_host_fixture_does_not_request_docker" ;;
@@ -61,6 +65,9 @@ if [[ "${1:-}" == "--select" ]]; then
     ORCH-013) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_001_plan_requires_docker_only_for_container_tasks" ;;
     ORCH-014) package="harnesslab-cli"; test_name="runner::sandbox::tests::docker_guard_exposes_handle_and_ignores_destroy_errors_on_drop" ;;
     REPLAY-002) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_keeps_completed_attempts_and_schedules_missing_only" ;;
+    REPLAY-004) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_failed_completed_attempt_schedules_recovery_attempt" ;;
+    REPLAY-005) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_does_not_create_unbounded_recovery_attempts" ;;
+    REPLAY-006) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_uses_encoded_task_dir_for_slash_bearing_task_ids" ;;
     REPLAY-003) package="harnesslab-cli"; test_name="runner::tests::replay_003_replay_spec_preserves_execution_config_and_links_source" ;;
     INT-001) package="harnesslab-cli"; test_name="int_001_init_empty_home_creates_config_and_profiles" ;;
     INT-003) package="harnesslab-cli"; test_name="int_003_fake_terminal_success_creates_report_and_results" ;;
@@ -72,6 +79,8 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-012) package="harnesslab-cli"; test_name="int_012_replay_text_output_succeeds" ;;
     INT-013) package="harnesslab-cli"; test_name="int_013_replay_falls_back_when_benchmark_snapshot_is_missing" ;;
     INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;
+    INT-015) package="harnesslab-cli"; test_name="int_008_resume_failed_run_recovers_once_and_reports_latest_attempt" ;;
+    INT-016) package="harnesslab-cli"; test_name="int_016_resume_interrupted_attempt_schedules_recovery_attempt" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;

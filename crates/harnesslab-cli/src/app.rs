@@ -66,6 +66,18 @@ fn init(home: &Path, json: bool) -> Result<i32> {
         })?;
     } else {
         println!("init: ok home={}", home.display());
+        println!("Detected agents:");
+        for (name, _, executable, _) in default_profiles() {
+            let profile_path = home.join("agents").join(format!("{name}.toml"));
+            if command_exists(executable) {
+                println!("  - {name}: found -> {}", profile_path.display());
+            } else {
+                println!("  - {name}: not found -> {}", profile_path.display());
+            }
+        }
+        println!("Next:");
+        println!("  1. Edit agent profiles in {}/agents", home.display());
+        println!("  2. Run: harnesslab doctor");
     }
     Ok(0)
 }

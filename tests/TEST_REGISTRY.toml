@@ -241,6 +241,66 @@ requirements = ["core_models"]
 contracts = ["UsageRecord"]
 
 [[tests]]
+id = "USE-005"
+title = "Configured usage parser is reflected in run results and report"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select USE-005"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/usage.rs",
+  "crates/harnesslab-cli/tests/usage_contract.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["results.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "9"
+[tests.verifies]
+requirements = ["core_models", "report_html"]
+contracts = ["UsageRecord", "ReportHtml"]
+
+[[tests]]
+id = "USE-006"
+title = "JSON usage parser records tokens and cost"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select USE-006"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/usage.rs",
+  "crates/harnesslab-cli/tests/usage_contract.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["results.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "9"
+[tests.verifies]
+requirements = ["core_models", "report_html"]
+contracts = ["UsageRecord", "UsageConfig", "ReportHtml"]
+
+[[tests]]
+id = "USE-007"
+title = "Usage parser failures are explicit in results and report"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select USE-007"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/usage.rs",
+  "crates/harnesslab-cli/tests/usage_contract.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["results.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "9"
+[tests.verifies]
+requirements = ["core_models", "report_html"]
+contracts = ["UsageRecord", "ReportHtml"]
+
+[[tests]]
 id = "C-BENCH-001"
 title = "Built-in benchmark descriptors"
 layer = "contract"
@@ -613,6 +673,25 @@ requirements = ["report_html"]
 contracts = ["ReportService"]
 
 [[tests]]
+id = "RPT-002"
+title = "HTML report encodes task paths and rejects unsafe patch links"
+layer = "unit"
+owner_module = "harnesslab-report"
+command = "scripts/test-after-change.sh --select RPT-002"
+file_patterns = [
+  "crates/harnesslab-core/src/path_safety.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["coverage/coverage.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "11"
+[tests.verifies]
+requirements = ["report_html", "artifact_event_store"]
+contracts = ["ReportService", "PathSafety"]
+
+[[tests]]
 id = "ORCH-004"
 title = "Run orchestrator expands configured attempts"
 layer = "unit"
@@ -948,6 +1027,65 @@ requirements = ["replay_runtime"]
 contracts = ["Replay", "RunSpec"]
 
 [[tests]]
+id = "REPLAY-004"
+title = "Resume schedules recovery attempt for failed task"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-004"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/src/runner_tests.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "8.4"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Resume", "RunOrchestrator"]
+
+[[tests]]
+id = "REPLAY-005"
+title = "Resume does not create unbounded recovery attempts"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-005"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/src/runner_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "8.4"
+[tests.verifies]
+requirements = ["replay_runtime"]
+contracts = ["Resume", "RunOrchestrator"]
+
+[[tests]]
+id = "REPLAY-006"
+title = "Resume stores slash-bearing task ids under encoded directories"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-006"
+file_patterns = [
+  "crates/harnesslab-core/src/path_safety.rs",
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/src/runner_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "8.4"
+[tests.verifies]
+requirements = ["replay_runtime", "artifact_event_store"]
+contracts = ["Resume", "RunOrchestrator", "PathSafety"]
+
+[[tests]]
 id = "ORCH-013"
 title = "Run sandbox cleanup is enabled only for container tasks"
 layer = "unit"
@@ -994,6 +1132,47 @@ section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime", "config_agent_registry"]
 contracts = ["Resume", "AgentProfile"]
+
+[[tests]]
+id = "INT-015"
+title = "Resume recovery updates summary, report, and events"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-015"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/tests/resume_contract.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["results.json", "report.html", "events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime", "report_html", "artifact_event_store"]
+contracts = ["Resume", "RunOrchestrator", "ReportHtml", "EventLog"]
+
+[[tests]]
+id = "INT-016"
+title = "Resume interrupted attempt schedules recovery"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-016"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/tests/resume_contract.rs",
+]
+required_artifacts = ["results.json", "events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["replay_runtime", "artifact_event_store"]
+contracts = ["Resume", "RunOrchestrator", "EventLog"]
 
 [[tests]]
 id = "META-002"
