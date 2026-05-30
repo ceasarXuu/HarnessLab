@@ -111,6 +111,17 @@ doc = "docs/mvp-development-spec.md"
 section = "13.3"
 
 [[requirements]]
+id = "external_benchmark_runtime"
+title = "External benchmark adapters preserve official outputs and task-level failures"
+area = "integration"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "16"
+
+[[requirements]]
 id = "replay_runtime"
 title = "Replay creates a new run from stored snapshots"
 area = "replay"

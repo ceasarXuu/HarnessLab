@@ -30,7 +30,7 @@ fn bench_001_terminal_bench_info_uses_local_data_root() {
         .find(|split| split["name"] == "full")
         .unwrap();
     assert_eq!(full["task_count"], 1);
-    assert_eq!(full["data_state"], "unsupported");
+    assert_eq!(full["data_state"], "ready");
 }
 
 #[test]
@@ -40,13 +40,14 @@ fn bench_002_swe_bench_pro_info_uses_local_data_root() {
         .path()
         .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/data");
     std::fs::create_dir_all(&data_dir).unwrap();
-    std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "").unwrap();
+    std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "parquet").unwrap();
     std::fs::write(
         root.path()
             .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/README.md"),
         "splits:\n- name: test\n  num_examples: 731\n",
     )
     .unwrap();
+    create_swe_source(root.path());
 
     let output = Command::cargo_bin("harnesslab")
         .unwrap()
@@ -66,11 +67,41 @@ fn bench_002_swe_bench_pro_info_uses_local_data_root() {
         .find(|split| split["name"] == "full")
         .unwrap();
     assert_eq!(full["task_count"], 731);
-    assert_eq!(full["data_state"], "unsupported");
+    assert_eq!(full["data_state"], "ready");
 }
 
 #[test]
-fn bench_003_run_blocks_unsupported_local_full_split_before_planning() {
+fn bench_003_run_blocks_missing_terminal_bench_full_before_planning() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "printf ok > result.txt");
+    let root = tempfile::tempdir().unwrap();
+
+    Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "fake",
+            "--benchmark",
+            "terminal-bench",
+            "--split",
+            "full",
+            "--json",
+        ])
+        .assert()
+        .code(3)
+        .stderr(
+            predicate::str::contains("terminal-bench/full")
+                .and(predicate::str::contains("data_state=not_downloaded")),
+        );
+}
+
+#[test]
+fn bench_003_run_validates_terminal_bench_agent_mapping_before_start() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "printf ok > result.txt");
@@ -93,15 +124,12 @@ fn bench_003_run_blocks_unsupported_local_full_split_before_planning() {
             "--benchmark",
             "terminal-bench",
             "--split",
-            "full",
+            "smoke",
             "--json",
         ])
         .assert()
         .code(3)
-        .stderr(
-            predicate::str::contains("terminal-bench/full")
-                .and(predicate::str::contains("data_state=unsupported")),
-        );
+        .stderr(predicate::str::contains("terminal_bench_agent"));
 }
 
 #[test]
@@ -141,7 +169,7 @@ fn bench_004_run_blocks_swe_bench_pro_full_before_planning() {
         .code(3)
         .stderr(
             predicate::str::contains("swe-bench-pro/full")
-                .and(predicate::str::contains("data_state=unsupported")),
+                .and(predicate::str::contains("data_state=corrupted")),
         );
 }
 
@@ -177,4 +205,10 @@ parser = "none"
 "#
     );
     fs::write(home.join("agents/fake.toml"), content).unwrap();
+}
+
+fn create_swe_source(root: &Path) {
+    let source = root.join("_src/SWE-bench_Pro-os");
+    std::fs::create_dir_all(source.join("run_scripts")).unwrap();
+    std::fs::write(source.join("swe_bench_pro_eval.py"), "").unwrap();
 }

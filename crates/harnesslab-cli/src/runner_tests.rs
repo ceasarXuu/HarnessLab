@@ -389,6 +389,7 @@ fn test_task() -> TaskPlan {
             max_size_bytes: 1,
         },
         patch_spec: None,
+        external_runner: None,
     }
 }
 

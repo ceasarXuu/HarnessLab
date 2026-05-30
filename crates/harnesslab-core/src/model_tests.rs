@@ -79,6 +79,42 @@ fn core_004_failure_classifier_maps_failed_verifier() {
 }
 
 #[test]
+fn core_001_old_task_plan_snapshot_defaults_external_runner() {
+    let json = r#"{
+        "task_id": "task-1",
+        "instruction": "do it",
+        "workspace_spec": {"workspace_type":"empty","target_path":"workspace","clean":true},
+        "sandbox_spec": {
+            "image":"host",
+            "mounts":[],
+            "env_vars":[],
+            "network":"none",
+            "privileged":false,
+            "resource_limits":{"cpu_cores":1,"memory_mb":128}
+        },
+        "verifier_spec": {
+            "command":"true",
+            "working_dir":"workspace",
+            "timeout_sec":1,
+            "expected_exit_codes":[0],
+            "environment_mode":"host_process",
+            "output_parser":"exit_code"
+        },
+        "artifact_spec": {
+            "base_dir":"workspace",
+            "globs":[],
+            "required_paths":[],
+            "max_size_bytes":1
+        },
+        "patch_spec": null
+    }"#;
+
+    let task: crate::TaskPlan = serde_json::from_str(json).unwrap();
+
+    assert!(task.external_runner.is_none());
+}
+
+#[test]
 fn orch_003_exit_code_priority_prefers_execution_over_benchmark() {
     let mut benchmark = attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed));
     benchmark.task_id = "benchmark-task".to_string();
@@ -338,6 +374,7 @@ fn valid_plan() -> crate::BenchmarkPlan {
                 max_size_bytes: 1024,
             },
             patch_spec: None,
+            external_runner: None,
         }],
         run_config_overrides: crate::RunConfigOverrides {
             timeout_sec: None,

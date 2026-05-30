@@ -108,6 +108,7 @@ fn terminal_task(
             max_size_bytes: 1024 * 1024,
         },
         patch_spec: None,
+        external_runner: None,
     }
 }
 

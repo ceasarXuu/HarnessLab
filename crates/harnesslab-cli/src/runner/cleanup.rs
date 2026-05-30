@@ -228,6 +228,7 @@ mod tests {
                     max_size_bytes: 1,
                 },
                 patch_spec: None,
+                external_runner: None,
             }],
             run_config_overrides: RunConfigOverrides {
                 timeout_sec: None,

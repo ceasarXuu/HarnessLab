@@ -1,10 +1,12 @@
-use crate::{BenchmarkAdapter, plan_from_tasks};
+use crate::BenchmarkAdapter;
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDescriptor, BenchmarkPlan, BenchmarkSplit, BenchmarkStyle, DataState,
-    NetworkPolicy, PatchSpec, ResourceHint, SandboxSpec, TaskPlan, VerifierEnvironment,
-    VerifierSpec, WorkspaceSpec, WorkspaceType,
+    ArtifactSpec, BenchmarkDescriptor, BenchmarkIdentity, BenchmarkPlan, BenchmarkSplit,
+    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PatchSpec,
+    ResourceHint, RunConfigOverrides, SandboxSpec, TaskPlan, VerifierEnvironment, VerifierSpec,
+    WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub struct SweBenchProAdapter {
     data_root: Option<PathBuf>,
@@ -31,6 +33,9 @@ impl Default for SweBenchProAdapter {
 impl BenchmarkAdapter for SweBenchProAdapter {
     fn descriptor(&self) -> BenchmarkDescriptor {
         let dataset = self.data_root.as_deref().map(discover_swe_bench_pro);
+        let ready = dataset
+            .as_ref()
+            .is_some_and(|dataset| dataset.data_state == DataState::Ready);
         BenchmarkDescriptor {
             name: "swe-bench-pro".to_string(),
             style: BenchmarkStyle::Patch,
@@ -39,8 +44,10 @@ impl BenchmarkAdapter for SweBenchProAdapter {
             splits: vec![
                 BenchmarkSplit {
                     name: "smoke".to_string(),
-                    task_count: 1,
-                    data_state: DataState::Ready,
+                    task_count: usize::from(ready),
+                    data_state: dataset
+                        .as_ref()
+                        .map_or(DataState::RequiresAuth, |dataset| dataset.data_state),
                 },
                 BenchmarkSplit {
                     name: "full".to_string(),
@@ -53,68 +60,25 @@ impl BenchmarkAdapter for SweBenchProAdapter {
     }
 
     fn plan(&self, split: &str) -> Result<BenchmarkPlan, String> {
+        let dataset = self
+            .data_root
+            .as_deref()
+            .map(discover_swe_bench_pro)
+            .ok_or_else(|| "swe-bench-pro data root is not configured".to_string())?;
+        if dataset.data_state != DataState::Ready {
+            return Err(format!(
+                "swe-bench-pro data is not runnable: data_state={}",
+                dataset.data_state
+            ));
+        }
         match split {
-            "smoke" => Ok(plan_from_tasks(
-                self.descriptor(),
-                split,
-                vec![TaskPlan {
-                    task_id: "swe-bench-pro-smoke".to_string(),
-                    instruction: "Modify app.txt from old to swe-bench-pro-smoke.".to_string(),
-                    workspace_spec: WorkspaceSpec {
-                        workspace_type: WorkspaceType::GitRepo,
-                        target_path: "workspace".to_string(),
-                        clean: true,
-                    },
-                    sandbox_spec: SandboxSpec {
-                        image: "ubuntu:24.04".to_string(),
-                        mounts: Vec::new(),
-                        env_vars: Vec::new(),
-                        network: NetworkPolicy::None,
-                        privileged: false,
-                        resource_limits: ResourceHint {
-                            cpu_cores: 1,
-                            memory_mb: 512,
-                        },
-                    },
-                    verifier_spec: VerifierSpec {
-                        command: "grep -q swe-bench-pro-smoke app.txt".to_string(),
-                        working_dir: "workspace".to_string(),
-                        timeout_sec: 30,
-                        expected_exit_codes: vec![0],
-                        environment_mode: VerifierEnvironment::HostProcess,
-                        output_parser: "exit_code".to_string(),
-                    },
-                    artifact_spec: ArtifactSpec {
-                        base_dir: "workspace".to_string(),
-                        globs: vec!["**/*".to_string()],
-                        required_paths: Vec::new(),
-                        max_size_bytes: 1024 * 1024,
-                    },
-                    patch_spec: Some(PatchSpec {
-                        diff_path: "patch.diff".to_string(),
-                        prediction_path: "prediction.jsonl".to_string(),
-                    }),
-                }],
-            )),
+            "smoke" => {
+                let ids = extract_instance_ids(&dataset.dataset_dir, Some(1))?;
+                Ok(plan_from_dataset(self.descriptor(), split, &dataset, ids))
+            }
             "full" => {
-                let state = self
-                    .data_root
-                    .as_deref()
-                    .map(discover_swe_bench_pro)
-                    .map_or(DataState::RequiresAuth, |dataset| dataset.data_state);
-                if state == DataState::Unsupported {
-                    Err(
-                        "swe-bench-pro full data is present, but evaluator execution is not implemented yet"
-                            .to_string(),
-                    )
-                } else if state == DataState::Corrupted {
-                    Err("swe-bench-pro full data is present but incomplete or invalid".to_string())
-                } else {
-                    Err(
-                        "swe-bench-pro full data is not available locally; download it first (requires HuggingFace auth)"
-                            .to_string(),
-                    )
-                }
+                let ids = extract_instance_ids(&dataset.dataset_dir, None)?;
+                Ok(plan_from_dataset(self.descriptor(), split, &dataset, ids))
             }
             other => Err(format!("unknown swe-bench-pro split {other}")),
         }
@@ -125,24 +89,40 @@ impl BenchmarkAdapter for SweBenchProAdapter {
 struct SweBenchProDataset {
     task_count: usize,
     data_state: DataState,
+    dataset_dir: PathBuf,
+    source_dir: PathBuf,
 }
 
 fn discover_swe_bench_pro(root: &Path) -> SweBenchProDataset {
     let dataset_dir = root.join("swe-bench-pro/ScaleAI__SWE-bench_Pro");
+    let dataset_dir = std::fs::canonicalize(&dataset_dir).unwrap_or(dataset_dir);
+    let source_dir = root.join("_src/SWE-bench_Pro-os");
+    let source_dir = std::fs::canonicalize(&source_dir).unwrap_or(source_dir);
     let data_dir = dataset_dir.join("data");
     let has_parquet = std::fs::read_dir(data_dir)
         .ok()
         .into_iter()
         .flatten()
         .filter_map(Result::ok)
-        .find(|entry| entry.path().extension().is_some_and(|ext| ext == "parquet"))
+        .find(|entry| {
+            entry.path().extension().is_some_and(|ext| ext == "parquet")
+                && entry.metadata().is_ok_and(|meta| meta.len() > 0)
+        })
         .is_some();
     let readme = dataset_dir.join("README.md");
     let task_count = read_num_examples(&readme);
+    let has_evaluator = source_dir.join("swe_bench_pro_eval.py").is_file()
+        && source_dir.join("run_scripts").is_dir();
     if has_parquet && task_count.is_some_and(|count| count > 0) {
         return SweBenchProDataset {
             task_count: task_count.unwrap(),
-            data_state: DataState::Unsupported,
+            data_state: if has_evaluator {
+                DataState::Ready
+            } else {
+                DataState::Corrupted
+            },
+            dataset_dir,
+            source_dir,
         };
     }
     let data_state = if has_parquet || readme.is_file() {
@@ -153,6 +133,131 @@ fn discover_swe_bench_pro(root: &Path) -> SweBenchProDataset {
     SweBenchProDataset {
         task_count: 0,
         data_state,
+        dataset_dir,
+        source_dir,
+    }
+}
+
+fn extract_instance_ids(dataset_dir: &Path, limit: Option<usize>) -> Result<Vec<String>, String> {
+    let parquet = first_parquet(dataset_dir)
+        .ok_or_else(|| "swe-bench-pro parquet data is missing".to_string())?;
+    let limit_arg = limit.unwrap_or(0).to_string();
+    let script = r#"
+import pandas as pd
+import sys
+path, limit = sys.argv[1], int(sys.argv[2])
+df = pd.read_parquet(path, columns=["instance_id"])
+ids = [str(v) for v in df["instance_id"].dropna().tolist()]
+for value in (ids[:limit] if limit else ids):
+    print(value)
+"#;
+    let output = Command::new("uv")
+        .args([
+            "run", "--with", "pandas", "--with", "pyarrow", "python", "-c",
+        ])
+        .arg(script)
+        .arg(parquet)
+        .arg(limit_arg)
+        .output()
+        .map_err(|error| format!("failed to execute uv for swe-bench-pro metadata: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "failed to read swe-bench-pro parquet metadata: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    let ids = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    if ids.is_empty() {
+        return Err("swe-bench-pro parquet contains no instance_id rows".to_string());
+    }
+    Ok(ids)
+}
+
+fn first_parquet(dataset_dir: &Path) -> Option<PathBuf> {
+    let mut files = std::fs::read_dir(dataset_dir.join("data"))
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "parquet"))
+        .map(|entry| entry.path())
+        .collect::<Vec<_>>();
+    files.sort();
+    files.into_iter().next()
+}
+
+fn plan_from_dataset(
+    descriptor: BenchmarkDescriptor,
+    split: &str,
+    dataset: &SweBenchProDataset,
+    task_ids: Vec<String>,
+) -> BenchmarkPlan {
+    let tasks = task_ids
+        .into_iter()
+        .map(|task_id| swe_bench_pro_task(&task_id, dataset))
+        .collect::<Vec<_>>();
+    BenchmarkPlan {
+        benchmark: BenchmarkIdentity {
+            name: descriptor.name,
+            version: descriptor.version,
+        },
+        split: split.to_string(),
+        prepared_benchmark_ref: dataset.dataset_dir.display().to_string(),
+        tasks,
+        run_config_overrides: RunConfigOverrides {
+            timeout_sec: None,
+            network: Some(NetworkPolicy::Full),
+        },
+        warnings: Vec::new(),
+    }
+}
+
+fn swe_bench_pro_task(task_id: &str, dataset: &SweBenchProDataset) -> TaskPlan {
+    TaskPlan {
+        task_id: task_id.to_string(),
+        instruction: format!("Solve official SWE-bench Pro instance {task_id}."),
+        workspace_spec: WorkspaceSpec {
+            workspace_type: WorkspaceType::GitRepo,
+            target_path: "workspace".to_string(),
+            clean: true,
+        },
+        sandbox_spec: SandboxSpec {
+            image: "swe-bench-pro-official".to_string(),
+            mounts: Vec::new(),
+            env_vars: Vec::new(),
+            network: NetworkPolicy::Full,
+            privileged: false,
+            resource_limits: ResourceHint {
+                cpu_cores: 4,
+                memory_mb: 8192,
+            },
+        },
+        verifier_spec: VerifierSpec {
+            command: "swe_bench_pro_eval.py".to_string(),
+            working_dir: "workspace".to_string(),
+            timeout_sec: 7200,
+            expected_exit_codes: vec![0],
+            environment_mode: VerifierEnvironment::HostProcess,
+            output_parser: "swe_bench_pro_eval_results_json".to_string(),
+        },
+        artifact_spec: ArtifactSpec {
+            base_dir: "workspace".to_string(),
+            globs: vec!["**/*".to_string()],
+            required_paths: Vec::new(),
+            max_size_bytes: 256 * 1024 * 1024,
+        },
+        patch_spec: Some(PatchSpec {
+            diff_path: "patch.diff".to_string(),
+            prediction_path: "prediction.json".to_string(),
+        }),
+        external_runner: Some(ExternalRunnerSpec {
+            kind: ExternalRunnerKind::SweBenchPro,
+            dataset_path: dataset.dataset_dir.display().to_string(),
+            source_path: Some(dataset.source_dir.display().to_string()),
+        }),
     }
 }
 
@@ -175,19 +280,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn c_bench_006_swe_bench_pro_full_reports_local_data_as_unsupported() {
+    fn c_bench_006_swe_bench_pro_full_reports_local_data_as_ready() {
         let root = tempfile::tempdir().unwrap();
         let data_dir = root
             .path()
             .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/data");
         std::fs::create_dir_all(&data_dir).unwrap();
-        std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "").unwrap();
+        std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "parquet").unwrap();
         std::fs::write(
             root.path()
                 .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/README.md"),
             "splits:\n- name: test\n  num_examples: 731\n",
         )
         .unwrap();
+        create_source(root.path());
 
         let descriptor = SweBenchProAdapter::with_data_root(Some(root.path())).descriptor();
         let full = descriptor
@@ -197,7 +303,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(full.task_count, 731);
-        assert_eq!(full.data_state, DataState::Unsupported);
+        assert_eq!(full.data_state, DataState::Ready);
     }
 
     #[test]
@@ -236,7 +342,7 @@ mod tests {
             .path()
             .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/data");
         std::fs::create_dir_all(&data_dir).unwrap();
-        std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "").unwrap();
+        std::fs::write(data_dir.join("test-00000-of-00001.parquet"), "parquet").unwrap();
 
         let descriptor = SweBenchProAdapter::with_data_root(Some(root.path())).descriptor();
         let full = descriptor
@@ -273,7 +379,7 @@ mod tests {
         let missing_error = SweBenchProAdapter::with_data_root(Some(missing.path()))
             .plan("full")
             .unwrap_err();
-        assert!(missing_error.contains("not available locally"));
+        assert!(missing_error.contains("data_state=requires_auth"));
 
         let present = tempfile::tempdir().unwrap();
         let data_dir = present
@@ -291,6 +397,31 @@ mod tests {
         let present_error = SweBenchProAdapter::with_data_root(Some(present.path()))
             .plan("full")
             .unwrap_err();
-        assert!(present_error.contains("data is present"));
+        assert!(present_error.contains("data_state=corrupted"));
+    }
+
+    #[test]
+    fn c_bench_006_swe_bench_pro_task_uses_external_runner() {
+        let root = tempfile::tempdir().unwrap();
+        let dataset = SweBenchProDataset {
+            task_count: 1,
+            data_state: DataState::Ready,
+            dataset_dir: root.path().join("dataset"),
+            source_dir: root.path().join("source"),
+        };
+
+        let task = swe_bench_pro_task("instance_demo", &dataset);
+
+        assert_eq!(
+            task.external_runner.as_ref().unwrap().kind,
+            ExternalRunnerKind::SweBenchPro
+        );
+        assert!(task.patch_spec.is_some());
+    }
+
+    fn create_source(root: &Path) {
+        let source = root.join("_src/SWE-bench_Pro-os");
+        std::fs::create_dir_all(source.join("run_scripts")).unwrap();
+        std::fs::write(source.join("swe_bench_pro_eval.py"), "").unwrap();
     }
 }

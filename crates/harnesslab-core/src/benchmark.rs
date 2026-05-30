@@ -116,6 +116,23 @@ pub struct TaskPlan {
     pub verifier_spec: VerifierSpec,
     pub artifact_spec: ArtifactSpec,
     pub patch_spec: Option<PatchSpec>,
+    #[serde(default)]
+    pub external_runner: Option<ExternalRunnerSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExternalRunnerSpec {
+    pub kind: ExternalRunnerKind,
+    pub dataset_path: String,
+    #[serde(default)]
+    pub source_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExternalRunnerKind {
+    TerminalBench,
+    SweBenchPro,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
