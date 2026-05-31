@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use assert_cmd::Command;
 use std::fs;
 use std::path::Path;
@@ -148,17 +150,27 @@ pub fn terminal_bench_root_with_tasks(tasks: &[&str]) -> tempfile::TempDir {
 }
 
 pub fn fake_uvx(body: &str) -> tempfile::TempDir {
+    fake_uvx_and_docker(body, None)
+}
+
+pub fn fake_uvx_and_docker(body: &str, docker_body: Option<&str>) -> tempfile::TempDir {
     let bin = tempfile::tempdir().unwrap();
-    let uvx = bin.path().join("uvx");
-    fs::write(&uvx, format!("#!/bin/sh\n{body}")).unwrap();
-    let mut permissions = fs::metadata(&uvx).unwrap().permissions();
+    write_executable(&bin.path().join("uvx"), body);
+    if let Some(docker_body) = docker_body {
+        write_executable(&bin.path().join("docker"), docker_body);
+    }
+    bin
+}
+
+fn write_executable(path: &Path, body: &str) {
+    fs::write(path, format!("#!/bin/sh\n{body}")).unwrap();
+    let mut permissions = fs::metadata(path).unwrap().permissions();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         permissions.set_mode(0o755);
-        fs::set_permissions(&uvx, permissions).unwrap();
+        fs::set_permissions(path, permissions).unwrap();
     }
-    bin
 }
 
 pub fn harnesslab() -> Command {

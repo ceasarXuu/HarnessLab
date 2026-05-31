@@ -84,6 +84,47 @@ fn c_sbox_005_exec_copy_destroy_and_cleanup_args_are_stable() {
         vec!["ps", "-aq", "--filter", "label=harnesslab.run_id=run-1"]
     );
     assert_eq!(
+        DockerCliProvider::compose_containers_args("project-1"),
+        vec![
+            "ps",
+            "-aq",
+            "--filter",
+            "label=com.docker.compose.project=project-1"
+        ]
+    );
+    assert_eq!(
+        DockerCliProvider::compose_networks_args("project-1"),
+        vec![
+            "network",
+            "ls",
+            "-q",
+            "--filter",
+            "label=com.docker.compose.project=project-1"
+        ]
+    );
+    assert_eq!(
+        DockerCliProvider::compose_container_project_labels_args(),
+        vec![
+            "ps",
+            "-a",
+            "--filter",
+            "label=com.docker.compose.project",
+            "--format",
+            "{{.ID}}\t{{.Label \"com.docker.compose.project\"}}"
+        ]
+    );
+    assert_eq!(
+        DockerCliProvider::compose_network_project_labels_args(),
+        vec![
+            "network",
+            "ls",
+            "--filter",
+            "label=com.docker.compose.project",
+            "--format",
+            "{{.ID}}\t{{.Label \"com.docker.compose.project\"}}"
+        ]
+    );
+    assert_eq!(
         DockerCliProvider::mount_check_args(&["/host/cache:/cache:ro".to_string()]),
         vec![
             "run",
@@ -155,6 +196,120 @@ fn c_sbox_008_cleanup_orphans_removes_listed_containers() {
     );
     assert_eq!(runner.seen.borrow()[1], vec!["rm", "-f", "a"]);
     assert_eq!(runner.seen.borrow()[2], vec!["rm", "-f", "b"]);
+}
+
+#[test]
+fn c_sbox_013_cleanup_compose_project_removes_containers_before_networks() {
+    let runner = FakeDockerRunner::new(vec![ok("c1\nc2\n"), ok(""), ok(""), ok("n1\n"), ok("")]);
+
+    let result =
+        DockerCliProvider::cleanup_compose_project_with_runner("project-1", &runner).unwrap();
+
+    assert_eq!(
+        result.removed,
+        vec!["container:c1", "container:c2", "network:n1"]
+    );
+    assert_eq!(
+        runner.seen.borrow()[0],
+        DockerCliProvider::compose_containers_args("project-1")
+    );
+    assert_eq!(runner.seen.borrow()[1], vec!["rm", "-f", "c1"]);
+    assert_eq!(runner.seen.borrow()[2], vec!["rm", "-f", "c2"]);
+    assert_eq!(
+        runner.seen.borrow()[3],
+        DockerCliProvider::compose_networks_args("project-1")
+    );
+    assert_eq!(runner.seen.borrow()[4], vec!["network", "rm", "n1"]);
+}
+
+#[test]
+fn c_sbox_014_cleanup_compose_projects_matching_uses_authoritative_labels() {
+    let runner = FakeDockerRunner::new(vec![
+        ok("c1\tproject-run-token-a\nc2\tother\n"),
+        ok("n1\tproject-run-token-a\nn2\tproject-run-token-b\n"),
+        ok("c1\n"),
+        ok(""),
+        ok("n1\n"),
+        ok(""),
+        ok(""),
+        ok("n2\n"),
+        ok(""),
+    ]);
+
+    let result =
+        DockerCliProvider::cleanup_compose_projects_matching_with_runner("run-token", &runner)
+            .unwrap();
+
+    assert_eq!(
+        result.removed,
+        vec!["container:c1", "network:n1", "network:n2"]
+    );
+    assert_eq!(
+        runner.seen.borrow()[0],
+        DockerCliProvider::compose_container_project_labels_args()
+    );
+    assert_eq!(
+        runner.seen.borrow()[1],
+        DockerCliProvider::compose_network_project_labels_args()
+    );
+    assert_eq!(
+        runner.seen.borrow()[2],
+        DockerCliProvider::compose_containers_args("project-run-token-a")
+    );
+}
+
+#[test]
+fn c_sbox_015_cleanup_compose_project_reports_remove_failures() {
+    let runner = FakeDockerRunner::new(vec![ok("c1\n"), err("rm denied")]);
+
+    let error = DockerCliProvider::cleanup_compose_project_with_runner("project-1", &runner)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("docker rm failed"));
+    assert!(error.contains("rm denied"));
+}
+
+#[test]
+fn c_sbox_016_cleanup_compose_rejects_empty_selectors() {
+    let runner = FakeDockerRunner::new(Vec::new());
+
+    assert!(
+        DockerCliProvider::cleanup_compose_projects_matching_with_runner("", &runner)
+            .unwrap_err()
+            .to_string()
+            .contains("match token is empty")
+    );
+    assert!(
+        DockerCliProvider::cleanup_compose_project_with_runner("", &runner)
+            .unwrap_err()
+            .to_string()
+            .contains("compose project is empty")
+    );
+}
+
+#[test]
+fn c_sbox_017_cleanup_compose_matching_reports_listing_failures() {
+    let runner = FakeDockerRunner::new(vec![err("ps denied")]);
+
+    let error = DockerCliProvider::cleanup_compose_projects_matching_with_runner("token", &runner)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("docker ps failed"));
+    assert!(error.contains("ps denied"));
+}
+
+#[test]
+fn c_sbox_018_cleanup_compose_project_reports_network_remove_failures() {
+    let runner = FakeDockerRunner::new(vec![ok(""), ok("n1\n"), err("network denied")]);
+
+    let error = DockerCliProvider::cleanup_compose_project_with_runner("project-1", &runner)
+        .unwrap_err()
+        .to_string();
+
+    assert!(error.contains("docker network rm failed"));
+    assert!(error.contains("network denied"));
 }
 
 #[test]
