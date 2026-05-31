@@ -121,7 +121,13 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
         .map(|task| {
             let failure = match task.failure_class {
                 FailureClass::None => "none".to_string(),
-                class => format!("{class:?}/{:?}", task.failure_code),
+                class => format!(
+                    "{}/{}",
+                    debug_snake(class),
+                    task.failure_code
+                        .map(debug_snake)
+                        .unwrap_or("none".to_string())
+                ),
             };
             let patch_href = patch_href(task);
             TaskRow {
@@ -195,6 +201,18 @@ fn usage_text(usage: &UsageRecord) -> String {
             None => format!("{total_tokens} tokens"),
         },
     }
+}
+
+fn debug_snake(value: impl std::fmt::Debug) -> String {
+    let debug = format!("{value:?}");
+    let mut out = String::new();
+    for (index, ch) in debug.chars().enumerate() {
+        if ch.is_ascii_uppercase() && index > 0 {
+            out.push('_');
+        }
+        out.push(ch.to_ascii_lowercase());
+    }
+    out
 }
 
 fn total_usage_text(tasks: &[TaskAttemptResult]) -> String {
