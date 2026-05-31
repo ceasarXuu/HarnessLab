@@ -41,6 +41,12 @@ fn c_sbox_004_create_args_include_labels_mounts_and_network_policy() {
     assert!(args.contains(&"A=B".to_string()));
     assert!(args.contains(&"--cpus".to_string()));
     assert!(args.contains(&"--memory".to_string()));
+    assert!(args.windows(2).any(|pair| pair == ["--entrypoint", "sh"]));
+    assert!(args.ends_with(&[
+        "alpine:3.20".to_string(),
+        "-lc".to_string(),
+        "sleep infinity".to_string(),
+    ]));
 }
 
 #[test]

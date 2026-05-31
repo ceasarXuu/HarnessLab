@@ -83,31 +83,26 @@ fn execute_terminal_bench(
     let agent = terminal_bench_agent(ctx.profile)?;
     let command = terminal_bench_command(
         dataset_path,
-        &ctx.task.task_id,
         &agent,
         &output_root,
         &official_run_id,
         ctx.profile,
-        ctx.task,
+        ctx,
     );
     let report_command = terminal_bench_command(
         dataset_path,
-        &ctx.task.task_id,
         &agent,
         &output_root,
         &official_run_id,
         ctx.report_profile,
-        ctx.task,
+        ctx,
     );
     write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
     let process = normalize_agent_paths(HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,
         working_dir: ctx.attempt_dir.to_path_buf(),
-        timeout_sec: ctx
-            .profile
-            .timeout_sec
-            .max(ctx.task.verifier_spec.timeout_sec),
+        timeout_sec: terminal_bench_process_timeout(ctx),
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
@@ -207,28 +202,39 @@ pub(super) fn write_external_command_snapshot(
 
 fn terminal_bench_command(
     dataset_path: &Path,
-    task_id: &str,
     agent: &TerminalBenchAgent,
     output_root: &Path,
     run_id: &str,
     profile: &AgentProfile,
-    task: &TaskPlan,
+    ctx: &ExternalTaskExecution<'_>,
 ) -> String {
+    let (agent_timeout, test_timeout, _) = terminal_bench_timeout_values(
+        ctx.spec.execution.timeout_sec,
+        profile.timeout_sec,
+        ctx.task.verifier_spec.timeout_sec,
+    );
     let mut command = vec![
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
         "uvx --from terminal-bench tb run".to_string(),
         format!("--dataset-path {}", shell_quote(&dataset_path.display().to_string())),
-        format!("--task-id {}", shell_quote(task_id)),
+        format!("--task-id {}", shell_quote(&ctx.task.task_id)),
         "--n-attempts 1".to_string(),
         "--n-concurrent 1".to_string(),
-        format!("--global-agent-timeout-sec {}", profile.timeout_sec.max(1)),
-        format!("--global-test-timeout-sec {}", task.verifier_spec.timeout_sec.max(1)),
+        format!("--global-agent-timeout-sec {agent_timeout}"),
+        format!("--global-test-timeout-sec {test_timeout}"),
         format!("--output-path {}", shell_quote(&output_root.display().to_string())),
         format!("--run-id {}", shell_quote(run_id)),
         "--no-upload-results".to_string(),
     ];
     match agent {
-        TerminalBenchAgent::BuiltIn(name) => command.push(format!("--agent {}", shell_quote(name))),
+        TerminalBenchAgent::BuiltIn { name, model } => {
+            command.push(format!("--agent {}", shell_quote(name)));
+            if requires_terminal_bench_model(name)
+                && let Some(model) = model
+            {
+                command.push(format!("--model {}", shell_quote(model)));
+            }
+        }
         TerminalBenchAgent::ImportPath(path) => {
             command.push(format!("--agent-import-path {}", shell_quote(path)));
         }
@@ -236,8 +242,31 @@ fn terminal_bench_command(
     command.join(" ")
 }
 
+fn terminal_bench_process_timeout(ctx: &ExternalTaskExecution<'_>) -> u64 {
+    let (_, _, process_timeout) = terminal_bench_timeout_values(
+        ctx.spec.execution.timeout_sec,
+        ctx.profile.timeout_sec,
+        ctx.task.verifier_spec.timeout_sec,
+    );
+    process_timeout
+}
+
+fn terminal_bench_timeout_values(
+    run_timeout: Option<u64>,
+    profile_timeout: u64,
+    verifier_timeout: u64,
+) -> (u64, u64, u64) {
+    (
+        run_timeout.unwrap_or(profile_timeout).max(1),
+        run_timeout.unwrap_or(verifier_timeout).max(1),
+        run_timeout
+            .unwrap_or_else(|| profile_timeout.max(verifier_timeout))
+            .max(1),
+    )
+}
+
 enum TerminalBenchAgent {
-    BuiltIn(String),
+    BuiltIn { name: String, model: Option<String> },
     ImportPath(String),
 }
 
@@ -245,18 +274,60 @@ fn terminal_bench_agent(profile: &AgentProfile) -> Result<TerminalBenchAgent> {
     if let Some(path) = profile.labels.get("terminal_bench_agent_import_path") {
         return Ok(TerminalBenchAgent::ImportPath(path.clone()));
     }
+    let model = terminal_bench_model(profile);
     if let Some(name) = profile.labels.get("terminal_bench_agent") {
-        return Ok(TerminalBenchAgent::BuiltIn(name.clone()));
+        if requires_terminal_bench_model(name) && model.is_none() {
+            bail!(
+                "agent profile {} must set label terminal_bench_model or model for terminal-bench {} agent",
+                profile.name,
+                name
+            );
+        }
+        return Ok(TerminalBenchAgent::BuiltIn {
+            name: name.clone(),
+            model,
+        });
     }
     match profile.kind {
-        AgentKind::Codex => Ok(TerminalBenchAgent::BuiltIn("codex".to_string())),
-        AgentKind::ClaudeCode => Ok(TerminalBenchAgent::BuiltIn("claude-code".to_string())),
-        AgentKind::Opencode => Ok(TerminalBenchAgent::BuiltIn("opencode".to_string())),
+        AgentKind::Codex | AgentKind::Opencode if model.is_none() => bail!(
+            "agent profile {} must set label terminal_bench_model or model for terminal-bench {} agent",
+            profile.name,
+            match profile.kind {
+                AgentKind::Codex => "codex",
+                AgentKind::Opencode => "opencode",
+                _ => unreachable!(),
+            }
+        ),
+        AgentKind::Codex => Ok(TerminalBenchAgent::BuiltIn {
+            name: "codex".to_string(),
+            model,
+        }),
+        AgentKind::ClaudeCode => Ok(TerminalBenchAgent::BuiltIn {
+            name: "claude-code".to_string(),
+            model,
+        }),
+        AgentKind::Opencode => Ok(TerminalBenchAgent::BuiltIn {
+            name: "opencode".to_string(),
+            model,
+        }),
         AgentKind::PiCodingAgent | AgentKind::Custom | AgentKind::Fake => bail!(
             "agent profile {} must set label terminal_bench_agent or terminal_bench_agent_import_path",
             profile.name
         ),
     }
+}
+
+fn terminal_bench_model(profile: &AgentProfile) -> Option<String> {
+    profile
+        .labels
+        .get("terminal_bench_model")
+        .or_else(|| profile.labels.get("model"))
+        .filter(|value| !value.trim().is_empty() && value.as_str() != "user-configured")
+        .cloned()
+}
+
+fn requires_terminal_bench_model(name: &str) -> bool {
+    matches!(name, "codex" | "opencode")
 }
 
 fn parse_terminal_bench_result(
@@ -389,4 +460,20 @@ fn normalize_agent_paths(mut process: ProcessRecord) -> ProcessRecord {
 
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::terminal_bench_timeout_values;
+
+    #[test]
+    fn terminal_bench_timeout_values_use_run_override_when_present() {
+        assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 42));
+    }
+
+    #[test]
+    fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
+        assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 7));
+        assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 1));
+    }
 }

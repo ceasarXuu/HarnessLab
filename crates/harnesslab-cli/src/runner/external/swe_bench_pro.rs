@@ -1,15 +1,16 @@
 use super::ExternalTaskExecution;
 use anyhow::{Context, Result, bail};
 use harnesslab_core::{
-    AgentProfile, EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
-    ProcessRecord, TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord,
-    classify_agent_process,
+    EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
+    TaskAttemptResult, TaskPlan, TaskState, UsageRecord, classify_agent_process,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+
+mod agent;
 
 pub(super) fn execute(
     ctx: &ExternalTaskExecution<'_>,
@@ -42,15 +43,22 @@ pub(super) fn execute(
         return setup_failure_result(ctx, &format!("workspace preparation failed: {error}"));
     }
     let agent_task = task_with_real_instruction(ctx.task, &instance);
-    let agent = run_agent(ctx, &agent_task, &workspace, &instance)?;
-    let agent_failure = classify_agent_process(&agent);
+    let agent_run = agent::run_agent(ctx, &agent_task, &workspace, &instance)?;
+    let agent = agent_run.process;
+    let agent_failure = agent_run
+        .sandbox_failure
+        .map(|code| (FailureClass::Execution, Some(code)))
+        .unwrap_or_else(|| {
+            let failure = classify_agent_process(&agent);
+            (failure.class, failure.code)
+        });
     let (evaluation, patch, failure_class, failure_code, score) =
-        if agent_failure.class == FailureClass::Execution {
+        if agent_failure.0 == FailureClass::Execution {
             (
                 missing_evaluation(ctx.attempt_dir, "agent failed before evaluator")?,
                 None,
-                agent_failure.class,
-                agent_failure.code,
+                agent_failure.0,
+                agent_failure.1,
                 0.0,
             )
         } else {
@@ -234,14 +242,14 @@ fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -
         "instance_id": instance.instance_id,
         "repo": instance.repo,
         "base_commit": instance.base_commit,
-        "docker_image": format!("jefzda/sweap-images:{}", instance.dockerhub_tag),
+        "docker_image": docker_image(instance),
         "workspace": workspace.display().to_string(),
     });
     atomic_write_json(&swe_dir.join("workspace-manifest.json"), &manifest)?;
     let command = format!(
         "set -e; {}; image={}; docker pull --platform linux/amd64 \"$image\"; cid=$(docker create --platform linux/amd64 \"$image\"); trap 'docker rm -f \"$cid\" >/dev/null 2>&1 || true' EXIT; docker cp \"$cid:/app/.\" {}; cd {}; git config user.email harnesslab@example.invalid; git config user.name HarnessLab",
         docker_host_prefix(),
-        shell_quote(&format!("jefzda/sweap-images:{}", instance.dockerhub_tag)),
+        shell_quote(&docker_image(instance)),
         shell_quote(&workspace.display().to_string()),
         shell_quote(&workspace.display().to_string())
     );
@@ -260,71 +268,8 @@ fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -
     }
 }
 
-fn run_agent(
-    ctx: &ExternalTaskExecution<'_>,
-    task: &TaskPlan,
-    workspace: &Path,
-    instance: &SweInstance,
-) -> Result<ProcessRecord> {
-    if ctx
-        .profile
-        .labels
-        .get("swe_bench_pro_agent")
-        .map(String::as_str)
-        == Some("gold")
-    {
-        return apply_gold_patch(ctx.attempt_dir, workspace, instance, ctx.report_profile);
-    }
-    Ok(super::super::sandbox::run_agent(
-        ctx.spec,
-        ctx.profile,
-        ctx.report_profile,
-        task,
-        ctx.attempt,
-        ctx.attempt_dir,
-        workspace,
-    )?
-    .process)
-}
-
-fn apply_gold_patch(
-    attempt_dir: &Path,
-    workspace: &Path,
-    instance: &SweInstance,
-    profile: &AgentProfile,
-) -> Result<ProcessRecord> {
-    let agent_dir = attempt_dir.join("agent");
-    fs::create_dir_all(&agent_dir)?;
-    super::write_external_command_snapshot(attempt_dir, profile, "git apply -")?;
-    let status = Command::new("git")
-        .arg("apply")
-        .arg("-")
-        .current_dir(workspace)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .and_then(|mut child| {
-            use std::io::Write;
-            child
-                .stdin
-                .take()
-                .expect("git apply stdin")
-                .write_all(instance.gold_patch.as_bytes())?;
-            child.wait_with_output()
-        })?;
-    fs::write(agent_dir.join("stdout.log"), status.stdout)?;
-    fs::write(agent_dir.join("stderr.log"), status.stderr)?;
-    Ok(ProcessRecord {
-        exit_code: status.status.code(),
-        termination_reason: if status.status.code().is_some() {
-            TerminationReason::Completed
-        } else {
-            TerminationReason::Signaled
-        },
-        stdout_path: "agent/stdout.log".to_string(),
-        stderr_path: "agent/stderr.log".to_string(),
-    })
+fn docker_image(instance: &SweInstance) -> String {
+    format!("jefzda/sweap-images:{}", instance.dockerhub_tag)
 }
 
 fn task_with_real_instruction(task: &TaskPlan, instance: &SweInstance) -> TaskPlan {
@@ -346,6 +291,14 @@ fn capture_prediction(
         .arg("diff")
         .current_dir(workspace)
         .output()?;
+    atomic_write_json(
+        &attempt_dir.join("git-diff.status.json"),
+        &serde_json::json!({
+            "exit_code": output.status.code(),
+            "success": output.status.success()
+        }),
+    )?;
+    fs::write(attempt_dir.join("git-diff.stderr.log"), &output.stderr)?;
     let patch = String::from_utf8_lossy(&output.stdout).to_string();
     fs::write(attempt_dir.join("patch.diff"), &patch)?;
     let prediction = serde_json::json!({
@@ -367,7 +320,9 @@ fn capture_prediction(
     Ok(PatchRecord {
         diff_path: "patch.diff".to_string(),
         prediction_path: Some("prediction.jsonl".to_string()),
-        status: if output.stdout.is_empty() {
+        status: if !output.status.success() {
+            PatchStatus::ApplyFailed
+        } else if output.stdout.is_empty() {
             PatchStatus::Empty
         } else {
             PatchStatus::Captured
@@ -474,8 +429,13 @@ fn append_log(path: &Path, message: &str) -> Result<()> {
 }
 
 fn patch_failure(patch: &PatchRecord) -> Option<(FailureClass, Option<FailureCode>)> {
-    matches!(patch.status, PatchStatus::Empty)
-        .then_some((FailureClass::Benchmark, Some(FailureCode::NoValidDiff)))
+    match patch.status {
+        PatchStatus::Empty => Some((FailureClass::Benchmark, Some(FailureCode::NoValidDiff))),
+        PatchStatus::ApplyFailed => {
+            Some((FailureClass::Execution, Some(FailureCode::PatchApplyFailed)))
+        }
+        _ => None,
+    }
 }
 
 fn json_string(value: &Value, key: &str) -> Result<String> {

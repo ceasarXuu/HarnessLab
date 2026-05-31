@@ -27,7 +27,7 @@ fn int_001_init_empty_home_creates_config_and_profiles() {
 
     let codex = fs::read_to_string(home.path().join("agents/codex-default.toml")).unwrap();
     assert!(codex.contains("OPENAI_API_KEY"));
-    assert!(codex.contains("~/.codex:/root/.codex:ro"));
+    assert!(codex.contains("~/.codex:/root/.codex:rw"));
     let pi = fs::read_to_string(home.path().join("agents/pi-coding-agent-default.toml")).unwrap();
     assert!(pi.contains("pi coding --version || pi --version"));
 }

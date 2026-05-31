@@ -143,10 +143,17 @@ impl AgentProfile {
         if !is_valid_profile_name(&self.name) {
             return Err(ConfigError::InvalidName(self.name.clone()));
         }
-        if matches!(self.input_mode, InputMode::Argument | InputMode::File)
-            && !self.command.contains("{{instruction}}")
-        {
-            return Err(ConfigError::MissingInputVariable);
+        match self.input_mode {
+            InputMode::Argument if !self.command.contains("{{instruction}}") => {
+                return Err(ConfigError::MissingInputVariable);
+            }
+            InputMode::File
+                if !self.command.contains("{{instruction}}")
+                    && !self.command.contains("{{instruction_file}}") =>
+            {
+                return Err(ConfigError::MissingInputVariable);
+            }
+            _ => {}
         }
         if self.timeout_sec == 0 {
             return Err(ConfigError::InvalidTimeout);
@@ -270,8 +277,34 @@ pub fn default_agent_profile(name: &str, kind: AgentKind, command: &str) -> Agen
         version_command: default_version_command(kind),
         auth: default_auth_config(kind),
         usage: UsageConfig::default(),
-        labels: std::collections::BTreeMap::new(),
+        labels: default_labels(kind),
     }
+}
+
+fn default_labels(kind: AgentKind) -> std::collections::BTreeMap<String, String> {
+    let mut labels = std::collections::BTreeMap::new();
+    match kind {
+        AgentKind::Codex => {
+            labels.insert(
+                "sandbox_setup_command".to_string(),
+                "if ! command -v codex >/dev/null 2>&1; then if command -v npm >/dev/null 2>&1; then npm install -g @openai/codex >/tmp/harnesslab-codex-install.log 2>&1 || { cat /tmp/harnesslab-codex-install.log >&2; exit 127; }; else echo 'codex CLI missing and npm unavailable' >&2; exit 127; fi; fi".to_string(),
+            );
+        }
+        AgentKind::ClaudeCode => {
+            labels.insert(
+                "sandbox_setup_command".to_string(),
+                "if ! command -v claude >/dev/null 2>&1; then if command -v npm >/dev/null 2>&1; then npm install -g @anthropic-ai/claude-code >/tmp/harnesslab-claude-code-install.log 2>&1 || { cat /tmp/harnesslab-claude-code-install.log >&2; exit 127; }; else echo 'claude CLI missing and npm unavailable' >&2; exit 127; fi; fi".to_string(),
+            );
+        }
+        AgentKind::Opencode => {
+            labels.insert(
+                "sandbox_setup_command".to_string(),
+                "if ! command -v opencode >/dev/null 2>&1; then if command -v npm >/dev/null 2>&1; then npm install -g opencode-ai >/tmp/harnesslab-opencode-install.log 2>&1 || { cat /tmp/harnesslab-opencode-install.log >&2; exit 127; }; else echo 'opencode CLI missing and npm unavailable' >&2; exit 127; fi; fi".to_string(),
+            );
+        }
+        AgentKind::Fake | AgentKind::PiCodingAgent | AgentKind::Custom => {}
+    }
+    labels
 }
 
 fn default_version_command(kind: AgentKind) -> Option<String> {
@@ -283,10 +316,7 @@ fn default_version_command(kind: AgentKind) -> Option<String> {
 
 pub fn default_auth_config(kind: AgentKind) -> AuthConfig {
     let (inherit_env, include_paths): (&[&str], &[&str]) = match kind {
-        AgentKind::Codex => (
-            &["OPENAI_API_KEY", "CODEX_HOME"],
-            &["~/.codex:/root/.codex:ro"],
-        ),
+        AgentKind::Codex => (&["OPENAI_API_KEY"], &["~/.codex:/root/.codex:rw"]),
         AgentKind::ClaudeCode => (&["ANTHROPIC_API_KEY"], &["~/.claude:/root/.claude:ro"]),
         AgentKind::Opencode => (
             &[
