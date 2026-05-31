@@ -1,5 +1,6 @@
 mod app;
 mod benchmark_data;
+mod doctor;
 mod output;
 mod runner;
 

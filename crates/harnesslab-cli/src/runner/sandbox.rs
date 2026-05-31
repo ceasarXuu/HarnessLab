@@ -1,5 +1,8 @@
 use anyhow::Result;
-use harnesslab_core::{AgentProfile, FailureCode, InputMode, RunSpec, TaskPlan, TerminationReason};
+use harnesslab_core::{
+    AgentProfile, FailureCode, InputMode, RunSpec, TaskPlan, TerminationReason,
+    effective_auth_mount_specs,
+};
 use harnesslab_infra::{DockerCliProvider, DockerCreateRequest, ExecSpec, HostProcessExecutor};
 use std::fs;
 use std::path::Path;
@@ -139,71 +142,12 @@ fn merged_env_vars(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
 
 fn merged_mounts(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
     let mut mounts = task.sandbox_spec.mounts.clone();
-    if !profile.auth.inherit {
-        return mounts;
-    }
-    let excluded_hosts = profile
-        .auth
-        .exclude_paths
-        .iter()
-        .map(|path| normalized_host_path(path))
-        .collect::<Vec<_>>();
-    for path in &profile.auth.include_paths {
-        if let Some(auth) = auth_mount(path)
-            && !excluded_hosts.contains(&auth.host)
-            && !mounts.contains(&auth.mount)
-        {
+    for auth in effective_auth_mount_specs(profile) {
+        if !mounts.contains(&auth.mount) {
             mounts.push(auth.mount);
         }
     }
     mounts
-}
-
-struct AuthMount {
-    host: String,
-    mount: String,
-}
-
-fn auth_mount(value: &str) -> Option<AuthMount> {
-    let parts = value.split(':').collect::<Vec<_>>();
-    match parts.as_slice() {
-        [host] => {
-            let expanded = normalized_host_path(host);
-            Some(AuthMount {
-                host: expanded.clone(),
-                mount: format!("{expanded}:{expanded}:ro"),
-            })
-        }
-        [host, container] => {
-            let expanded = normalized_host_path(host);
-            Some(AuthMount {
-                host: expanded.clone(),
-                mount: format!("{expanded}:{container}:ro"),
-            })
-        }
-        [host, container, mode] => {
-            let expanded = normalized_host_path(host);
-            Some(AuthMount {
-                host: expanded.clone(),
-                mount: format!("{expanded}:{container}:{mode}"),
-            })
-        }
-        _ => None,
-    }
-}
-
-fn normalized_host_path(value: &str) -> String {
-    let host = value.split(':').next().unwrap_or(value);
-    let home = std::env::var("HOME").unwrap_or_default();
-    if host == "~" {
-        home
-    } else if let Some(rest) = host.strip_prefix("~/") {
-        format!("{home}/{rest}")
-    } else if let Some(rest) = value.strip_prefix("~/") {
-        format!("{home}/{rest}")
-    } else {
-        host.to_string()
-    }
 }
 
 pub(super) fn task_requires_docker(task: &TaskPlan) -> bool {

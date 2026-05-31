@@ -8,12 +8,13 @@ if [[ "${1:-}" == "--select" ]]; then
     CLI-002) package="harnesslab-cli"; test_name="cli_002_resume_and_replay_are_nested_under_run" ;;
     CLI-003) package="harnesslab-cli"; test_name="cli_003_m0_json_commands_have_stable_shape" ;;
     CLI-004) package="harnesslab-cli"; test_name="cli_004_m0_text_commands_succeed" ;;
-    CLI-008) package="harnesslab-cli"; test_name="app::tests::app_001_overall_status_prioritizes_error_then_warning" ;;
+    CLI-008) package="harnesslab-cli"; test_name="doctor::tests::doc_008_overall_status_prioritizes_error_then_warning" ;;
     DOC-001) package="harnesslab-cli"; test_name="doc_001_doctor_json_has_stable_shape" ;;
     DOC-003) package="harnesslab-cli"; test_name="doc_003_doctor_reports_semantically_invalid_agent_profiles" ;;
     DOC-004) package="harnesslab-cli"; test_name="doc_004_doctor_reports_builtin_benchmark_readiness" ;;
     DOC-005) package="harnesslab-cli"; test_name="doc_005_doctor_reports_agent_profile_warnings" ;;
     DOC-006) package="harnesslab-cli"; test_name="doc_006_doctor_reports_agent_profile_load_errors" ;;
+    DOC-007) package="harnesslab-cli"; test_name="doc_007_doctor_reports_auth_and_usage_configuration_problems" ;;
     CORE-001) package="harnesslab-core"; test_name="model::tests::core_001_state_machine_allows_expected_lifecycle" ;;
     CORE-002) package="harnesslab-core"; test_name="model::tests::core_002_state_machine_rejects_terminal_to_running" ;;
     CORE-003) package="harnesslab-core"; test_name="model::tests::core_003_failure_classifier_maps_agent_timeout" ;;
@@ -23,6 +24,7 @@ if [[ "${1:-}" == "--select" ]]; then
     CFG-002) package="harnesslab-core"; test_name="config::tests::cfg_002_invalid_profile_name_fails" ;;
     CFG-003|SEC-001) package="harnesslab-core"; test_name="redaction::tests::cfg_003_redacts_secret_values_without_removing_names" ;;
     CFG-004) package="harnesslab-core"; test_name="config::tests::cfg_004_path_expands_home_and_relative_paths" ;;
+    CFG-006) package="harnesslab-core"; test_name="config::tests::cfg_004_effective_auth_mount_specs_match_runtime_rules" ;;
     AGT-005) package="harnesslab-core"; test_name="config::tests::agt_005_docker_socket_requested_warns" ;;
     USE-001) package="harnesslab-core"; test_name="usage::tests::use_001_parser_none_is_unknown" ;;
     USE-002) package="harnesslab-core"; test_name="usage::tests::use_002_regex_parser_extracts_tokens" ;;
@@ -51,6 +53,7 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-009) package="harnesslab-infra"; test_name="docker::tests::c_sbox_009_error_paths_are_structured" ;;
     C-SBOX-010) package="harnesslab-infra"; test_name="docker::tests::c_sbox_010_exec_without_docker_returns_process_record" ;;
     C-SBOX-011) package="harnesslab-infra"; test_name="docker::tests::c_sbox_011_create_args_cover_privileged_full_network_and_sanitized_names" ;;
+    C-SBOX-012) package="harnesslab-infra"; test_name="docker::tests::c_sbox_012_mount_check_reports_dry_run_status" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;

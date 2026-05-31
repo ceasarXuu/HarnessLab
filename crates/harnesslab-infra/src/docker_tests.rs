@@ -78,6 +78,21 @@ fn c_sbox_005_exec_copy_destroy_and_cleanup_args_are_stable() {
         vec!["ps", "-aq", "--filter", "label=harnesslab.run_id=run-1"]
     );
     assert_eq!(
+        DockerCliProvider::mount_check_args(&["/host/cache:/cache:ro".to_string()]),
+        vec![
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "-v",
+            "/host/cache:/cache:ro",
+            "alpine:3.20",
+            "sh",
+            "-lc",
+            "true"
+        ]
+    );
+    assert_eq!(
         docker_shell_command(&DockerCliProvider::exec_args(&handle, "printf 'ok'")),
         "docker 'exec' '-i' '--workdir' '/workspace' 'abc123' 'sh' '-lc' 'printf '\\''ok'\\'''"
     );
@@ -169,6 +184,22 @@ fn c_sbox_009_error_paths_are_structured() {
     assert!(copy.contains("docker cp failed"));
     assert!(destroy.contains("docker rm failed"));
     assert!(cleanup.contains("docker ps failed"));
+}
+
+#[test]
+fn c_sbox_012_mount_check_reports_dry_run_status() {
+    let ok = DockerCliProvider::mount_check_with_runner(
+        &["/host/cache:/cache:ro".to_string()],
+        &FakeDockerRunner::new(vec![ok("")]),
+    );
+    assert_eq!(ok.status, "ok");
+
+    let failed = DockerCliProvider::mount_check_with_runner(
+        &["/host/cache:/cache:ro".to_string()],
+        &FakeDockerRunner::new(vec![err("mount denied")]),
+    );
+    assert_eq!(failed.status, "error");
+    assert!(failed.message.contains("mount denied"));
 }
 
 #[test]
