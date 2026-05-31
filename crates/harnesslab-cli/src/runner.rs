@@ -470,13 +470,13 @@ fn prepare_workspace(workspace: &Path, task: &TaskPlan) -> Result<()> {
     }
     Ok(())
 }
-
 fn run_verifier(workspace: &Path, attempt_dir: &Path, task: &TaskPlan) -> Result<EvaluationRecord> {
     let result = HostProcessExecutor::exec(&ExecSpec {
         command: task.verifier_spec.command.clone(),
         stdin: None,
         working_dir: workspace.to_path_buf(),
         timeout_sec: task.verifier_spec.timeout_sec,
+        no_output_timeout_sec: None,
         stdout_path: attempt_dir.join("verifier/stdout.log"),
         stderr_path: attempt_dir.join("verifier/stderr.log"),
     })?;

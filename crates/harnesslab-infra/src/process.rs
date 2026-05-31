@@ -1,10 +1,14 @@
 use anyhow::{Context, Result};
 use harnesslab_core::{ProcessRecord, TerminationReason};
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+    mpsc,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -14,6 +18,7 @@ pub struct ExecSpec {
     pub stdin: Option<String>,
     pub working_dir: std::path::PathBuf,
     pub timeout_sec: u64,
+    pub no_output_timeout_sec: Option<u64>,
     pub stdout_path: std::path::PathBuf,
     pub stderr_path: std::path::PathBuf,
 }
@@ -50,16 +55,27 @@ impl HostProcessExecutor {
         }
         drop(child.stdin.take());
 
+        let started = Instant::now();
+        let last_output_ms = Arc::new(AtomicU64::new(0));
         let mut stdout_thread = Some(stream_child_output(
             child.stdout.take(),
             spec.stdout_path.clone(),
+            Arc::clone(&last_output_ms),
+            started,
         ));
         let mut stderr_thread = Some(stream_child_output(
             child.stderr.take(),
             spec.stderr_path.clone(),
+            Arc::clone(&last_output_ms),
+            started,
         ));
 
-        let deadline = Instant::now() + Duration::from_secs(spec.timeout_sec.max(1));
+        let hard_timeout = Duration::from_secs(spec.timeout_sec.max(1));
+        let no_output_timeout = spec
+            .no_output_timeout_sec
+            .filter(|timeout| *timeout > 0)
+            .map(Duration::from_secs);
+        let deadline = started + hard_timeout;
         loop {
             if let Some(status) = child.try_wait()? {
                 join_stream(stdout_thread.take().expect("stdout stream thread"))?;
@@ -73,6 +89,23 @@ impl HostProcessExecutor {
                         TerminationReason::Signaled
                     },
                 ));
+            }
+            if let Some(timeout) = no_output_timeout {
+                let elapsed_ms = started.elapsed().as_millis();
+                let last_output = u128::from(last_output_ms.load(Ordering::Relaxed));
+                if elapsed_ms.saturating_sub(last_output) >= timeout.as_millis() {
+                    kill_process_tree(&mut child);
+                    child.wait().context("wait for no-progress process kill")?;
+                    join_stream_timeout(
+                        stdout_thread.take().expect("stdout stream thread"),
+                        Duration::from_secs(2),
+                    )?;
+                    join_stream_timeout(
+                        stderr_thread.take().expect("stderr stream thread"),
+                        Duration::from_secs(2),
+                    )?;
+                    return Ok(record(spec, None, TerminationReason::NoProgress));
+                }
             }
             if Instant::now() >= deadline {
                 kill_process_tree(&mut child);
@@ -135,17 +168,31 @@ fn kill_process_tree(child: &mut Child) {
 fn stream_child_output<R>(
     pipe: Option<R>,
     path: std::path::PathBuf,
+    last_output_ms: Arc<AtomicU64>,
+    started: Instant,
 ) -> thread::JoinHandle<Result<()>>
 where
-    R: std::io::Read + Send + 'static,
+    R: Read + Send + 'static,
 {
     thread::spawn(move || {
         let mut file = fs::File::create(path)?;
         if let Some(mut pipe) = pipe {
-            std::io::copy(&mut pipe, &mut file)?;
+            let mut buffer = [0; 8192];
+            loop {
+                let read = pipe.read(&mut buffer)?;
+                if read == 0 {
+                    break;
+                }
+                file.write_all(&buffer[..read])?;
+                last_output_ms.store(elapsed_ms(started), Ordering::Relaxed);
+            }
         }
         Ok(())
     })
+}
+
+fn elapsed_ms(started: Instant) -> u64 {
+    started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64
 }
 
 fn join_stream(handle: thread::JoinHandle<Result<()>>) -> Result<()> {
@@ -222,6 +269,7 @@ mod tests {
             stdin: None,
             working_dir: tmp.path().join("workspace"),
             timeout_sec: 5,
+            no_output_timeout_sec: None,
             stdout_path: tmp.path().join("stdout.log"),
             stderr_path: tmp.path().join("stderr.log"),
         };
@@ -240,6 +288,7 @@ mod tests {
             stdin: None,
             working_dir: tmp.path().join("workspace"),
             timeout_sec: 1,
+            no_output_timeout_sec: None,
             stdout_path: tmp.path().join("stdout.log"),
             stderr_path: tmp.path().join("stderr.log"),
         };
@@ -250,6 +299,30 @@ mod tests {
     }
 
     #[test]
+    fn c_sbox_003_host_exec_no_output_timeout_is_structured() {
+        let tmp = tempfile::tempdir().unwrap();
+        let spec = ExecSpec {
+            command: "printf started; sleep 5".to_string(),
+            stdin: None,
+            working_dir: tmp.path().join("workspace"),
+            timeout_sec: 30,
+            no_output_timeout_sec: Some(1),
+            stdout_path: tmp.path().join("stdout.log"),
+            stderr_path: tmp.path().join("stderr.log"),
+        };
+        let started = Instant::now();
+
+        let result = HostProcessExecutor::exec(&spec).unwrap();
+
+        assert_eq!(result.termination_reason, TerminationReason::NoProgress);
+        assert!(
+            started.elapsed() < Duration::from_secs(4),
+            "no-output timeout should kill silent descendants promptly"
+        );
+        assert_eq!(fs::read_to_string(spec.stdout_path).unwrap(), "started");
+    }
+
+    #[test]
     fn c_sbox_003_timeout_kills_background_pipe_holder() {
         let tmp = tempfile::tempdir().unwrap();
         let spec = ExecSpec {
@@ -257,6 +330,7 @@ mod tests {
             stdin: None,
             working_dir: tmp.path().join("workspace"),
             timeout_sec: 1,
+            no_output_timeout_sec: None,
             stdout_path: tmp.path().join("stdout.log"),
             stderr_path: tmp.path().join("stderr.log"),
         };
@@ -279,6 +353,7 @@ mod tests {
             stdin: Some("ignored input".repeat(1024)),
             working_dir: tmp.path().join("workspace"),
             timeout_sec: 5,
+            no_output_timeout_sec: None,
             stdout_path: tmp.path().join("stdout.log"),
             stderr_path: tmp.path().join("stderr.log"),
         };

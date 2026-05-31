@@ -1,6 +1,11 @@
 use super::terminal_bench_env::{terminal_bench_agent_env, terminal_bench_input_mode};
-use super::terminal_bench_timeout::terminal_bench_timeout_values;
-use harnesslab_core::{AgentKind, FailureClass, FailureCode, InputMode, default_agent_profile};
+use super::terminal_bench_timeout::{
+    terminal_bench_no_output_timeout_sec, terminal_bench_timeout_values,
+};
+use harnesslab_core::{
+    AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, TerminationReason,
+    default_agent_profile,
+};
 use std::fs;
 
 #[test]
@@ -12,6 +17,39 @@ fn terminal_bench_timeout_values_use_run_override_when_present() {
 fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
     assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 607));
     assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 601));
+}
+
+#[test]
+fn terminal_bench_no_output_timeout_bounds_silent_official_runner_stalls() {
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(Some(180), 3600, 3600, None),
+        240
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(None, 3600, 3600, None),
+        3660
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(None, 3600, 3600, Some("1")),
+        1
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(None, 3600, 3600, Some("invalid")),
+        3660
+    );
+}
+
+#[test]
+fn terminal_bench_no_output_process_maps_to_external_runner_no_progress() {
+    let failure = super::terminal_bench::terminal_bench_process_failure(&ProcessRecord {
+        exit_code: None,
+        termination_reason: TerminationReason::NoProgress,
+        stdout_path: "agent/stdout.log".to_string(),
+        stderr_path: "agent/stderr.log".to_string(),
+    });
+
+    assert_eq!(failure.class, FailureClass::Execution);
+    assert_eq!(failure.code, Some(FailureCode::ExternalRunnerNoProgress));
 }
 
 #[test]
@@ -48,8 +86,12 @@ fn terminal_bench_result_maps_official_agent_timeout() {
     .unwrap();
 
     let (_, _, failure_class, failure_code, score) =
-        super::parse_terminal_bench_result(attempt_dir.path(), &result_path, "hello-world")
-            .unwrap();
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
 
     assert_eq!(score, 0.0);
     assert_eq!(failure_class, FailureClass::Execution);
@@ -65,8 +107,12 @@ fn terminal_bench_result_maps_official_test_timeout() {
     );
 
     let (_, _, failure_class, failure_code, _) =
-        super::parse_terminal_bench_result(attempt_dir.path(), &result_path, "hello-world")
-            .unwrap();
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
     assert_eq!(failure_code, Some(FailureCode::VerifierTimeout));
@@ -81,8 +127,12 @@ fn terminal_bench_result_preserves_success_with_stale_failure_mode() {
     );
 
     let (_, _, failure_class, failure_code, score) =
-        super::parse_terminal_bench_result(attempt_dir.path(), &result_path, "hello-world")
-            .unwrap();
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
 
     assert_eq!(score, 1.0);
     assert_eq!(failure_class, FailureClass::None);
@@ -98,8 +148,12 @@ fn terminal_bench_result_ignores_other_task_failure_mode() {
     );
 
     let (_, _, failure_class, failure_code, _) =
-        super::parse_terminal_bench_result(attempt_dir.path(), &result_path, "hello-world")
-            .unwrap();
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
     assert_eq!(failure_code, Some(FailureCode::TestFailed));
@@ -114,8 +168,12 @@ fn terminal_bench_result_unknown_failure_mode_falls_back_to_test_failed() {
     );
 
     let (_, _, failure_class, failure_code, _) =
-        super::parse_terminal_bench_result(attempt_dir.path(), &result_path, "hello-world")
-            .unwrap();
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
     assert_eq!(failure_code, Some(FailureCode::TestFailed));

@@ -685,6 +685,22 @@ requirements = ["execution_runtime", "config_agent_registry"]
 contracts = ["SandboxProvider", "DockerCliProvider"]
 
 [[tests]]
+id = "C-SBOX-013"
+title = "Host exec no-output watchdog is structured"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-013"
+file_patterns = ["crates/harnesslab-infra/src/process.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor", "ProcessRecord"]
+
+[[tests]]
 id = "ART-003"
 title = "Atomic JSON write"
 layer = "unit"
@@ -1256,6 +1272,22 @@ section = "17"
 [tests.verifies]
 requirements = ["replay_runtime", "secret_redaction"]
 contracts = ["Resume", "Report"]
+
+[[tests]]
+id = "INT-021"
+title = "Terminal-Bench silent official runner is no-progress"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-021"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "report_html"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "Report"]
 
 [[tests]]
 id = "INT-015"
