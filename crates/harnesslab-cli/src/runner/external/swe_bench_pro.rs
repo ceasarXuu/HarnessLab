@@ -169,7 +169,7 @@ fn load_instance(dataset_path: &Path, task_id: &str, swe_dir: &Path) -> Result<S
     let parquet = first_parquet(dataset_path).context("swe-bench-pro parquet data is missing")?;
     let process = HostProcessExecutor::exec(&ExecSpec {
         command: format!(
-            "uv run --with pandas --with pyarrow python {} {} {} {} {}",
+            "unset PYTHONHOME PYTHONPATH PYTHONUSERBASE; export PYTHONNOUSERSITE=1; uv run --with pandas --with pyarrow python {} {} {} {} {}",
             shell_quote(&script_path.display().to_string()),
             shell_quote(&parquet.display().to_string()),
             shell_quote(task_id),
@@ -348,18 +348,25 @@ fn capture_prediction(
         .output()?;
     let patch = String::from_utf8_lossy(&output.stdout).to_string();
     fs::write(attempt_dir.join("patch.diff"), &patch)?;
-    fs::write(
-        attempt_dir.join("prediction.json"),
-        serde_json::to_string_pretty(&vec![serde_json::json!({
+    let prediction = serde_json::json!({
             "instance_id": task.task_id,
+            "model_name_or_path": "harnesslab",
+            "model_patch": patch,
             "patch": patch,
             "prefix": "harnesslab"
-        })])?,
+    });
+    fs::write(
+        attempt_dir.join("prediction.jsonl"),
+        format!("{}\n", serde_json::to_string(&prediction)?),
+    )?;
+    fs::write(
+        attempt_dir.join("prediction.eval.json"),
+        serde_json::to_string_pretty(&vec![prediction])?,
     )?;
     let _ = instance;
     Ok(PatchRecord {
         diff_path: "patch.diff".to_string(),
-        prediction_path: Some("prediction.json".to_string()),
+        prediction_path: Some("prediction.jsonl".to_string()),
         status: if output.stdout.is_empty() {
             PatchStatus::Empty
         } else {
@@ -378,7 +385,7 @@ fn run_evaluator(
     let eval_dir = swe_dir.join("eval");
     fs::create_dir_all(&eval_dir)?;
     let command = format!(
-        "set -e; {}; uv run --with pandas --with tqdm --with docker python {} --raw_sample_path {} --patch_path {} --output_dir {} --scripts_dir {} --dockerhub_username jefzda --use_local_docker --docker_platform linux/amd64 --num_workers 1 --redo",
+        "set -e; {}; unset PYTHONHOME PYTHONPATH PYTHONUSERBASE; export PYTHONNOUSERSITE=1; uv run --with pandas --with tqdm --with docker python {} --raw_sample_path {} --patch_path {} --output_dir {} --scripts_dir {} --dockerhub_username jefzda --use_local_docker --docker_platform linux/amd64 --num_workers 1 --redo",
         docker_host_prefix(),
         shell_quote(
             &source_path
@@ -387,7 +394,12 @@ fn run_evaluator(
                 .to_string()
         ),
         shell_quote(&swe_dir.join("raw_sample.jsonl").display().to_string()),
-        shell_quote(&attempt_root.join("prediction.json").display().to_string()),
+        shell_quote(
+            &attempt_root
+                .join("prediction.eval.json")
+                .display()
+                .to_string()
+        ),
         shell_quote(&eval_dir.display().to_string()),
         shell_quote(&source_path.join("run_scripts").display().to_string()),
     );

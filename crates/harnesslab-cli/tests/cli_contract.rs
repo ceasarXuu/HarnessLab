@@ -5,7 +5,7 @@ use std::path::Path;
 
 #[test]
 fn cli_001_help_lists_m0_commands() {
-    let mut cmd = Command::cargo_bin("harnesslab").unwrap();
+    let mut cmd = harnesslab();
 
     cmd.arg("--help")
         .assert()
@@ -20,21 +20,15 @@ fn cli_001_help_lists_m0_commands() {
 
 #[test]
 fn cli_002_resume_and_replay_are_nested_under_run() {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
-        .args(["resume", "/tmp/run"])
-        .assert()
-        .failure();
+    harnesslab().args(["resume", "/tmp/run"]).assert().failure();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["run", "resume", "--help"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Usage: harnesslab run resume"));
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["run", "replay", "--help"])
         .assert()
         .success()
@@ -54,8 +48,7 @@ fn cli_003_m0_json_commands_have_stable_shape() {
     ];
 
     for (args, command_name) in cases {
-        let output = Command::cargo_bin("harnesslab")
-            .unwrap()
+        let output = harnesslab()
             .args(args)
             .assert()
             .success()
@@ -65,6 +58,13 @@ fn cli_003_m0_json_commands_have_stable_shape() {
         let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
         assert_eq!(json["schema_version"], 1);
         assert_eq!(json["command"], command_name);
+        if command_name == "benchmark list" {
+            let rendered = serde_json::to_string(&json).unwrap();
+            assert!(!rendered.contains("fake-terminal"));
+            assert!(!rendered.contains("fake-patch"));
+            assert!(rendered.contains("terminal-bench"));
+            assert!(rendered.contains("swe-bench-pro"));
+        }
     }
 }
 
@@ -78,8 +78,7 @@ fn cli_004_m0_text_commands_succeed() {
     ];
 
     for args in cases {
-        Command::cargo_bin("harnesslab")
-            .unwrap()
+        harnesslab()
             .args(args)
             .assert()
             .success()
@@ -93,8 +92,7 @@ fn int_003_fake_terminal_success_creates_report_and_results() {
     init_home(home.path());
     write_agent(home.path(), "printf ok > result.txt", 5);
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -140,8 +138,7 @@ fn int_003_fake_terminal_success_creates_report_and_results() {
     .unwrap();
     assert!(agent_command.contains("rendered=printf ok > result.txt"));
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -161,8 +158,7 @@ fn int_004_fake_terminal_test_fail_exits_2() {
     init_home(home.path());
     write_agent(home.path(), "printf ok > result.txt", 5);
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -184,8 +180,7 @@ fn int_005_fake_terminal_timeout_exits_1() {
     init_home(home.path());
     write_agent(home.path(), "sleep 2", 5);
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -207,8 +202,7 @@ fn int_005_fake_terminal_agent_crash_exits_1() {
     init_home(home.path());
     write_agent(home.path(), "exit 7", 5);
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -230,8 +224,7 @@ fn int_006_fake_patch_success_saves_diff() {
     init_home(home.path());
     write_agent(home.path(), "printf new > app.txt", 5);
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -265,8 +258,7 @@ fn int_007_fake_patch_no_diff_exits_2() {
     init_home(home.path());
     write_agent(home.path(), "true", 5);
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -291,8 +283,7 @@ fn int_008_resume_completed_run_succeeds() {
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let source = json["run_dir"].as_str().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -315,8 +306,7 @@ fn int_008_resume_text_output_succeeds() {
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let source = json["run_dir"].as_str().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -339,8 +329,7 @@ fn int_009_replay_success_creates_new_run() {
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let source = json["run_dir"].as_str().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -368,8 +357,7 @@ fn int_010_replay_missing_agent_blocks_before_execution() {
     value["command"] = serde_json::json!("missing-harnesslab-agent");
     fs::write(&profile, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -386,8 +374,7 @@ fn int_010_replay_missing_agent_blocks_before_execution() {
 fn cli_005_agent_list_json_allows_uninitialized_home() {
     let home = tempfile::tempdir().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -409,8 +396,7 @@ fn cli_006_report_open_explicit_path_text_succeeds() {
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let source = json["run_dir"].as_str().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -427,15 +413,13 @@ fn cli_006_report_open_explicit_path_text_succeeds() {
 fn cli_007_run_and_benchmark_preflight_errors_are_clear() {
     let home = tempfile::tempdir().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.path().to_str().unwrap(), "run"])
         .assert()
         .code(3)
         .stderr(predicate::str::contains("--agent is required"));
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["benchmark", "info", "missing-benchmark"])
         .assert()
         .code(3)
@@ -443,8 +427,7 @@ fn cli_007_run_and_benchmark_preflight_errors_are_clear() {
 }
 
 fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -478,8 +461,7 @@ parser = "none"
 }
 
 fn run_success(home: &Path) -> Vec<u8> {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.to_str().unwrap(),
@@ -497,4 +479,8 @@ fn run_success(home: &Path) -> Vec<u8> {
         .get_output()
         .stdout
         .clone()
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

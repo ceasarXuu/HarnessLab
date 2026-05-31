@@ -3,7 +3,7 @@ use crate::output::{
     BenchmarkInfoOutput, BenchmarkListOutput, DoctorCheck, DoctorOutput, InitOutput, ListOutput,
     PathOutput,
 };
-use crate::runner::{execute_new_run, replay_run, resume_run};
+use crate::runner::{RunOverrides, execute_new_run, replay_run, resume_run};
 use crate::{
     AgentCommand, BenchmarkCommand, Cli, Command, ReportCommand, RunAction, RunArgs, print_json,
 };
@@ -208,6 +208,9 @@ fn doctor(home: &Path, json: bool) -> Result<i32> {
         })?;
     } else {
         println!("doctor: {status}");
+        for check in checks {
+            println!("  - {} [{}]: {}", check.id, check.status, check.message);
+        }
     }
     Ok(if status == "error" { 3 } else { 0 })
 }
@@ -225,7 +228,16 @@ fn benchmark_list(home: &Path, json: bool) -> Result<i32> {
         })?;
     } else {
         for descriptor in descriptors {
-            println!("{}", descriptor.name);
+            let splits = descriptor
+                .splits
+                .iter()
+                .map(|split| format!("{}:{}:{}", split.name, split.task_count, split.data_state))
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!(
+                "{} ({:?}) version={} splits=[{}]",
+                descriptor.name, descriptor.style, descriptor.version, splits
+            );
         }
     }
     Ok(0)
@@ -247,6 +259,26 @@ fn benchmark_info(home: &Path, name: &str, json: bool) -> Result<i32> {
         })?;
     } else {
         println!("benchmark info: {}", descriptor.name);
+        println!("  style: {:?}", descriptor.style);
+        println!("  version: {}", descriptor.version);
+        println!("  homepage: {}", descriptor.homepage);
+        println!("  splits:");
+        for split in &descriptor.splits {
+            println!(
+                "    - {}: tasks={}, data_state={}",
+                split.name, split.task_count, split.data_state
+            );
+        }
+        if let Some(split) = descriptor
+            .splits
+            .iter()
+            .find(|split| !data_state_blocks_run(split.data_state))
+        {
+            println!(
+                "  run: harnesslab run --agent <agent-profile> --benchmark {} --split {}",
+                descriptor.name, split.name
+            );
+        }
     }
     Ok(0)
 }
@@ -259,14 +291,30 @@ fn run_command(home: &Path, args: RunArgs) -> Result<i32> {
             let agent = args.agent.context("--agent is required")?;
             let benchmark = args.benchmark.context("--benchmark is required")?;
             let split = args.split.context("--split is required")?;
-            execute_new_run(home, &agent, &benchmark, &split, args.json, None)
+            execute_new_run(
+                home,
+                &agent,
+                &benchmark,
+                &split,
+                args.json,
+                RunOverrides {
+                    concurrency: args.concurrency,
+                    attempts: args.attempts,
+                },
+                None,
+            )
         }
     }
 }
 
 fn report_open(home: &Path, target: &str, json: bool) -> Result<i32> {
     let run_dir = if target == "latest" {
-        latest_run_dir(&home.join("runs"))?.context("no runs found")?
+        let config = load_config(home).ok();
+        let runs_dir = config.as_ref().map_or_else(
+            || home.join("runs"),
+            |config| crate::runner::runs_dir(home, config),
+        );
+        latest_run_dir(&runs_dir)?.context("no runs found")?
     } else {
         PathBuf::from(target)
     };

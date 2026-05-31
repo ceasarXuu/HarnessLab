@@ -10,8 +10,7 @@ fn int_011_terminal_bench_smoke_without_data_reports_readiness_blocker() {
     write_agent(home.path(), "printf terminal-bench-smoke > result.txt");
     let root = tempfile::tempdir().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args([
             "--home",
@@ -41,8 +40,7 @@ fn int_011_terminal_bench_zero_exit_without_results_stays_task_failure() {
     let root = terminal_bench_root();
     let bin = fake_uvx("exit 0\n");
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .env("PATH", path_with(bin.path()))
         .args([
@@ -94,8 +92,7 @@ exit 1
 "#,
     );
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .env("PATH", path_with(bin.path()))
         .args([
@@ -228,7 +225,7 @@ fn run_swe_json(
     extra_env: &[(&str, &str)],
     expected_code: i32,
 ) -> (serde_json::Value, PathBuf) {
-    let mut command = Command::cargo_bin("harnesslab").unwrap();
+    let mut command = harnesslab();
     command
         .env("HARNESSLAB_BENCHMARKS_DIR", root)
         .env("PATH", path_with(bin))
@@ -260,8 +257,7 @@ fn run_swe_json(
 }
 
 fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -478,4 +474,8 @@ fn write_executable(path: &Path, content: &str) {
 fn path_with(bin: &Path) -> String {
     let current = std::env::var("PATH").unwrap_or_default();
     format!("{}:{current}", bin.display())
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

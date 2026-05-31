@@ -10,8 +10,7 @@ fn int_008_resume_failed_run_recovers_once_and_reports_latest_attempt() {
         home.path(),
         "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac",
     );
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -72,8 +71,7 @@ fn int_008_resume_uses_unredacted_runtime_profile_snapshot() {
         "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac",
         &["HARNESSLAB_REDACT_RESUME_TEST"],
     );
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_REDACT_RESUME_TEST", "ok")
         .args([
             "--home",
@@ -120,8 +118,7 @@ fn int_020_resume_redacts_public_artifacts_without_current_env() {
         "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac # sk-resume-secret",
         &["HARNESSLAB_SECRET_RESUME_TEST"],
     );
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_SECRET_RESUME_TEST", "sk-resume-secret")
         .args([
             "--home",
@@ -161,8 +158,7 @@ fn int_008_resume_missing_planned_attempt_reports_resumed_provenance() {
         home.path(),
         "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac",
     );
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -219,8 +215,7 @@ fn int_016_resume_interrupted_attempt_schedules_recovery_attempt() {
         home.path(),
         "case \"$PWD\" in */attempts/2/workspace) printf ok > result.txt;; *) exit 7;; esac",
     );
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -262,7 +257,7 @@ fn resume_success(home: &Path, run_dir: &Path) {
 }
 
 fn resume_success_with_env(home: &Path, run_dir: &Path, env: Option<(&str, &str)>) {
-    let mut command = Command::cargo_bin("harnesslab").unwrap();
+    let mut command = harnesslab();
     if let Some((key, value)) = env {
         command.env(key, value);
     }
@@ -315,8 +310,7 @@ fn assert_report_row_provenance(report: &str, task_id: &str, attempt: u32, prove
 }
 
 fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -381,4 +375,8 @@ fn assert_public_artifacts_do_not_contain(run_dir: &Path, secret: &str) {
             );
         }
     }
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

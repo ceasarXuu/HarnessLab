@@ -11,8 +11,7 @@ fn int_012_replay_text_output_succeeds() {
     let output = run_success(home.path());
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -53,8 +52,7 @@ fn int_012_replay_uses_unredacted_runtime_profile_snapshot() {
             .contains("agent-profile.runtime.json")
     );
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_REDACT_REPLAY_TEST", "ok")
         .args([
             "--home",
@@ -85,8 +83,7 @@ fn int_017_replay_redacts_public_artifacts_without_current_env() {
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
 
-    let replay_output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let replay_output = harnesslab()
         .env_remove("HARNESSLAB_SECRET_REPLAY_TEST")
         .args([
             "--home",
@@ -129,8 +126,7 @@ fn int_018_replay_rejects_redacted_legacy_profile_without_runtime_snapshot() {
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
     fs::remove_file(run_dir.join("agent-profile.runtime.json")).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_REDACT_LEGACY_REPLAY_TEST", "ok")
         .args([
             "--home",
@@ -154,8 +150,7 @@ fn int_019_resume_report_marks_missing_original_command() {
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
     fs::remove_file(run_dir.join("command.txt")).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -182,8 +177,7 @@ fn int_013_replay_falls_back_when_benchmark_snapshot_is_missing() {
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
     fs::remove_file(run_dir.join("benchmark.snapshot.json")).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -211,8 +205,7 @@ fn int_014_resume_rejects_invalid_profile_snapshot() {
     profile["schema_version"] = serde_json::json!(2);
     fs::write(&profile_path, serde_json::to_vec_pretty(&profile).unwrap()).unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args([
             "--home",
             home.path().to_str().unwrap(),
@@ -226,8 +219,7 @@ fn int_014_resume_rejects_invalid_profile_snapshot() {
 }
 
 fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -273,7 +265,7 @@ fn run_success(home: &Path) -> Vec<u8> {
 }
 
 fn run_success_with_env(home: &Path, env: Option<(&str, &str)>) -> Vec<u8> {
-    let mut command = Command::cargo_bin("harnesslab").unwrap();
+    let mut command = harnesslab();
     if let Some((key, value)) = env {
         command.env(key, value);
     }
@@ -320,4 +312,8 @@ fn assert_public_artifacts_do_not_contain(run_dir: &Path, secret: &str) {
             );
         }
     }
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

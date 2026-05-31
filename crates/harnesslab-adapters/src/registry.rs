@@ -9,20 +9,32 @@ pub trait BenchmarkAdapter {
 }
 
 pub fn built_in_descriptors() -> Vec<BenchmarkDescriptor> {
+    let mut descriptors = production_descriptors(None);
+    if internal_fixtures_enabled() {
+        descriptors.splice(0..0, fixture_descriptors());
+    }
+    descriptors
+}
+
+pub fn production_descriptors(root: Option<&Path>) -> Vec<BenchmarkDescriptor> {
     vec![
-        crate::FakeTerminalAdapter.descriptor(),
-        crate::FakePatchAdapter.descriptor(),
-        crate::TerminalBenchAdapter::new().descriptor(),
-        crate::SweBenchProAdapter::new().descriptor(),
+        crate::TerminalBenchAdapter::with_data_root(root).descriptor(),
+        crate::SweBenchProAdapter::with_data_root(root).descriptor(),
     ]
 }
 
 pub fn built_in_descriptors_with_root(root: Option<&Path>) -> Vec<BenchmarkDescriptor> {
+    let mut descriptors = production_descriptors(root);
+    if internal_fixtures_enabled() {
+        descriptors.splice(0..0, fixture_descriptors());
+    }
+    descriptors
+}
+
+fn fixture_descriptors() -> Vec<BenchmarkDescriptor> {
     vec![
         crate::FakeTerminalAdapter.descriptor(),
         crate::FakePatchAdapter.descriptor(),
-        crate::TerminalBenchAdapter::with_data_root(root).descriptor(),
-        crate::SweBenchProAdapter::with_data_root(root).descriptor(),
     ]
 }
 
@@ -38,6 +50,10 @@ pub fn adapter_for_with_root(name: &str, root: Option<&Path>) -> Option<Box<dyn 
         "swe-bench-pro" => Some(Box::new(crate::SweBenchProAdapter::with_data_root(root))),
         _ => None,
     }
+}
+
+fn internal_fixtures_enabled() -> bool {
+    std::env::var("HARNESSLAB_ENABLE_FAKE_BENCHMARKS").as_deref() == Ok("1")
 }
 
 pub fn plan_from_tasks(
@@ -72,10 +88,19 @@ mod tests {
             .map(|descriptor| descriptor.name)
             .collect::<Vec<_>>();
 
-        assert!(names.contains(&"fake-terminal".to_string()));
-        assert!(names.contains(&"fake-patch".to_string()));
         assert!(names.contains(&"terminal-bench".to_string()));
         assert!(names.contains(&"swe-bench-pro".to_string()));
+    }
+
+    #[test]
+    fn c_bench_001_fake_descriptors_are_internal_only() {
+        let names = built_in_descriptors()
+            .into_iter()
+            .map(|descriptor| descriptor.name)
+            .collect::<Vec<_>>();
+
+        assert!(!names.contains(&"fake-terminal".to_string()));
+        assert!(!names.contains(&"fake-patch".to_string()));
     }
 
     #[test]
