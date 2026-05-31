@@ -294,9 +294,9 @@ impl DockerCliProvider {
             args.push("--memory".to_string());
             args.push(format!("{}m", request.memory_mb));
         }
+        args.extend(["--entrypoint".to_string(), "sh".to_string()]);
         args.extend([
             request.image.clone(),
-            "sh".to_string(),
             "-lc".to_string(),
             "sleep infinity".to_string(),
         ]);

@@ -30,7 +30,7 @@ pub(super) fn run_agent(
         stdin: matches!(profile.input_mode, InputMode::Stdin | InputMode::Tty)
             .then(|| task.instruction.clone()),
         working_dir: workspace.to_path_buf(),
-        timeout_sec: agent_timeout(profile, task),
+        timeout_sec: agent_timeout(spec, profile, task),
         stdout_path: attempt_dir.join("agent/stdout.log"),
         stderr_path: attempt_dir.join("agent/stderr.log"),
     };
@@ -160,10 +160,10 @@ pub(super) fn render_command(
     workspace: &Path,
     uses_docker: bool,
 ) -> Result<String> {
-    match profile.input_mode {
-        InputMode::Argument => Ok(profile
+    let command = match profile.input_mode {
+        InputMode::Argument => profile
             .command
-            .replace("{{instruction}}", &shell_quote(&task.instruction))),
+            .replace("{{instruction}}", &shell_quote(&task.instruction)),
         InputMode::File => {
             let path = workspace.join("instruction.txt");
             fs::create_dir_all(workspace)?;
@@ -173,12 +173,55 @@ pub(super) fn render_command(
             } else {
                 path.display().to_string()
             };
-            Ok(profile
+            profile
                 .command
-                .replace("{{instruction}}", &shell_quote(&instruction_path)))
+                .replace("{{instruction_file}}", &shell_quote(&instruction_path))
+                .replace("{{instruction}}", &shell_quote(&instruction_path))
         }
-        InputMode::Stdin | InputMode::Tty => Ok(profile.command.clone()),
+        InputMode::Stdin | InputMode::Tty => profile.command.clone(),
+    };
+    if uses_docker {
+        Ok(prefix_docker_setup(profile, &command))
+    } else {
+        Ok(command)
     }
+}
+
+fn prefix_docker_setup(profile: &AgentProfile, command: &str) -> String {
+    let Some(setup) = docker_setup_command(profile) else {
+        return command.to_string();
+    };
+    format!("{setup}; {command}")
+}
+
+fn docker_setup_command(profile: &AgentProfile) -> Option<String> {
+    if let Some(command) = profile.labels.get("sandbox_setup_command") {
+        return (!command.trim().is_empty()).then(|| command.clone());
+    }
+    match profile.kind {
+        harnesslab_core::AgentKind::Codex => Some(missing_command_installer(
+            "codex",
+            "npm install -g @openai/codex",
+            "codex",
+        )),
+        harnesslab_core::AgentKind::ClaudeCode => Some(missing_command_installer(
+            "claude",
+            "npm install -g @anthropic-ai/claude-code",
+            "claude-code",
+        )),
+        harnesslab_core::AgentKind::Opencode => Some(missing_command_installer(
+            "opencode",
+            "npm install -g opencode-ai",
+            "opencode",
+        )),
+        _ => None,
+    }
+}
+
+fn missing_command_installer(binary: &str, install: &str, slug: &str) -> String {
+    format!(
+        "if ! command -v {binary} >/dev/null 2>&1; then if command -v npm >/dev/null 2>&1; then {install} >/tmp/harnesslab-{slug}-install.log 2>&1 || {{ cat /tmp/harnesslab-{slug}-install.log >&2; exit 127; }}; else echo '{binary} CLI missing and npm unavailable' >&2; exit 127; fi; fi"
+    )
 }
 
 struct DockerSandboxGuard {
@@ -205,11 +248,11 @@ impl Drop for DockerSandboxGuard {
     }
 }
 
-fn agent_timeout(profile: &AgentProfile, task: &TaskPlan) -> u64 {
+fn agent_timeout(spec: &RunSpec, profile: &AgentProfile, task: &TaskPlan) -> u64 {
     if task.task_id.contains("agent-timeout") {
         1
     } else {
-        profile.timeout_sec
+        spec.execution.timeout_sec.unwrap_or(profile.timeout_sec)
     }
 }
 
@@ -294,29 +337,58 @@ mod tests {
     }
 
     #[test]
+    fn docker_command_prefixes_builtin_and_custom_setup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task = task();
+        let codex = default_agent_profile("codex", AgentKind::Codex, "codex exec -");
+        let rendered = render_command(&codex, &task, tmp.path(), true).unwrap();
+        assert!(rendered.contains("npm install -g @openai/codex"));
+        assert!(rendered.ends_with("; codex exec -"));
+        assert_eq!(
+            render_command(&codex, &task, tmp.path(), false).unwrap(),
+            "codex exec -"
+        );
+
+        let claude = default_agent_profile("claude", AgentKind::ClaudeCode, "claude -p -");
+        assert!(
+            render_command(&claude, &task, tmp.path(), true)
+                .unwrap()
+                .contains("npm install -g @anthropic-ai/claude-code")
+        );
+        let opencode = default_agent_profile("opencode", AgentKind::Opencode, "opencode run -");
+        assert!(
+            render_command(&opencode, &task, tmp.path(), true)
+                .unwrap()
+                .contains("npm install -g opencode-ai")
+        );
+        let pi = default_agent_profile("pi", AgentKind::PiCodingAgent, "pi -");
+        assert_eq!(
+            render_command(&pi, &task, tmp.path(), true).unwrap(),
+            "pi -"
+        );
+
+        let mut custom = default_agent_profile("custom", AgentKind::Custom, "agent");
+        custom.labels.insert(
+            "sandbox_setup_command".to_string(),
+            "install-agent".to_string(),
+        );
+        assert_eq!(
+            render_command(&custom, &task, tmp.path(), true).unwrap(),
+            "install-agent; agent"
+        );
+        custom
+            .labels
+            .insert("sandbox_setup_command".to_string(), " ".to_string());
+        assert_eq!(
+            render_command(&custom, &task, tmp.path(), true).unwrap(),
+            "agent"
+        );
+    }
+
+    #[test]
     fn docker_request_respects_auth_inherit_and_exclude_paths() {
         let workspace = std::path::PathBuf::from("/tmp/ws");
-        let spec = RunSpec {
-            schema_version: 1,
-            run_id: "run-1".to_string(),
-            created_at: "2026-05-30T00:00:00Z".to_string(),
-            agent_profile_ref: "fake".to_string(),
-            benchmark: harnesslab_core::BenchmarkRef {
-                name: "fake-terminal".to_string(),
-                version: "0".to_string(),
-                split: "success".to_string(),
-            },
-            execution: harnesslab_core::ExecutionConfig {
-                concurrency: 4,
-                attempts: 1,
-                network: NetworkPolicy::Full,
-                timeout_sec: None,
-            },
-            paths: harnesslab_core::RunPaths {
-                run_dir: "/tmp/run".to_string(),
-            },
-            replay_source_run_id: None,
-        };
+        let spec = spec(None);
         let task = task();
         let mut profile = default_agent_profile("fake", AgentKind::Fake, "agent");
         profile.auth.inherit_env = vec!["OPENAI_API_KEY".to_string()];
@@ -336,10 +408,13 @@ mod tests {
     #[test]
     fn agent_timeout_uses_task_override_marker() {
         let profile = default_agent_profile("fake", AgentKind::Fake, "agent");
+        let mut spec = spec(Some(99));
         let mut task = task();
-        assert_eq!(agent_timeout(&profile, &task), 3600);
+        assert_eq!(agent_timeout(&spec, &profile, &task), 99);
+        spec.execution.timeout_sec = None;
+        assert_eq!(agent_timeout(&spec, &profile, &task), 3600);
         task.task_id = "agent-timeout-case".to_string();
-        assert_eq!(agent_timeout(&profile, &task), 1);
+        assert_eq!(agent_timeout(&spec, &profile, &task), 1);
     }
 
     #[test]
@@ -393,6 +468,30 @@ mod tests {
             },
             patch_spec: None,
             external_runner: None,
+        }
+    }
+
+    fn spec(timeout_sec: Option<u64>) -> RunSpec {
+        RunSpec {
+            schema_version: 1,
+            run_id: "run-1".to_string(),
+            created_at: "2026-05-30T00:00:00Z".to_string(),
+            agent_profile_ref: "fake".to_string(),
+            benchmark: harnesslab_core::BenchmarkRef {
+                name: "fake-terminal".to_string(),
+                version: "0".to_string(),
+                split: "success".to_string(),
+            },
+            execution: harnesslab_core::ExecutionConfig {
+                concurrency: 4,
+                attempts: 1,
+                network: NetworkPolicy::Full,
+                timeout_sec,
+            },
+            paths: harnesslab_core::RunPaths {
+                run_dir: "/tmp/run".to_string(),
+            },
+            replay_source_run_id: None,
         }
     }
 }

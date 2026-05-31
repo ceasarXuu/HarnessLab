@@ -208,7 +208,7 @@ fn plan_from_dataset(
         prepared_benchmark_ref: dataset.dataset_dir.display().to_string(),
         tasks,
         run_config_overrides: RunConfigOverrides {
-            timeout_sec: None,
+            timeout_sec: Some(7200),
             network: Some(NetworkPolicy::Full),
         },
         warnings: Vec::new(),

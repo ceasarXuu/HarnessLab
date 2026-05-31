@@ -44,11 +44,11 @@ enum ExecutionMode {
 }
 
 #[cfg(test)]
-use attempts::panic_message;
-#[cfg(test)]
-use sandbox::{docker_create_request, render_command, task_requires_docker};
-#[cfg(test)]
-use schedule::{attempt_result_path, planned_attempts};
+use {
+    attempts::panic_message,
+    sandbox::{docker_create_request, render_command, task_requires_docker},
+    schedule::{attempt_result_path, planned_attempts},
+};
 
 pub(crate) fn execute_new_run(
     home: &Path,
@@ -71,10 +71,7 @@ pub(crate) fn execute_new_run(
     validate_benchmark_plan(&plan)?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;
     let run_id = format!(
-        "{}-{}-{}-{}",
-        agent_name,
-        benchmark_name,
-        split,
+        "{agent_name}-{benchmark_name}-{split}-{}",
         store::timestamp_id()
     );
     let run_dir = store::runs_dir(home, &config).join(&run_id);
@@ -92,8 +89,11 @@ pub(crate) fn execute_new_run(
         execution: harnesslab_core::ExecutionConfig {
             concurrency: overrides.concurrency.unwrap_or(config.default_concurrency),
             attempts: overrides.attempts.unwrap_or(config.default_attempts),
-            network: config.network_default,
-            timeout_sec: None,
+            network: plan
+                .run_config_overrides
+                .network
+                .unwrap_or(config.network_default),
+            timeout_sec: plan.run_config_overrides.timeout_sec,
         },
         paths: RunPaths {
             run_dir: run_dir.display().to_string(),
@@ -456,6 +456,9 @@ fn execute_task(
 }
 
 fn prepare_workspace(workspace: &Path, task: &TaskPlan) -> Result<()> {
+    if task.external_runner.is_some() {
+        return Ok(());
+    }
     if task.patch_spec.is_some() {
         fs::write(workspace.join("app.txt"), "old\n")?;
         run_shell(

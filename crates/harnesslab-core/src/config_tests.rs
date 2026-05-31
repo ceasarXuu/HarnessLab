@@ -56,6 +56,10 @@ fn cfg_002_profile_rejects_missing_input_variable_and_timeout() {
     profile.input_mode = InputMode::Argument;
     assert_eq!(profile.validate(), Err(ConfigError::MissingInputVariable));
 
+    profile.input_mode = InputMode::File;
+    profile.command = "agent run {{instruction_file}}".to_string();
+    assert!(profile.validate().is_ok());
+
     profile.input_mode = InputMode::Stdin;
     profile.timeout_sec = 0;
     assert_eq!(profile.validate(), Err(ConfigError::InvalidTimeout));
@@ -161,7 +165,13 @@ fn agt_006_builtin_profiles_expand_auth_defaults() {
         codex
             .auth
             .include_paths
-            .contains(&"~/.codex:/root/.codex:ro".to_string())
+            .contains(&"~/.codex:/root/.codex:rw".to_string())
+    );
+    assert!(
+        codex
+            .labels
+            .get("sandbox_setup_command")
+            .is_some_and(|value| value.contains("@openai/codex"))
     );
 
     let pi = default_agent_profile("pi-coding-agent-default", AgentKind::PiCodingAgent, "pi -");
