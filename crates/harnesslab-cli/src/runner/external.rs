@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::Path;
 
+mod log_scan;
 mod swe_bench_pro;
 
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {
@@ -114,7 +115,8 @@ fn execute_terminal_bench(
     let result_path = output_root.join(&official_run_id).join("results.json");
     let parsed_result = parse_terminal_bench_result(ctx.attempt_dir, &result_path);
     let agent_failure = classify_agent_process(&process);
-    let (evaluation, usage, failure_class, failure_code, score) = match parsed_result {
+    let infra_failure = log_scan::terminal_bench_infra_failure(ctx.attempt_dir);
+    let (evaluation, usage, mut failure_class, mut failure_code, mut score) = match parsed_result {
         Ok(parsed) => parsed,
         Err(error) => (
             {
@@ -140,6 +142,11 @@ fn execute_terminal_bench(
             0.0,
         ),
     };
+    if let Some(code) = infra_failure {
+        failure_class = FailureClass::Execution;
+        failure_code = Some(code);
+        score = 0.0;
+    }
     let mut warnings = Vec::new();
     if matches!(usage, UsageRecord::Unknown) {
         warnings.push(FailureCode::UsageUnknown);
@@ -286,13 +293,10 @@ fn terminal_bench_timeout_values(
     profile_timeout: u64,
     verifier_timeout: u64,
 ) -> (u64, u64, u64) {
-    (
-        run_timeout.unwrap_or(profile_timeout).max(1),
-        run_timeout.unwrap_or(verifier_timeout).max(1),
-        run_timeout
-            .unwrap_or_else(|| profile_timeout.max(verifier_timeout))
-            .max(1),
-    )
+    let agent_timeout = run_timeout.unwrap_or(profile_timeout).max(1);
+    let test_timeout = run_timeout.unwrap_or(verifier_timeout).max(1);
+    let process_timeout = agent_timeout.max(test_timeout).saturating_add(600);
+    (agent_timeout, test_timeout, process_timeout)
 }
 
 enum TerminalBenchAgent {
@@ -491,7 +495,6 @@ fn normalize_agent_paths(mut process: ProcessRecord) -> ProcessRecord {
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
-
 #[cfg(test)]
 #[path = "external_tests.rs"]
 mod tests;

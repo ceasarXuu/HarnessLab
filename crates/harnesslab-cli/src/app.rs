@@ -185,6 +185,7 @@ fn run_command(home: &Path, args: RunArgs) -> Result<i32> {
                 RunOverrides {
                     concurrency: args.concurrency,
                     attempts: args.attempts,
+                    timeout_sec: args.timeout_sec,
                 },
                 None,
             )

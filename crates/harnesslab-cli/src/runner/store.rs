@@ -155,6 +155,9 @@ pub(super) fn original_run_command(
     if spec.execution.attempts != config.default_attempts {
         command.push_str(&format!(" --attempts {}", spec.execution.attempts));
     }
+    if let Some(timeout_sec) = spec.execution.timeout_sec {
+        command.push_str(&format!(" --timeout-sec {timeout_sec}"));
+    }
     command
 }
 
@@ -343,7 +346,7 @@ mod tests {
                 concurrency: 2,
                 attempts: 3,
                 network: harnesslab_core::NetworkPolicy::Full,
-                timeout_sec: None,
+                timeout_sec: Some(123),
             },
             paths: harnesslab_core::RunPaths {
                 run_dir: tmp.path().join("runs/run-1").display().to_string(),
@@ -362,8 +365,10 @@ mod tests {
 
         assert!(command.contains("--concurrency 2"));
         assert!(command.contains("--attempts 3"));
+        assert!(command.contains("--timeout-sec 123"));
         spec.execution.concurrency = config.default_concurrency;
         spec.execution.attempts = config.default_attempts;
+        spec.execution.timeout_sec = None;
         let default_command = original_run_command(
             tmp.path(),
             "agent",
@@ -374,5 +379,6 @@ mod tests {
         );
         assert!(!default_command.contains("--concurrency"));
         assert!(!default_command.contains("--attempts"));
+        assert!(!default_command.contains("--timeout-sec"));
     }
 }

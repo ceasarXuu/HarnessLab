@@ -85,6 +85,8 @@ pub(crate) struct RunArgs {
     #[arg(long)]
     pub attempts: Option<u32>,
     #[arg(long)]
+    pub timeout_sec: Option<u64>,
+    #[arg(long)]
     pub json: bool,
 }
 

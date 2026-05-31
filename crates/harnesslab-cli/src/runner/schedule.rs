@@ -1,6 +1,6 @@
 use anyhow::Result;
 use harnesslab_core::{
-    AttemptProvenance, Outcome, TaskAttemptResult, TaskPlan, TaskState, task_dir_name,
+    AttemptProvenance, FailureCode, Outcome, TaskAttemptResult, TaskPlan, TaskState, task_dir_name,
 };
 use harnesslab_infra::read_json;
 use std::fs;
@@ -21,7 +21,10 @@ pub(super) fn partition_attempts(
     let mut completed = Vec::new();
     let mut pending = Vec::new();
     for task in &plan.tasks {
-        let existing = existing_attempts(run_dir, &task.task_id)?;
+        let existing = existing_attempts(run_dir, &task.task_id)?
+            .into_iter()
+            .filter(|result| result.failure_code != Some(FailureCode::RunHealthAborted))
+            .collect::<Vec<_>>();
         let next_planned = planned_attempts_for_task(task, attempts)
             .into_iter()
             .filter(|work| !existing.iter().any(|result| result.attempt == work.attempt))

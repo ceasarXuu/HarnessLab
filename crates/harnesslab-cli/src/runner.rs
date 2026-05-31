@@ -1,6 +1,7 @@
 mod attempts;
 mod cleanup;
 mod external;
+mod monitor;
 mod patch;
 mod replay;
 mod sandbox;
@@ -8,7 +9,6 @@ mod schedule;
 mod shell;
 mod store;
 mod usage;
-
 use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
 use crate::output::{PathOutput, RunOutput};
 use crate::print_json;
@@ -35,21 +35,18 @@ use std::fs;
 use std::path::Path;
 use store::{load_config, load_profile, write_run_inputs};
 use usage::collect_usage;
-
 #[derive(Debug, Clone, Copy)]
 enum ExecutionMode {
     New,
     Resume,
     Replay,
 }
-
 #[cfg(test)]
 use {
     attempts::panic_message,
     sandbox::{docker_create_request, render_command, task_requires_docker},
     schedule::{attempt_result_path, planned_attempts},
 };
-
 pub(crate) fn execute_new_run(
     home: &Path,
     agent_name: &str,
@@ -93,7 +90,9 @@ pub(crate) fn execute_new_run(
                 .run_config_overrides
                 .network
                 .unwrap_or(config.network_default),
-            timeout_sec: plan.run_config_overrides.timeout_sec,
+            timeout_sec: overrides
+                .timeout_sec
+                .or(plan.run_config_overrides.timeout_sec),
         },
         paths: RunPaths {
             run_dir: run_dir.display().to_string(),
@@ -140,6 +139,7 @@ pub(crate) fn execute_new_run(
 pub(crate) struct RunOverrides {
     pub(crate) concurrency: Option<usize>,
     pub(crate) attempts: Option<u32>,
+    pub(crate) timeout_sec: Option<u64>,
 }
 
 pub(crate) fn runs_dir(home: &Path, config: &harnesslab_core::GlobalConfig) -> std::path::PathBuf {
@@ -308,6 +308,7 @@ fn execute_plan(
     });
     let results = summarize_results(&spec.run_id, attempts);
     atomic_write_json(&run_dir.join("results.json"), &results)?;
+    let run_health = monitor::report_health(run_dir);
     let model = harnesslab_report::build_report_model(
         harnesslab_report::ReportContext {
             run_id: spec.run_id.clone(),
@@ -319,6 +320,8 @@ fn execute_plan(
             replay_command: store::replay_command(spec),
             original_command: store::original_command_from_snapshot(run_dir),
             resumed: matches!(mode, ExecutionMode::Resume),
+            run_health_status: run_health.status,
+            run_health_reason: run_health.reason,
         },
         results.clone(),
     );
@@ -454,7 +457,6 @@ fn execute_task(
     atomic_write_json(&attempt_dir.join("result.json"), &result)?;
     Ok(result)
 }
-
 fn prepare_workspace(workspace: &Path, task: &TaskPlan) -> Result<()> {
     if task.external_runner.is_some() {
         return Ok(());
@@ -493,7 +495,6 @@ fn run_verifier(workspace: &Path, attempt_dir: &Path, task: &TaskPlan) -> Result
         stderr_path: "verifier/stderr.log".to_string(),
     })
 }
-
 #[cfg(test)]
 #[path = "runner_tests.rs"]
 mod tests;

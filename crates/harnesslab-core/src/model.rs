@@ -51,6 +51,8 @@ pub enum FailureCode {
     PatchApplyFailed,
     UsageUnknown,
     UsageParserFailed,
+    DockerNetworkPoolExhausted,
+    RunHealthAborted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

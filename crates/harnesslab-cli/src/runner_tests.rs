@@ -194,6 +194,34 @@ fn replay_002_resume_does_not_create_unbounded_recovery_attempts() {
 }
 
 #[test]
+fn replay_002_resume_ignores_run_health_aborted_placeholders() {
+    let tmp = tempfile::tempdir().unwrap();
+    let plan = test_plan(vec![task_with_id("task-a")]);
+    for attempt_number in [1, 2] {
+        let mut aborted = attempt(FailureClass::Execution, Some(FailureCode::RunHealthAborted));
+        aborted.state = TaskState::Interrupted;
+        aborted.outcome = Outcome::Failure;
+        atomic_write_json(
+            &attempt_result_path(tmp.path(), "task-a", attempt_number),
+            &TaskAttemptResult {
+                task_id: "task-a".to_string(),
+                attempt: attempt_number,
+                ..aborted
+            },
+        )
+        .unwrap();
+    }
+
+    let (loaded, pending) = partition_attempts(tmp.path(), &plan, 2).unwrap();
+
+    assert!(loaded.is_empty());
+    assert_eq!(
+        pending.iter().map(|work| work.attempt).collect::<Vec<_>>(),
+        vec![1, 2]
+    );
+}
+
+#[test]
 fn replay_002_resume_uses_encoded_task_dir_for_slash_bearing_task_ids() {
     let tmp = tempfile::tempdir().unwrap();
     let plan = test_plan(vec![task_with_id("task/slash")]);

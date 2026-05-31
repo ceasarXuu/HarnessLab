@@ -252,6 +252,48 @@ fn int_016_resume_interrupted_attempt_schedules_recovery_attempt() {
     assert_eq!(events.matches("recovery_attempt_scheduled").count(), 1);
 }
 
+#[test]
+fn int_016_resume_ignores_run_health_aborted_placeholders() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "printf ok > result.txt");
+    let output = harnesslab()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "fake",
+            "--benchmark",
+            "fake-terminal",
+            "--split",
+            "success",
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    force_configured_attempts(run_dir, 2);
+    mark_attempt_run_health_aborted(run_dir, 1);
+    mark_attempt_run_health_aborted(run_dir, 2);
+
+    resume_success(home.path(), run_dir);
+
+    let results: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
+    assert_eq!(results["summary"]["success"], 1);
+    assert_eq!(results["tasks"].as_array().unwrap().len(), 2);
+    assert_eq!(results["tasks"][0]["provenance"], "resumed");
+    assert_eq!(results["tasks"][1]["provenance"], "resumed");
+    assert!(!results["tasks"].to_string().contains("run_health_aborted"));
+    let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
+    assert!(!events.contains("recovery_attempt_scheduled"));
+}
+
 fn resume_success(home: &Path, run_dir: &Path) {
     resume_success_with_env(home, run_dir, None);
 }
@@ -278,6 +320,7 @@ fn force_configured_attempts(run_dir: &Path, attempts: u32) {
     let path = run_dir.join("run.json");
     let mut run: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     run["execution"]["attempts"] = serde_json::json!(attempts);
+    run["execution"]["concurrency"] = serde_json::json!(1);
     fs::write(path, serde_json::to_vec_pretty(&run).unwrap()).unwrap();
 }
 
@@ -285,6 +328,24 @@ fn mark_first_attempt_interrupted(run_dir: &Path) {
     let path = run_dir.join("tasks/fake-terminal-success/attempts/1/result.json");
     let mut result: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     result["state"] = serde_json::json!("interrupted");
+    fs::write(path, serde_json::to_vec_pretty(&result).unwrap()).unwrap();
+}
+
+fn mark_attempt_run_health_aborted(run_dir: &Path, attempt: u32) {
+    let path = run_dir.join(format!(
+        "tasks/fake-terminal-success/attempts/{attempt}/result.json"
+    ));
+    let mut result: serde_json::Value = serde_json::from_slice(
+        &fs::read(run_dir.join("tasks/fake-terminal-success/attempts/1/result.json")).unwrap(),
+    )
+    .unwrap();
+    result["attempt"] = serde_json::json!(attempt);
+    result["state"] = serde_json::json!("interrupted");
+    result["outcome"] = serde_json::json!("failure");
+    result["failure_class"] = serde_json::json!("execution");
+    result["failure_code"] = serde_json::json!("run_health_aborted");
+    result["benchmark_score"] = serde_json::json!(0.0);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, serde_json::to_vec_pretty(&result).unwrap()).unwrap();
 }
 
