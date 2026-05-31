@@ -1,7 +1,8 @@
-use assert_cmd::Command;
+#[path = "support/terminal_bench.rs"]
+mod terminal_bench_support;
 use predicates::prelude::*;
 use std::fs;
-use std::path::Path;
+use terminal_bench_support::*;
 
 #[test]
 fn int_011_terminal_bench_smoke_without_data_reports_readiness_blocker() {
@@ -83,6 +84,47 @@ exit 0
 }
 
 #[test]
+fn int_011_terminal_bench_run_timeout_override_wins_over_benchmark_default() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root();
+    let bin = fake_uvx(
+        r#"out=""; run=""; agent_timeout=""; test_timeout=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-path) out="$2"; shift 2 ;;
+    --run-id) run="$2"; shift 2 ;;
+    --global-agent-timeout-sec) agent_timeout="$2"; shift 2 ;;
+    --global-test-timeout-sec) test_timeout="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+if [ "$agent_timeout" != "123" ] || [ "$test_timeout" != "123" ]; then
+  echo "bad timeouts agent=$agent_timeout test=$test_timeout" >&2
+  exit 64
+fi
+mkdir -p "$out/$run"
+printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
+exit 0
+"#,
+    );
+
+    let (results, run_dir, _) = run_terminal_with_extra_args(
+        home.path(),
+        root.path(),
+        bin.path(),
+        &["--timeout-sec", "123"],
+        0,
+    );
+
+    assert_eq!(results["tasks"][0]["state"], "success");
+    let spec: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("run.json")).unwrap()).unwrap();
+    assert_eq!(spec["execution"]["timeout_sec"], 123);
+}
+
+#[test]
 fn int_011_terminal_bench_nonzero_with_results_uses_benchmark_result() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
@@ -108,6 +150,161 @@ exit 1
     assert_eq!(results["tasks"][0]["failure_class"], "benchmark");
     assert_eq!(results["tasks"][0]["failure_code"], "test_failed");
     assert_eq!(results["tasks"][0]["usage"]["total_tokens"], 7);
+}
+
+#[test]
+fn int_011_terminal_bench_docker_network_exhaustion_aborts_remaining_tasks() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root_with_tasks(&["first-task", "second-task"]);
+    let bin = fake_uvx(
+        r#"echo "Error response from daemon: all predefined address pools have been fully subnetted" >&2
+exit 1
+"#,
+    );
+
+    let (results, run_dir, _) = run_terminal_with_split_and_extra_args(
+        home.path(),
+        root.path(),
+        bin.path(),
+        "full",
+        &["--concurrency", "1"],
+        130,
+    );
+
+    assert_eq!(results["summary"]["total_tasks"], 2);
+    assert_eq!(results["summary"]["execution_failure"], 2);
+    assert_eq!(results["summary"]["interrupted"], 1);
+    assert_eq!(
+        results["tasks"][0]["failure_code"],
+        "docker_network_pool_exhausted"
+    );
+    assert_eq!(results["tasks"][1]["state"], "interrupted");
+    assert_eq!(results["tasks"][1]["failure_code"], "run_health_aborted");
+    let health: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
+    assert_eq!(health["status"], "invalid");
+    let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
+    assert!(report.contains("Run health:"));
+    assert!(report.contains("docker network pool exhausted"));
+    assert!(report.contains("interrupted 1"));
+}
+
+#[test]
+fn int_011_terminal_bench_concurrent_abort_drains_active_chunk_only() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root_with_tasks(&["a", "b", "c", "d", "e"]);
+    let marker = home.path().join("uvx-count.txt");
+    let bin = fake_uvx(&format!(
+        r#"printf run >> '{}'
+echo "Error response from daemon: all predefined address pools have been fully subnetted" >&2
+exit 1
+"#,
+        marker.display()
+    ));
+
+    let (results, _, _) = run_terminal_with_split_and_extra_args(
+        home.path(),
+        root.path(),
+        bin.path(),
+        "full",
+        &["--concurrency", "2"],
+        130,
+    );
+
+    assert_eq!(
+        fs::read_to_string(marker).unwrap().matches("run").count(),
+        2
+    );
+    assert_eq!(results["summary"]["total_tasks"], 5);
+    assert_eq!(results["summary"]["interrupted"], 3);
+    let tasks = results["tasks"].as_array().unwrap();
+    assert_eq!(
+        tasks
+            .iter()
+            .filter(|task| task["failure_code"] == "docker_network_pool_exhausted")
+            .count(),
+        2
+    );
+    assert_eq!(
+        tasks
+            .iter()
+            .filter(|task| task["failure_code"] == "run_health_aborted")
+            .count(),
+        3
+    );
+}
+
+#[test]
+fn int_011_terminal_bench_infra_log_overrides_normal_looking_results() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root();
+    let bin = fake_uvx(
+        r#"out=""; run=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-path) out="$2"; shift 2 ;;
+    --run-id) run="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$out/$run"
+printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
+echo "Error response from daemon: all predefined address pools have been fully subnetted" >&2
+exit 0
+"#,
+    );
+
+    let (results, run_dir, _) = run_terminal(home.path(), root.path(), bin.path(), 1);
+
+    assert_eq!(results["summary"]["success"], 0);
+    assert_eq!(results["summary"]["total_score"], 0.0);
+    assert_eq!(results["tasks"][0]["failure_class"], "execution");
+    assert_eq!(
+        results["tasks"][0]["failure_code"],
+        "docker_network_pool_exhausted"
+    );
+    let health: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
+    assert_eq!(health["status"], "invalid");
+}
+
+#[test]
+fn int_011_terminal_bench_outer_timeout_allows_setup_overhead() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root();
+    let bin = fake_uvx(
+        r#"out=""; run=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-path) out="$2"; shift 2 ;;
+    --run-id) run="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+sleep 2
+mkdir -p "$out/$run"
+printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
+exit 0
+"#,
+    );
+
+    let (results, _, _) = run_terminal_with_extra_args(
+        home.path(),
+        root.path(),
+        bin.path(),
+        &["--timeout-sec", "1"],
+        0,
+    );
+
+    assert_eq!(results["tasks"][0]["state"], "success");
 }
 
 #[test]
@@ -300,142 +497,4 @@ exit 0
     let (results, _, _) = run_terminal(home.path(), root.path(), bin.path(), 0);
 
     assert_eq!(results["tasks"][0]["state"], "success");
-}
-
-fn run_terminal(
-    home: &Path,
-    root: &Path,
-    bin: &Path,
-    expected_code: i32,
-) -> (serde_json::Value, std::path::PathBuf, serde_json::Value) {
-    let output = harnesslab()
-        .env("HARNESSLAB_BENCHMARKS_DIR", root)
-        .env("PATH", path_with(bin))
-        .args([
-            "--home",
-            home.to_str().unwrap(),
-            "run",
-            "--agent",
-            "fake",
-            "--benchmark",
-            "terminal-bench",
-            "--split",
-            "smoke",
-            "--json",
-        ])
-        .assert()
-        .code(expected_code)
-        .get_output()
-        .stdout
-        .clone();
-    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
-    let run_dir = std::path::PathBuf::from(json["run_dir"].as_str().unwrap());
-    let results = serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
-    (results, run_dir, json)
-}
-
-fn init_home(home: &Path) {
-    harnesslab()
-        .args(["--home", home.to_str().unwrap(), "init"])
-        .assert()
-        .success();
-}
-
-fn write_agent(home: &Path, agent: &str, model: Option<&str>, import_path: Option<&str>) {
-    let mut labels = format!("terminal_bench_agent = \"{agent}\"\n");
-    if let Some(model) = model {
-        labels.push_str(&format!("terminal_bench_model = \"{model}\"\n"));
-    }
-    if let Some(import_path) = import_path {
-        labels.push_str(&format!(
-            "terminal_bench_agent_import_path = \"{import_path}\"\n"
-        ));
-    }
-    write_agent_with_labels(home, &labels);
-}
-
-fn write_agent_with_labels(home: &Path, labels: &str) {
-    let content = format!(
-        r#"schema_version = 1
-name = "fake"
-kind = "fake"
-display_name = "Fake"
-command = "true"
-input_mode = "stdin"
-working_dir = "workspace"
-timeout_sec = 5
-
-[auth]
-inherit = false
-inherit_env = []
-include_paths = []
-exclude_paths = []
-mount_ssh_socket = false
-mount_docker_socket = false
-
-[usage]
-parser = "none"
-
-[labels]
-{labels}"#
-    );
-    fs::write(home.join("agents/fake.toml"), content).unwrap();
-}
-
-fn success_when_model_is(expected: &str) -> &'static str {
-    match expected {
-        "gpt-5" => {
-            r#"out=""; run=""; model=""
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --output-path) out="$2"; shift 2 ;;
-    --run-id) run="$2"; shift 2 ;;
-    --model) model="$2"; shift 2 ;;
-    *) shift ;;
-  esac
-done
-if [ "$model" != "gpt-5" ]; then
-  echo "missing model: $model" >&2
-  exit 64
-fi
-mkdir -p "$out/$run"
-printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
-exit 0
-"#
-        }
-        _ => unreachable!("test only supports gpt-5"),
-    }
-}
-
-fn terminal_bench_root() -> tempfile::TempDir {
-    let root = tempfile::tempdir().unwrap();
-    let task_dir = root
-        .path()
-        .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
-    fs::create_dir_all(&task_dir).unwrap();
-    fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
-    root
-}
-
-fn fake_uvx(body: &str) -> tempfile::TempDir {
-    let bin = tempfile::tempdir().unwrap();
-    let uvx = bin.path().join("uvx");
-    fs::write(&uvx, format!("#!/bin/sh\n{body}")).unwrap();
-    let mut permissions = fs::metadata(&uvx).unwrap().permissions();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        permissions.set_mode(0o755);
-        fs::set_permissions(&uvx, permissions).unwrap();
-    }
-    bin
-}
-
-fn path_with(bin: &Path) -> String {
-    let current = std::env::var("PATH").unwrap_or_default();
-    format!("{}:{current}", bin.display())
-}
-
-fn harnesslab() -> Command {
-    Command::cargo_bin("harnesslab").unwrap()
 }

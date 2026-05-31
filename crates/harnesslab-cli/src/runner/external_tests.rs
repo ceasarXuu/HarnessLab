@@ -3,13 +3,13 @@ use harnesslab_core::{AgentKind, InputMode, default_agent_profile};
 
 #[test]
 fn terminal_bench_timeout_values_use_run_override_when_present() {
-    assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 42));
+    assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 642));
 }
 
 #[test]
 fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
-    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 7));
-    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 1));
+    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 607));
+    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 601));
 }
 
 #[test]

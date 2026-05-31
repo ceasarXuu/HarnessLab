@@ -14,6 +14,9 @@ pub struct ReportModel {
     pub report_path: String,
     pub resumed: bool,
     pub summary: harnesslab_core::RunSummary,
+    pub run_health_status: String,
+    pub run_health_reason: String,
+    pub has_run_health_reason: bool,
     pub rows: Vec<TaskRow>,
     pub total_usage: String,
     pub agent_config_summary: String,
@@ -50,6 +53,8 @@ pub struct ReportContext {
     pub replay_command: String,
     pub original_command: String,
     pub resumed: bool,
+    pub run_health_status: String,
+    pub run_health_reason: String,
 }
 
 #[derive(Template)]
@@ -72,9 +77,10 @@ pub struct ReportContext {
   <p>Run <code>{{ model.run_id }}</code> using {{ model.agent }} on {{ model.benchmark }} / {{ model.split }}.</p>
   <p>Report: <code>{{ model.report_path }}</code></p>
   <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
+  <p>Run health: <strong>{{ model.run_health_status }}</strong>{% if model.has_run_health_reason %}: {{ model.run_health_reason }}{% endif %}. <a href="run-health.json">run-health.json</a></p>
   <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, command: <a href="command.txt">command.txt</a>.</p>
   <h2>Summary</h2>
-  <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, score {{ model.summary.total_score }}.</p>
+  <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, interrupted {{ model.summary.interrupted }}, score {{ model.summary.total_score }}.</p>
   <p>Usage: {{ model.total_usage }}</p>
   <p>Score uses the latest attempt per task. Usage sums all recorded attempts. Usage marked unknown is cost not comparable.</p>
   <h2>Tasks</h2>
@@ -161,6 +167,9 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
         report_path: context.report_path,
         resumed: context.resumed,
         summary: results.summary,
+        run_health_status: context.run_health_status,
+        has_run_health_reason: !context.run_health_reason.is_empty(),
+        run_health_reason: context.run_health_reason,
         rows,
         total_usage: total_usage_text(&results.tasks),
         agent_config_summary: context.agent_config_summary,
@@ -261,6 +270,8 @@ mod tests {
         assert!(html.contains("HarnessLab Run Report"));
         assert!(html.contains("cost not comparable"));
         assert!(html.contains("Agent config:"));
+        assert!(html.contains("Run health:"));
+        assert!(html.contains("interrupted 0"));
         assert!(html.contains("agent-profile.snapshot.json"));
         assert!(html.contains("command.txt"));
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
@@ -324,6 +335,8 @@ mod tests {
                 "harnesslab --home /tmp/home run --agent fake --benchmark fake-terminal --split success"
                     .to_string(),
             resumed,
+            run_health_status: "ok".to_string(),
+            run_health_reason: String::new(),
         }
     }
 }
