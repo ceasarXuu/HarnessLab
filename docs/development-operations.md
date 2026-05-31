@@ -135,6 +135,27 @@ uvx --from terminal-bench tb run \
 - 结果文件位于 `.benchmarks/_runs/terminal-bench-official/<run-id>/results.json`，容器内 agent/test 日志在同级任务目录下。
 - `run-id` 必须全小写；Docker Compose 会把它拼进 project name，包含大写 `T/Z` 的时间戳会触发 `invalid project name`。
 
+### HarnessLab Terminal-Bench Real-Run Checks
+
+真实验证 Terminal-Bench runner 时，优先使用 `.benchmarks/` 下的小子集目录，保持流程经过 HarnessLab CLI，而不是临时脚本绕过：
+
+```bash
+HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
+  target/debug/harnesslab \
+  --home .benchmarks/_harnesslab-home-terminal-real \
+  run --agent claude-ds --benchmark terminal-bench --split full \
+  --concurrency 1 --timeout-sec 180
+```
+
+检查顺序：
+
+- 先查 `results.json`，确认 `failure_class/failure_code` 和官方 `results[].failure_mode` 一致。官方 `agent_timeout` 必须映射为 HarnessLab `execution/agent_timeout`，不能误报成 `benchmark/test_failed`。
+- 再查 `run-health.json`，确认 `agent_timeouts`、`docker_network_failures`、`completed` 与结果一致。少量真实任务中有 agent timeout 但未到阈值时，`status` 仍应为 `ok`。
+- 再查 `report.html`，确认任务明细展示 `execution/agent_timeout` 等 snake_case 分类，避免报告层把 JSON 修复掩盖掉。
+- 最后查 Docker 残留：`docker network ls --filter label=com.docker.compose.project` 和 `docker ps -a --filter label=com.docker.compose.project` 不应留下本次 run id 对应的资源。
+
+真实运行中看到 `terminal-bench cleanup post_task ... projects=none removed containers=0 networks=0` 不代表 HarnessLab 没有保护；通常是官方 Terminal-Bench 已先执行 `docker compose down`，HarnessLab fallback 只是在确认并清理遗留资源。
+
 ## Official SWE-bench Pro Run
 
 SWE-bench Pro 官方仓库和运行产物放在 `.benchmarks/` 下，避免进入 git 跟踪：
