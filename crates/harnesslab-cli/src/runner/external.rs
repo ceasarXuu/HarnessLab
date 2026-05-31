@@ -135,7 +135,8 @@ fn execute_terminal_bench(
         false,
     )?;
     let result_path = output_root.join(&official_run_id).join("results.json");
-    let parsed_result = parse_terminal_bench_result(ctx.attempt_dir, &result_path);
+    let parsed_result =
+        parse_terminal_bench_result(ctx.attempt_dir, &result_path, &ctx.task.task_id);
     let agent_failure = classify_agent_process(&process);
     let infra_failure = log_scan::terminal_bench_infra_failure(ctx.attempt_dir);
     let (evaluation, usage, mut failure_class, mut failure_code, mut score) = match parsed_result {
@@ -345,6 +346,7 @@ fn requires_terminal_bench_model(name: &str) -> bool {
 fn parse_terminal_bench_result(
     attempt_dir: &Path,
     result_path: &Path,
+    task_id: &str,
 ) -> Result<(
     EvaluationRecord,
     UsageRecord,
@@ -368,6 +370,8 @@ fn parse_terminal_bench_result(
     let usage = terminal_bench_usage(&value);
     if score >= 1.0 {
         Ok((evaluation, usage, FailureClass::None, None, score))
+    } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
+        Ok((evaluation, usage, failure_class, Some(failure_code), score))
     } else {
         Ok((
             evaluation,
@@ -425,6 +429,20 @@ fn resolved_score(value: &Value) -> Option<f64> {
     let unresolved = value.get("n_unresolved")?.as_f64()?;
     let total = resolved + unresolved;
     (total > 0.0).then_some(resolved / total)
+}
+
+fn terminal_bench_failure(value: &Value, task_id: &str) -> Option<(FailureClass, FailureCode)> {
+    for result in value.get("results").and_then(Value::as_array)? {
+        if result.get("task_id").and_then(Value::as_str) != Some(task_id) {
+            continue;
+        }
+        return match result.get("failure_mode").and_then(Value::as_str)? {
+            "agent_timeout" => Some((FailureClass::Execution, FailureCode::AgentTimeout)),
+            "test_timeout" => Some((FailureClass::Benchmark, FailureCode::VerifierTimeout)),
+            _ => None,
+        };
+    }
+    None
 }
 
 fn terminal_bench_usage(value: &Value) -> UsageRecord {
