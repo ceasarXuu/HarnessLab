@@ -566,11 +566,13 @@ Runner 需要输出：
   "duration_ms": 1234,
   "stdout_path": "stdout.log",
   "stderr_path": "stderr.log",
-  "termination_reason": "completed|timeout|signal|spawn_error"
+  "termination_reason": "completed|timeout|no_progress|signaled|spawn_error"
 }
 ```
 
 Runner 不判断任务成功。任务成功只由 benchmark evaluator/verifier 决定。
+
+`no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。
 
 ## 8. Sandbox Provider 架构
 

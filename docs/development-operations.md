@@ -154,6 +154,15 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
 - 再查 `report.html`，确认任务明细展示 `execution/agent_timeout` 等 snake_case 分类，避免报告层把 JSON 修复掩盖掉。
 - 最后查 Docker 残留：`docker network ls --filter label=com.docker.compose.project` 和 `docker ps -a --filter label=com.docker.compose.project` 不应留下本次 run id 对应的资源。
 
+Terminal-Bench runner 有两层超时：
+
+- 官方 agent/test 超时：传给 `tb run` 的 `--global-agent-timeout-sec` 和 `--global-test-timeout-sec`，用于判定 benchmark 内部任务结果。
+- HarnessLab 进程守护超时：外层进程硬超时为 `max(agent_timeout, test_timeout) + 600`；无日志输出 watchdog 默认为 `max(agent_timeout, test_timeout) + 60`，下限 `120` 秒，不设置固定上限，避免误杀合法长任务。
+
+如果官方 runner 长时间卡在 Docker build/setup 这类阶段且没有继续输出日志，HarnessLab 会杀掉整个进程组，写入 `external_runner_no_progress` 事件，并把任务标记为 `execution/external_runner_no_progress`。这类失败说明 benchmark runner 或本地 Docker 阶段无进展，不应算作 agent 解题能力失败。
+
+调试真实卡死场景时可以临时设置 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC=<seconds>` 缩短 watchdog 等待；该值只用于本次进程，必须大于 `0`，并会被限制在外层硬超时之前。
+
 真实运行中看到 `terminal-bench cleanup post_task ... projects=none removed containers=0 networks=0` 不代表 HarnessLab 没有保护；通常是官方 Terminal-Bench 已先执行 `docker compose down`，HarnessLab fallback 只是在确认并清理遗留资源。
 
 ## Official SWE-bench Pro Run

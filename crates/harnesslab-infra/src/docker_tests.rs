@@ -380,6 +380,7 @@ fn c_sbox_010_exec_without_docker_returns_process_record() {
             stdin: None,
             working_dir: tmp.path().join("host"),
             timeout_sec: 1,
+            no_output_timeout_sec: None,
             stdout_path: tmp.path().join("stdout.log"),
             stderr_path: tmp.path().join("stderr.log"),
         },

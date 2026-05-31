@@ -56,6 +56,7 @@ pub(super) struct RunMonitor {
     completed: usize,
     docker_network_failures: usize,
     agent_timeouts: usize,
+    external_runner_no_progress: usize,
     non_timeout_completed: usize,
     successes: usize,
     aborted: Option<RunAbort>,
@@ -74,6 +75,7 @@ struct RunHealthSnapshot<'a> {
     non_timeout_completed: usize,
     docker_network_failures: usize,
     agent_timeouts: usize,
+    external_runner_no_progress: usize,
 }
 
 impl RunMonitor {
@@ -84,6 +86,7 @@ impl RunMonitor {
             completed: 0,
             docker_network_failures: 0,
             agent_timeouts: 0,
+            external_runner_no_progress: 0,
             non_timeout_completed: 0,
             successes: 0,
             aborted: None,
@@ -99,7 +102,7 @@ impl RunMonitor {
         if result.state == TaskState::Success {
             self.successes += 1;
         }
-        if result.failure_code != Some(FailureCode::AgentTimeout) {
+        if !is_execution_stall(result.failure_code) {
             self.non_timeout_completed += 1;
         }
         if result.failure_code == Some(FailureCode::DockerNetworkPoolExhausted) {
@@ -109,16 +112,23 @@ impl RunMonitor {
                 result,
                 "docker network pool exhausted; benchmark environment is unhealthy",
             )?;
-        } else if result.failure_code == Some(FailureCode::AgentTimeout) {
-            self.agent_timeouts += 1;
-            if self.agent_timeouts >= AGENT_TIMEOUT_ABORT_THRESHOLD
+        } else if is_execution_stall(result.failure_code) {
+            if result.failure_code == Some(FailureCode::AgentTimeout) {
+                self.agent_timeouts += 1;
+            }
+            if result.failure_code == Some(FailureCode::ExternalRunnerNoProgress) {
+                self.external_runner_no_progress += 1;
+            }
+            if self.agent_timeouts + self.external_runner_no_progress
+                >= AGENT_TIMEOUT_ABORT_THRESHOLD
                 && self.non_timeout_completed == 0
             {
-                self.abort(
-                    run_dir,
-                    result,
-                    "agent timeout threshold reached before any successful task",
-                )?;
+                let reason = if self.external_runner_no_progress == 0 {
+                    "agent timeout threshold reached before any successful task"
+                } else {
+                    "execution stall threshold reached before any successful task"
+                };
+                self.abort(run_dir, result, reason)?;
             }
         }
         self.write_snapshot(run_dir)?;
@@ -215,249 +225,19 @@ impl RunMonitor {
             non_timeout_completed: self.non_timeout_completed,
             docker_network_failures: self.docker_network_failures,
             agent_timeouts: self.agent_timeouts,
+            external_runner_no_progress: self.external_runner_no_progress,
         };
         atomic_write_json(&run_dir.join("run-health.json"), &snapshot)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use harnesslab_core::{AttemptProvenance, NetworkPolicy, TaskPlan, UsageRecord};
-
-    #[test]
-    fn monitor_aborts_immediately_on_docker_network_pool_exhaustion() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut monitor = RunMonitor::new("run-1", 2);
-        let result = attempt(FailureCode::DockerNetworkPoolExhausted);
-
-        let abort = monitor.record_result(tmp.path(), &result).unwrap();
-
-        assert_eq!(
-            abort.unwrap().reason,
-            "docker network pool exhausted; benchmark environment is unhealthy"
-        );
-        let health: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(tmp.path().join("run-health.json")).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(health["status"], "invalid");
-    }
-
-    #[test]
-    fn monitor_writes_interrupted_results_for_unscheduled_work() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut monitor = RunMonitor::new("run-1", 2);
-        monitor
-            .record_result(
-                tmp.path(),
-                &attempt(FailureCode::DockerNetworkPoolExhausted),
-            )
-            .unwrap();
-
-        let interrupted = monitor
-            .interrupted_results(
-                tmp.path(),
-                &[AttemptWork {
-                    task: task("task-b"),
-                    attempt: 1,
-                    provenance: AttemptProvenance::Original,
-                }],
-            )
-            .unwrap();
-
-        assert_eq!(interrupted.len(), 1);
-        assert_eq!(interrupted[0].state, TaskState::Interrupted);
-        assert_eq!(
-            interrupted[0].failure_code,
-            Some(FailureCode::RunHealthAborted)
-        );
-        assert!(
-            tmp.path()
-                .join("tasks/task-b/attempts/1/result.json")
-                .exists()
-        );
-    }
-
-    #[test]
-    fn monitor_aborts_after_timeout_threshold_before_any_success() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut monitor = RunMonitor::new("run-1", 5);
-
-        for index in 0..4 {
-            let abort = monitor
-                .record_result(
-                    tmp.path(),
-                    &attempt_with_task(
-                        &format!("timeout-{index}"),
-                        FailureCode::AgentTimeout,
-                        TaskState::Failure,
-                    ),
-                )
-                .unwrap();
-            assert!(abort.is_none());
-        }
-
-        let abort = monitor
-            .record_result(
-                tmp.path(),
-                &attempt_with_task("timeout-4", FailureCode::AgentTimeout, TaskState::Failure),
-            )
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(abort.task_id, "timeout-4");
-        assert_eq!(
-            abort.reason,
-            "agent timeout threshold reached before any successful task"
-        );
-    }
-
-    #[test]
-    fn monitor_does_not_abort_timeout_threshold_after_success() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut monitor = RunMonitor::new("run-1", 6);
-        monitor
-            .record_result(
-                tmp.path(),
-                &attempt_with_task("success", FailureCode::TestFailed, TaskState::Success),
-            )
-            .unwrap();
-
-        for index in 0..5 {
-            let abort = monitor
-                .record_result(
-                    tmp.path(),
-                    &attempt_with_task(
-                        &format!("timeout-{index}"),
-                        FailureCode::AgentTimeout,
-                        TaskState::Failure,
-                    ),
-                )
-                .unwrap();
-            assert!(abort.is_none());
-        }
-
-        let health: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(tmp.path().join("run-health.json")).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(health["status"], "ok");
-    }
-
-    #[test]
-    fn monitor_does_not_abort_timeout_threshold_after_non_timeout_failure() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut monitor = RunMonitor::new("run-1", 6);
-        monitor
-            .record_result(
-                tmp.path(),
-                &attempt_with_class(
-                    "test-failed",
-                    Some(FailureCode::TestFailed),
-                    FailureClass::Benchmark,
-                    TaskState::Failure,
-                ),
-            )
-            .unwrap();
-
-        for index in 0..5 {
-            let abort = monitor
-                .record_result(
-                    tmp.path(),
-                    &attempt_with_task(
-                        &format!("timeout-{index}"),
-                        FailureCode::AgentTimeout,
-                        TaskState::Failure,
-                    ),
-                )
-                .unwrap();
-            assert!(abort.is_none());
-        }
-    }
-
-    fn attempt(code: FailureCode) -> TaskAttemptResult {
-        attempt_with_task("task-a", code, TaskState::Failure)
-    }
-
-    fn attempt_with_task(task_id: &str, code: FailureCode, state: TaskState) -> TaskAttemptResult {
-        attempt_with_class(
-            task_id,
-            (state != TaskState::Success).then_some(code),
-            if state == TaskState::Success {
-                FailureClass::None
-            } else {
-                FailureClass::Execution
-            },
-            state,
-        )
-    }
-
-    fn attempt_with_class(
-        task_id: &str,
-        code: Option<FailureCode>,
-        class: FailureClass,
-        state: TaskState,
-    ) -> TaskAttemptResult {
-        TaskAttemptResult {
-            schema_version: 1,
-            task_id: task_id.to_string(),
-            attempt: 1,
-            provenance: AttemptProvenance::Original,
-            state,
-            outcome: if state == TaskState::Success {
-                Outcome::Success
-            } else {
-                Outcome::Failure
-            },
-            failure_class: class,
-            failure_code: code,
-            benchmark_score: f64::from(state == TaskState::Success),
-            duration_ms: 1,
-            agent: None,
-            evaluation: None,
-            patch: None,
-            usage: UsageRecord::Unknown,
-            warnings: Vec::new(),
-        }
-    }
-
-    fn task(task_id: &str) -> TaskPlan {
-        TaskPlan {
-            task_id: task_id.to_string(),
-            instruction: "instruction".to_string(),
-            workspace_spec: harnesslab_core::WorkspaceSpec {
-                workspace_type: harnesslab_core::WorkspaceType::Empty,
-                target_path: "workspace".to_string(),
-                clean: true,
-            },
-            sandbox_spec: harnesslab_core::SandboxSpec {
-                image: "host".to_string(),
-                mounts: Vec::new(),
-                env_vars: Vec::new(),
-                network: NetworkPolicy::None,
-                privileged: false,
-                resource_limits: harnesslab_core::ResourceHint {
-                    cpu_cores: 1,
-                    memory_mb: 128,
-                },
-            },
-            verifier_spec: harnesslab_core::VerifierSpec {
-                command: "true".to_string(),
-                working_dir: "workspace".to_string(),
-                timeout_sec: 1,
-                expected_exit_codes: vec![0],
-                environment_mode: harnesslab_core::VerifierEnvironment::HostProcess,
-                output_parser: "exit_code".to_string(),
-            },
-            artifact_spec: harnesslab_core::ArtifactSpec {
-                base_dir: "workspace".to_string(),
-                globs: Vec::new(),
-                required_paths: Vec::new(),
-                max_size_bytes: 1,
-            },
-            patch_spec: None,
-            external_runner: None,
-        }
-    }
+fn is_execution_stall(code: Option<FailureCode>) -> bool {
+    matches!(
+        code,
+        Some(FailureCode::AgentTimeout | FailureCode::ExternalRunnerNoProgress)
+    )
 }
+
+#[cfg(test)]
+#[path = "monitor_tests.rs"]
+mod tests;

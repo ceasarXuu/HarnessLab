@@ -190,6 +190,18 @@ Validation rules:
 }
 ```
 
+Schema version `1` currently includes these structured process termination reasons:
+
+- `completed`
+- `spawn_error`
+- `timeout`
+- `no_progress`
+- `signaled`
+
+`no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window.
+
+Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` so they are distinguishable from agent-level `agent_timeout`.
+
 Pass criteria:
 
 - Result JSON is valid after every terminal task state.
@@ -204,6 +216,7 @@ Pass criteria:
 | Workspace preparation fails | failure | execution | `workspace_prep_failed` |
 | Agent command not found | failure | execution | `agent_spawn_error` |
 | Agent timeout | failure | execution | `agent_timeout` |
+| External benchmark runner has no log progress before watchdog timeout | failure | execution | `external_runner_no_progress` |
 | Agent killed by signal | failure | execution | `agent_signaled` |
 | Agent exits non-zero before evaluation can run | failure | execution | `agent_nonzero_exit` |
 | Verifier timeout | failure | benchmark | `verifier_timeout` |

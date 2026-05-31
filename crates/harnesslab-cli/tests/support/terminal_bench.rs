@@ -31,6 +31,26 @@ pub fn run_terminal_with_split_and_extra_args(
     extra_args: &[&str],
     expected_code: i32,
 ) -> (serde_json::Value, std::path::PathBuf, serde_json::Value) {
+    run_terminal_with_split_extra_args_and_env(
+        home,
+        root,
+        bin,
+        split,
+        extra_args,
+        &[],
+        expected_code,
+    )
+}
+
+pub fn run_terminal_with_split_extra_args_and_env(
+    home: &Path,
+    root: &Path,
+    bin: &Path,
+    split: &str,
+    extra_args: &[&str],
+    extra_env: &[(&str, &str)],
+    expected_code: i32,
+) -> (serde_json::Value, std::path::PathBuf, serde_json::Value) {
     let mut args = vec![
         "--home",
         home.to_str().unwrap(),
@@ -44,9 +64,14 @@ pub fn run_terminal_with_split_and_extra_args(
         "--json",
     ];
     args.extend_from_slice(extra_args);
-    let output = harnesslab()
+    let mut command = harnesslab();
+    command
         .env("HARNESSLAB_BENCHMARKS_DIR", root)
-        .env("PATH", path_with(bin))
+        .env("PATH", path_with(bin));
+    for (key, value) in extra_env {
+        command.env(key, value);
+    }
+    let output = command
         .args(args)
         .assert()
         .code(expected_code)

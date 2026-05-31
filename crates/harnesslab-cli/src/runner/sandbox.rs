@@ -31,6 +31,7 @@ pub(super) fn run_agent(
             .then(|| task.instruction.clone()),
         working_dir: workspace.to_path_buf(),
         timeout_sec: agent_timeout(spec, profile, task),
+        no_output_timeout_sec: None,
         stdout_path: attempt_dir.join("agent/stdout.log"),
         stderr_path: attempt_dir.join("agent/stderr.log"),
     };

@@ -40,6 +40,7 @@ pub enum FailureCode {
     WorkspacePrepFailed,
     AgentSpawnError,
     AgentTimeout,
+    ExternalRunnerNoProgress,
     AgentSignaled,
     AgentNonzeroExit,
     ArtifactCollectionFailed,
@@ -76,6 +77,7 @@ pub enum TerminationReason {
     Completed,
     SpawnError,
     Timeout,
+    NoProgress,
     Signaled,
 }
 
@@ -284,6 +286,7 @@ pub fn classify_agent_process(result: &ProcessRecord) -> Failure {
     match result.termination_reason {
         TerminationReason::SpawnError => execution(FailureCode::AgentSpawnError),
         TerminationReason::Timeout => execution(FailureCode::AgentTimeout),
+        TerminationReason::NoProgress => execution(FailureCode::AgentTimeout),
         TerminationReason::Signaled => execution(FailureCode::AgentSignaled),
         TerminationReason::Completed if result.exit_code.unwrap_or(1) != 0 => {
             execution(FailureCode::AgentNonzeroExit)
