@@ -131,6 +131,9 @@ else
   echo "SKIP cargo-nextest: not installed; using cargo test for M0 bootstrap"
   cargo test --workspace --all-features
 fi
+PYTHONPATH="$PWD/integrations/terminal_bench" \
+  uvx --from terminal-bench python -m unittest \
+  "$PWD/integrations/terminal_bench/harnesslab_tb_agent_test.py"
 
 echo "== registry-check =="
 scripts/verify-test-registry.sh
