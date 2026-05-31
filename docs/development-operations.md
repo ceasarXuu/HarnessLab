@@ -167,5 +167,5 @@ DOCKER_HOST="unix://$HOME/.colima/default/docker.sock" uv run \
 - 官方 evaluator 使用 `jefzda/sweap-images:<dockerhub_tag>` 预构建镜像，不需要本机构建全部镜像。
 - Apple Silicon 上必须显式使用 `--docker_platform linux/amd64`，否则可能拉取不到匹配镜像。
 - gold patch 首条 instance 输出 `Overall accuracy: 1.0`，结果在 `.benchmarks/_runs/swe-bench-pro-official/gold-first/`。
-- HarnessLab external runner 已能用 `swe-gold` profile 跑通真实 `swe-bench-pro/smoke`，从 parquet 抽取 instance metadata，准备官方 Docker image `/app` workspace，捕获 `patch.diff`/`prediction.json`，调用官方 evaluator，并生成 HarnessLab `results.json` 和 `report.html`。
+- HarnessLab external runner 已能用 `swe-gold` profile 跑通真实 `swe-bench-pro/smoke`，从 parquet 抽取 instance metadata，准备官方 Docker image `/app` workspace，捕获 `patch.diff`/`prediction.jsonl`，调用官方 evaluator，并生成 HarnessLab `results.json` 和 `report.html`。
 - `uv run` 过程中如果宿主 Python 环境泄漏出 NumPy 1.x 编译扩展 warning，只要 evaluator 继续运行且最终 accuracy 输出正常，不要误判为官方 evaluator 失败；后续可通过更干净的 uv venv 固化。

@@ -251,7 +251,7 @@ fn swe_bench_pro_task(task_id: &str, dataset: &SweBenchProDataset) -> TaskPlan {
         },
         patch_spec: Some(PatchSpec {
             diff_path: "patch.diff".to_string(),
-            prediction_path: "prediction.json".to_string(),
+            prediction_path: "prediction.jsonl".to_string(),
         }),
         external_runner: Some(ExternalRunnerSpec {
             kind: ExternalRunnerKind::SweBenchPro,

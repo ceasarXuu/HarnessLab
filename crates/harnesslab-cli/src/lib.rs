@@ -80,6 +80,10 @@ pub(crate) struct RunArgs {
     #[arg(long)]
     pub split: Option<String>,
     #[arg(long)]
+    pub concurrency: Option<usize>,
+    #[arg(long)]
+    pub attempts: Option<u32>,
+    #[arg(long)]
     pub json: bool,
 }
 

@@ -12,8 +12,7 @@ fn bench_001_terminal_bench_info_uses_local_data_root() {
     std::fs::create_dir_all(&task_dir).unwrap();
     std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args(["benchmark", "info", "terminal-bench", "--json"])
         .assert()
@@ -49,8 +48,7 @@ fn bench_002_swe_bench_pro_info_uses_local_data_root() {
     .unwrap();
     create_swe_source(root.path());
 
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args(["benchmark", "info", "swe-bench-pro", "--json"])
         .assert()
@@ -77,8 +75,7 @@ fn bench_003_run_blocks_missing_terminal_bench_full_before_planning() {
     write_agent(home.path(), "printf ok > result.txt");
     let root = tempfile::tempdir().unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args([
             "--home",
@@ -112,8 +109,7 @@ fn bench_003_run_validates_terminal_bench_agent_mapping_before_start() {
     std::fs::create_dir_all(&task_dir).unwrap();
     std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args([
             "--home",
@@ -150,8 +146,7 @@ fn bench_004_run_blocks_swe_bench_pro_full_before_planning() {
     )
     .unwrap();
 
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
         .args([
             "--home",
@@ -173,9 +168,45 @@ fn bench_004_run_blocks_swe_bench_pro_full_before_planning() {
         );
 }
 
-fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
+#[test]
+fn bench_005_configured_missing_benchmark_dir_does_not_use_repo_cache() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    let mut config = fs::read_to_string(home.path().join("config.toml")).unwrap();
+    config = config.replace(
+        "benchmarks_dir = \"~/.harnesslab/benchmarks\"",
+        "benchmarks_dir = \"missing-benchmarks\"",
+    );
+    fs::write(home.path().join("config.toml"), config).unwrap();
+
+    let output = harnesslab()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "benchmark",
+            "info",
+            "terminal-bench",
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let full = json["benchmark"]["splits"]
+        .as_array()
         .unwrap()
+        .iter()
+        .find(|split| split["name"] == "full")
+        .unwrap();
+
+    assert_eq!(full["data_state"], "not_downloaded");
+    assert_eq!(full["task_count"], 0);
+}
+
+fn init_home(home: &Path) {
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -211,4 +242,8 @@ fn create_swe_source(root: &Path) {
     let source = root.join("_src/SWE-bench_Pro-os");
     std::fs::create_dir_all(source.join("run_scripts")).unwrap();
     std::fs::write(source.join("swe_bench_pro_eval.py"), "").unwrap();
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

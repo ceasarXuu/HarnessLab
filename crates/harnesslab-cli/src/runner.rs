@@ -56,6 +56,7 @@ pub(crate) fn execute_new_run(
     benchmark_name: &str,
     split: &str,
     json: bool,
+    overrides: RunOverrides,
     replay_source: Option<String>,
 ) -> Result<i32> {
     let config = load_config(home)?;
@@ -76,7 +77,7 @@ pub(crate) fn execute_new_run(
         split,
         store::timestamp_id()
     );
-    let run_dir = home.join("runs").join(&run_id);
+    let run_dir = store::runs_dir(home, &config).join(&run_id);
     fs::create_dir_all(&run_dir)?;
     let spec = RunSpec {
         schema_version: 1,
@@ -89,8 +90,8 @@ pub(crate) fn execute_new_run(
             split: split.to_string(),
         },
         execution: harnesslab_core::ExecutionConfig {
-            concurrency: config.default_concurrency,
-            attempts: config.default_attempts,
+            concurrency: overrides.concurrency.unwrap_or(config.default_concurrency),
+            attempts: overrides.attempts.unwrap_or(config.default_attempts),
             network: config.network_default,
             timeout_sec: None,
         },
@@ -100,7 +101,8 @@ pub(crate) fn execute_new_run(
         replay_source_run_id: replay_source,
     };
     validate_run_spec(&spec)?;
-    let original_command = store::original_run_command(home, agent_name, benchmark_name, split);
+    let original_command =
+        store::original_run_command(home, agent_name, benchmark_name, split, &spec, &config);
     let report_profile = store::public_profile_snapshot(&profile);
     write_run_inputs(
         &run_dir,
@@ -132,6 +134,16 @@ pub(crate) fn execute_new_run(
         println!("report: {}", run_dir.join("report.html").display());
     }
     Ok(code)
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct RunOverrides {
+    pub(crate) concurrency: Option<usize>,
+    pub(crate) attempts: Option<u32>,
+}
+
+pub(crate) fn runs_dir(home: &Path, config: &harnesslab_core::GlobalConfig) -> std::path::PathBuf {
+    store::runs_dir(home, config)
 }
 
 pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32> {
@@ -167,6 +179,7 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
 }
 
 pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> {
+    let config = load_config(home)?;
     let source_spec: RunSpec = read_json(&source.join("run.json"))?;
     let (profile, profile_source) = store::load_run_profile(source)?;
     let report_profile = store::load_report_profile(source)?;
@@ -186,7 +199,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         source_spec.benchmark.split,
         store::timestamp_id()
     );
-    let run_dir = home.join("runs").join(&run_id);
+    let run_dir = store::runs_dir(home, &config).join(&run_id);
     fs::create_dir_all(&run_dir)?;
     let spec =
         replay_spec_from_source(&source_spec, run_id.clone(), store::now_rfc3339(), &run_dir);

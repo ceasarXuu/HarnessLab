@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 anyhow.workspace = true
 harnesslab-core = { path = "../harnesslab-core" }
+libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 time.workspace = true

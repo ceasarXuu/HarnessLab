@@ -63,8 +63,7 @@ fn use_005_usage_parser_failure_is_persisted_and_reported() {
 }
 
 fn init_home(home: &Path) {
-    Command::cargo_bin("harnesslab")
-        .unwrap()
+    harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
         .assert()
         .success();
@@ -106,8 +105,7 @@ parser = "none"
 }
 
 fn run_and_load(home: &Path) -> (serde_json::Value, String) {
-    let output = Command::cargo_bin("harnesslab")
-        .unwrap()
+    let output = harnesslab()
         .args([
             "--home",
             home.to_str().unwrap(),
@@ -130,4 +128,8 @@ fn run_and_load(home: &Path) -> (serde_json::Value, String) {
     let results = serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
     let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
     (results, report)
+}
+
+fn harnesslab() -> Command {
+    Command::cargo_bin("harnesslab").unwrap()
 }

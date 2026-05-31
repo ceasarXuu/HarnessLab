@@ -5,7 +5,7 @@ use harnesslab_core::{
 };
 use harnesslab_infra::{append_event, atomic_write_json, event, read_json};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use time::OffsetDateTime;
 
 pub(super) const RUNTIME_PROFILE_SNAPSHOT: &str = "agent-profile.runtime.json";
@@ -29,6 +29,32 @@ pub(super) fn load_config(home: &Path) -> Result<GlobalConfig> {
     Ok(toml::from_str(&fs::read_to_string(
         home.join("config.toml"),
     )?)?)
+}
+
+pub(super) fn runs_dir(home: &Path, config: &GlobalConfig) -> PathBuf {
+    if config.runs_dir == "~/.harnesslab/runs" {
+        return home.join("runs");
+    }
+    expand_config_path(&config.runs_dir, home)
+}
+
+fn expand_config_path(value: &str, home: &Path) -> PathBuf {
+    if value == "~" {
+        return std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| home.to_path_buf());
+    }
+    if let Some(rest) = value.strip_prefix("~/") {
+        return std::env::var_os("HOME")
+            .map(|host_home| PathBuf::from(host_home).join(rest))
+            .unwrap_or_else(|| home.join(rest));
+    }
+    let path = PathBuf::from(value);
+    if path.is_absolute() {
+        path
+    } else {
+        home.join(path)
+    }
 }
 
 pub(super) fn load_profile(home: &Path, name: &str) -> Result<AgentProfile> {
@@ -113,14 +139,23 @@ pub(super) fn original_run_command(
     agent: &str,
     benchmark: &str,
     split: &str,
+    spec: &RunSpec,
+    config: &GlobalConfig,
 ) -> String {
-    format!(
+    let mut command = format!(
         "harnesslab --home {} run --agent {} --benchmark {} --split {}",
         shell_quote(&home.display().to_string()),
         shell_quote(agent),
         shell_quote(benchmark),
         shell_quote(split)
-    )
+    );
+    if spec.execution.concurrency != config.default_concurrency {
+        command.push_str(&format!(" --concurrency {}", spec.execution.concurrency));
+    }
+    if spec.execution.attempts != config.default_attempts {
+        command.push_str(&format!(" --attempts {}", spec.execution.attempts));
+    }
+    command
 }
 
 pub(super) fn original_replay_command(home: &Path, source: &Path) -> String {
@@ -234,5 +269,110 @@ mod tests {
         let error = load_run_profile(tmp.path()).unwrap_err().to_string();
 
         assert!(error.contains("runtime profile snapshot missing"));
+    }
+
+    #[test]
+    fn default_runs_dir_uses_harnesslab_home_not_nested_home() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = GlobalConfig::default();
+
+        assert_eq!(runs_dir(tmp.path(), &config), tmp.path().join("runs"));
+    }
+
+    #[test]
+    fn custom_runs_dir_can_be_relative_to_harnesslab_home() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = GlobalConfig {
+            runs_dir: "local-runs".to_string(),
+            ..GlobalConfig::default()
+        };
+
+        assert_eq!(runs_dir(tmp.path(), &config), tmp.path().join("local-runs"));
+    }
+
+    #[test]
+    fn custom_runs_dir_expands_home_and_absolute_paths() {
+        let tmp = tempfile::tempdir().unwrap();
+        let host_home = std::env::var_os("HOME").map(PathBuf::from);
+        let config_home = GlobalConfig {
+            runs_dir: "~".to_string(),
+            ..GlobalConfig::default()
+        };
+        assert_eq!(
+            runs_dir(tmp.path(), &config_home),
+            host_home
+                .clone()
+                .unwrap_or_else(|| tmp.path().to_path_buf())
+        );
+
+        let config_child = GlobalConfig {
+            runs_dir: "~/runs-cache".to_string(),
+            ..GlobalConfig::default()
+        };
+        assert_eq!(
+            runs_dir(tmp.path(), &config_child),
+            host_home.clone().map_or_else(
+                || tmp.path().join("runs-cache"),
+                |home| home.join("runs-cache")
+            )
+        );
+
+        let absolute = tmp.path().join("absolute-runs");
+        let config_absolute = GlobalConfig {
+            runs_dir: absolute.display().to_string(),
+            ..GlobalConfig::default()
+        };
+        assert_eq!(runs_dir(tmp.path(), &config_absolute), absolute);
+    }
+
+    #[test]
+    fn original_command_preserves_non_default_run_overrides() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = GlobalConfig::default();
+        let mut spec = harnesslab_core::RunSpec {
+            schema_version: 1,
+            run_id: "run-1".to_string(),
+            created_at: "2026-05-30T00:00:00Z".to_string(),
+            agent_profile_ref: "agent".to_string(),
+            benchmark: harnesslab_core::BenchmarkRef {
+                name: "terminal-bench".to_string(),
+                version: "2.x".to_string(),
+                split: "smoke".to_string(),
+            },
+            execution: harnesslab_core::ExecutionConfig {
+                concurrency: 2,
+                attempts: 3,
+                network: harnesslab_core::NetworkPolicy::Full,
+                timeout_sec: None,
+            },
+            paths: harnesslab_core::RunPaths {
+                run_dir: tmp.path().join("runs/run-1").display().to_string(),
+            },
+            replay_source_run_id: None,
+        };
+
+        let command = original_run_command(
+            tmp.path(),
+            "agent",
+            "terminal-bench",
+            "smoke",
+            &spec,
+            &config,
+        );
+
+        assert!(command.contains("--concurrency 2"));
+        assert!(command.contains("--attempts 3"));
+        spec.execution.concurrency = config.default_concurrency;
+        spec.execution.attempts = config.default_attempts;
+        let default_command = original_run_command(
+            tmp.path(),
+            "agent",
+            "terminal-bench",
+            "smoke",
+            &spec,
+            &config,
+        );
+        assert!(!default_command.contains("--concurrency"));
+        assert!(!default_command.contains("--attempts"));
     }
 }

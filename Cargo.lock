@@ -320,6 +320,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "harnesslab-core",
+ "libc",
  "serde",
  "serde_json",
  "tempfile",
