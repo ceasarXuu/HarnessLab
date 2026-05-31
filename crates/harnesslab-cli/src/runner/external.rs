@@ -1,8 +1,8 @@
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentKind, AgentProfile, AttemptProvenance, EvaluationRecord, ExternalRunnerKind, FailureClass,
-    FailureCode, Outcome, ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan, TaskState,
-    UsageRecord, classify_agent_process,
+    FailureCode, InputMode, Outcome, ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan,
+    TaskState, UsageRecord, classify_agent_process,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
@@ -102,7 +102,12 @@ fn execute_terminal_bench(
         command,
         stdin: None,
         working_dir: ctx.attempt_dir.to_path_buf(),
-        timeout_sec: terminal_bench_process_timeout(ctx),
+        timeout_sec: terminal_bench_timeout_values(
+            ctx.spec.execution.timeout_sec,
+            ctx.profile.timeout_sec,
+            ctx.task.verifier_spec.timeout_sec,
+        )
+        .2,
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
@@ -214,6 +219,7 @@ fn terminal_bench_command(
         ctx.task.verifier_spec.timeout_sec,
     );
     let mut command = vec![
+        terminal_bench_agent_env(profile, agent_timeout),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
         "uvx --from terminal-bench tb run".to_string(),
         format!("--dataset-path {}", shell_quote(&dataset_path.display().to_string())),
@@ -242,13 +248,37 @@ fn terminal_bench_command(
     command.join(" ")
 }
 
-fn terminal_bench_process_timeout(ctx: &ExternalTaskExecution<'_>) -> u64 {
-    let (_, _, process_timeout) = terminal_bench_timeout_values(
-        ctx.spec.execution.timeout_sec,
-        ctx.profile.timeout_sec,
-        ctx.task.verifier_spec.timeout_sec,
-    );
-    process_timeout
+fn terminal_bench_agent_env(profile: &AgentProfile, agent_timeout: u64) -> String {
+    let input_mode = terminal_bench_input_mode(profile);
+    let working_dir = format!("{:?}", profile.working_dir).to_ascii_lowercase();
+    let timeout = agent_timeout.to_string();
+    let mut exports = [
+        ("HARNESSLAB_AGENT_NAME", profile.name.as_str()),
+        ("HARNESSLAB_AGENT_COMMAND", profile.command.as_str()),
+        ("HARNESSLAB_AGENT_INPUT_MODE", input_mode),
+        ("HARNESSLAB_AGENT_WORKING_DIR", working_dir.as_str()),
+        ("HARNESSLAB_AGENT_TIMEOUT_SEC", timeout.as_str()),
+    ]
+    .into_iter()
+    .map(|(name, value)| format!("export {name}={}", shell_quote(value)))
+    .collect::<Vec<_>>();
+    if let Some(path) = profile.labels.get("terminal_bench_agent_pythonpath")
+        && !path.trim().is_empty()
+    {
+        exports.push(format!(
+            "export PYTHONPATH={}${{PYTHONPATH:+:$PYTHONPATH}}",
+            shell_quote(path)
+        ));
+    }
+    format!("{};", exports.join("; "))
+}
+
+fn terminal_bench_input_mode(profile: &AgentProfile) -> &'static str {
+    match profile.input_mode {
+        InputMode::Stdin | InputMode::Tty => "stdin",
+        InputMode::Argument => "argument",
+        InputMode::File => "file",
+    }
 }
 
 fn terminal_bench_timeout_values(
@@ -463,17 +493,5 @@ fn shell_quote(value: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::terminal_bench_timeout_values;
-
-    #[test]
-    fn terminal_bench_timeout_values_use_run_override_when_present() {
-        assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 42));
-    }
-
-    #[test]
-    fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
-        assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 7));
-        assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 1));
-    }
-}
+#[path = "external_tests.rs"]
+mod tests;

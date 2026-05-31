@@ -3,4 +3,5 @@
 /artifacts/
 /.nextest/
 /.benchmarks/
+__pycache__/
 *.profraw

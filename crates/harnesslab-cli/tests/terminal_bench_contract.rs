@@ -259,6 +259,49 @@ exit 0
     assert_eq!(results["tasks"][0]["state"], "success");
 }
 
+#[test]
+fn int_011_terminal_bench_import_agent_receives_registered_command_env() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_labels(
+        home.path(),
+        r#"terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"
+terminal_bench_agent_pythonpath = "/opt/harnesslab/python"
+"#,
+    );
+    let root = terminal_bench_root();
+    let bin = fake_uvx(
+        r#"out=""; run=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-path) out="$2"; shift 2 ;;
+    --run-id) run="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+case ":${PYTHONPATH:-}:" in
+  *":/opt/harnesslab/python:"*) ;;
+  *) echo "missing pythonpath: ${PYTHONPATH:-}" >&2; exit 64 ;;
+esac
+if [ "${HARNESSLAB_AGENT_COMMAND:-}" != "true" ]; then
+  echo "missing command env: ${HARNESSLAB_AGENT_COMMAND:-}" >&2
+  exit 64
+fi
+if [ "${HARNESSLAB_AGENT_INPUT_MODE:-}" != "stdin" ]; then
+  echo "missing input mode env: ${HARNESSLAB_AGENT_INPUT_MODE:-}" >&2
+  exit 64
+fi
+mkdir -p "$out/$run"
+printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
+exit 0
+"#,
+    );
+
+    let (results, _, _) = run_terminal(home.path(), root.path(), bin.path(), 0);
+
+    assert_eq!(results["tasks"][0]["state"], "success");
+}
+
 fn run_terminal(
     home: &Path,
     root: &Path,
