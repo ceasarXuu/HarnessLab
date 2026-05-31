@@ -1,4 +1,5 @@
-use super::{terminal_bench_agent_env, terminal_bench_input_mode, terminal_bench_timeout_values};
+use super::terminal_bench_env::{terminal_bench_agent_env, terminal_bench_input_mode};
+use super::terminal_bench_timeout::terminal_bench_timeout_values;
 use harnesslab_core::{AgentKind, InputMode, default_agent_profile};
 
 #[test]

@@ -1,8 +1,8 @@
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentKind, AgentProfile, AttemptProvenance, EvaluationRecord, ExternalRunnerKind, FailureClass,
-    FailureCode, InputMode, Outcome, ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan,
-    TaskState, UsageRecord, classify_agent_process,
+    FailureCode, Outcome, ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan, TaskState,
+    UsageRecord, classify_agent_process,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
@@ -11,6 +11,12 @@ use std::path::Path;
 
 mod log_scan;
 mod swe_bench_pro;
+pub(super) mod terminal_bench_cleanup;
+mod terminal_bench_env;
+mod terminal_bench_timeout;
+
+use terminal_bench_env::terminal_bench_agent_env;
+use terminal_bench_timeout::terminal_bench_timeout_values;
 
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {
     task.external_runner.is_some()
@@ -66,6 +72,14 @@ fn execute_terminal_bench(
     let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
     let output_root = attempt_root.join("official/terminal-bench");
     let official_run_id = official_run_id(ctx.spec, ctx.task, ctx.attempt);
+    terminal_bench_cleanup::cleanup_task_resources(
+        ctx.run_dir,
+        ctx.spec,
+        &ctx.task.task_id,
+        "pre_task",
+        &official_run_id,
+        true,
+    )?;
     append_event(
         &ctx.run_dir.join("events.jsonl"),
         &event(
@@ -112,6 +126,14 @@ fn execute_terminal_bench(
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
+    terminal_bench_cleanup::cleanup_task_resources(
+        ctx.run_dir,
+        ctx.spec,
+        &ctx.task.task_id,
+        "post_task",
+        &official_run_id,
+        false,
+    )?;
     let result_path = output_root.join(&official_run_id).join("results.json");
     let parsed_result = parse_terminal_bench_result(ctx.attempt_dir, &result_path);
     let agent_failure = classify_agent_process(&process);
@@ -253,50 +275,6 @@ fn terminal_bench_command(
         }
     }
     command.join(" ")
-}
-
-fn terminal_bench_agent_env(profile: &AgentProfile, agent_timeout: u64) -> String {
-    let input_mode = terminal_bench_input_mode(profile);
-    let working_dir = format!("{:?}", profile.working_dir).to_ascii_lowercase();
-    let timeout = agent_timeout.to_string();
-    let mut exports = [
-        ("HARNESSLAB_AGENT_NAME", profile.name.as_str()),
-        ("HARNESSLAB_AGENT_COMMAND", profile.command.as_str()),
-        ("HARNESSLAB_AGENT_INPUT_MODE", input_mode),
-        ("HARNESSLAB_AGENT_WORKING_DIR", working_dir.as_str()),
-        ("HARNESSLAB_AGENT_TIMEOUT_SEC", timeout.as_str()),
-    ]
-    .into_iter()
-    .map(|(name, value)| format!("export {name}={}", shell_quote(value)))
-    .collect::<Vec<_>>();
-    if let Some(path) = profile.labels.get("terminal_bench_agent_pythonpath")
-        && !path.trim().is_empty()
-    {
-        exports.push(format!(
-            "export PYTHONPATH={}${{PYTHONPATH:+:$PYTHONPATH}}",
-            shell_quote(path)
-        ));
-    }
-    format!("{};", exports.join("; "))
-}
-
-fn terminal_bench_input_mode(profile: &AgentProfile) -> &'static str {
-    match profile.input_mode {
-        InputMode::Stdin | InputMode::Tty => "stdin",
-        InputMode::Argument => "argument",
-        InputMode::File => "file",
-    }
-}
-
-fn terminal_bench_timeout_values(
-    run_timeout: Option<u64>,
-    profile_timeout: u64,
-    verifier_timeout: u64,
-) -> (u64, u64, u64) {
-    let agent_timeout = run_timeout.unwrap_or(profile_timeout).max(1);
-    let test_timeout = run_timeout.unwrap_or(verifier_timeout).max(1);
-    let process_timeout = agent_timeout.max(test_timeout).saturating_add(600);
-    (agent_timeout, test_timeout, process_timeout)
 }
 
 enum TerminalBenchAgent {
