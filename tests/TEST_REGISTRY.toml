@@ -38,7 +38,7 @@ title = "Doctor status priority covers ok warning and error"
 layer = "unit"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select CLI-008"
-file_patterns = ["crates/harnesslab-cli/src/app.rs"]
+file_patterns = ["crates/harnesslab-cli/src/doctor.rs"]
 required_artifacts = []
 status = "active"
 [tests.source]
@@ -129,6 +129,22 @@ requirements = ["doctor_json_stable", "config_agent_registry"]
 contracts = ["DoctorOutput", "AgentProfile"]
 
 [[tests]]
+id = "DOC-007"
+title = "Doctor reports auth inheritance and usage parser problems"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select DOC-007"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "17"
+[tests.verifies]
+requirements = ["doctor_json_stable", "config_agent_registry"]
+contracts = ["DoctorOutput", "AgentProfile", "UsageConfig"]
+
+[[tests]]
 id = "CORE-001"
 title = "State machine accepts normal lifecycle"
 layer = "unit"
@@ -182,7 +198,10 @@ title = "Valid global config parses"
 layer = "unit"
 owner_module = "harnesslab-core"
 command = "scripts/test-after-change.sh --select CFG-001"
-file_patterns = ["crates/harnesslab-core/src/config.rs"]
+file_patterns = [
+  "crates/harnesslab-core/src/config.rs",
+  "crates/harnesslab-core/src/config_tests.rs",
+]
 required_artifacts = []
 status = "active"
 [tests.source]
@@ -193,12 +212,34 @@ requirements = ["config_agent_registry"]
 contracts = ["GlobalConfig"]
 
 [[tests]]
+id = "CFG-006"
+title = "Effective auth mounts match runtime rules"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "scripts/test-after-change.sh --select CFG-006"
+file_patterns = [
+  "crates/harnesslab-core/src/config.rs",
+  "crates/harnesslab-core/src/config_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "17"
+[tests.verifies]
+requirements = ["config_agent_registry", "execution_runtime"]
+contracts = ["AgentProfile", "AuthConfig", "SandboxProvider"]
+
+[[tests]]
 id = "AGT-005"
 title = "Docker socket warning"
 layer = "unit"
 owner_module = "harnesslab-core"
 command = "scripts/test-after-change.sh --select AGT-005"
-file_patterns = ["crates/harnesslab-core/src/config.rs"]
+file_patterns = [
+  "crates/harnesslab-core/src/config.rs",
+  "crates/harnesslab-core/src/config_tests.rs",
+]
 required_artifacts = []
 status = "active"
 [tests.source]
@@ -622,6 +663,25 @@ doc = "docs/mvp-development-spec.md"
 section = "8.3"
 [tests.verifies]
 requirements = ["execution_runtime"]
+contracts = ["SandboxProvider", "DockerCliProvider"]
+
+[[tests]]
+id = "C-SBOX-012"
+title = "Docker auth mount dry-run reports status"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-012"
+file_patterns = [
+  "crates/harnesslab-infra/src/docker.rs",
+  "crates/harnesslab-infra/src/docker_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/prd.md"
+section = "17"
+[tests.verifies]
+requirements = ["execution_runtime", "config_agent_registry"]
 contracts = ["SandboxProvider", "DockerCliProvider"]
 
 [[tests]]

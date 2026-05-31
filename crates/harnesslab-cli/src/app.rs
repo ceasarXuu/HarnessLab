@@ -1,8 +1,5 @@
 use crate::benchmark_data::resolve_benchmarks_dir;
-use crate::output::{
-    BenchmarkInfoOutput, BenchmarkListOutput, DoctorCheck, DoctorOutput, InitOutput, ListOutput,
-    PathOutput,
-};
+use crate::output::{BenchmarkInfoOutput, BenchmarkListOutput, InitOutput, ListOutput, PathOutput};
 use crate::runner::{RunOverrides, execute_new_run, replay_run, resume_run};
 use crate::{
     AgentCommand, BenchmarkCommand, Cli, Command, ReportCommand, RunAction, RunArgs, print_json,
@@ -12,9 +9,7 @@ use harnesslab_adapters::built_in_descriptors_with_root;
 use harnesslab_core::{
     AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
 };
-use harnesslab_infra::{
-    DockerCliProvider, command_exists, command_succeeds, first_command_word, latest_run_dir,
-};
+use harnesslab_infra::{command_exists, command_succeeds, latest_run_dir};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -25,7 +20,7 @@ pub(crate) fn dispatch(cli: Cli) -> Result<i32> {
         Command::Agent { command } => match command {
             AgentCommand::List { json } => agent_list(&home, json),
         },
-        Command::Doctor { json } => doctor(&home, json),
+        Command::Doctor { json } => crate::doctor::run(&home, json),
         Command::Benchmark { command } => match command {
             BenchmarkCommand::List { json } => benchmark_list(&home, json),
             BenchmarkCommand::Info { benchmark, json } => benchmark_info(&home, &benchmark, json),
@@ -103,116 +98,6 @@ fn agent_list(home: &Path, json: bool) -> Result<i32> {
         }
     }
     Ok(0)
-}
-
-fn doctor(home: &Path, json: bool) -> Result<i32> {
-    let mut checks = Vec::new();
-    checks.push(check(
-        "m0.cli",
-        "ok",
-        "info",
-        "M0 CLI skeleton is available",
-    ));
-    checks.push(if home.join("config.toml").exists() {
-        check("config.global", "ok", "error", "Global config readable")
-    } else {
-        check("config.global", "error", "error", "Global config missing")
-    });
-    let docker = DockerCliProvider::health_check();
-    checks.push(check(
-        "docker.daemon",
-        &docker.status,
-        "error",
-        &docker.message,
-    ));
-    let config = load_config(home).ok();
-    let benchmark_root = resolve_benchmarks_dir(home, config.as_ref());
-    for descriptor in built_in_descriptors_with_root(benchmark_root.as_deref()) {
-        for split in descriptor.splits {
-            let blocked = data_state_blocks_run(split.data_state);
-            let message = if blocked {
-                format!(
-                    "Benchmark split is not ready locally (data_state={})",
-                    split.data_state
-                )
-            } else {
-                format!("Benchmark split is ready (data_state={})", split.data_state)
-            };
-            checks.push(check_with_details(
-                &format!("benchmark.{}.{}", descriptor.name, split.name),
-                if blocked { "warning" } else { "ok" },
-                "warning",
-                &message,
-                serde_json::json!({
-                    "data_state": split.data_state,
-                    "task_count": split.task_count,
-                }),
-            ));
-        }
-    }
-    match load_profiles(home) {
-        Ok(profiles) => {
-            for profile in profiles {
-                match profile.validate() {
-                    Ok(warnings) => {
-                        if warnings.is_empty() {
-                            checks.push(check(
-                                &format!("agent.{}.validation", profile.name),
-                                "ok",
-                                "error",
-                                "Agent profile configuration is valid",
-                            ));
-                        } else {
-                            checks.push(check_with_details(
-                                &format!("agent.{}.validation", profile.name),
-                                "warning",
-                                "warning",
-                                "Agent profile configuration has warnings",
-                                serde_json::json!({ "warnings": warnings.iter().map(|warning| &warning.code).collect::<Vec<_>>() }),
-                            ));
-                        }
-                    }
-                    Err(error) => checks.push(check_with_details(
-                        &format!("agent.{}.validation", profile.name),
-                        "error",
-                        "error",
-                        &error.to_string(),
-                        serde_json::json!({ "error": error.to_string() }),
-                    )),
-                }
-                let status = first_command_word(&profile.command)
-                    .map(command_exists)
-                    .unwrap_or(false);
-                checks.push(check(
-                    &format!("agent.{}", profile.name),
-                    if status { "ok" } else { "error" },
-                    "error",
-                    "Agent command availability checked",
-                ));
-            }
-        }
-        Err(error) => checks.push(check_with_details(
-            "agents.load",
-            "error",
-            "error",
-            "Agent profiles failed to load",
-            serde_json::json!({ "error": error.to_string() }),
-        )),
-    }
-    let status = overall_status(&checks);
-    if json {
-        print_json(&DoctorOutput {
-            schema_version: 1,
-            status,
-            checks,
-        })?;
-    } else {
-        println!("doctor: {status}");
-        for check in checks {
-            println!("  - {} [{}]: {}", check.id, check.status, check.message);
-        }
-    }
-    Ok(if status == "error" { 3 } else { 0 })
 }
 
 fn benchmark_list(home: &Path, json: bool) -> Result<i32> {
@@ -414,64 +299,4 @@ fn load_config(home: &Path) -> Result<GlobalConfig> {
     Ok(toml::from_str(&fs::read_to_string(
         home.join("config.toml"),
     )?)?)
-}
-
-fn check(id: &str, status: &str, severity: &str, message: &str) -> DoctorCheck {
-    DoctorCheck {
-        id: id.to_string(),
-        status: status.to_string(),
-        severity: severity.to_string(),
-        message: message.to_string(),
-        details: serde_json::json!({}),
-    }
-}
-
-fn check_with_details(
-    id: &str,
-    status: &str,
-    severity: &str,
-    message: &str,
-    details: serde_json::Value,
-) -> DoctorCheck {
-    DoctorCheck {
-        id: id.to_string(),
-        status: status.to_string(),
-        severity: severity.to_string(),
-        message: message.to_string(),
-        details,
-    }
-}
-
-fn overall_status(checks: &[DoctorCheck]) -> &'static str {
-    if checks.iter().any(|check| check.status == "error") {
-        "error"
-    } else if checks.iter().any(|check| check.status == "warning") {
-        "warning"
-    } else {
-        "ok"
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn app_001_overall_status_prioritizes_error_then_warning() {
-        assert_eq!(overall_status(&[check("a", "ok", "info", "ok")]), "ok");
-        assert_eq!(
-            overall_status(&[
-                check("a", "ok", "info", "ok"),
-                check("b", "warning", "warning", "warn"),
-            ]),
-            "warning"
-        );
-        assert_eq!(
-            overall_status(&[
-                check("a", "warning", "warning", "warn"),
-                check("b", "error", "error", "err"),
-            ]),
-            "error"
-        );
-    }
 }

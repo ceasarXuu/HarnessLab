@@ -188,6 +188,39 @@ impl DockerCliProvider {
         Self::cleanup_orphans_with_runner(run_id, &CliDockerRunner)
     }
 
+    pub fn mount_check(mounts: &[String]) -> HealthResult {
+        Self::mount_check_with_runner(mounts, &CliDockerRunner)
+    }
+
+    fn mount_check_with_runner(
+        mounts: &[String],
+        runner: &impl DockerCommandRunner,
+    ) -> HealthResult {
+        if mounts.is_empty() {
+            return HealthResult {
+                status: "ok".to_string(),
+                message: "No auth mounts configured".to_string(),
+            };
+        }
+        match runner.output(&Self::mount_check_args(mounts)) {
+            Ok(output) if output.success => HealthResult {
+                status: "ok".to_string(),
+                message: "Auth mounts are readable in Docker dry-run".to_string(),
+            },
+            Ok(output) => HealthResult {
+                status: "error".to_string(),
+                message: format!(
+                    "Docker auth mount dry-run failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ),
+            },
+            Err(error) => HealthResult {
+                status: "error".to_string(),
+                message: format!("Docker auth mount dry-run unavailable: {error}"),
+            },
+        }
+    }
+
     fn cleanup_orphans_with_runner(
         run_id: &str,
         runner: &impl DockerCommandRunner,
@@ -310,6 +343,26 @@ impl DockerCliProvider {
             "--filter".to_string(),
             format!("label=harnesslab.run_id={run_id}"),
         ]
+    }
+
+    pub fn mount_check_args(mounts: &[String]) -> Vec<String> {
+        let mut args = vec![
+            "run".to_string(),
+            "--rm".to_string(),
+            "--network".to_string(),
+            "none".to_string(),
+        ];
+        for mount in mounts {
+            args.push("-v".to_string());
+            args.push(mount.clone());
+        }
+        args.extend([
+            "alpine:3.20".to_string(),
+            "sh".to_string(),
+            "-lc".to_string(),
+            "true".to_string(),
+        ]);
+        args
     }
 }
 
