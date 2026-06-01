@@ -9,7 +9,7 @@ use harnesslab_adapters::built_in_descriptors_with_root;
 use harnesslab_core::{
     AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
 };
-use harnesslab_infra::{command_exists, command_succeeds, latest_run_dir};
+use harnesslab_infra::{command_exists, command_succeeds, latest_run_dir, validate_event_log};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -170,8 +170,14 @@ fn benchmark_info(home: &Path, name: &str, json: bool) -> Result<i32> {
 
 fn run_command(home: &Path, args: RunArgs) -> Result<i32> {
     match args.action {
-        Some(RunAction::Resume { run_dir, json }) => resume_run(home, &run_dir, json),
-        Some(RunAction::Replay { run_dir, json }) => replay_run(home, &run_dir, json),
+        Some(RunAction::Resume { run_dir, json }) => {
+            validate_run_event_log(&run_dir)?;
+            resume_run(home, &run_dir, json)
+        }
+        Some(RunAction::Replay { run_dir, json }) => {
+            validate_run_event_log(&run_dir)?;
+            replay_run(home, &run_dir, json)
+        }
         None => {
             let agent = args.agent.context("--agent is required")?;
             let benchmark = args.benchmark.context("--benchmark is required")?;
@@ -204,6 +210,7 @@ fn report_open(home: &Path, target: &str, json: bool) -> Result<i32> {
     } else {
         PathBuf::from(target)
     };
+    validate_run_event_log(&run_dir)?;
     let report = run_dir.join("report.html");
     if json {
         print_json(&PathOutput {
@@ -216,6 +223,10 @@ fn report_open(home: &Path, target: &str, json: bool) -> Result<i32> {
         println!("{}", report.display());
     }
     Ok(0)
+}
+
+fn validate_run_event_log(run_dir: &Path) -> Result<()> {
+    validate_event_log(&run_dir.join("events.jsonl"))
 }
 
 fn load_profiles(home: &Path) -> Result<Vec<AgentProfile>> {

@@ -817,6 +817,38 @@ requirements = ["artifact_event_store", "secret_redaction"]
 contracts = ["EventLog"]
 
 [[tests]]
+id = "LOG-005"
+title = "Concurrent event appends preserve JSONL"
+layer = "unit"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select LOG-005"
+file_patterns = ["crates/harnesslab-infra/src/event.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9.1"
+[tests.verifies]
+requirements = ["artifact_event_store", "external_benchmark_runtime"]
+contracts = ["EventLog"]
+
+[[tests]]
+id = "LOG-006"
+title = "Event log integrity rejects malformed lines"
+layer = "unit"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select LOG-006"
+file_patterns = ["crates/harnesslab-infra/src/event.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "20"
+[tests.verifies]
+requirements = ["artifact_event_store"]
+contracts = ["EventLog"]
+
+[[tests]]
 id = "RPT-001"
 title = "HTML report summary and links"
 layer = "unit"
@@ -1540,6 +1572,66 @@ requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_eve
 contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
 
 [[tests]]
+id = "INT-032"
+title = "Resume rejects malformed event log before reuse"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-032"
+file_patterns = [
+  "crates/harnesslab-cli/src/app.rs",
+  "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+  "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "20"
+[tests.verifies]
+requirements = ["artifact_event_store", "replay_runtime"]
+contracts = ["EventLog", "Resume"]
+
+[[tests]]
+id = "INT-033"
+title = "Replay rejects malformed source event log"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-033"
+file_patterns = [
+  "crates/harnesslab-cli/src/app.rs",
+  "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+  "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "20"
+[tests.verifies]
+requirements = ["artifact_event_store", "replay_runtime"]
+contracts = ["EventLog", "Replay"]
+
+[[tests]]
+id = "INT-034"
+title = "Report open rejects malformed event log"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-034"
+file_patterns = [
+  "crates/harnesslab-cli/src/app.rs",
+  "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+  "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = ["events.jsonl", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "20"
+[tests.verifies]
+requirements = ["artifact_event_store", "report_html"]
+contracts = ["EventLog", "ReportHtml"]
+
+[[tests]]
 id = "INT-015"
 title = "Resume recovery updates summary, report, and events"
 layer = "integration"
@@ -1579,6 +1671,26 @@ section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime", "artifact_event_store"]
 contracts = ["Resume", "RunOrchestrator", "EventLog"]
+
+[[tests]]
+id = "META-001"
+title = "Selected test gate prints failing cargo output"
+layer = "gate"
+owner_module = "scripts"
+command = "scripts/verify-test-after-change-select-output.sh"
+file_patterns = [
+  "scripts/test-after-change.sh",
+  "scripts/verify-test-after-change-select-output.sh",
+]
+required_artifacts = []
+status = "active"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "12"
+[tests.verifies]
+requirements = ["test_registry_gate"]
+contracts = ["LocalTestGate"]
 
 [[tests]]
 id = "META-002"

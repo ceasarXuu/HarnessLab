@@ -648,6 +648,8 @@ task_finished
 Pass criteria:
 
 - Events are append-only JSONL.
+- Concurrent task workers must not interleave event writes; every physical line
+  must be exactly one valid event object.
 - If process crashes, completed task attempts remain valid.
 - `results.json` can be regenerated from task attempt results.
 - Report can be regenerated from artifact store only.
@@ -799,6 +801,8 @@ Pass criteria:
 | LOG-002 | Events | event ordering | lifecycle order is valid |
 | LOG-003 | Events | event redaction | no known fake secret in events |
 | LOG-004 | Events | terminal task event | task has terminal finished/interrupted event |
+| LOG-005 | Events | concurrent append | parallel task writes preserve one valid event per JSONL line |
+| LOG-006 | Events | integrity gate | malformed event log line is rejected with path and line number |
 | ORCH-001 | Orchestrator | success assembly | output TaskAttemptResult is consistent |
 | ORCH-002 | Orchestrator | failure assembly | failure class/code propagated |
 | ORCH-003 | Orchestrator | exit code mapping | run outcome matrix maps to expected code |
@@ -1122,6 +1126,8 @@ Pass criteria:
 
 - Events are valid JSON lines.
 - Events contain no unredacted secret values.
+- `run resume`, `run replay`, and `report open` validate existing
+  `events.jsonl` before reusing a run directory.
 - Every task has `task_started` and terminal `task_finished` or `task_interrupted`.
 - Run has terminal `run_finished`, `run_failed`, or `run_paused`.
 
