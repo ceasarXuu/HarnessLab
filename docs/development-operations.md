@@ -166,6 +166,8 @@ Terminal-Bench runner 有两层超时：
 调试真实卡死场景时可以临时设置 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC=<seconds>` 缩短 watchdog 等待；该值只用于本次进程，必须大于 `0`，并会被限制在外层硬超时之前。确实要允许长时间静默时，可显式设置为 `0`、`off`、`disabled` 或 `none` 关闭。
 开发诊断或契约测试需要覆盖 hard-timeout 路径时，可以临时设置 `HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC=<seconds>` 缩短 HarnessLab 外层进程守护时间；不设置时仍使用默认 `agent_timeout + test_timeout + 600`。
 
+使用 `terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"` 接入本机 CLI agent 时，HarnessLab 传给适配层的 `HARNESSLAB_AGENT_TIMEOUT_SEC` 必须保持原始 agent 预算，传给官方 `tb run` 的 `--global-agent-timeout-sec` 会额外增加清理余量，避免官方外层 timeout 先中断 `perform_task`。排查真实 run 时，如果看到 `agent_timeout` 且宿主机仍有对应 agent 子进程，优先修适配层进程树清理，而不是继续跑完整 bench。
+
 真实运行中看到 `terminal-bench cleanup post_task ... projects=none removed containers=0 networks=0` 不代表 HarnessLab 没有保护；通常是官方 Terminal-Bench 已先执行 `docker compose down`，HarnessLab fallback 只是在确认并清理遗留资源。
 
 ## Official SWE-bench Pro Run

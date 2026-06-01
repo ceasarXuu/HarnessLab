@@ -13,6 +13,8 @@ from terminal_bench.agents.failure_mode import FailureMode
 from terminal_bench.terminal.models import TerminalCommand
 from terminal_bench.terminal.tmux_session import TmuxSession
 
+from harnesslab_tb_process import AgentCommandTimedOut, run_agent_process
+
 
 class HarnessLabCommandAgent(BaseAgent):
     @staticmethod
@@ -30,15 +32,22 @@ class HarnessLabCommandAgent(BaseAgent):
         timeout = int(os.environ.get("HARNESSLAB_AGENT_TIMEOUT_SEC", "3600"))
         prompt = self._command_prompt(self._render_instruction(instruction))
         log_dir = prepare_log_dir(logging_dir)
+        write_log(log_dir, "prompt.txt", prompt)
 
         try:
             output = run_registered_agent(command, input_mode, prompt, timeout)
+        except AgentCommandTimedOut as error:
+            write_log(log_dir, "agent_error.log", str(error))
+            write_log(log_dir, "agent_stdout_partial.log", error.stdout)
+            write_log(log_dir, "agent_stderr_partial.log", error.stderr)
+            if error.cleanup_succeeded:
+                return AgentResult(failure_mode=FailureMode.AGENT_TIMEOUT)
+            return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
         except Exception as error:
             write_log(log_dir, "agent_error.log", str(error))
             return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
 
         script = extract_shell_script(output)
-        write_log(log_dir, "prompt.txt", prompt)
         write_log(log_dir, "agent_output.txt", output)
         write_log(log_dir, "container_script.sh", script)
         if not script.strip():
@@ -81,25 +90,12 @@ def run_registered_agent(
     prompt: str,
     timeout: int,
 ) -> str:
+    stdin = None
     if input_mode == "stdin":
-        completed = subprocess.run(
-            command,
-            input=prompt,
-            text=True,
-            shell=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
+        rendered = command
+        stdin = prompt
     elif input_mode == "argument":
-        completed = subprocess.run(
-            command.replace("{{instruction}}", shlex.quote(prompt)),
-            text=True,
-            shell=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
+        rendered = command.replace("{{instruction}}", shlex.quote(prompt))
     elif input_mode == "file":
         with tempfile.NamedTemporaryFile("w", delete=False) as handle:
             handle.write(prompt)
@@ -107,24 +103,34 @@ def run_registered_agent(
         try:
             rendered = command.replace("{{instruction_file}}", shlex.quote(prompt_path))
             rendered = rendered.replace("{{instruction}}", shlex.quote(prompt_path))
-            completed = subprocess.run(
-                rendered,
-                text=True,
-                shell=True,
-                capture_output=True,
-                timeout=timeout,
-                check=False,
-            )
+            completed = run_agent_process(rendered, stdin, timeout)
         finally:
             Path(prompt_path).unlink(missing_ok=True)
+        return completed_stdout_or_error(completed)
     else:
         raise ValueError(f"unsupported input mode: {input_mode}")
 
+    completed = run_agent_process(rendered, stdin, timeout)
+    return completed_stdout_or_error(completed)
+
+
+def completed_stdout_or_error(completed: subprocess.CompletedProcess) -> str:
     if completed.returncode != 0:
         raise RuntimeError(
-            f"agent exited {completed.returncode}: {completed.stderr.strip()}"
+            "agent exited "
+            f"{completed.returncode}: stdout={trim_for_log(completed.stdout)} "
+            f"stderr={trim_for_log(completed.stderr)}"
         )
     return completed.stdout
+
+
+def trim_for_log(text: str | None, limit: int = 4000) -> str:
+    if not text:
+        return ""
+    stripped = text.strip()
+    if len(stripped) <= limit:
+        return stripped
+    return stripped[:limit] + "...<truncated>"
 
 
 def extract_shell_script(output: str) -> str:

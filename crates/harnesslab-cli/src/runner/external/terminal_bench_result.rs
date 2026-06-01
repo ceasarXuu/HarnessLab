@@ -2,7 +2,12 @@ use anyhow::Result;
 use harnesslab_core::{EvaluationRecord, FailureClass, FailureCode, UsageRecord};
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
+use std::io::{Read, Seek, SeekFrom};
+use std::path::{Path, PathBuf};
+
+const ADAPTER_TIMEOUT_MARKER: &str = "agent command timed out;";
+const ADAPTER_CLEANUP_SUCCEEDED_MARKER: &str = "succeeded=True";
+const MAX_LOG_BYTES: u64 = 256 * 1024;
 
 pub(super) fn parse_terminal_bench_result(
     attempt_dir: &Path,
@@ -33,6 +38,14 @@ pub(super) fn parse_terminal_bench_result(
         Ok((evaluation, usage, FailureClass::None, None, score))
     } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
         Ok((evaluation, usage, failure_class, Some(failure_code), score))
+    } else if adapter_agent_timeout_cleanup_succeeded(result_path) {
+        Ok((
+            evaluation,
+            usage,
+            FailureClass::Benchmark,
+            Some(FailureCode::AgentTimeout),
+            score,
+        ))
     } else {
         Ok((
             evaluation,
@@ -124,6 +137,50 @@ fn terminal_bench_failure(value: &Value, task_id: &str) -> Option<(FailureClass,
         return failure_mode_code(result.get("failure_mode").and_then(Value::as_str)?);
     }
     None
+}
+
+fn adapter_agent_timeout_cleanup_succeeded(result_path: &Path) -> bool {
+    let root = result_path.parent().unwrap_or(result_path);
+    find_agent_error_logs(root).into_iter().any(|path| {
+        read_log_tail(&path)
+            .map(|content| {
+                content.contains(ADAPTER_TIMEOUT_MARKER)
+                    && content.contains(ADAPTER_CLEANUP_SUCCEEDED_MARKER)
+            })
+            .unwrap_or(false)
+    })
+}
+
+fn find_agent_error_logs(root: &Path) -> Vec<PathBuf> {
+    let mut pending = vec![root.to_path_buf()];
+    let mut logs = Vec::new();
+    while let Some(path) = pending.pop() {
+        let Ok(metadata) = fs::metadata(&path) else {
+            continue;
+        };
+        if metadata.is_dir() {
+            let Ok(entries) = fs::read_dir(&path) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                pending.push(entry.path());
+            }
+        } else if path.file_name().and_then(|name| name.to_str()) == Some("agent_error.log") {
+            logs.push(path);
+        }
+    }
+    logs
+}
+
+fn read_log_tail(path: &Path) -> std::io::Result<String> {
+    let mut file = fs::File::open(path)?;
+    let len = file.metadata()?.len();
+    if len > MAX_LOG_BYTES {
+        file.seek(SeekFrom::Start(len - MAX_LOG_BYTES))?;
+    }
+    let mut bytes = Vec::new();
+    file.take(MAX_LOG_BYTES).read_to_end(&mut bytes)?;
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
 fn warning_code_for_success(result: &Value) -> Option<FailureCode> {

@@ -133,7 +133,13 @@ exit 0
     assert_eq!(results["tasks"][0]["state"], "success");
     assert_eq!(results["tasks"][0]["failure_class"], "none");
     assert_eq!(results["tasks"][0]["failure_code"], serde_json::Value::Null);
-    assert_eq!(results["tasks"][0]["warnings"][0], "agent_timeout");
+    assert!(
+        results["tasks"][0]["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning == "agent_timeout")
+    );
     let health: serde_json::Value =
         serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
     assert_eq!(health["agent_timeouts"], 0);
@@ -217,7 +223,13 @@ exit 0
         results["tasks"][0]["failure_code"],
         "external_runner_no_progress"
     );
-    assert_eq!(results["tasks"][0]["warnings"][0], "agent_timeout");
+    assert!(
+        results["tasks"][0]["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning == "agent_timeout")
+    );
     let health: serde_json::Value =
         serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
     assert_eq!(health["external_runner_no_progress"], 1);
@@ -239,14 +251,11 @@ fn int_027_terminal_bench_repeated_no_progress_aborts_run() {
     let root = terminal_bench_root_with_tasks(&[
         "stall-a", "stall-b", "stall-c", "stall-d", "stall-e", "stall-f",
     ]);
-    let marker = home.path().join("uvx-count.txt");
-    let bin = fake_uvx(&format!(
-        r#"printf x >> '{}'
-echo "runner started"
+    let bin = fake_uvx(
+        r#"echo "runner started"
 sleep 8
 "#,
-        marker.display()
-    ));
+    );
 
     let (results, run_dir, _) = run_terminal_with_split_extra_args_and_env(
         home.path(),
@@ -260,11 +269,6 @@ sleep 8
 
     let health: serde_json::Value =
         serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
-    assert_eq!(
-        fs::read_to_string(marker).unwrap().matches('x').count(),
-        5,
-        "results={results} health={health}"
-    );
     assert_eq!(results["summary"]["execution_failure"], 6);
     assert_eq!(results["summary"]["interrupted"], 1);
     assert_eq!(health["status"], "invalid");
@@ -285,6 +289,15 @@ sleep 8
             .filter(|task| task["failure_code"] == "run_health_aborted")
             .count(),
         1
+    );
+    assert_eq!(
+        results["tasks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|task| task["failure_code"] == "external_runner_no_progress")
+            .count(),
+        5
     );
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("run_health_aborted"));
@@ -331,7 +344,13 @@ exit 0
     assert_eq!(results["summary"]["benchmark_failure"], 0);
     assert_eq!(results["tasks"][0]["failure_class"], "execution");
     assert_eq!(results["tasks"][0]["failure_code"], "agent_timeout");
-    assert_eq!(results["tasks"][0]["warnings"][0], "agent_timeout");
+    assert!(
+        results["tasks"][0]["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning == "agent_timeout")
+    );
     assert_eq!(
         results["tasks"][0]["agent"]["termination_reason"],
         "timeout"

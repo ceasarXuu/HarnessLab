@@ -468,26 +468,20 @@ terminal_bench_agent_pythonpath = "/opt/harnesslab/python"
     );
     let root = terminal_bench_root();
     let bin = fake_uvx(
-        r#"out=""; run=""
+        r#"out=""; run=""; agent_timeout=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --output-path) out="$2"; shift 2 ;;
     --run-id) run="$2"; shift 2 ;;
+    --global-agent-timeout-sec) agent_timeout="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
-case ":${PYTHONPATH:-}:" in
-  *":/opt/harnesslab/python:"*) ;;
-  *) echo "missing pythonpath: ${PYTHONPATH:-}" >&2; exit 64 ;;
-esac
-if [ "${HARNESSLAB_AGENT_COMMAND:-}" != "true" ]; then
-  echo "missing command env: ${HARNESSLAB_AGENT_COMMAND:-}" >&2
-  exit 64
-fi
-if [ "${HARNESSLAB_AGENT_INPUT_MODE:-}" != "stdin" ]; then
-  echo "missing input mode env: ${HARNESSLAB_AGENT_INPUT_MODE:-}" >&2
-  exit 64
-fi
+case ":${PYTHONPATH:-}:" in *":/opt/harnesslab/python:"*) ;; *) echo "missing pythonpath: ${PYTHONPATH:-}" >&2; exit 64 ;; esac
+[ "${HARNESSLAB_AGENT_COMMAND:-}" = "true" ] || { echo "missing command env: ${HARNESSLAB_AGENT_COMMAND:-}" >&2; exit 64; }
+[ "${HARNESSLAB_AGENT_INPUT_MODE:-}" = "stdin" ] || { echo "missing input mode env: ${HARNESSLAB_AGENT_INPUT_MODE:-}" >&2; exit 64; }
+[ "${HARNESSLAB_AGENT_TIMEOUT_SEC:-}" = "3600" ] || { echo "missing adapter timeout env: ${HARNESSLAB_AGENT_TIMEOUT_SEC:-}" >&2; exit 64; }
+[ "$agent_timeout" = "3630" ] || { echo "missing official cleanup grace timeout: $agent_timeout" >&2; exit 64; }
 mkdir -p "$out/$run"
 printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
 exit 0
