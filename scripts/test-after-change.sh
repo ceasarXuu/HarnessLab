@@ -55,6 +55,7 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-011) package="harnesslab-infra"; test_name="docker::tests::c_sbox_011_create_args_cover_privileged_full_network_and_sanitized_names" ;;
     C-SBOX-012) package="harnesslab-infra"; test_name="docker::tests::c_sbox_012_mount_check_reports_dry_run_status" ;;
     C-SBOX-013) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_host_exec_no_output_timeout_is_structured" ;;
+    C-SBOX-014) package="harnesslab-infra"; test_name="c_sbox_014_sigterm_kills_registered_process_group" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
@@ -93,7 +94,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-022) package="harnesslab-cli"; test_name="int_022_terminal_bench_official_agent_timeout_is_benchmark_verdict" ;;
     INT-023) package="harnesslab-cli"; test_name="int_023_terminal_bench_repeated_official_agent_timeouts_do_not_abort_run" ;;
     INT-024) package="harnesslab-cli"; test_name="int_024_terminal_bench_success_with_agent_timeout_gets_warning" ;;
-    INT-025) package="harnesslab-cli"; test_name="int_025_terminal_bench_default_no_output_watchdog_is_disabled" ;;
+    INT-025) package="harnesslab-cli"; test_name="int_025_terminal_bench_default_no_output_watchdog_is_enabled" ;;
     INT-026) package="harnesslab-cli"; test_name="int_026_terminal_bench_no_progress_overrides_official_result" ;;
     INT-027) package="harnesslab-cli"; test_name="int_027_terminal_bench_repeated_no_progress_aborts_run" ;;
     INT-028) package="harnesslab-cli"; test_name="int_028_terminal_bench_hard_timeout_overrides_official_result" ;;

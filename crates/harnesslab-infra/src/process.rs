@@ -6,11 +6,25 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::{
     Arc,
-    atomic::{AtomicU64, Ordering},
+    atomic::{AtomicI32, AtomicU64, Ordering},
     mpsc,
 };
 use std::thread;
 use std::time::{Duration, Instant};
+
+#[path = "process_start_gate.rs"]
+mod process_start_gate;
+use process_start_gate::{ChildStartGate, ChildStartGateFds};
+
+#[cfg(unix)]
+const MAX_ACTIVE_PROCESS_GROUPS: usize = 4096;
+
+#[cfg(unix)]
+static ACTIVE_PROCESS_GROUPS: [AtomicI32; MAX_ACTIVE_PROCESS_GROUPS] =
+    [const { AtomicI32::new(0) }; MAX_ACTIVE_PROCESS_GROUPS];
+
+#[cfg(unix)]
+static SIGNAL_HANDLERS_INSTALLED: std::sync::Once = std::sync::Once::new();
 
 #[derive(Debug, Clone)]
 pub struct ExecSpec {
@@ -35,22 +49,40 @@ impl HostProcessExecutor {
         }
         fs::create_dir_all(&spec.working_dir)?;
 
-        let child = spawn_child(spec);
+        let spawned = spawn_child(spec);
 
-        let mut child = match child {
-            Ok(child) => child,
+        let mut spawned = match spawned {
+            Ok(spawned) => spawned,
             Err(error) => {
                 fs::write(&spec.stdout_path, "")?;
                 fs::write(&spec.stderr_path, error.to_string())?;
                 return Ok(record(spec, None, TerminationReason::SpawnError));
             }
         };
+        let mut child = spawned.child;
+        let process_group = match ActiveProcessGroup::register(&mut child) {
+            Ok(process_group) => process_group,
+            Err(error) => {
+                fs::write(&spec.stdout_path, "")?;
+                fs::write(&spec.stderr_path, error.to_string())?;
+                return Ok(record(spec, None, TerminationReason::SpawnError));
+            }
+        };
+        if let Err(error) = spawned.start_gate.release() {
+            kill_process_tree(&mut child, &process_group);
+            let _ = child.wait();
+            fs::write(&spec.stdout_path, "")?;
+            fs::write(&spec.stderr_path, error.to_string())?;
+            return Ok(record(spec, None, TerminationReason::SpawnError));
+        }
 
         if let Some(stdin) = &spec.stdin
             && let Some(mut pipe) = child.stdin.take()
             && let Err(error) = pipe.write_all(stdin.as_bytes())
             && error.kind() != std::io::ErrorKind::BrokenPipe
         {
+            kill_process_tree(&mut child, &process_group);
+            let _ = child.wait();
             return Err(error.into());
         }
         drop(child.stdin.take());
@@ -94,7 +126,7 @@ impl HostProcessExecutor {
                 let elapsed_ms = started.elapsed().as_millis();
                 let last_output = u128::from(last_output_ms.load(Ordering::Relaxed));
                 if elapsed_ms.saturating_sub(last_output) >= timeout.as_millis() {
-                    kill_process_tree(&mut child);
+                    kill_process_tree(&mut child, &process_group);
                     child.wait().context("wait for no-progress process kill")?;
                     join_stream_timeout(
                         stdout_thread.take().expect("stdout stream thread"),
@@ -108,7 +140,7 @@ impl HostProcessExecutor {
                 }
             }
             if Instant::now() >= deadline {
-                kill_process_tree(&mut child);
+                kill_process_tree(&mut child, &process_group);
                 child.wait().context("wait for killed process")?;
                 join_stream_timeout(
                     stdout_thread.take().expect("stdout stream thread"),
@@ -125,44 +157,150 @@ impl HostProcessExecutor {
     }
 }
 
-fn spawn_child(spec: &ExecSpec) -> std::io::Result<Child> {
+struct SpawnedChild {
+    child: Child,
+    start_gate: ChildStartGate,
+}
+
+fn spawn_child(spec: &ExecSpec) -> std::io::Result<SpawnedChild> {
+    install_shutdown_signal_handlers();
+    let mut start_gate = ChildStartGate::new()?;
+    let command_body = start_gate.wrap_command(&spec.command);
     let mut command = Command::new("sh");
     command
         .arg("-c")
-        .arg(&spec.command)
+        .arg(command_body)
         .current_dir(&spec.working_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    configure_child_process_group(&mut command);
-    command.spawn()
+    configure_child_process_group(&mut command, start_gate.child_fds());
+    let child = command.spawn()?;
+    start_gate.close_child_end();
+    Ok(SpawnedChild { child, start_gate })
 }
 
 #[cfg(unix)]
-fn configure_child_process_group(command: &mut Command) {
+fn configure_child_process_group(command: &mut Command, start_gate: ChildStartGateFds) {
     use std::os::unix::process::CommandExt;
     unsafe {
-        command.pre_exec(|| {
+        command.pre_exec(move || {
             if libc::setsid() == -1 {
                 return Err(std::io::Error::last_os_error());
             }
+            process_start_gate::prepare_child_after_setsid(start_gate);
             Ok(())
         });
     }
 }
 
 #[cfg(not(unix))]
-fn configure_child_process_group(_command: &mut Command) {}
+fn configure_child_process_group(_command: &mut Command, _start_gate: ChildStartGateFds) {}
 
-fn kill_process_tree(child: &mut Child) {
-    #[cfg(unix)]
-    {
-        let pgid = -(child.id() as i32);
-        unsafe {
-            let _ = libc::kill(pgid, libc::SIGKILL);
-        }
+#[cfg(unix)]
+struct ActiveProcessGroup {
+    pgid: i32,
+    slot: usize,
+}
+
+#[cfg(unix)]
+impl ActiveProcessGroup {
+    fn register(child: &mut Child) -> Result<Self> {
+        let pgid = child.id() as i32;
+        let Some(slot) = reserve_process_group_slot(&ACTIVE_PROCESS_GROUPS, pgid) else {
+            kill_process_group(pgid);
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!(
+                "active process group registry is full; reduce HarnessLab run concurrency"
+            );
+        };
+        Ok(Self { pgid, slot })
     }
+
+    fn kill(&self) {
+        kill_process_group(self.pgid);
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ActiveProcessGroup {
+    fn drop(&mut self) {
+        let _ = ACTIVE_PROCESS_GROUPS[self.slot].compare_exchange(
+            self.pgid,
+            0,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        );
+    }
+}
+
+#[cfg(not(unix))]
+struct ActiveProcessGroup;
+
+#[cfg(not(unix))]
+impl ActiveProcessGroup {
+    fn register(_child: &mut Child) -> Result<Self> {
+        Ok(Self)
+    }
+
+    fn kill(&self) {}
+}
+
+fn kill_process_tree(child: &mut Child, process_group: &ActiveProcessGroup) {
+    process_group.kill();
     let _ = child.kill();
+}
+
+#[cfg(unix)]
+fn reserve_process_group_slot(groups: &[AtomicI32], pgid: i32) -> Option<usize> {
+    groups.iter().position(|group| {
+        group
+            .compare_exchange(0, pgid, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    })
+}
+
+#[cfg(unix)]
+fn kill_process_group(pgid: i32) {
+    if pgid <= 0 {
+        return;
+    }
+    unsafe {
+        let _ = libc::kill(-pgid, libc::SIGKILL);
+    }
+}
+
+#[cfg(unix)]
+fn install_shutdown_signal_handlers() {
+    SIGNAL_HANDLERS_INSTALLED.call_once(|| {
+        install_signal_handler(libc::SIGINT);
+        install_signal_handler(libc::SIGTERM);
+    });
+}
+
+#[cfg(not(unix))]
+fn install_shutdown_signal_handlers() {}
+
+#[cfg(unix)]
+fn install_signal_handler(signal: libc::c_int) {
+    unsafe {
+        let mut action: libc::sigaction = std::mem::zeroed();
+        action.sa_sigaction = shutdown_signal_handler as *const () as usize;
+        action.sa_flags = 0;
+        libc::sigemptyset(&mut action.sa_mask);
+        let _ = libc::sigaction(signal, &action, std::ptr::null_mut());
+    }
+}
+
+#[cfg(unix)]
+extern "C" fn shutdown_signal_handler(signal: libc::c_int) {
+    for group in &ACTIVE_PROCESS_GROUPS {
+        kill_process_group(group.load(Ordering::SeqCst));
+    }
+    unsafe {
+        libc::_exit(128 + signal);
+    }
 }
 
 fn stream_child_output<R>(
@@ -258,116 +396,5 @@ fn shell_quote(value: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn c_sbox_002_host_exec_echo_captures_stdout() {
-        let tmp = tempfile::tempdir().unwrap();
-        let spec = ExecSpec {
-            command: "printf hello".to_string(),
-            stdin: None,
-            working_dir: tmp.path().join("workspace"),
-            timeout_sec: 5,
-            no_output_timeout_sec: None,
-            stdout_path: tmp.path().join("stdout.log"),
-            stderr_path: tmp.path().join("stderr.log"),
-        };
-
-        let result = HostProcessExecutor::exec(&spec).unwrap();
-
-        assert_eq!(result.exit_code, Some(0));
-        assert_eq!(fs::read_to_string(spec.stdout_path).unwrap(), "hello");
-    }
-
-    #[test]
-    fn c_sbox_003_host_exec_timeout_is_structured() {
-        let tmp = tempfile::tempdir().unwrap();
-        let spec = ExecSpec {
-            command: "sleep 2".to_string(),
-            stdin: None,
-            working_dir: tmp.path().join("workspace"),
-            timeout_sec: 1,
-            no_output_timeout_sec: None,
-            stdout_path: tmp.path().join("stdout.log"),
-            stderr_path: tmp.path().join("stderr.log"),
-        };
-
-        let result = HostProcessExecutor::exec(&spec).unwrap();
-
-        assert_eq!(result.termination_reason, TerminationReason::Timeout);
-    }
-
-    #[test]
-    fn c_sbox_003_host_exec_no_output_timeout_is_structured() {
-        let tmp = tempfile::tempdir().unwrap();
-        let spec = ExecSpec {
-            command: "printf started; sleep 5".to_string(),
-            stdin: None,
-            working_dir: tmp.path().join("workspace"),
-            timeout_sec: 30,
-            no_output_timeout_sec: Some(1),
-            stdout_path: tmp.path().join("stdout.log"),
-            stderr_path: tmp.path().join("stderr.log"),
-        };
-        let started = Instant::now();
-
-        let result = HostProcessExecutor::exec(&spec).unwrap();
-
-        assert_eq!(result.termination_reason, TerminationReason::NoProgress);
-        assert!(
-            started.elapsed() < Duration::from_secs(4),
-            "no-output timeout should kill silent descendants promptly"
-        );
-        assert_eq!(fs::read_to_string(spec.stdout_path).unwrap(), "started");
-    }
-
-    #[test]
-    fn c_sbox_003_timeout_kills_background_pipe_holder() {
-        let tmp = tempfile::tempdir().unwrap();
-        let spec = ExecSpec {
-            command: "sh -c '(sleep 5; printf late) & sleep 10'".to_string(),
-            stdin: None,
-            working_dir: tmp.path().join("workspace"),
-            timeout_sec: 1,
-            no_output_timeout_sec: None,
-            stdout_path: tmp.path().join("stdout.log"),
-            stderr_path: tmp.path().join("stderr.log"),
-        };
-        let started = Instant::now();
-
-        let result = HostProcessExecutor::exec(&spec).unwrap();
-
-        assert_eq!(result.termination_reason, TerminationReason::Timeout);
-        assert!(
-            started.elapsed() < Duration::from_secs(4),
-            "timeout should kill pipe-holding descendants promptly"
-        );
-    }
-
-    #[test]
-    fn c_sbox_002_stdin_broken_pipe_is_not_spawn_failure() {
-        let tmp = tempfile::tempdir().unwrap();
-        let spec = ExecSpec {
-            command: "true".to_string(),
-            stdin: Some("ignored input".repeat(1024)),
-            working_dir: tmp.path().join("workspace"),
-            timeout_sec: 5,
-            no_output_timeout_sec: None,
-            stdout_path: tmp.path().join("stdout.log"),
-            stderr_path: tmp.path().join("stderr.log"),
-        };
-
-        let result = HostProcessExecutor::exec(&spec).unwrap();
-
-        assert_eq!(result.exit_code, Some(0));
-    }
-
-    #[test]
-    fn c_run_001_command_detection_helpers_are_stable() {
-        assert_eq!(first_command_word("sh -c true"), Some("sh"));
-        assert!(command_exists("sh"));
-        assert!(command_succeeds("true"));
-        assert!(!command_succeeds("false"));
-    }
-}
+#[path = "process_tests.rs"]
+mod tests;

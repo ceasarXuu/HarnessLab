@@ -21,15 +21,38 @@ fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
 }
 
 #[test]
-fn terminal_bench_no_output_timeout_is_override_only() {
-    assert_eq!(terminal_bench_no_output_timeout_sec(960, None), None);
+fn terminal_bench_no_output_timeout_defaults_to_setup_watchdog() {
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(960, Some("1")),
+        terminal_bench_no_output_timeout_sec(300, 300, 1200, None),
+        Some(420)
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(5, 7, 612, None),
+        Some(300)
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(300, 300, 120, None),
+        Some(119)
+    );
+}
+
+#[test]
+fn terminal_bench_no_output_timeout_can_be_overridden_or_disabled() {
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(300, 300, 1200, Some("1")),
         Some(1)
     );
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(960, Some("invalid")),
+        terminal_bench_no_output_timeout_sec(300, 300, 1200, Some("off")),
         None
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(300, 300, 1200, Some("0")),
+        None
+    );
+    assert_eq!(
+        terminal_bench_no_output_timeout_sec(300, 300, 1200, Some("invalid")),
+        Some(420)
     );
 }
 

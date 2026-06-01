@@ -12,16 +12,30 @@ pub(super) fn terminal_bench_timeout_values(
 }
 
 pub(super) fn terminal_bench_no_output_timeout_sec(
+    agent_timeout: u64,
+    test_timeout: u64,
     process_timeout: u64,
     override_timeout: Option<&str>,
 ) -> Option<u64> {
-    if let Some(timeout) = override_timeout
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|value| *value > 0)
+    let cap = process_timeout.saturating_sub(1).max(1);
+    if let Some(value) = override_timeout
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
     {
-        return Some(timeout.min(process_timeout.saturating_sub(1).max(1)));
+        if matches!(
+            value.to_ascii_lowercase().as_str(),
+            "0" | "off" | "false" | "disabled" | "none"
+        ) {
+            return None;
+        }
+        if let Ok(timeout) = value.parse::<u64>()
+            && timeout > 0
+        {
+            return Some(timeout.min(cap));
+        }
     }
-    None
+    let default_timeout = agent_timeout.max(test_timeout).saturating_add(120).max(300);
+    Some(default_timeout.min(cap))
 }
 
 pub(super) fn terminal_bench_process_timeout_sec(
