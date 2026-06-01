@@ -42,6 +42,9 @@ if [[ "${1:-}" == "--select" ]]; then
     C-BENCH-008) package="harnesslab-cli"; test_name="bench_004_run_blocks_swe_bench_pro_full_before_planning" ;;
     ART-003) package="harnesslab-infra"; test_name="artifact::tests::art_003_atomic_json_write_produces_valid_json" ;;
     LOG-003) package="harnesslab-infra"; test_name="event::tests::log_003_events_are_redacted" ;;
+    LOG-005) package="harnesslab-infra"; test_name="event::tests::log_005_concurrent_process_appends_preserve_jsonl" ;;
+    LOG-006) package="harnesslab-infra"; test_name="event::tests::log_006_event_log_integrity_rejects_malformed_line" ;;
+    META-001-FAIL) package="harnesslab-infra"; test_name="event::tests::meta_001_selected_failure_outputs_assertion_context" ;;
     C-SBOX-001) package="harnesslab-infra"; test_name="docker::tests::c_sbox_001_health_check_is_structured" ;;
     C-SBOX-002) package="harnesslab-infra"; test_name="process::tests::c_sbox_002_host_exec_echo_captures_stdout" ;;
     C-SBOX-003) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_host_exec_timeout_is_structured" ;;
@@ -104,6 +107,9 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-029) exec scripts/verify-terminal-bench-docker-activity-watchdog.sh ;;
     INT-030) package="harnesslab-cli"; test_name="int_030_terminal_bench_silent_docker_activity_is_not_no_progress" ;;
     INT-031) package="harnesslab-cli"; test_name="int_031_terminal_bench_progress_deferral_still_hard_times_out" ;;
+    INT-032) package="harnesslab-cli"; test_name="int_032_resume_rejects_malformed_event_log_before_reuse" ;;
+    INT-033) package="harnesslab-cli"; test_name="int_033_replay_rejects_malformed_source_event_log" ;;
+    INT-034) package="harnesslab-cli"; test_name="int_034_report_open_rejects_malformed_event_log" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;
@@ -113,8 +119,14 @@ if [[ "${1:-}" == "--select" ]]; then
       exit 2
       ;;
   esac
+  set +e
   output="$(cargo test -p "$package" --all-features "$test_name" -- --exact 2>&1)"
+  cargo_status=$?
+  set -e
   printf '%s\n' "$output"
+  if [[ "$cargo_status" -ne 0 ]]; then
+    exit "$cargo_status"
+  fi
   if ! grep -q "running 1 test" <<<"$output"; then
     echo "selected test did not run exactly once: $id -> $test_name" >&2
     exit 1
@@ -160,6 +172,9 @@ scripts/verify-terminal-bench-docker-activity-watchdog.sh
 
 echo "== registry-check =="
 scripts/verify-test-registry.sh
+
+echo "== test-runner-meta =="
+scripts/verify-test-after-change-select-output.sh
 
 echo "== traceability-check =="
 scripts/generate-test-traceability.sh
