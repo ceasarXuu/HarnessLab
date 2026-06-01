@@ -3,6 +3,7 @@ use anyhow::{Context, Result, bail};
 use harnesslab_core::{
     EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
     TaskAttemptResult, TaskPlan, TaskState, UsageRecord, classify_agent_process,
+    health_impact_for_failure,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
@@ -112,6 +113,7 @@ pub(super) fn execute(
         },
         failure_class,
         failure_code,
+        health_impact: health_impact_for_failure(failure_class, failure_code),
         benchmark_score: score,
         duration_ms: ctx.started.elapsed().as_millis() as u64,
         agent: Some(agent),
@@ -146,6 +148,10 @@ fn setup_failure_result(
         outcome: Outcome::Failure,
         failure_class: FailureClass::Execution,
         failure_code: Some(FailureCode::WorkspacePrepFailed),
+        health_impact: health_impact_for_failure(
+            FailureClass::Execution,
+            Some(FailureCode::WorkspacePrepFailed),
+        ),
         benchmark_score: 0.0,
         duration_ms: ctx.started.elapsed().as_millis() as u64,
         agent: None,

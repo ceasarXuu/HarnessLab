@@ -10,6 +10,7 @@ mod swe_bench_pro;
 mod terminal_bench;
 pub(super) mod terminal_bench_cleanup;
 mod terminal_bench_env;
+mod terminal_bench_result;
 mod terminal_bench_timeout;
 
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {

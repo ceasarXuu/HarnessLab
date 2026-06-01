@@ -1,7 +1,7 @@
 use super::schedule::AttemptWork;
 use anyhow::Result;
 use harnesslab_core::{
-    FailureClass, FailureCode, Outcome, TaskAttemptResult, TaskState, task_dir_name,
+    FailureCode, HealthImpact, Outcome, TaskAttemptResult, TaskState, task_dir_name,
 };
 use harnesslab_infra::{append_event, atomic_write_json, event};
 use serde::Serialize;
@@ -57,6 +57,7 @@ pub(super) struct RunMonitor {
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
+    execution_stalls: usize,
     non_timeout_completed: usize,
     successes: usize,
     aborted: Option<RunAbort>,
@@ -76,6 +77,7 @@ struct RunHealthSnapshot<'a> {
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
+    execution_stalls: usize,
 }
 
 impl RunMonitor {
@@ -87,6 +89,7 @@ impl RunMonitor {
             docker_network_failures: 0,
             agent_timeouts: 0,
             external_runner_no_progress: 0,
+            execution_stalls: 0,
             non_timeout_completed: 0,
             successes: 0,
             aborted: None,
@@ -102,28 +105,28 @@ impl RunMonitor {
         if result.state == TaskState::Success {
             self.successes += 1;
         }
-        if !is_execution_stall(result.failure_code) {
+        if result.health_impact != HealthImpact::Stall {
             self.non_timeout_completed += 1;
         }
-        if result.failure_code == Some(FailureCode::DockerNetworkPoolExhausted) {
+        if result.health_impact == HealthImpact::EnvironmentUnhealthy {
             self.docker_network_failures += 1;
             self.abort(
                 run_dir,
                 result,
                 "docker network pool exhausted; benchmark environment is unhealthy",
             )?;
-        } else if is_execution_stall(result.failure_code) {
+        } else if result.health_impact == HealthImpact::Stall {
+            self.execution_stalls += 1;
             if result.failure_code == Some(FailureCode::AgentTimeout) {
                 self.agent_timeouts += 1;
             }
             if result.failure_code == Some(FailureCode::ExternalRunnerNoProgress) {
                 self.external_runner_no_progress += 1;
             }
-            if self.agent_timeouts + self.external_runner_no_progress
-                >= AGENT_TIMEOUT_ABORT_THRESHOLD
+            if self.execution_stalls >= AGENT_TIMEOUT_ABORT_THRESHOLD
                 && self.non_timeout_completed == 0
             {
-                let reason = if self.external_runner_no_progress == 0 {
+                let reason = if self.agent_timeouts == self.execution_stalls {
                     "agent timeout threshold reached before any successful task"
                 } else {
                     "execution stall threshold reached before any successful task"
@@ -152,8 +155,9 @@ impl RunMonitor {
                 provenance: work.provenance,
                 state: TaskState::Interrupted,
                 outcome: Outcome::Failure,
-                failure_class: FailureClass::Execution,
+                failure_class: harnesslab_core::FailureClass::Execution,
                 failure_code: Some(FailureCode::RunHealthAborted),
+                health_impact: HealthImpact::None,
                 benchmark_score: 0.0,
                 duration_ms: 0,
                 agent: None,
@@ -226,16 +230,10 @@ impl RunMonitor {
             docker_network_failures: self.docker_network_failures,
             agent_timeouts: self.agent_timeouts,
             external_runner_no_progress: self.external_runner_no_progress,
+            execution_stalls: self.execution_stalls,
         };
         atomic_write_json(&run_dir.join("run-health.json"), &snapshot)
     }
-}
-
-fn is_execution_stall(code: Option<FailureCode>) -> bool {
-    matches!(
-        code,
-        Some(FailureCode::AgentTimeout | FailureCode::ExternalRunnerNoProgress)
-    )
 }
 
 #[cfg(test)]

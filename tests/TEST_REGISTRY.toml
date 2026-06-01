@@ -1290,6 +1290,118 @@ requirements = ["external_benchmark_runtime", "execution_runtime", "report_html"
 contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "Report"]
 
 [[tests]]
+id = "INT-022"
+title = "Terminal-Bench official agent timeout is benchmark verdict"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-022"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "run-health.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "report_html"]
+contracts = ["TerminalBenchExternalRunner", "RunMonitor", "Report"]
+
+[[tests]]
+id = "INT-023"
+title = "Terminal-Bench repeated official timeouts do not abort run health"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-023"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "RunMonitor"]
+
+[[tests]]
+id = "INT-024"
+title = "Terminal-Bench successful task can surface official timeout warning"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-024"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "artifact_event_store", "report_html"]
+contracts = ["TerminalBenchExternalRunner", "EventLog", "Report"]
+
+[[tests]]
+id = "INT-025"
+title = "Terminal-Bench default no-output watchdog is disabled"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-025"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["events.jsonl", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor"]
+
+[[tests]]
+id = "INT-026"
+title = "Terminal-Bench execution no-progress overrides official result"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-026"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "RunMonitor", "EventLog"]
+
+[[tests]]
+id = "INT-027"
+title = "Terminal-Bench repeated no-progress aborts run"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-027"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "RunMonitor", "EventLog"]
+
+[[tests]]
+id = "INT-028"
+title = "Terminal-Bench hard timeout overrides official result"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-028"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "RunMonitor", "EventLog"]
+
+[[tests]]
 id = "INT-015"
 title = "Resume recovery updates summary, report, and events"
 layer = "integration"

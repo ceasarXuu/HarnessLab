@@ -1,19 +1,24 @@
 use super::{
     ExternalTaskExecution, log_scan, terminal_bench_cleanup,
     terminal_bench_env::terminal_bench_agent_env,
-    terminal_bench_timeout::{terminal_bench_no_output_timeout_sec, terminal_bench_timeout_values},
+    terminal_bench_result::{missing_evaluation, terminal_bench_result_warnings},
+    terminal_bench_timeout::{
+        terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
+        terminal_bench_timeout_values,
+    },
     write_external_command_snapshot,
 };
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentKind, AgentProfile, EvaluationRecord, Failure, FailureClass, FailureCode, Outcome,
-    ProcessRecord, RunSpec, TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord,
-    classify_agent_process,
+    AgentKind, AgentProfile, Failure, FailureClass, FailureCode, Outcome, ProcessRecord, RunSpec,
+    TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord, classify_agent_process,
+    health_impact_for_failure,
 };
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
-use serde_json::Value;
 use std::fs;
 use std::path::Path;
+
+pub(super) use super::terminal_bench_result::parse_terminal_bench_result;
 
 pub(super) fn validate_profile(profile: &AgentProfile) -> Result<()> {
     let _ = terminal_bench_agent(profile)?;
@@ -68,42 +73,35 @@ pub(super) fn execute(
         ctx,
     );
     write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
-    let no_output_timeout_sec = terminal_bench_no_output_timeout_sec(
+    let default_process_timeout_sec = terminal_bench_timeout_values(
         ctx.spec.execution.timeout_sec,
         ctx.profile.timeout_sec,
         ctx.task.verifier_spec.timeout_sec,
+    )
+    .2;
+    let process_timeout_sec = terminal_bench_process_timeout_sec(
+        default_process_timeout_sec,
+        std::env::var("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC")
+            .ok()
+            .as_deref(),
+    );
+    let no_output_timeout_sec = terminal_bench_no_output_timeout_sec(
+        process_timeout_sec,
         std::env::var("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC")
             .ok()
             .as_deref(),
     );
+    append_runner_config_event(ctx, process_timeout_sec, no_output_timeout_sec)?;
     let process = normalize_agent_paths(HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,
         working_dir: ctx.attempt_dir.to_path_buf(),
-        timeout_sec: terminal_bench_timeout_values(
-            ctx.spec.execution.timeout_sec,
-            ctx.profile.timeout_sec,
-            ctx.task.verifier_spec.timeout_sec,
-        )
-        .2,
-        no_output_timeout_sec: Some(no_output_timeout_sec),
+        timeout_sec: process_timeout_sec,
+        no_output_timeout_sec,
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
-    if process.termination_reason == TerminationReason::NoProgress {
-        append_event(
-            &ctx.run_dir.join("events.jsonl"),
-            &event(
-                &ctx.spec.run_id,
-                Some(&ctx.task.task_id),
-                "external_runner_no_progress",
-                &format!(
-                    "terminal-bench official runner produced no log output for {no_output_timeout_sec}s; killed process tree"
-                ),
-            ),
-            &[],
-        )?;
-    }
+    append_process_termination_event(ctx, &process, process_timeout_sec, no_output_timeout_sec)?;
     terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
@@ -143,14 +141,26 @@ pub(super) fn execute(
             0.0,
         ),
     };
+    let official_failure_class = failure_class;
+    let official_failure_code = failure_code;
     if let Some(code) = infra_failure {
         failure_class = FailureClass::Execution;
         failure_code = Some(code);
         score = 0.0;
+    } else if agent_failure.class == FailureClass::Execution
+        && process.termination_reason != TerminationReason::Completed
+    {
+        failure_class = FailureClass::Execution;
+        failure_code = agent_failure.code;
+        score = 0.0;
     }
-    let mut warnings = Vec::new();
-    if matches!(usage, UsageRecord::Unknown) {
-        warnings.push(FailureCode::UsageUnknown);
+    let mut warnings =
+        terminal_bench_result_warnings(&result_path, &ctx.task.task_id, official_failure_class);
+    if failure_class == FailureClass::Execution
+        && official_failure_class == FailureClass::Benchmark
+        && let Some(code) = official_failure_code
+    {
+        warnings.push(code);
     }
     if agent_failure.class == FailureClass::Execution
         && failure_class != FailureClass::Execution
@@ -158,6 +168,10 @@ pub(super) fn execute(
     {
         warnings.push(code);
     }
+    if matches!(usage, UsageRecord::Unknown) {
+        warnings.push(FailureCode::UsageUnknown);
+    }
+    append_task_warnings(ctx, &warnings)?;
     let result = TaskAttemptResult {
         schema_version: 1,
         task_id: ctx.task.task_id.clone(),
@@ -175,6 +189,7 @@ pub(super) fn execute(
         },
         failure_class,
         failure_code,
+        health_impact: health_impact_for_failure(failure_class, failure_code),
         benchmark_score: score,
         duration_ms: ctx.started.elapsed().as_millis() as u64,
         agent: Some(process),
@@ -194,6 +209,73 @@ pub(super) fn execute(
         &result,
     )?;
     Ok(result)
+}
+
+fn append_runner_config_event(
+    ctx: &ExternalTaskExecution<'_>,
+    process_timeout_sec: u64,
+    no_output_timeout_sec: Option<u64>,
+) -> Result<()> {
+    let no_output_timeout = no_output_timeout_sec
+        .map(|timeout| timeout.to_string())
+        .unwrap_or_else(|| "disabled".to_string());
+    append_event(
+        &ctx.run_dir.join("events.jsonl"),
+        &event(
+            &ctx.spec.run_id,
+            Some(&ctx.task.task_id),
+            "external_runner_configured",
+            &format!(
+                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout}"
+            ),
+        ),
+        &[],
+    )
+}
+
+fn append_process_termination_event(
+    ctx: &ExternalTaskExecution<'_>,
+    process: &ProcessRecord,
+    process_timeout_sec: u64,
+    no_output_timeout_sec: Option<u64>,
+) -> Result<()> {
+    let (name, message) = match process.termination_reason {
+        TerminationReason::NoProgress => (
+            "external_runner_no_progress",
+            format!(
+                "terminal-bench official runner produced no log output for {}s; killed process tree",
+                no_output_timeout_sec.unwrap_or(0)
+            ),
+        ),
+        TerminationReason::Timeout => (
+            "external_runner_timeout",
+            format!(
+                "terminal-bench official runner exceeded hard timeout {process_timeout_sec}s; killed process tree"
+            ),
+        ),
+        _ => return Ok(()),
+    };
+    append_event(
+        &ctx.run_dir.join("events.jsonl"),
+        &event(&ctx.spec.run_id, Some(&ctx.task.task_id), name, &message),
+        &[],
+    )
+}
+
+fn append_task_warnings(ctx: &ExternalTaskExecution<'_>, warnings: &[FailureCode]) -> Result<()> {
+    for warning in warnings {
+        append_event(
+            &ctx.run_dir.join("events.jsonl"),
+            &event(
+                &ctx.spec.run_id,
+                Some(&ctx.task.task_id),
+                "task_warning",
+                &format!("attempt {} warning {warning:?}", ctx.attempt),
+            ),
+            &[],
+        )?;
+    }
+    Ok(())
 }
 
 fn terminal_bench_command(
@@ -304,108 +386,6 @@ fn requires_terminal_bench_model(name: &str) -> bool {
     matches!(name, "codex" | "opencode")
 }
 
-pub(super) fn parse_terminal_bench_result(
-    attempt_dir: &Path,
-    result_path: &Path,
-    task_id: &str,
-) -> Result<(
-    EvaluationRecord,
-    UsageRecord,
-    FailureClass,
-    Option<FailureCode>,
-    f64,
-)> {
-    let value = read_result_json(result_path)?;
-    let score = value
-        .get("accuracy")
-        .and_then(Value::as_f64)
-        .or_else(|| resolved_score(&value))
-        .unwrap_or(0.0);
-    write_verifier_logs(attempt_dir, result_path, &value, "")?;
-    let evaluation = EvaluationRecord {
-        exit_code: Some(0),
-        raw_score: score,
-        stdout_path: "verifier/stdout.log".to_string(),
-        stderr_path: "verifier/stderr.log".to_string(),
-    };
-    let usage = terminal_bench_usage(&value);
-    if score >= 1.0 {
-        Ok((evaluation, usage, FailureClass::None, None, score))
-    } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
-        Ok((evaluation, usage, failure_class, Some(failure_code), score))
-    } else {
-        Ok((
-            evaluation,
-            usage,
-            FailureClass::Benchmark,
-            Some(FailureCode::TestFailed),
-            score,
-        ))
-    }
-}
-
-fn missing_evaluation(
-    attempt_dir: &Path,
-    result_path: &Path,
-    reason: &str,
-) -> Result<EvaluationRecord> {
-    let message = format!(
-        "terminal-bench official results unavailable at {}: {reason}",
-        result_path.display()
-    );
-    write_verifier_logs(attempt_dir, result_path, &Value::Null, &message)?;
-    Ok(EvaluationRecord {
-        exit_code: None,
-        raw_score: 0.0,
-        stdout_path: "verifier/stdout.log".to_string(),
-        stderr_path: "verifier/stderr.log".to_string(),
-    })
-}
-
-fn read_result_json(path: &Path) -> Result<Value> {
-    let bytes = fs::read(path)?;
-    Ok(serde_json::from_slice(&bytes)?)
-}
-
-fn write_verifier_logs(
-    attempt_dir: &Path,
-    result_path: &Path,
-    value: &Value,
-    stderr: &str,
-) -> Result<()> {
-    let verifier_dir = attempt_dir.join("verifier");
-    fs::create_dir_all(&verifier_dir)?;
-    let mut stdout = format!("official_results_path={}\n", result_path.display());
-    if !value.is_null() {
-        stdout.push_str(&serde_json::to_string_pretty(value)?);
-        stdout.push('\n');
-    }
-    fs::write(verifier_dir.join("stdout.log"), stdout)?;
-    fs::write(verifier_dir.join("stderr.log"), stderr)?;
-    Ok(())
-}
-
-fn resolved_score(value: &Value) -> Option<f64> {
-    let resolved = value.get("n_resolved")?.as_f64()?;
-    let unresolved = value.get("n_unresolved")?.as_f64()?;
-    let total = resolved + unresolved;
-    (total > 0.0).then_some(resolved / total)
-}
-
-fn terminal_bench_failure(value: &Value, task_id: &str) -> Option<(FailureClass, FailureCode)> {
-    for result in value.get("results").and_then(Value::as_array)? {
-        if result.get("task_id").and_then(Value::as_str) != Some(task_id) {
-            continue;
-        }
-        return match result.get("failure_mode").and_then(Value::as_str)? {
-            "agent_timeout" => Some((FailureClass::Execution, FailureCode::AgentTimeout)),
-            "test_timeout" => Some((FailureClass::Benchmark, FailureCode::VerifierTimeout)),
-            _ => None,
-        };
-    }
-    None
-}
-
 pub(super) fn terminal_bench_process_failure(process: &ProcessRecord) -> Failure {
     if process.termination_reason == TerminationReason::NoProgress {
         return Failure {
@@ -416,30 +396,6 @@ pub(super) fn terminal_bench_process_failure(process: &ProcessRecord) -> Failure
         };
     }
     classify_agent_process(process)
-}
-
-fn terminal_bench_usage(value: &Value) -> UsageRecord {
-    let mut input_tokens = 0;
-    let mut output_tokens = 0;
-    let Some(results) = value.get("results").and_then(Value::as_array) else {
-        return UsageRecord::Unknown;
-    };
-    for result in results {
-        input_tokens += result
-            .get("total_input_tokens")
-            .and_then(Value::as_u64)
-            .unwrap_or(0);
-        output_tokens += result
-            .get("total_output_tokens")
-            .and_then(Value::as_u64)
-            .unwrap_or(0);
-    }
-    UsageRecord::Parsed {
-        input_tokens,
-        output_tokens,
-        total_tokens: input_tokens + output_tokens,
-        cost_usd: None,
-    }
 }
 
 fn official_run_id(spec: &RunSpec, task: &TaskPlan, attempt: u32) -> String {

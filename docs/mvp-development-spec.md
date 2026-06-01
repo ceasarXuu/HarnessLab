@@ -201,6 +201,13 @@ Schema version `1` currently includes these structured process termination reaso
 `no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window.
 
 Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` so they are distinguishable from agent-level `agent_timeout`.
+`TaskAttemptResult.health_impact` is an adapter-agnostic run-health signal:
+
+- `none`: no run-level health impact.
+- `stall`: execution made no useful progress or timed out and can count toward run-health abort.
+- `environment_unhealthy`: local benchmark environment is unhealthy and should abort immediately.
+
+RunMonitor consumes `health_impact`, not benchmark-specific failure codes. A HarnessLab process-level timeout or no-progress kill must set `stall` even if an external benchmark wrote a valid result first.
 
 Pass criteria:
 
@@ -217,6 +224,7 @@ Pass criteria:
 | Agent command not found | failure | execution | `agent_spawn_error` |
 | Agent timeout | failure | execution | `agent_timeout` |
 | External benchmark runner has no log progress before watchdog timeout | failure | execution | `external_runner_no_progress` |
+| External benchmark reports agent timeout | failure | benchmark | `agent_timeout` |
 | Agent killed by signal | failure | execution | `agent_signaled` |
 | Agent exits non-zero before evaluation can run | failure | execution | `agent_nonzero_exit` |
 | Verifier timeout | failure | benchmark | `verifier_timeout` |
@@ -260,6 +268,7 @@ Rules:
 - `evaluation_result` determines benchmark score and success/partial/failure when agent execution reached evaluation.
 - `failure_classification` determines `failure_class` and `failure_code`.
 - `usage_result` can only add usage fields or warning codes; it must not change outcome.
+- `warnings[]` can include adapter-translated upstream advisory verdicts. These warnings must not change `outcome`, `failure_class`, exit code, or benchmark score.
 - Optional artifact collection failure can only add warnings.
 - Required artifact collection failure maps to `execution/artifact_collection_failed`.
 - If agent fails before evaluation, `evaluation` may be null but `agent` must be present.
@@ -514,7 +523,8 @@ Terminal smoke acceptance:
 
 - A known passing fake task returns `success` and score `1`.
 - A known failing fake task returns `benchmark_failure/test_failed`.
-- A task with agent timeout returns `execution_failure/agent_timeout`.
+- A HarnessLab process-level agent timeout returns `execution_failure/agent_timeout`.
+- An external benchmark-reported agent timeout returns `benchmark_failure/agent_timeout`.
 - Artifacts under configured artifact dirs are collected and listed in manifest.
 
 ### 7.7 Patch-Style Adapter

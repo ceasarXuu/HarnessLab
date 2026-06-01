@@ -90,6 +90,13 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-019) package="harnesslab-cli"; test_name="int_019_resume_report_marks_missing_original_command" ;;
     INT-020) package="harnesslab-cli"; test_name="int_020_resume_redacts_public_artifacts_without_current_env" ;;
     INT-021) package="harnesslab-cli"; test_name="int_021_terminal_bench_silent_official_runner_is_no_progress" ;;
+    INT-022) package="harnesslab-cli"; test_name="int_022_terminal_bench_official_agent_timeout_is_benchmark_verdict" ;;
+    INT-023) package="harnesslab-cli"; test_name="int_023_terminal_bench_repeated_official_agent_timeouts_do_not_abort_run" ;;
+    INT-024) package="harnesslab-cli"; test_name="int_024_terminal_bench_success_with_agent_timeout_gets_warning" ;;
+    INT-025) package="harnesslab-cli"; test_name="int_025_terminal_bench_default_no_output_watchdog_is_disabled" ;;
+    INT-026) package="harnesslab-cli"; test_name="int_026_terminal_bench_no_progress_overrides_official_result" ;;
+    INT-027) package="harnesslab-cli"; test_name="int_027_terminal_bench_repeated_no_progress_aborts_run" ;;
+    INT-028) package="harnesslab-cli"; test_name="int_028_terminal_bench_hard_timeout_overrides_official_result" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;

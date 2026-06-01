@@ -369,11 +369,14 @@ MVP failure code 枚举：
 
 | Class | Codes |
 |---|---|
-| execution | `sandbox_create_failed`, `workspace_prep_failed`, `agent_spawn_error`, `agent_timeout`, `agent_signaled`, `agent_nonzero_exit`, `auth_failed`, `artifact_collection_failed`, `unknown_execution_error` |
-| benchmark | `verifier_timeout`, `verifier_error`, `test_failed`, `no_valid_diff`, `patch_apply_failed`, `evaluator_error`, `wrong_answer`, `unknown_benchmark_failure` |
-| warning | `usage_unknown`, `usage_parser_failed`, `artifact_optional_missing` |
+| execution | `sandbox_create_failed`, `workspace_prep_failed`, `agent_spawn_error`, `agent_timeout`, `external_runner_no_progress`, `agent_signaled`, `agent_nonzero_exit`, `artifact_collection_failed`, `docker_network_pool_exhausted`, `run_health_aborted`, `evaluator_error` |
+| benchmark | `agent_timeout`, `verifier_timeout`, `verifier_error`, `test_failed`, `no_valid_diff`, `patch_apply_failed` |
+| warning | `usage_unknown`, `usage_parser_failed`, `artifact_optional_missing`, adapter-translated upstream advisory verdicts such as `agent_timeout` |
 
 Adapters 可以保留 benchmark 原始错误码，但必须映射到上述规范 code，报告才能跨 benchmark 比较。
+外部 benchmark 明确给出的 agent timeout 是任务结果 verdict，归入 `benchmark/agent_timeout`；HarnessLab 进程级超时或 watchdog kill 才归入 execution。
+
+TaskAttemptResult 额外持有 `health_impact = none | stall | environment_unhealthy`。RunMonitor 只消费该健康影响信号，不直接枚举 benchmark adapter 的失败码。Terminal-Bench 这类外部 runner 如果被 HarnessLab 进程硬超时或 no-progress watchdog 杀掉，必须把 `health_impact` 设为 `stall`，即使官方 `results.json` 已经写出；官方 verdict 只能作为 warning 或 verifier 元数据保留。
 
 ## 6. Benchmark Adapter 架构
 
@@ -573,6 +576,7 @@ Runner 需要输出：
 Runner 不判断任务成功。任务成功只由 benchmark evaluator/verifier 决定。
 
 `no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。
+外层 hard timeout 同样是 HarnessLab 执行层失败，必须压过已经写出的外部 benchmark 结果，避免把 runner teardown/setup 卡死误算成 agent 能力得分。
 
 ## 8. Sandbox Provider 架构
 

@@ -56,6 +56,15 @@ pub enum FailureCode {
     RunHealthAborted,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum HealthImpact {
+    #[default]
+    None,
+    Stall,
+    EnvironmentUnhealthy,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Failure {
     pub class: FailureClass,
@@ -116,6 +125,8 @@ pub struct TaskAttemptResult {
     pub outcome: Outcome,
     pub failure_class: FailureClass,
     pub failure_code: Option<FailureCode>,
+    #[serde(default)]
+    pub health_impact: HealthImpact,
     pub benchmark_score: f64,
     pub duration_ms: u64,
     pub agent: Option<ProcessRecord>,
@@ -123,6 +134,20 @@ pub struct TaskAttemptResult {
     pub patch: Option<PatchRecord>,
     pub usage: crate::UsageRecord,
     pub warnings: Vec<FailureCode>,
+}
+
+pub fn health_impact_for_failure(
+    failure_class: FailureClass,
+    failure_code: Option<FailureCode>,
+) -> HealthImpact {
+    match (failure_class, failure_code) {
+        (_, Some(FailureCode::DockerNetworkPoolExhausted)) => HealthImpact::EnvironmentUnhealthy,
+        (
+            FailureClass::Execution,
+            Some(FailureCode::AgentTimeout | FailureCode::ExternalRunnerNoProgress),
+        ) => HealthImpact::Stall,
+        _ => HealthImpact::None,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

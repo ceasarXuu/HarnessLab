@@ -105,6 +105,7 @@ mod tests {
             outcome: Outcome::Success,
             failure_class: harnesslab_core::FailureClass::None,
             failure_code: None,
+            health_impact: harnesslab_core::HealthImpact::None,
             benchmark_score: 1.0,
             duration_ms: 1,
             agent: None,
