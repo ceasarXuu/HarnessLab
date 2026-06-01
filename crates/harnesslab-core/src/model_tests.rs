@@ -298,6 +298,7 @@ fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult 
         },
         failure_class: class,
         failure_code: code,
+        health_impact: health_impact_for_failure(class, code),
         benchmark_score: 0.0,
         duration_ms: 10,
         agent: None,

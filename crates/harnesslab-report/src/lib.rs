@@ -40,6 +40,8 @@ pub struct TaskRow {
     pub stderr_link: String,
     pub verifier_stdout_link: String,
     pub verifier_stderr_link: String,
+    pub warnings: String,
+    pub has_warnings: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -85,7 +87,7 @@ pub struct ReportContext {
   <p>Score uses the latest attempt per task. Usage sums all recorded attempts. Usage marked unknown is cost not comparable.</p>
   <h2>Tasks</h2>
   <table>
-    <thead><tr><th>Task</th><th>Attempt</th><th>Resume</th><th>Outcome</th><th>Failure</th><th>Score</th><th>Duration</th><th>Usage</th><th>Patch</th><th>Logs</th></tr></thead>
+    <thead><tr><th>Task</th><th>Attempt</th><th>Resume</th><th>Outcome</th><th>Failure</th><th>Warnings</th><th>Score</th><th>Duration</th><th>Usage</th><th>Patch</th><th>Logs</th></tr></thead>
     <tbody>
     {% for row in model.rows %}
       <tr>
@@ -94,6 +96,7 @@ pub struct ReportContext {
         <td>{{ row.resumed_marker }}</td>
         <td>{{ row.outcome }}</td>
         <td>{{ row.failure }}</td>
+        <td>{% if row.has_warnings %}{{ row.warnings }}{% else %}none{% endif %}</td>
         <td>{{ row.score }}</td>
         <td>{{ row.duration_ms }} ms</td>
         <td>{{ row.usage }}</td>
@@ -130,6 +133,7 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
                 ),
             };
             let patch_href = patch_href(task);
+            let warnings = warnings_text(&task.warnings);
             TaskRow {
                 task_id: task.task_id.clone(),
                 attempt: task.attempt,
@@ -161,6 +165,8 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
                     task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
                     task.attempt
                 ),
+                has_warnings: !warnings.is_empty(),
+                warnings,
             }
         })
         .collect();
@@ -201,6 +207,14 @@ fn usage_text(usage: &UsageRecord) -> String {
             None => format!("{total_tokens} tokens"),
         },
     }
+}
+
+fn warnings_text(warnings: &[harnesslab_core::FailureCode]) -> String {
+    warnings
+        .iter()
+        .map(debug_snake)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn debug_snake(value: impl std::fmt::Debug) -> String {
@@ -290,6 +304,7 @@ mod tests {
         assert!(html.contains("Agent config:"));
         assert!(html.contains("Run health:"));
         assert!(html.contains("interrupted 0"));
+        assert!(html.contains("<th>Warnings</th>"));
         assert!(html.contains("agent-profile.snapshot.json"));
         assert!(html.contains("command.txt"));
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
@@ -301,6 +316,7 @@ mod tests {
         let mut result = attempt();
         result.task_id = "task/slash".to_string();
         result.provenance = AttemptProvenance::Recovery;
+        result.warnings = vec![harnesslab_core::FailureCode::AgentTimeout];
         result.patch = Some(PatchRecord {
             diff_path: "../patch.diff".to_string(),
             prediction_path: None,
@@ -313,6 +329,7 @@ mod tests {
 
         assert!(html.contains("task/slash"));
         assert!(html.contains("<td>recovery</td>"));
+        assert!(html.contains("<td>agent_timeout</td>"));
         assert!(html.contains("tasks/task%2Fslash/attempts/1/agent/stdout.log"));
         assert!(html.contains("<td>n/a</td>"));
         assert!(!html.contains("../patch.diff"));
@@ -328,6 +345,7 @@ mod tests {
             outcome: Outcome::Success,
             failure_class: FailureClass::None,
             failure_code: None,
+            health_impact: harnesslab_core::HealthImpact::None,
             benchmark_score: 1.0,
             duration_ms: 1,
             agent: None,

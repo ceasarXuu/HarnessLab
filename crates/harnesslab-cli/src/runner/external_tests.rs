@@ -1,6 +1,7 @@
 use super::terminal_bench_env::{terminal_bench_agent_env, terminal_bench_input_mode};
 use super::terminal_bench_timeout::{
-    terminal_bench_no_output_timeout_sec, terminal_bench_timeout_values,
+    terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
+    terminal_bench_timeout_values,
 };
 use harnesslab_core::{
     AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, TerminationReason,
@@ -10,33 +11,36 @@ use std::fs;
 
 #[test]
 fn terminal_bench_timeout_values_use_run_override_when_present() {
-    assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 642));
+    assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 684));
 }
 
 #[test]
 fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
-    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 607));
-    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 601));
+    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 612));
+    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 602));
 }
 
 #[test]
-fn terminal_bench_no_output_timeout_bounds_silent_official_runner_stalls() {
+fn terminal_bench_no_output_timeout_is_override_only() {
+    assert_eq!(terminal_bench_no_output_timeout_sec(960, None), None);
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(Some(180), 3600, 3600, None),
-        240
+        terminal_bench_no_output_timeout_sec(960, Some("1")),
+        Some(1)
     );
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(None, 3600, 3600, None),
-        3660
+        terminal_bench_no_output_timeout_sec(960, Some("invalid")),
+        None
     );
+}
+
+#[test]
+fn terminal_bench_process_timeout_can_be_overridden_for_diagnostics() {
+    assert_eq!(terminal_bench_process_timeout_sec(960, None), 960);
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(None, 3600, 3600, Some("1")),
-        1
+        terminal_bench_process_timeout_sec(960, Some("invalid")),
+        960
     );
-    assert_eq!(
-        terminal_bench_no_output_timeout_sec(None, 3600, 3600, Some("invalid")),
-        3660
-    );
+    assert_eq!(terminal_bench_process_timeout_sec(960, Some("2")), 2);
 }
 
 #[test]
@@ -94,7 +98,7 @@ fn terminal_bench_result_maps_official_agent_timeout() {
         .unwrap();
 
     assert_eq!(score, 0.0);
-    assert_eq!(failure_class, FailureClass::Execution);
+    assert_eq!(failure_class, FailureClass::Benchmark);
     assert_eq!(failure_code, Some(FailureCode::AgentTimeout));
 }
 

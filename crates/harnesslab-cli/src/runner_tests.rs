@@ -3,7 +3,7 @@ use harnesslab_core::{
     AgentKind, AttemptProvenance, AuthConfig, EvaluationRecord, FailureClass, FailureCode,
     InputMode, ModelError, NetworkPolicy, Outcome, ProcessRecord, TerminationReason, UsageConfig,
     UsageRecord, WorkingDirMode, classify_agent_process, classify_evaluation_process,
-    default_agent_profile, derive_exit_code, validate_run_spec,
+    default_agent_profile, derive_exit_code, health_impact_for_failure, validate_run_spec,
 };
 
 #[test]
@@ -387,6 +387,7 @@ fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult 
         outcome: Outcome::Success,
         failure_class: class,
         failure_code: code,
+        health_impact: health_impact_for_failure(class, code),
         benchmark_score: 1.0,
         duration_ms: 1,
         agent: None,

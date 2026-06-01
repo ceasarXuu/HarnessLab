@@ -175,7 +175,7 @@ pub fn terminal_bench_root_with_tasks(tasks: &[&str]) -> tempfile::TempDir {
 }
 
 pub fn fake_uvx(body: &str) -> tempfile::TempDir {
-    fake_uvx_and_docker(body, None)
+    fake_uvx_and_docker(body, Some("exit 0\n"))
 }
 
 pub fn fake_uvx_and_docker(body: &str, docker_body: Option<&str>) -> tempfile::TempDir {

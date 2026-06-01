@@ -19,8 +19,8 @@ use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
     AgentProfile, AttemptProvenance, BenchmarkRef, EvaluationRecord, FailureClass, FailureCode,
     Outcome, RunPaths, RunSpec, TaskAttemptResult, TaskPlan, TaskState, classify_agent_process,
-    classify_evaluation_process, derive_exit_code, summarize_results, task_dir_name,
-    validate_benchmark_plan, validate_global_config, validate_run_spec,
+    classify_evaluation_process, derive_exit_code, health_impact_for_failure, summarize_results,
+    task_dir_name, validate_benchmark_plan, validate_global_config, validate_run_spec,
 };
 use harnesslab_infra::{
     ExecSpec, HostProcessExecutor, append_event, atomic_write_json, collect_artifacts,
@@ -446,6 +446,7 @@ fn execute_task(
         },
         failure_class,
         failure_code,
+        health_impact: health_impact_for_failure(failure_class, failure_code),
         benchmark_score: score,
         duration_ms: started.elapsed().as_millis() as u64,
         agent: Some(agent_run.process),
