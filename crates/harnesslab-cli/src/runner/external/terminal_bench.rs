@@ -14,7 +14,9 @@ use harnesslab_core::{
     TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord, classify_agent_process,
     health_impact_for_failure,
 };
-use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
+use harnesslab_infra::{
+    ExecSpec, HostProcessExecutor, NoOutputActivityEvent, append_event, atomic_write_json, event,
+};
 use std::fs;
 use std::path::Path;
 
@@ -102,6 +104,14 @@ pub(super) fn execute(
         working_dir: ctx.attempt_dir.to_path_buf(),
         timeout_sec: process_timeout_sec,
         no_output_timeout_sec,
+        no_output_progress_paths: vec![output_root.join(&official_run_id).join("run.log")],
+        no_output_activity_patterns: terminal_bench_no_output_activity_patterns(),
+        no_output_activity_event: Some(NoOutputActivityEvent {
+            path: ctx.run_dir.join("events.jsonl"),
+            run_id: ctx.spec.run_id.clone(),
+            task_id: Some(ctx.task.task_id.clone()),
+            event_name: "external_runner_activity".to_string(),
+        }),
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
@@ -223,6 +233,8 @@ fn append_runner_config_event(
     let no_output_timeout = no_output_timeout_sec
         .map(|timeout| timeout.to_string())
         .unwrap_or_else(|| "disabled".to_string());
+    let activity_patterns = terminal_bench_no_output_activity_patterns().join(",");
+    let progress_paths = "official/terminal-bench/<run-id>/run.log";
     append_event(
         &ctx.run_dir.join("events.jsonl"),
         &event(
@@ -230,11 +242,25 @@ fn append_runner_config_event(
             Some(&ctx.task.task_id),
             "external_runner_configured",
             &format!(
-                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout}"
+                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} progress_paths={progress_paths} activity_patterns={activity_patterns}"
             ),
         ),
         &[],
     )
+}
+
+pub(super) fn terminal_bench_no_output_activity_patterns() -> Vec<String> {
+    [
+        "docker compose",
+        "docker-compose",
+        "docker build",
+        "docker buildx",
+        "docker-buildx",
+        "docker pull",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
 }
 
 fn append_process_termination_event(

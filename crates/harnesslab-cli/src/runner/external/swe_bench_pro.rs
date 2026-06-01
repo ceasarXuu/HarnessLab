@@ -194,6 +194,9 @@ fn load_instance(dataset_path: &Path, task_id: &str, swe_dir: &Path) -> Result<S
         working_dir: swe_dir.to_path_buf(),
         timeout_sec: 300,
         no_output_timeout_sec: None,
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: None,
         stdout_path: swe_dir.join("metadata.stdout.log"),
         stderr_path: swe_dir.join("metadata.stderr.log"),
     })?;
@@ -266,6 +269,9 @@ fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -
         working_dir: swe_dir.to_path_buf(),
         timeout_sec: 1800,
         no_output_timeout_sec: None,
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: None,
         stdout_path: swe_dir.join("workspace.stdout.log"),
         stderr_path: swe_dir.join("workspace.stderr.log"),
     })?;
@@ -372,6 +378,9 @@ fn run_evaluator(
         working_dir: source_path.to_path_buf(),
         timeout_sec: task.verifier_spec.timeout_sec,
         no_output_timeout_sec: None,
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: None,
         stdout_path: attempt_root.join("verifier/stdout.log"),
         stderr_path: attempt_root.join("verifier/stderr.log"),
     })?;

@@ -57,6 +57,15 @@ fn terminal_bench_no_output_timeout_can_be_overridden_or_disabled() {
 }
 
 #[test]
+fn terminal_bench_no_output_activity_patterns_are_setup_scoped() {
+    let patterns = super::terminal_bench::terminal_bench_no_output_activity_patterns();
+
+    assert!(patterns.contains(&"docker compose".to_string()));
+    assert!(patterns.contains(&"docker-buildx".to_string()));
+    assert!(!patterns.contains(&"docker exec".to_string()));
+}
+
+#[test]
 fn terminal_bench_process_timeout_can_be_overridden_for_diagnostics() {
     assert_eq!(terminal_bench_process_timeout_sec(960, None), 960);
     assert_eq!(
