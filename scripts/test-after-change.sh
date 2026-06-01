@@ -56,6 +56,9 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-012) package="harnesslab-infra"; test_name="docker::tests::c_sbox_012_mount_check_reports_dry_run_status" ;;
     C-SBOX-013) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_host_exec_no_output_timeout_is_structured" ;;
     C-SBOX-014) package="harnesslab-infra"; test_name="c_sbox_014_sigterm_kills_registered_process_group" ;;
+    C-SBOX-015) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_pattern_defers_to_hard_timeout" ;;
+    C-SBOX-016) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_disappearing_kills_promptly" ;;
+    C-SBOX-017) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_progress_file_defers_to_hard_timeout" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
@@ -98,6 +101,9 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-026) package="harnesslab-cli"; test_name="int_026_terminal_bench_no_progress_overrides_official_result" ;;
     INT-027) package="harnesslab-cli"; test_name="int_027_terminal_bench_repeated_no_progress_aborts_run" ;;
     INT-028) package="harnesslab-cli"; test_name="int_028_terminal_bench_hard_timeout_overrides_official_result" ;;
+    INT-029) exec scripts/verify-terminal-bench-docker-activity-watchdog.sh ;;
+    INT-030) package="harnesslab-cli"; test_name="int_030_terminal_bench_silent_docker_activity_is_not_no_progress" ;;
+    INT-031) package="harnesslab-cli"; test_name="int_031_terminal_bench_progress_deferral_still_hard_times_out" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;
@@ -148,6 +154,9 @@ PYTHONPATH="$PWD/integrations/terminal_bench" \
 
 echo "== terminal-bench-real-import-timeout-cleanup =="
 scripts/verify-terminal-bench-import-timeout-cleanup.sh
+
+echo "== terminal-bench-real-docker-activity-watchdog =="
+scripts/verify-terminal-bench-docker-activity-watchdog.sh
 
 echo "== registry-check =="
 scripts/verify-test-registry.sh

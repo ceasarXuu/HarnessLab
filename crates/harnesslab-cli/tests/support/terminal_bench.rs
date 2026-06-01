@@ -187,6 +187,16 @@ pub fn fake_uvx_and_docker(body: &str, docker_body: Option<&str>) -> tempfile::T
     bin
 }
 
+pub fn fake_uvx_and_docker_buildx(body: &str) -> tempfile::TempDir {
+    let bin = tempfile::tempdir().unwrap();
+    write_executable(&bin.path().join("uvx"), body);
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("/bin/sleep", bin.path().join("docker-buildx")).unwrap();
+    #[cfg(not(unix))]
+    write_executable(&bin.path().join("docker-buildx"), "sleep \"$1\"\n");
+    bin
+}
+
 fn write_executable(path: &Path, body: &str) {
     fs::write(path, format!("#!/bin/sh\n{body}")).unwrap();
     let mut permissions = fs::metadata(path).unwrap().permissions();

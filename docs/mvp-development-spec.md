@@ -198,7 +198,7 @@ Schema version `1` currently includes these structured process termination reaso
 - `no_progress`
 - `signaled`
 
-`no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window.
+`no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window and the runner did not expose any configured progress or activity signal. Terminal-Bench treats official `run.log` growth as progress and active Docker setup/build subprocesses as activity, so first-time image builds are bounded by the hard process timeout instead of the no-output watchdog. Activity checks are re-probed on a short cadence after the watchdog boundary; process activity does not reset the full no-output window, while actual `run.log` growth refreshes the progress window.
 
 Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` so they are distinguishable from agent-level `agent_timeout`.
 `TaskAttemptResult.health_impact` is an adapter-agnostic run-health signal:
@@ -223,7 +223,7 @@ Pass criteria:
 | Workspace preparation fails | failure | execution | `workspace_prep_failed` |
 | Agent command not found | failure | execution | `agent_spawn_error` |
 | Agent timeout | failure | execution | `agent_timeout` |
-| External benchmark runner has no log progress before watchdog timeout | failure | execution | `external_runner_no_progress` |
+| External benchmark runner has no log progress and no configured activity before watchdog timeout | failure | execution | `external_runner_no_progress` |
 | External benchmark reports agent timeout | failure | benchmark | `agent_timeout` |
 | Agent killed by signal | failure | execution | `agent_signaled` |
 | Agent exits non-zero before evaluation can run | failure | execution | `agent_nonzero_exit` |

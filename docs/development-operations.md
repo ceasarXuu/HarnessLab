@@ -158,10 +158,11 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
 Terminal-Bench runner 有两层超时：
 
 - 官方 agent/test 超时：传给 `tb run` 的 `--global-agent-timeout-sec` 和 `--global-test-timeout-sec`，用于判定 benchmark 内部任务结果。
-- HarnessLab 进程守护超时：外层进程硬超时为 `agent_timeout + test_timeout + 600`，为官方 setup、agent、verifier、cleanup 留出完整窗口。无日志输出 watchdog 默认为 `max(agent_timeout, test_timeout) + 120`，下限 `300` 秒，并会被外层硬超时截断，避免 Docker build/setup 长时间无进展时浪费整批 run。
+- HarnessLab 进程守护超时：外层进程硬超时为 `agent_timeout + test_timeout + 600`，为官方 setup、agent、verifier、cleanup 留出完整窗口。无日志输出 watchdog 默认为 `max(agent_timeout, test_timeout) + 120`，下限 `300` 秒，并会被外层硬超时截断。Terminal-Bench 的 no-output watchdog 同时检查官方 `run.log` 是否增长，以及受管进程组内的 Docker setup/build 活动；首次构建镜像时即使 stdout/stderr 静默，只要 `run.log` 仍在推进，或仍有 `docker compose`、`docker-buildx`、`docker build` 或 `docker pull` 等活动进程，就不应触发 `external_runner_no_progress`。`docker exec` 不属于默认 setup/build 活动信号。
 
-如果官方 runner 长时间卡在 Docker build/setup 这类阶段且没有继续输出日志，HarnessLab 会杀掉整个进程组，写入 `external_runner_no_progress` 事件，并把任务标记为 `execution/external_runner_no_progress`。这类失败说明 benchmark runner 或本地 Docker 阶段无进展，不应算作 agent 解题能力失败。
+如果官方 runner 长时间卡住，且既没有继续输出日志，也没有匹配到受控 Docker setup/build 活动，HarnessLab 会杀掉整个进程组，写入 `external_runner_no_progress` 事件，并把任务标记为 `execution/external_runner_no_progress`。这类失败说明 benchmark runner 或本地 Docker 阶段无进展，不应算作 agent 解题能力失败。
 如果官方 runner 已经写出 `results.json` 但随后被 HarnessLab hard timeout 或 no-progress watchdog 杀掉，执行层失败必须压过官方结果；官方结果只作为 verifier 日志或 `warnings[]` 辅助排查。
+当 no-output watchdog 因匹配到 Docker setup/build 活动或官方 `run.log` 进度而延期时，HarnessLab 会限流写入 `external_runner_activity` 事件。Docker 活动事件包含匹配的 pid、命令名和模式；进度文件事件包含 `run.log` 路径。活动消失后不会重新获得完整 watchdog 窗口；只有官方日志文件真实增长才会刷新无日志窗口，下一次短周期复查若仍无进展会进入 no-progress 判定。
 
 调试真实卡死场景时可以临时设置 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC=<seconds>` 缩短 watchdog 等待；该值只用于本次进程，必须大于 `0`，并会被限制在外层硬超时之前。确实要允许长时间静默时，可显式设置为 `0`、`off`、`disabled` 或 `none` 关闭。
 开发诊断或契约测试需要覆盖 hard-timeout 路径时，可以临时设置 `HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC=<seconds>` 缩短 HarnessLab 外层进程守护时间；不设置时仍使用默认 `agent_timeout + test_timeout + 600`。

@@ -132,6 +132,9 @@ impl DockerCliProvider {
             working_dir: spec.working_dir.clone(),
             timeout_sec: spec.timeout_sec,
             no_output_timeout_sec: spec.no_output_timeout_sec,
+            no_output_progress_paths: spec.no_output_progress_paths.clone(),
+            no_output_activity_patterns: spec.no_output_activity_patterns.clone(),
+            no_output_activity_event: spec.no_output_activity_event.clone(),
             stdout_path: spec.stdout_path.clone(),
             stderr_path: spec.stderr_path.clone(),
         };

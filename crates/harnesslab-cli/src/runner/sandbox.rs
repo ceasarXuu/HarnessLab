@@ -32,6 +32,9 @@ pub(super) fn run_agent(
         working_dir: workspace.to_path_buf(),
         timeout_sec: agent_timeout(spec, profile, task),
         no_output_timeout_sec: None,
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: None,
         stdout_path: attempt_dir.join("agent/stdout.log"),
         stderr_path: attempt_dir.join("agent/stderr.log"),
     };
