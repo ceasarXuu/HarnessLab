@@ -5,6 +5,7 @@ import re
 import shlex
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 
 from terminal_bench.agents.base_agent import AgentResult, BaseAgent
@@ -42,10 +43,20 @@ class HarnessLabCommandAgent(BaseAgent):
         write_log(log_dir, "container_script.sh", script)
         if not script.strip():
             return AgentResult(failure_mode=FailureMode.PARSE_ERROR)
+        execution_shell, shell_resolution = resolve_execution_shell(session)
+        write_log(log_dir, "execution_shell.txt", execution_shell)
+        if shell_resolution:
+            write_log(log_dir, "execution_shell_resolution.log", shell_resolution)
+        syntax_error = shell_syntax_error(script, session, execution_shell)
+        if syntax_error:
+            write_log(log_dir, "script_syntax_error.log", syntax_error)
+            return AgentResult(failure_mode=FailureMode.PARSE_ERROR)
+        container_command = build_container_execution_command(script, execution_shell)
+        write_log(log_dir, "container_command.sh", container_command)
 
         session.send_command(
             TerminalCommand(
-                command=script,
+                command=container_command,
                 min_timeout_sec=0.0,
                 max_timeout_sec=float(timeout),
                 block=True,
@@ -121,6 +132,147 @@ def extract_shell_script(output: str) -> str:
     if fenced:
         return fenced.group(1).strip()
     return output.strip()
+
+
+def resolve_execution_shell(session: TmuxSession | None) -> tuple[str, str | None]:
+    container = getattr(session, "container", None)
+    user = execution_user(session)
+    if container is None:
+        return (
+            "/bin/sh",
+            f"no terminal container available; session_user={user}; using /bin/sh",
+        )
+    session_name = getattr(session, "_session_name", "")
+    if not session_name:
+        return (
+            "/bin/sh",
+            f"terminal session name unavailable; session_user={user}; using /bin/sh",
+        )
+    try:
+        result = exec_in_session(
+            session,
+            ["tmux", "show-options", "-t", session_name, "-v", "default-shell"],
+        )
+    except Exception as error:
+        return (
+            "/bin/sh",
+            f"tmux default-shell lookup failed: session={session_name} user={user} error={error}; using /bin/sh",
+        )
+    if getattr(result, "exit_code", 1) != 0:
+        output = decode_exec_output(getattr(result, "output", b"")).strip()
+        return (
+            "/bin/sh",
+            f"tmux default-shell lookup exited {result.exit_code}: session={session_name} user={user} output={output}; using /bin/sh",
+        )
+    shell = decode_exec_output(getattr(result, "output", b"")).strip()
+    if not shell:
+        return (
+            "/bin/sh",
+            f"tmux default-shell lookup returned empty output: session={session_name} user={user}; using /bin/sh",
+        )
+    return shell, None
+
+
+def shell_syntax_error(
+    script: str,
+    session: TmuxSession | None = None,
+    shell: str = "/bin/sh",
+) -> str | None:
+    container = getattr(session, "container", None)
+    if container is not None:
+        return container_shell_syntax_error(session, script, shell)
+    try:
+        completed = subprocess.run(
+            [shell, "-n"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as error:
+        return f"shell syntax check failed: {error}"
+    if completed.returncode == 0:
+        return None
+    return syntax_error_message(shell, completed.returncode, completed.stderr)
+
+
+def container_shell_syntax_error(
+    session: TmuxSession,
+    script: str,
+    shell: str,
+) -> str | None:
+    path = f"/tmp/harnesslab-agent-syntax-{uuid.uuid4().hex}.sh"
+    command = build_container_syntax_command(script, shell, path)
+    try:
+        result = exec_in_session(session, ["/bin/sh", "-lc", command])
+    except Exception as error:
+        return (
+            "shell syntax check failed: "
+            f"shell={shell} user={execution_user(session)} error={error}"
+        )
+    exit_code = getattr(result, "exit_code", 1)
+    output = decode_exec_output(getattr(result, "output", b""))
+    if exit_code == 0:
+        return None
+    return syntax_error_message(shell, exit_code, output)
+
+
+def exec_in_session(session: TmuxSession, command: list[str]):
+    return session.container.exec_run(command, user=execution_user(session))
+
+
+def execution_user(session: TmuxSession | None) -> str:
+    return getattr(session, "_user", "") or ""
+
+
+def build_container_syntax_command(script: str, shell: str, path: str) -> str:
+    delimiter = heredoc_delimiter(script)
+    quoted_path = shlex.quote(path)
+    quoted_shell = shlex.quote(shell)
+    return (
+        f"cat > {quoted_path} <<'{delimiter}'\n"
+        f"{script}\n"
+        f"{delimiter}\n"
+        f"{quoted_shell} -n {quoted_path}\n"
+        "status=$?\n"
+        f"rm -f {quoted_path}\n"
+        'exit "$status"'
+    )
+
+
+def build_container_execution_command(script: str, shell: str) -> str:
+    delimiter = heredoc_delimiter(script)
+    path = f"/tmp/harnesslab-agent-run-{uuid.uuid4().hex}.sh"
+    quoted_path = shlex.quote(path)
+    quoted_shell = shlex.quote(shell)
+    body = (
+        f"cat > {quoted_path} <<'{delimiter}'\n"
+        f"{script}\n"
+        f"{delimiter}\n"
+        f"{quoted_shell} {quoted_path}\n"
+        "status=$?\n"
+        f"rm -f {quoted_path}\n"
+        'test "$status" -eq 0'
+    )
+    return f"/bin/sh -lc {shlex.quote(body)}"
+
+
+def heredoc_delimiter(script: str) -> str:
+    delimiter = f"HARNESSLAB_SCRIPT_{uuid.uuid4().hex}"
+    while delimiter in script:
+        delimiter = f"HARNESSLAB_SCRIPT_{uuid.uuid4().hex}"
+    return delimiter
+
+
+def syntax_error_message(shell: str, exit_code: int, output: str) -> str:
+    details = output.strip() or "shell syntax check failed"
+    return f"shell={shell}\nexit_code={exit_code}\n{details}"
+
+
+def decode_exec_output(output) -> str:
+    if isinstance(output, bytes):
+        return output.decode(errors="replace")
+    return str(output)
 
 
 def required_env(name: str) -> str:
