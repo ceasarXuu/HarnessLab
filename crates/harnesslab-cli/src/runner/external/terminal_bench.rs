@@ -73,12 +73,12 @@ pub(super) fn execute(
         ctx,
     );
     write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
-    let default_process_timeout_sec = terminal_bench_timeout_values(
-        ctx.spec.execution.timeout_sec,
-        ctx.profile.timeout_sec,
-        ctx.task.verifier_spec.timeout_sec,
-    )
-    .2;
+    let (agent_timeout_sec, test_timeout_sec, default_process_timeout_sec) =
+        terminal_bench_timeout_values(
+            ctx.spec.execution.timeout_sec,
+            ctx.profile.timeout_sec,
+            ctx.task.verifier_spec.timeout_sec,
+        );
     let process_timeout_sec = terminal_bench_process_timeout_sec(
         default_process_timeout_sec,
         std::env::var("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC")
@@ -86,6 +86,8 @@ pub(super) fn execute(
             .as_deref(),
     );
     let no_output_timeout_sec = terminal_bench_no_output_timeout_sec(
+        agent_timeout_sec,
+        test_timeout_sec,
         process_timeout_sec,
         std::env::var("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC")
             .ok()

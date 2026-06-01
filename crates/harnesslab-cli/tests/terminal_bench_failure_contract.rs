@@ -146,7 +146,7 @@ exit 0
 }
 
 #[test]
-fn int_025_terminal_bench_default_no_output_watchdog_is_disabled() {
+fn int_025_terminal_bench_default_no_output_watchdog_is_enabled() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "oracle", None, None);
@@ -172,7 +172,8 @@ exit 0
     assert_eq!(results["tasks"][0]["state"], "success");
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("external_runner_configured"));
-    assert!(events.contains("no_output_timeout_sec=disabled"));
+    assert!(events.contains("process_timeout_sec=7800 no_output_timeout_sec=3720"));
+    assert!(!events.contains("no_output_timeout_sec=disabled"));
     assert!(!events.contains("external_runner_no_progress"));
 }
 
@@ -319,7 +320,10 @@ exit 0
         bin.path(),
         "smoke",
         &[],
-        &[("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "3")],
+        &[
+            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "3"),
+            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "off"),
+        ],
         1,
     );
 
@@ -337,7 +341,9 @@ exit 0
     assert_eq!(health["agent_timeouts"], 1);
     assert_eq!(health["execution_stalls"], 1);
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
+    assert!(events.contains("no_output_timeout_sec=disabled"));
     assert!(events.contains("external_runner_timeout"));
+    assert!(!events.contains("external_runner_no_progress"));
 }
 
 #[test]

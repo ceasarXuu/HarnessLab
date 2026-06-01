@@ -690,7 +690,31 @@ title = "Host exec no-output watchdog is structured"
 layer = "contract"
 owner_module = "harnesslab-infra"
 command = "scripts/test-after-change.sh --select C-SBOX-013"
-file_patterns = ["crates/harnesslab-infra/src/process.rs"]
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor", "ProcessRecord"]
+
+[[tests]]
+id = "C-SBOX-014"
+title = "Host exec signal shutdown kills registered process group"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-014"
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_start_gate.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+  "crates/harnesslab-infra/tests/process_signal_contract.rs",
+]
 required_artifacts = []
 status = "active"
 [tests.source]
@@ -1339,7 +1363,7 @@ contracts = ["TerminalBenchExternalRunner", "EventLog", "Report"]
 
 [[tests]]
 id = "INT-025"
-title = "Terminal-Bench default no-output watchdog is disabled"
+title = "Terminal-Bench default no-output watchdog is enabled and observable"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-025"
