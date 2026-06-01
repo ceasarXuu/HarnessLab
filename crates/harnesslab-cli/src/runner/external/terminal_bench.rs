@@ -20,6 +20,8 @@ use std::path::Path;
 
 pub(super) use super::terminal_bench_result::parse_terminal_bench_result;
 
+const IMPORT_AGENT_CLEANUP_GRACE_SEC: u64 = 30;
+
 pub(super) fn validate_profile(profile: &AgentProfile) -> Result<()> {
     let _ = terminal_bench_agent(profile)?;
     Ok(())
@@ -293,6 +295,10 @@ fn terminal_bench_command(
         profile.timeout_sec,
         ctx.task.verifier_spec.timeout_sec,
     );
+    let official_agent_timeout = terminal_bench_official_agent_timeout(
+        agent_timeout,
+        matches!(agent, TerminalBenchAgent::ImportPath(_)),
+    );
     let mut command = vec![
         terminal_bench_agent_env(profile, agent_timeout),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
@@ -301,7 +307,7 @@ fn terminal_bench_command(
         format!("--task-id {}", shell_quote(&ctx.task.task_id)),
         "--n-attempts 1".to_string(),
         "--n-concurrent 1".to_string(),
-        format!("--global-agent-timeout-sec {agent_timeout}"),
+        format!("--global-agent-timeout-sec {official_agent_timeout}"),
         format!("--global-test-timeout-sec {test_timeout}"),
         format!("--output-path {}", shell_quote(&output_root.display().to_string())),
         format!("--run-id {}", shell_quote(run_id)),
@@ -321,6 +327,17 @@ fn terminal_bench_command(
         }
     }
     command.join(" ")
+}
+
+pub(super) fn terminal_bench_official_agent_timeout(
+    agent_timeout: u64,
+    uses_import_agent: bool,
+) -> u64 {
+    if uses_import_agent {
+        agent_timeout.saturating_add(IMPORT_AGENT_CLEANUP_GRACE_SEC)
+    } else {
+        agent_timeout
+    }
 }
 
 enum TerminalBenchAgent {

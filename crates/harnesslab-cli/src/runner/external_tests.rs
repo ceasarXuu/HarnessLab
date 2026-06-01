@@ -89,6 +89,18 @@ fn terminal_bench_env_uses_effective_agent_timeout() {
 }
 
 #[test]
+fn terminal_bench_import_agent_official_timeout_adds_cleanup_grace() {
+    assert_eq!(
+        super::terminal_bench::terminal_bench_official_agent_timeout(300, true),
+        330
+    );
+    assert_eq!(
+        super::terminal_bench::terminal_bench_official_agent_timeout(300, false),
+        300
+    );
+}
+
+#[test]
 fn terminal_bench_tty_mode_maps_to_stdin_for_import_agent() {
     let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent");
     profile.input_mode = InputMode::Tty;
@@ -206,10 +218,117 @@ fn terminal_bench_result_unknown_failure_mode_falls_back_to_test_failed() {
     assert_eq!(failure_code, Some(FailureCode::TestFailed));
 }
 
+#[test]
+fn terminal_bench_result_adapter_timeout_log_overrides_parse_error() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"parse_error"}]}"#,
+    );
+    write_agent_error_log(
+        &result_path,
+        "agent command timed out; configured_timeout_sec=3; cleanup=root_pid=1 succeeded=True",
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Benchmark);
+    assert_eq!(failure_code, Some(FailureCode::AgentTimeout));
+}
+
+#[test]
+fn terminal_bench_result_failed_adapter_cleanup_stays_test_failed() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"parse_error"}]}"#,
+    );
+    write_agent_error_log(
+        &result_path,
+        "agent command timed out; configured_timeout_sec=3; cleanup=root_pid=1 succeeded=False",
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Benchmark);
+    assert_eq!(failure_code, Some(FailureCode::TestFailed));
+}
+
+#[test]
+fn terminal_bench_result_official_failure_mode_wins_over_adapter_timeout_log() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"test_timeout"}]}"#,
+    );
+    write_agent_error_log(
+        &result_path,
+        "agent command timed out; configured_timeout_sec=3; cleanup=root_pid=1 succeeded=True",
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Benchmark);
+    assert_eq!(failure_code, Some(FailureCode::VerifierTimeout));
+}
+
+#[test]
+fn terminal_bench_result_stale_adapter_timeout_log_does_not_override_parse_error() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let stale_log_dir = attempt_dir
+        .path()
+        .join("official/stale-run/task/agent-logs");
+    fs::create_dir_all(&stale_log_dir).unwrap();
+    fs::write(
+        stale_log_dir.join("agent_error.log"),
+        "agent command timed out; configured_timeout_sec=3; cleanup=root_pid=1 succeeded=True",
+    )
+    .unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"parse_error"}]}"#,
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Benchmark);
+    assert_eq!(failure_code, Some(FailureCode::TestFailed));
+}
+
 fn write_result(root: &std::path::Path, json: &str) -> std::path::PathBuf {
     let result_dir = root.join("official/run-1");
     fs::create_dir_all(&result_dir).unwrap();
     let result_path = result_dir.join("results.json");
     fs::write(&result_path, json).unwrap();
     result_path
+}
+
+fn write_agent_error_log(result_path: &std::path::Path, content: &str) {
+    let log_dir = result_path.parent().unwrap().join("task/agent-logs");
+    fs::create_dir_all(&log_dir).unwrap();
+    fs::write(log_dir.join("agent_error.log"), content).unwrap();
 }

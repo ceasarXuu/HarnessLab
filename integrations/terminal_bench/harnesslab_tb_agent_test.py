@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 from terminal_bench.agents.failure_mode import FailureMode
 
+from harnesslab_tb_process import AgentCommandTimedOut, CleanupResult
+
 from harnesslab_tb_agent import (
     HarnessLabCommandAgent,
     extract_shell_script,
@@ -143,6 +145,68 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             result = agent.perform_task("do it", FakeSession())
 
         self.assertEqual(result.failure_mode, FailureMode.PARSE_ERROR)
+
+    def test_perform_task_maps_agent_command_timeout_to_agent_timeout(self):
+        agent = HarnessLabCommandAgent()
+        command = (
+            "python -c "
+            + shlex.quote(
+                "import time; print('partial-output', flush=True); time.sleep(60)"
+            )
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(
+                os.environ,
+                {
+                    "HARNESSLAB_AGENT_COMMAND": command,
+                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
+                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "1",
+                },
+                clear=False,
+            ):
+                result = agent.perform_task("do it", FakeSession(), Path(tmp))
+
+            log_dir = Path(tmp)
+            error_text = (log_dir / "agent_error.log").read_text()
+            stdout_text = (log_dir / "agent_stdout_partial.log").read_text()
+            prompt_text = (log_dir / "prompt.txt").read_text()
+
+        self.assertEqual(result.failure_mode, FailureMode.AGENT_TIMEOUT)
+        self.assertIn("timed out", error_text)
+        self.assertIn("configured_timeout", error_text)
+        self.assertIn("succeeded=True", error_text)
+        self.assertIn("partial-output", stdout_text)
+        self.assertIn("Task instruction:", prompt_text)
+
+    def test_perform_task_maps_failed_cleanup_to_unknown_agent_error(self):
+        agent = HarnessLabCommandAgent()
+        cleanup = CleanupResult(
+            root_pid=123,
+            pids={123},
+            pgids={123},
+            token="token",
+            token_survivors={456},
+            alive_pids=set(),
+        )
+        timeout_error = AgentCommandTimedOut(1, cleanup, "out", "err")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(
+                os.environ,
+                {
+                    "HARNESSLAB_AGENT_COMMAND": "agent",
+                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
+                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "1",
+                },
+                clear=False,
+            ), patch(
+                "harnesslab_tb_agent.run_registered_agent",
+                side_effect=timeout_error,
+            ):
+                result = agent.perform_task("do it", FakeSession(), Path(tmp))
+            error_text = (Path(tmp) / "agent_error.log").read_text()
+
+        self.assertEqual(result.failure_mode, FailureMode.UNKNOWN_AGENT_ERROR)
+        self.assertIn("token_survivors=[456]", error_text)
 
     def test_perform_task_maps_invalid_shell_output_to_parse_error(self):
         agent = HarnessLabCommandAgent()
