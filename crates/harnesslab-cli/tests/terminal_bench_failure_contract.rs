@@ -416,3 +416,54 @@ sleep 8
     let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
     assert!(report.contains("execution/external_runner_no_progress"));
 }
+
+#[test]
+fn int_039_terminal_bench_stale_early_run_log_becomes_no_progress() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(home.path(), "oracle", None, None);
+    let root = terminal_bench_root();
+    let bin = fake_uvx(
+        r#"out=""; run=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-path) out="$2"; shift 2 ;;
+    --run-id) run="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$out/$run"
+printf 'early setup log\n' >> "$out/$run/run.log"
+sleep 8
+"#,
+    );
+
+    let (results, run_dir, _) = run_terminal_with_split_extra_args_and_env(
+        home.path(),
+        root.path(),
+        bin.path(),
+        "smoke",
+        &[],
+        &[
+            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "2"),
+            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "10"),
+        ],
+        1,
+    );
+
+    assert_eq!(results["summary"]["execution_failure"], 1);
+    assert_eq!(results["tasks"][0]["failure_class"], "execution");
+    assert_eq!(
+        results["tasks"][0]["failure_code"],
+        "external_runner_no_progress"
+    );
+    assert_eq!(
+        results["tasks"][0]["agent"]["termination_reason"],
+        "no_progress"
+    );
+    let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
+    assert!(events.contains("progress file path="));
+    assert!(events.contains("external_runner_no_progress"));
+    assert!(!events.contains("external_runner_timeout"));
+    assert!(events.contains("last_progress=path="));
+}

@@ -768,7 +768,7 @@ contracts = ["HostProcessExecutor", "ProcessRecord"]
 
 [[tests]]
 id = "C-SBOX-017"
-title = "Host exec no-output progress file defers to hard timeout"
+title = "Host exec no-output progress resets watchdog window"
 layer = "contract"
 owner_module = "harnesslab-infra"
 command = "scripts/test-after-change.sh --select C-SBOX-017"
@@ -828,6 +828,49 @@ section = "8.2"
 [tests.verifies]
 requirements = ["execution_runtime", "artifact_event_store"]
 contracts = ["HostProcessExecutor", "ProcessRecord", "EventLog"]
+
+[[tests]]
+id = "C-SBOX-020"
+title = "Host exec samples progress before watchdog boundary"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-020"
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_progress.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor", "ProcessRecord"]
+
+[[tests]]
+id = "C-SBOX-021"
+title = "Host exec progress resets activity grace"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-021"
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_activity.rs",
+  "crates/harnesslab-infra/src/process_progress.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor", "ProcessRecord"]
 
 [[tests]]
 id = "ART-003"
@@ -1867,6 +1910,28 @@ section = "HarnessLab Terminal-Bench Real-Run Checks"
 [tests.verifies]
 requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
 contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "ProcessCleanup"]
+
+[[tests]]
+id = "INT-039"
+title = "Terminal-Bench stale early run log becomes no-progress"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-039"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_progress.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
 
 [[tests]]
 id = "TB-001"

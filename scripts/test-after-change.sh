@@ -61,9 +61,11 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-014) package="harnesslab-infra"; test_name="c_sbox_014_sigterm_kills_registered_process_group" ;;
     C-SBOX-015) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_pattern_defers_to_hard_timeout" ;;
     C-SBOX-016) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_disappearing_kills_promptly" ;;
-    C-SBOX-017) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_progress_file_defers_to_hard_timeout" ;;
+    C-SBOX-017) package="harnesslab-infra"; test_name="process::tests::c_sbox_017_no_output_progress_file_resets_watchdog_window" ;;
     C-SBOX-018) package="harnesslab-infra"; test_name="process::tests::c_sbox_018_no_output_activity_has_bounded_grace" ;;
     C-SBOX-019) package="harnesslab-infra"; test_name="process::tests::c_sbox_019_activity_event_emits_after_output_reset" ;;
+    C-SBOX-020) package="harnesslab-infra"; test_name="process::tests::c_sbox_020_progress_file_is_sampled_before_watchdog_boundary" ;;
+    C-SBOX-021) package="harnesslab-infra"; test_name="process::tests::c_sbox_018_progress_growth_resets_activity_grace" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
@@ -123,6 +125,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-036) exec scripts/verify-terminal-bench-docker-activity-grace-expiry.sh ;;
     INT-037) exec scripts/verify-terminal-bench-import-success-cleanup.sh ;;
     INT-038) exec scripts/verify-terminal-bench-import-timeout-cleanup.sh ;;
+    INT-039) package="harnesslab-cli"; test_name="int_039_terminal_bench_stale_early_run_log_becomes_no_progress" ;;
     TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
     TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
     TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
