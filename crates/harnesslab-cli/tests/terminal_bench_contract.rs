@@ -84,7 +84,7 @@ exit 0
 }
 
 #[test]
-fn int_011_terminal_bench_run_timeout_override_wins_over_benchmark_default() {
+fn int_011_terminal_bench_run_timeout_override_does_not_inflate_test_timeout() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "oracle", None, None);
@@ -100,7 +100,7 @@ while [ "$#" -gt 0 ]; do
     *) shift ;;
   esac
 done
-if [ "$agent_timeout" != "123" ] || [ "$test_timeout" != "123" ]; then
+if [ "$agent_timeout" != "123" ] || [ "$test_timeout" != "3600" ]; then
   echo "bad timeouts agent=$agent_timeout test=$test_timeout" >&2
   exit 64
 fi

@@ -20,6 +20,28 @@ fn monitor_aborts_immediately_on_docker_network_pool_exhaustion() {
         serde_json::from_str(&std::fs::read_to_string(tmp.path().join("run-health.json")).unwrap())
             .unwrap();
     assert_eq!(health["status"], "invalid");
+    assert_eq!(health["environment_failures"], 1);
+    assert_eq!(health["docker_network_failures"], 1);
+}
+
+#[test]
+fn monitor_aborts_immediately_on_external_runner_setup_failure() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut monitor = RunMonitor::new("run-1", 2);
+    let result = attempt(FailureCode::ExternalRunnerSetupFailed);
+
+    let abort = monitor.record_result(tmp.path(), &result).unwrap();
+
+    assert_eq!(
+        abort.unwrap().reason,
+        "external runner setup failed; benchmark environment is unhealthy"
+    );
+    let health: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(tmp.path().join("run-health.json")).unwrap())
+            .unwrap();
+    assert_eq!(health["status"], "invalid");
+    assert_eq!(health["environment_failures"], 1);
+    assert_eq!(health["docker_network_failures"], 0);
 }
 
 #[test]

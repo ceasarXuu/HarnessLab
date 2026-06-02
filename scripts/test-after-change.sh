@@ -3,6 +3,7 @@ set -euo pipefail
 
 if [[ "${1:-}" == "--select" ]]; then
   id="${2:?missing test id}"
+  test_target="${HARNESSLAB_TEST_TARGET:-}"
   case "$id" in
     CLI-001) package="harnesslab-cli"; test_name="cli_001_help_lists_m0_commands" ;;
     CLI-002) package="harnesslab-cli"; test_name="cli_002_resume_and_replay_are_nested_under_run" ;;
@@ -40,6 +41,8 @@ if [[ "${1:-}" == "--select" ]]; then
     C-BENCH-006) package="harnesslab-cli"; test_name="bench_002_swe_bench_pro_info_uses_local_data_root" ;;
     C-BENCH-007) package="harnesslab-cli"; test_name="bench_003_run_blocks_unsupported_local_full_split_before_planning" ;;
     C-BENCH-008) package="harnesslab-cli"; test_name="bench_004_run_blocks_swe_bench_pro_full_before_planning" ;;
+    C-BENCH-009) package="harnesslab-adapters"; test_name="terminal_bench::tests::c_bench_006_terminal_bench_maps_task_test_timeout"; test_target="lib" ;;
+    C-BENCH-010) package="harnesslab-adapters"; test_name="terminal_bench::tests::c_bench_006_terminal_bench_ignores_timeout_text_inside_block_scalars"; test_target="lib" ;;
     ART-003) package="harnesslab-infra"; test_name="artifact::tests::art_003_atomic_json_write_produces_valid_json" ;;
     LOG-003) package="harnesslab-infra"; test_name="event::tests::log_003_events_are_redacted" ;;
     LOG-005) package="harnesslab-infra"; test_name="event::tests::log_005_concurrent_process_appends_preserve_jsonl" ;;
@@ -87,6 +90,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ORCH-020) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_007_terminal_bench_pre_run_considers_stale_run_without_snapshot" ;;
     ORCH-021) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_008_terminal_bench_pre_run_uses_stale_run_json_id" ;;
     ORCH-022) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_009_terminal_bench_pre_run_ignores_loose_name_match" ;;
+    ORCH-023) package="harnesslab-cli"; test_name="runner::monitor::tests::monitor_aborts_immediately_on_external_runner_setup_failure"; test_target="lib" ;;
     REPLAY-002) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_keeps_completed_attempts_and_schedules_missing_only" ;;
     REPLAY-004) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_failed_completed_attempt_schedules_recovery_attempt" ;;
     REPLAY-005) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_does_not_create_unbounded_recovery_attempts" ;;
@@ -130,10 +134,19 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-041) package="harnesslab-cli"; test_name="int_041_cleanup_failure_does_not_mask_no_progress_health" ;;
     INT-042) package="harnesslab-cli"; test_name="int_042_cleanup_failure_overrides_benchmark_failure_with_warning" ;;
     INT-043) package="harnesslab-cli"; test_name="int_043_cleanup_failure_does_not_mask_runner_timeout_health" ;;
+    INT-044) package="harnesslab-cli"; test_name="int_044_terminal_bench_runtime_exports_amd64_platform_by_default"; test_target="test:terminal_bench_runtime_contract" ;;
+    INT-045) package="harnesslab-cli"; test_name="int_011_terminal_bench_run_timeout_override_does_not_inflate_test_timeout"; test_target="test:terminal_bench_contract" ;;
     TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
     TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
     TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
     TB-004) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_hard_timeout_maps_to_external_runner_timeout" ;;
+    TB-005) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_maps_parse_error_to_agent_output_parse_error"; test_target="lib" ;;
+    TB-006) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_no_output_timeout_defaults_to_setup_watchdog"; test_target="lib" ;;
+    TB-007) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::detects_terminal_bench_compose_setup_failure"; test_target="lib" ;;
+    TB-008) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prepares_qemu_dataset_without_mutating_source"; test_target="lib" ;;
+    TB-009) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prepares_forced_amd64_qemu_dataset"; test_target="lib" ;;
+    TB-010) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prep_failure_is_structured_task_result"; test_target="lib" ;;
+    TB-011) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::ignores_verifier_logs_with_docker_error_text"; test_target="lib" ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
@@ -144,16 +157,41 @@ if [[ "${1:-}" == "--select" ]]; then
       exit 2
       ;;
   esac
+  if [[ -z "$test_target" && "$test_name" != *::* ]]; then
+    crate_tests_dir="crates/$package/tests"
+    if [[ -d "$crate_tests_dir" ]]; then
+      matched_test_files=()
+      while IFS= read -r matched_test_file; do
+        matched_test_files+=("$matched_test_file")
+      done < <(rg -l "fn[[:space:]]+$test_name\\b" "$crate_tests_dir" 2>/dev/null || true)
+      if [[ "${#matched_test_files[@]}" -eq 1 ]]; then
+        test_target="test:$(basename "${matched_test_files[0]}" .rs)"
+      fi
+    fi
+  fi
+
+  cargo_args=(-p "$package" --all-features)
+  if [[ "$test_target" == "lib" ]]; then
+    cargo_args+=(--lib)
+  elif [[ "$test_target" == test:* ]]; then
+    cargo_args+=(--test "${test_target#test:}")
+  fi
   set +e
-  output="$(cargo test -p "$package" --all-features "$test_name" -- --exact 2>&1)"
+  output="$(cargo test "${cargo_args[@]}" "$test_name" -- --exact 2>&1)"
   cargo_status=$?
   set -e
   printf '%s\n' "$output"
   if [[ "$cargo_status" -ne 0 ]]; then
     exit "$cargo_status"
   fi
-  if ! grep -q "running 1 test" <<<"$output"; then
+  running_one_count="$(grep -c '^running 1 test$' <<<"$output" || true)"
+  if [[ "$running_one_count" -ne 1 ]]; then
     echo "selected test did not run exactly once: $id -> $test_name" >&2
+    exit 1
+  fi
+  test_basename="${test_name##*::}"
+  if ! grep -Eq "^test .*${test_basename//./\\.} .*\\.\\.\\. ok$" <<<"$output"; then
+    echo "selected test output did not contain target ok line: $id -> $test_name" >&2
     exit 1
   fi
   exit 0

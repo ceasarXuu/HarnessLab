@@ -156,17 +156,24 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
 - 再查 `report.html`，确认任务明细展示 `benchmark/agent_timeout`、`execution/external_runner_no_progress`、`execution/external_runner_timeout`、`execution/agent_cleanup_failed` 等 snake_case 分类；如果官方结果同时给成功任务带了 `failure_mode=agent_timeout`，报告应在 `Warnings` 列展示 `agent_timeout`。
 - 最后查 Docker 残留：`docker network ls --filter label=com.docker.compose.project` 和 `docker ps -a --filter label=com.docker.compose.project` 不应留下本次 run id 对应的资源。
 
-Terminal-Bench runner 有两层超时：
+Terminal-Bench runner 有三层超时：
 
-- 官方 agent/test 超时：传给 `tb run` 的 `--global-agent-timeout-sec` 和 `--global-test-timeout-sec`，用于判定 benchmark 内部任务结果。
-- HarnessLab 进程守护超时：外层进程硬超时默认为 `agent_timeout + test_timeout + 1800`，为官方 setup、首次 Docker build、agent、verifier、cleanup 留出完整窗口。无日志输出 watchdog 默认为 `max(agent_timeout, test_timeout) + 120`，下限 `300` 秒，并会被外层硬超时截断。Terminal-Bench 的 no-output watchdog 同时检查官方 `run.log` 是否增长，以及受管进程组内的 Docker setup/build 活动；首次构建镜像时即使 stdout/stderr 静默，只要 `run.log` 仍在推进，或短时间内仍有 `docker compose`、`docker-buildx`、`docker build` 或 `docker pull` 等活动进程，就不应触发 `external_runner_no_progress`。纯进程活动最多只能延期一个额外 watchdog 窗口；`docker exec` 不属于默认 setup/build 活动信号。
+- 官方 agent/test 超时：来自 Terminal-Bench `task.yaml` 的 `max_agent_timeout_sec` 和 `max_test_timeout_sec`。HarnessLab 传给 `tb run` 的 `--global-agent-timeout-sec` 会在 agent timeout 基础上给 import-agent cleanup 增加 30 秒余量，传给 `tb run` 的 `--global-test-timeout-sec` 必须保持 benchmark verifier 自己的测试超时。用户 `--timeout-sec` 不能放大官方 verifier timeout。
+- HarnessLab agent env 超时：传给 Python bridge 的 `HARNESSLAB_AGENT_TIMEOUT_SEC` 必须是 task agent timeout cap 之后的值。例如 QEMU task 的 `max_agent_timeout_sec=360.0` 时，即使命令行传 `--timeout-sec 1800`，bridge 也应看到 `HARNESSLAB_AGENT_TIMEOUT_SEC=360`。
+- HarnessLab 进程守护超时：外层进程硬超时默认为 `agent_timeout + test_timeout + 1800`，为官方 setup、首次 Docker build、agent、verifier、cleanup 留出完整窗口。无日志输出 watchdog 默认为 `max(agent_timeout, test_timeout) + 120`，下限 `1800` 秒，并会被外层硬超时截断。Terminal-Bench 的 no-output watchdog 同时检查官方 `run.log` 是否增长，以及受管进程组内的 Docker setup/build 活动；首次构建镜像时即使 stdout/stderr 静默，只要 `run.log` 仍在推进，或短时间内仍有 `docker compose`、`docker-buildx`、`docker build` 或 `docker pull` 等活动进程，就不应触发 `external_runner_no_progress`。纯进程活动最多只能延期一个额外 watchdog 窗口；`docker exec` 不属于默认 setup/build 活动信号。
+
+Terminal-Bench runtime 对普通 task 默认导出 `DOCKER_DEFAULT_PLATFORM=linux/amd64` 和 `BUILDKIT_PROGRESS=plain` 后再执行 `tb run`。对 `build-initramfs-qemu` 和 `build-tcc-qemu`，Apple Silicon 默认改用 `linux/arm64` 容器并交叉编译 x86_64 kernel/rootfs；真实报告里的 `external_runner_configured` 事件必须记录最终平台值。诊断其他平台时可以临时设置 `HARNESSLAB_TERMINAL_BENCH_DOCKER_PLATFORM=<platform>` 覆盖。
+在 Apple Silicon 上，`build-initramfs-qemu` 和 `build-tcc-qemu` 的 amd64 setup build 可能因为 QEMU/binfmt 下的 GCC 崩溃而在 agent 启动前失败。HarnessLab 对这两个 task 做 attempt-local dataset 兼容准备：复制该 task 目录到当前 attempt；native arm64 模式给 Dockerfile 注入 `gcc-x86-64-linux-gnu` 并把 kernel build 改为 `make ARCH=x86_64 CROSS_COMPILE=x86_64-linux-gnu- -j$(nproc)`；强制 amd64 emulation 模式仅降级为 `make -j1`。该处理必须写入 `terminal_bench_dataset_prepared` 事件，且不得修改 `.benchmarks/terminal-bench/...` 原始数据。
 
 如果官方 runner 长时间卡住，且既没有继续输出日志，也没有可接受的受控 Docker setup/build 活动 grace，HarnessLab 会杀掉整个进程组，写入 `external_runner_no_progress` 事件，并把任务标记为 `execution/external_runner_no_progress`。如果官方 runner 持续有活动但超过外层 hard timeout，HarnessLab 写入 `external_runner_timeout` 事件，并把任务标记为 `execution/external_runner_timeout`。这两类失败说明 benchmark runner 或本地 Docker 阶段有执行层问题，不应算作 agent 解题能力失败；`external_runner_timeout` 会触发 run-health abort，避免继续污染完整 bench。
 如果官方 runner 已经写出 `results.json` 但随后被 HarnessLab hard timeout 或 no-progress watchdog 杀掉，执行层失败必须压过官方结果；官方结果只作为 verifier 日志或 `warnings[]` 辅助排查。
+如果官方 Terminal-Bench 在 agent 启动前的 `docker compose build/up` 阶段失败，官方结果可能只给 `failure_mode=unknown_agent_error`。HarnessLab 必须扫描 `run.log/stdout/stderr` 中的 Docker compose setup failure，把结果覆盖为 `execution/external_runner_setup_failed`，并让 run-health 中止剩余 pending task；这类错误不计入 agent 解题能力。
 当 no-output watchdog 因匹配到 Docker setup/build 活动或官方 `run.log` 进度而延期时，HarnessLab 会限流写入 `external_runner_activity` 事件。Docker 活动事件包含匹配的 pid、命令名和模式；进度文件事件包含 `run.log` 路径。进度文件会在进程运行期间持续采样，早期写入不会被延迟到 watchdog 边界才计时。活动消失后不会重新获得完整 watchdog 窗口；纯活动持续存在也只能延期一个额外 watchdog 窗口。只有官方日志文件真实增长才会刷新无日志窗口，下一次短周期复查若仍无进展会进入 no-progress 判定。最终 `external_runner_no_progress` 事件会包含 `activity_grace_exhausted`、`current_activity`、`last_activity` 和 `last_progress`，用于判断是没有任何活动、活动 grace 过期，还是进度文件增长后再次卡住。
 
 调试真实卡死场景时可以临时设置 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC=<seconds>` 缩短 watchdog 等待；该值只用于本次进程，必须大于 `0`，并会被限制在外层硬超时之前。确实要允许长时间静默时，可显式设置为 `0`、`off`、`disabled` 或 `none` 关闭。
 开发诊断或契约测试需要覆盖 hard-timeout 路径时，可以临时设置 `HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC=<seconds>` 缩短 HarnessLab 外层进程守护时间；不设置时仍使用默认 `agent_timeout + test_timeout + 1800`。
+
+如果官方结果出现 `failure_mode=parse_error`，HarnessLab 必须映射为 `benchmark/agent_output_parse_error`。常见原因是 agent 在 shell 脚本前输出自然语言前言；Terminal-Bench Python adapter 会剥离纯前言并从第一行 shell-looking 命令开始执行，但不得丢弃包含 shell 语义的内容。
 
 使用 `terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"` 接入本机 CLI agent 时，HarnessLab 传给适配层的 `HARNESSLAB_AGENT_TIMEOUT_SEC` 必须保持原始 agent 预算，传给官方 `tb run` 的 `--global-agent-timeout-sec` 会额外增加清理余量，避免官方外层 timeout 先中断 `perform_task`。排查真实 run 时，如果看到 `agent_timeout` 且宿主机仍有对应 agent 子进程，优先修适配层进程树清理，而不是继续跑完整 bench。
 

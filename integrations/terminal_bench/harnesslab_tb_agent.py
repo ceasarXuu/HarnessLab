@@ -144,7 +144,83 @@ def extract_shell_script(output: str) -> str:
     fenced = re.search(r"```(?:sh|bash|shell)?\s*(.*?)```", output, re.DOTALL)
     if fenced:
         return fenced.group(1).strip()
-    return output.strip()
+    stripped = output.strip()
+    lines = stripped.splitlines()
+    for index, line in enumerate(lines):
+        if looks_like_shell_start(line):
+            if index == 0:
+                return stripped
+            if not all(looks_like_preamble_line(prefix) for prefix in lines[:index]):
+                return stripped
+            return "\n".join(lines[index:]).strip()
+    return stripped
+
+
+def looks_like_preamble_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return True
+    return not re.search(r"[=(){}<>|;&`$\\\\]", stripped)
+
+
+def looks_like_shell_start(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    first = stripped.split(maxsplit=1)[0]
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", stripped):
+        return True
+    return stripped.startswith("#") or first in {
+        "{",
+        "(",
+        "if",
+        "then",
+        "elif",
+        "else",
+        "fi",
+        "for",
+        "while",
+        "until",
+        "do",
+        "done",
+        "case",
+        "esac",
+        "bash",
+        "sh",
+        "/bin/bash",
+        "/bin/sh",
+        "set",
+        "export",
+        "apt-get",
+        "apt",
+        "apk",
+        "yum",
+        "dnf",
+        "mkdir",
+        "cd",
+        "cat",
+        "chmod",
+        "chown",
+        "wget",
+        "curl",
+        "git",
+        "tar",
+        "gzip",
+        "cp",
+        "mv",
+        "rm",
+        "make",
+        "./configure",
+        "python",
+        "python3",
+        "pip",
+        "uv",
+        "cargo",
+        "npm",
+        "echo",
+        "printf",
+        "qemu-system-x86_64",
+    }
 
 
 def resolve_execution_shell(session: TmuxSession | None) -> tuple[str, str | None]:
