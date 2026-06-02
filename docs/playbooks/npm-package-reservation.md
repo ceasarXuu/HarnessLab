@@ -2,6 +2,8 @@
 
 This playbook records the steps used to reserve the public
 `@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names.
+It also records the additional brand-name reservations `harnessrig` and
+`harnessyard`.
 
 ## Goal And Current Outcome
 
@@ -15,6 +17,9 @@ Current outcome:
 - npm package name achieved: scoped fallback `@ceasarxuu/harnesslab`
 - CLI command name achieved after install: `harnesslab`
 - npm package name not achieved: unscoped `harnesslab`
+- additional package names achieved: `harnessrig`, `harnessyard`
+- additional CLI command names achieved after install: `harnessrig`,
+  `harnessyard`
 
 The reservation package is intentionally small. It publishes package metadata,
 the license, README, and a command shim that reports the current distribution
@@ -24,6 +29,11 @@ The unscoped `harnesslab` package name cannot currently be published because npm
 rejects it as too similar to the existing `harness-lab` package. The scoped name
 is the npm-recommended fallback and still reserves the `harnesslab` executable
 when installed from the scoped package.
+
+`harnessrig` and `harnessyard` were published as independent unscoped
+reservation packages at version `0.1.0`. Each package owns its same-named CLI
+command and points users back to the HarnessLab repository while the native CLI
+distribution strategy is prepared.
 
 ## Preflight
 
@@ -152,6 +162,60 @@ npm run smoke:npm-registry
 
 Do not store raw tokens, OTPs, npm debug logs, or command output containing
 credential material in repository artifacts.
+
+## Additional Brand Reservations
+
+On 2026-06-03, the following unscoped npm reservation packages were published:
+
+| Package | Version | CLI command | Registry status |
+|---|---:|---|---|
+| `harnessrig` | `0.1.0` | `harnessrig` | `200` |
+| `harnessyard` | `0.1.0` | `harnessyard` | `200` |
+
+Preflight exact-name checks returned `404` for both names before publishing:
+
+```bash
+npm view harnessrig name version bin --json
+npm view harnessyard name version bin --json
+```
+
+Each reservation package should stay small:
+
+```text
+LICENSE
+README.md
+bin/<command>.js
+package.json
+```
+
+After publication, verify both package metadata and the clean-directory command
+path:
+
+```bash
+npm view harnessrig name version bin --json
+npm view harnessyard name version bin --json
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnessrig
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnessyard
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+npx --yes harnessrig --version
+npx --yes harnessrig --help
+npx --yes harnessyard --version
+npx --yes harnessyard --help
+```
+
+Observed publish behavior:
+
+- `npm publish --access public --auth-type=web` for `harnessrig` returned an
+  `EOTP` message after web auth, but a follow-up publish reported that version
+  `0.1.0` already existed. `npm view harnessrig name version bin --json` and
+  registry HTTP `200` confirmed the package was live.
+- Token-based publish from ignored `.env.local` succeeded for `harnessyard`.
+  `npm view` briefly returned `404` immediately after publish while clean `npx`
+  could already execute the command. Waiting a few seconds and rerunning
+  `npm view` plus registry HTTP checks confirmed `harnessyard` was live.
+- Treat `npm publish` success, clean `npx`, and registry metadata as separate
+  signals. Do not assume any one signal alone proves the final package state.
 
 ## Reuse Notes
 
