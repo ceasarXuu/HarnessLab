@@ -200,7 +200,7 @@ Schema version `1` currently includes these structured process termination reaso
 
 `no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window and the runner did not expose durable progress. Terminal-Bench treats official `run.log` growth as progress and active Docker setup/build subprocesses as short-lived activity, so first-time image builds are not misclassified during normal quiet phases. Activity checks are re-probed on a short cadence after the watchdog boundary and may defer for at most one extra watchdog window; process activity does not reset the no-output window, while actual `run.log` growth refreshes the progress window. Final no-progress events include `activity_grace_exhausted`, `current_activity`, `last_activity`, and `last_progress` diagnostics.
 
-Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` so they are distinguishable from agent-level `agent_timeout`.
+Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` or `external_runner_timeout` so they are distinguishable from agent-level `agent_timeout`.
 Terminal-Bench adapter cleanup failures use `agent_cleanup_failed` and are execution failures because they invalidate the run environment rather than scoring the benchmark task.
 `TaskAttemptResult.health_impact` is an adapter-agnostic run-health signal:
 
@@ -225,6 +225,7 @@ Pass criteria:
 | Agent command not found | failure | execution | `agent_spawn_error` |
 | Agent timeout | failure | execution | `agent_timeout` |
 | External benchmark runner has no durable log progress before watchdog timeout and bounded activity grace | failure | execution | `external_runner_no_progress` |
+| External benchmark runner exceeds HarnessLab hard timeout | failure | execution | `external_runner_timeout` |
 | External benchmark reports agent timeout | failure | benchmark | `agent_timeout` |
 | Agent killed by signal | failure | execution | `agent_signaled` |
 | Agent exits non-zero before evaluation can run | failure | execution | `agent_nonzero_exit` |

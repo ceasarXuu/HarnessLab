@@ -119,7 +119,7 @@ if ! rg --fixed-strings "external_runner_configured" "$RUN_DIR/events.jsonl" >/d
   echo "missing runner configuration event" >&2
   exit 1
 fi
-if ! rg --fixed-strings "process_timeout_sec=606" "$RUN_DIR/events.jsonl" >/dev/null; then
+if ! rg --fixed-strings "process_timeout_sec=1806" "$RUN_DIR/events.jsonl" >/dev/null; then
   echo "missing expected real runner timeout configuration" >&2
   exit 1
 fi

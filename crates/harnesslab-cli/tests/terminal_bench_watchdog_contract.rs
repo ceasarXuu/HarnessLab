@@ -20,10 +20,11 @@ while [ "$#" -gt 0 ]; do
 done
 mkdir -p "$out/$run"
 printf '{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}' > "$out/$run/results.json"
-echo "official result written"
-for tick in 1 2 3 4 5 6 7 8 9 10; do
+tick=1
+while [ "$tick" -le 100 ]; do
   printf "progress %s\n" "$tick" >> "$out/$run/run.log"
-  sleep 1
+  tick=$((tick + 1))
+  sleep 0.1
 done
 exit 0
 "#,
@@ -36,8 +37,8 @@ exit 0
         "smoke",
         &[],
         &[
-            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "5"),
-            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "2"),
+            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "6"),
+            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "3"),
         ],
         1,
     );
@@ -45,7 +46,10 @@ exit 0
     assert_eq!(results["summary"]["execution_failure"], 1);
     assert_eq!(results["summary"]["benchmark_failure"], 0);
     assert_eq!(results["tasks"][0]["failure_class"], "execution");
-    assert_eq!(results["tasks"][0]["failure_code"], "agent_timeout");
+    assert_eq!(
+        results["tasks"][0]["failure_code"],
+        "external_runner_timeout"
+    );
     assert_eq!(
         results["tasks"][0]["agent"]["termination_reason"],
         "timeout"

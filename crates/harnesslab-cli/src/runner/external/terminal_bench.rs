@@ -427,15 +427,20 @@ fn requires_terminal_bench_model(name: &str) -> bool {
 }
 
 pub(super) fn terminal_bench_process_failure(process: &ProcessRecord) -> Failure {
-    if process.termination_reason == TerminationReason::NoProgress {
-        return Failure {
+    match process.termination_reason {
+        TerminationReason::NoProgress => Failure {
             class: FailureClass::Execution,
             code: Some(FailureCode::ExternalRunnerNoProgress),
             message: "terminal-bench official runner made no log progress before watchdog timeout"
                 .to_string(),
-        };
+        },
+        TerminationReason::Timeout => Failure {
+            class: FailureClass::Execution,
+            code: Some(FailureCode::ExternalRunnerTimeout),
+            message: "terminal-bench official runner exceeded its hard timeout".to_string(),
+        },
+        _ => classify_agent_process(process),
     }
-    classify_agent_process(process)
 }
 
 fn official_run_id(spec: &RunSpec, task: &TaskPlan, attempt: u32) -> String {

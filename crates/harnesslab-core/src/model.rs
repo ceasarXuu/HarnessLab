@@ -42,6 +42,7 @@ pub enum FailureCode {
     AgentTimeout,
     AgentCleanupFailed,
     ExternalRunnerNoProgress,
+    ExternalRunnerTimeout,
     AgentSignaled,
     AgentNonzeroExit,
     ArtifactCollectionFailed,
@@ -145,7 +146,11 @@ pub fn health_impact_for_failure(
         (_, Some(FailureCode::DockerNetworkPoolExhausted)) => HealthImpact::EnvironmentUnhealthy,
         (
             FailureClass::Execution,
-            Some(FailureCode::AgentTimeout | FailureCode::ExternalRunnerNoProgress),
+            Some(
+                FailureCode::AgentTimeout
+                | FailureCode::ExternalRunnerNoProgress
+                | FailureCode::ExternalRunnerTimeout,
+            ),
         ) => HealthImpact::Stall,
         _ => HealthImpact::None,
     }

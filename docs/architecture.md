@@ -371,12 +371,12 @@ MVP failure code 枚举：
 
 | Class | Codes |
 |---|---|
-| execution | `sandbox_create_failed`, `workspace_prep_failed`, `agent_spawn_error`, `agent_timeout`, `agent_cleanup_failed`, `external_runner_no_progress`, `agent_signaled`, `agent_nonzero_exit`, `artifact_collection_failed`, `docker_network_pool_exhausted`, `run_health_aborted`, `evaluator_error` |
+| execution | `sandbox_create_failed`, `workspace_prep_failed`, `agent_spawn_error`, `agent_timeout`, `agent_cleanup_failed`, `external_runner_no_progress`, `external_runner_timeout`, `agent_signaled`, `agent_nonzero_exit`, `artifact_collection_failed`, `docker_network_pool_exhausted`, `run_health_aborted`, `evaluator_error` |
 | benchmark | `agent_timeout`, `verifier_timeout`, `verifier_error`, `test_failed`, `no_valid_diff`, `patch_apply_failed` |
 | warning | `usage_unknown`, `usage_parser_failed`, `artifact_optional_missing`, adapter-translated upstream advisory verdicts such as `agent_timeout` |
 
 Adapters 可以保留 benchmark 原始错误码，但必须映射到上述规范 code，报告才能跨 benchmark 比较。
-外部 benchmark 明确给出的 agent timeout 是任务结果 verdict，归入 `benchmark/agent_timeout`；HarnessLab 进程级超时或 watchdog kill 才归入 execution。
+外部 benchmark 明确给出的 agent timeout 是任务结果 verdict，归入 `benchmark/agent_timeout`；HarnessLab 进程级 agent 超时、外部 runner hard timeout 或 watchdog kill 才归入 execution。
 
 TaskAttemptResult 额外持有 `health_impact = none | stall | environment_unhealthy`。RunMonitor 只消费该健康影响信号，不直接枚举 benchmark adapter 的失败码。Terminal-Bench 这类外部 runner 如果被 HarnessLab 进程硬超时或 no-progress watchdog 杀掉，必须把 `health_impact` 设为 `stall`，即使官方 `results.json` 已经写出；官方 verdict 只能作为 warning 或 verifier 元数据保留。
 
@@ -577,8 +577,8 @@ Runner 需要输出：
 
 Runner 不判断任务成功。任务成功只由 benchmark evaluator/verifier 决定。
 
-`no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。no-output watchdog 只能在“stdout/stderr 无新字节、无已注册进度文件增长、无可接受的已注册活动信号”时触发；Terminal-Bench 注册官方 `run.log` 作为进度文件，并注册 Docker setup/build 子进程活动，避免首次镜像构建被误判为 runner stall。进程活动匹配只延期到下一次短周期复查，并且最多持续一个额外 watchdog 窗口；官方 `run.log` 增长才会刷新进度窗口。匹配事件应写入运行日志，最终 no-progress 事件必须带 `activity_grace_exhausted`、`current_activity`、`last_activity`、`last_progress` 诊断字段，便于解释 hard timeout 或 no-progress。
-外层 hard timeout 同样是 HarnessLab 执行层失败，必须压过已经写出的外部 benchmark 结果，避免把 runner teardown/setup 卡死误算成 agent 能力得分。
+`no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。no-output watchdog 只能在“stdout/stderr 无新字节、无已注册进度文件增长、无可接受的已注册活动信号”时触发；Terminal-Bench 注册官方 `run.log` 作为进度文件，并注册 Docker setup/build 子进程活动，避免首次镜像构建被误判为 runner stall。进程活动匹配只延期到下一次短周期复查，并且最多持续一个额外 watchdog 窗口；官方 `run.log` 增长才会刷新进度窗口。匹配事件应写入运行日志，最终 no-progress 事件必须带 `activity_grace_exhausted`、`current_activity`、`last_activity`、`last_progress` 诊断字段，便于解释 no-progress。
+外层 hard timeout 映射为 `external_runner_timeout`，同样是 HarnessLab 执行层失败，必须压过已经写出的外部 benchmark 结果，避免把 runner teardown/setup 卡死误算成 agent 能力得分。Terminal-Bench 默认 runner hard timeout 是 `agent_timeout + test_timeout + 1800`，额外预算用于官方 setup 和首次 Docker build；该值可用 `HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC` 临时覆盖。
 
 Terminal-Bench Python adapter 以宿主机进程执行已注册 CLI agent。adapter 必须给 agent 命令注入 `HARNESSLAB_AGENT_RUN_TOKEN`，并在运行期间捕获 agent 进程树 ancestry；启动阶段必须高频捕获以覆盖快速 daemonize/env-sanitize 的 helper，稳定后可以降频。timeout 路径和正常退出路径都要合并 ancestry 快照与 token 扫描来清理残留进程。父命令成功退出但留下后台 agent 子进程属于执行层清理风险，必须在返回前收敛并写出持久化 cleanup 诊断。cleanup 失败或仍有 live child/token survivor 必须映射为执行层 `agent_cleanup_failed`，不能降级成 benchmark `test_failed`。Strict diagnostic mode 可以额外把 agent 窗口内新出现且无法安全归属的新 live 进程作为 `agent_cleanup_failed` 证据；默认不强杀或误判这类进程，避免影响并发任务或用户进程。
 

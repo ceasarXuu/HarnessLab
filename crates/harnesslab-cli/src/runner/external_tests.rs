@@ -11,13 +11,16 @@ use std::fs;
 
 #[test]
 fn terminal_bench_timeout_values_use_run_override_when_present() {
-    assert_eq!(terminal_bench_timeout_values(Some(42), 5, 7), (42, 42, 684));
+    assert_eq!(
+        terminal_bench_timeout_values(Some(42), 5, 7),
+        (42, 42, 1884)
+    );
 }
 
 #[test]
 fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
-    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 612));
-    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 602));
+    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 1812));
+    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 1802));
 }
 
 #[test]
@@ -86,6 +89,19 @@ fn terminal_bench_no_output_process_maps_to_external_runner_no_progress() {
 
     assert_eq!(failure.class, FailureClass::Execution);
     assert_eq!(failure.code, Some(FailureCode::ExternalRunnerNoProgress));
+}
+
+#[test]
+fn terminal_bench_hard_timeout_maps_to_external_runner_timeout() {
+    let failure = super::terminal_bench::terminal_bench_process_failure(&ProcessRecord {
+        exit_code: None,
+        termination_reason: TerminationReason::Timeout,
+        stdout_path: "agent/stdout.log".to_string(),
+        stderr_path: "agent/stderr.log".to_string(),
+    });
+
+    assert_eq!(failure.class, FailureClass::Execution);
+    assert_eq!(failure.code, Some(FailureCode::ExternalRunnerTimeout));
 }
 
 #[test]

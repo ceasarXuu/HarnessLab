@@ -81,6 +81,10 @@ if [[ "${1:-}" == "--select" ]]; then
     ORCH-016) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_run_health_abort" ;;
     ORCH-017) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_worker_error" ;;
     ORCH-018) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_worker_panic" ;;
+    ORCH-019) package="harnesslab-cli"; test_name="runner::monitor::tests::monitor_aborts_immediately_on_external_runner_timeout" ;;
+    ORCH-020) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_007_terminal_bench_pre_run_considers_stale_run_without_snapshot" ;;
+    ORCH-021) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_008_terminal_bench_pre_run_uses_stale_run_json_id" ;;
+    ORCH-022) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_009_terminal_bench_pre_run_ignores_loose_name_match" ;;
     REPLAY-002) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_keeps_completed_attempts_and_schedules_missing_only" ;;
     REPLAY-004) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_failed_completed_attempt_schedules_recovery_attempt" ;;
     REPLAY-005) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_does_not_create_unbounded_recovery_attempts" ;;
@@ -122,6 +126,7 @@ if [[ "${1:-}" == "--select" ]]; then
     TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
     TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
     TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
+    TB-004) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_hard_timeout_maps_to_external_runner_timeout" ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;

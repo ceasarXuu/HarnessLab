@@ -178,7 +178,7 @@ exit 0
     assert_eq!(results["tasks"][0]["state"], "success");
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("external_runner_configured"));
-    assert!(events.contains("process_timeout_sec=7800 no_output_timeout_sec=3720"));
+    assert!(events.contains("process_timeout_sec=9000 no_output_timeout_sec=3720"));
     assert!(!events.contains("no_output_timeout_sec=disabled"));
     assert!(!events.contains("external_runner_no_progress"));
 }
@@ -343,7 +343,10 @@ exit 0
     assert_eq!(results["summary"]["execution_failure"], 1);
     assert_eq!(results["summary"]["benchmark_failure"], 0);
     assert_eq!(results["tasks"][0]["failure_class"], "execution");
-    assert_eq!(results["tasks"][0]["failure_code"], "agent_timeout");
+    assert_eq!(
+        results["tasks"][0]["failure_code"],
+        "external_runner_timeout"
+    );
     assert!(
         results["tasks"][0]["warnings"]
             .as_array()
@@ -357,8 +360,13 @@ exit 0
     );
     let health: serde_json::Value =
         serde_json::from_slice(&fs::read(run_dir.join("run-health.json")).unwrap()).unwrap();
-    assert_eq!(health["agent_timeouts"], 1);
+    assert_eq!(health["agent_timeouts"], 0);
+    assert_eq!(health["external_runner_timeouts"], 1);
     assert_eq!(health["execution_stalls"], 1);
+    assert_eq!(
+        health["reason"],
+        "external runner hard timeout; benchmark runner budget or setup is unhealthy"
+    );
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("no_output_timeout_sec=disabled"));
     assert!(events.contains("external_runner_timeout"));
