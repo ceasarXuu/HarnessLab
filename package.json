@@ -1,0 +1,28 @@
+{
+  "name": "harnesslab",
+  "version": "0.1.0",
+  "description": "HarnessLab command reservation package for benchmark harness workflows.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ceasarXuu/HarnessLab.git"
+  },
+  "homepage": "https://github.com/ceasarXuu/HarnessLab#readme",
+  "bugs": {
+    "url": "https://github.com/ceasarXuu/HarnessLab/issues"
+  },
+  "bin": {
+    "harnesslab": "bin/harnesslab.js"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "smoke:npm-bin": "scripts/verify-npm-reservation-package.sh"
+  }
+}
