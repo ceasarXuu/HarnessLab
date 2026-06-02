@@ -117,7 +117,7 @@ pub(super) fn execute(
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
     append_process_termination_event(ctx, &process, process_timeout_sec)?;
-    terminal_bench_cleanup::cleanup_task_resources(
+    let post_cleanup_error = terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
         &ctx.task.task_id,
@@ -169,6 +169,13 @@ pub(super) fn execute(
         failure_code = agent_failure.code;
         score = 0.0;
     }
+    let cleanup_overrides_result =
+        post_cleanup_error.is_some() && failure_class != FailureClass::Execution;
+    if cleanup_overrides_result {
+        failure_class = FailureClass::Execution;
+        failure_code = Some(FailureCode::AgentCleanupFailed);
+        score = 0.0;
+    }
     let mut warnings =
         terminal_bench_result_warnings(&result_path, &ctx.task.task_id, official_failure_class);
     if failure_class == FailureClass::Execution
@@ -182,6 +189,9 @@ pub(super) fn execute(
         && let Some(code) = agent_failure.code
     {
         warnings.push(code);
+    }
+    if post_cleanup_error.is_some() && !cleanup_overrides_result {
+        warnings.push(FailureCode::AgentCleanupFailed);
     }
     if matches!(usage, UsageRecord::Unknown) {
         warnings.push(FailureCode::UsageUnknown);

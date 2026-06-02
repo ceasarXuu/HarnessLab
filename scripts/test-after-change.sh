@@ -98,7 +98,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-005) package="harnesslab-cli"; test_name="int_005_fake_terminal_timeout_exits_1" ;;
     INT-006) package="harnesslab-cli"; test_name="int_006_fake_patch_success_saves_diff" ;;
     INT-009) package="harnesslab-cli"; test_name="int_009_replay_success_creates_new_run" ;;
-    INT-011) package="harnesslab-cli"; test_name="int_011_terminal_bench_smoke_without_docker_reports_sandbox_failure" ;;
+    INT-011) package="harnesslab-cli"; test_name="int_011_swe_bench_pro_smoke_runs_external_evaluator_contract" ;;
     INT-012) package="harnesslab-cli"; test_name="int_012_replay_text_output_succeeds" ;;
     INT-013) package="harnesslab-cli"; test_name="int_013_replay_falls_back_when_benchmark_snapshot_is_missing" ;;
     INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;
@@ -126,6 +126,10 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-037) exec scripts/verify-terminal-bench-import-success-cleanup.sh ;;
     INT-038) exec scripts/verify-terminal-bench-import-timeout-cleanup.sh ;;
     INT-039) package="harnesslab-cli"; test_name="int_039_terminal_bench_stale_early_run_log_becomes_no_progress" ;;
+    INT-040) package="harnesslab-cli"; test_name="int_040_terminal_bench_post_task_cleanup_failure_is_execution_failure" ;;
+    INT-041) package="harnesslab-cli"; test_name="int_041_cleanup_failure_does_not_mask_no_progress_health" ;;
+    INT-042) package="harnesslab-cli"; test_name="int_042_cleanup_failure_overrides_benchmark_failure_with_warning" ;;
+    INT-043) package="harnesslab-cli"; test_name="int_043_cleanup_failure_does_not_mask_runner_timeout_health" ;;
     TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
     TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
     TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;

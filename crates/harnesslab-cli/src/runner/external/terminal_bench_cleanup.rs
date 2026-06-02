@@ -30,7 +30,7 @@ pub(super) fn cleanup_task_resources(
     phase: &str,
     official_run_id: &str,
     required: bool,
-) -> Result<()> {
+) -> Result<Option<String>> {
     match DockerCliProvider::compose_projects_matching(official_run_id).and_then(|projects| {
         if !projects.is_empty() {
             record_projects(run_dir, &projects)?;
@@ -44,16 +44,17 @@ pub(super) fn cleanup_task_resources(
                 task_id,
                 &cleanup_success_message(phase, official_run_id, &projects, &result),
             )?;
-            Ok(())
+            Ok(None)
         }
         Err(error) => {
+            let message = error.to_string();
             append_cleanup_event(
                 run_dir,
                 spec,
                 task_id,
                 &format!(
                     "terminal-bench cleanup {phase} warning: token={} error={}",
-                    official_run_id, error
+                    official_run_id, message
                 ),
             )?;
             if required {
@@ -61,7 +62,7 @@ pub(super) fn cleanup_task_resources(
                     format!("terminal-bench cleanup {phase} failed for token {official_run_id}")
                 })
             } else {
-                Ok(())
+                Ok(Some(message))
             }
         }
     }

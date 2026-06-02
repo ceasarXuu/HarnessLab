@@ -1934,6 +1934,88 @@ requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_eve
 contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
 
 [[tests]]
+id = "INT-040"
+title = "Terminal-Bench post-task compose cleanup failure is execution failure"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-040"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup", "FailureMapping"]
+
+[[tests]]
+id = "INT-041"
+title = "Terminal-Bench cleanup failure does not mask no-progress health"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-041"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+  "crates/harnesslab-cli/src/runner/monitor.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup", "RunMonitor", "FailureMapping"]
+
+[[tests]]
+id = "INT-042"
+title = "Terminal-Bench cleanup failure overrides benchmark failure with warning"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-042"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup", "FailureMapping"]
+
+[[tests]]
+id = "INT-043"
+title = "Terminal-Bench cleanup failure does not mask runner timeout health"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-043"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+  "crates/harnesslab-cli/src/runner/monitor.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup", "RunMonitor", "FailureMapping"]
+
+[[tests]]
 id = "TB-001"
 title = "Terminal-Bench adapter cleanup failure overrides official success"
 layer = "unit"
