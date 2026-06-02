@@ -5,7 +5,7 @@
 ## User Playbooks
 
 - [用 claude-ds 跑一次 Terminal-Bench 实验](playbooks/terminal-bench-claude-ds.md)：面向用户的最小使用路径，覆盖 agent 注册、预检查、run、结果查看、报告、replay/resume。
-- [npm 包名和 CLI 命令占位发布](playbooks/npm-package-reservation.md)：记录 `@ceasarxuu/harnesslab` npm 包名、`harnesslab` 命令占位发布的预检、验证和发布复用步骤。
+- [npm 包名和 CLI 命令占位发布](playbooks/npm-package-reservation.md)：记录 `@ceasarxuu/harnesslab`、`harnessrig`、`harnessyard` npm 包名和对应命令占位发布的预检、验证和发布复用步骤。
 
 ## M0 Rust Tooling
 
