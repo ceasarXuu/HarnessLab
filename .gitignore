@@ -5,3 +5,6 @@
 /.benchmarks/
 __pycache__/
 *.profraw
+.env
+.env.local
+.npmrc
