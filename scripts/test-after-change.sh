@@ -62,6 +62,7 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-015) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_pattern_defers_to_hard_timeout" ;;
     C-SBOX-016) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_disappearing_kills_promptly" ;;
     C-SBOX-017) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_progress_file_defers_to_hard_timeout" ;;
+    C-SBOX-018) package="harnesslab-infra"; test_name="process::tests::c_sbox_018_no_output_activity_has_bounded_grace" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
@@ -105,11 +106,12 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-027) package="harnesslab-cli"; test_name="int_027_terminal_bench_repeated_no_progress_aborts_run" ;;
     INT-028) package="harnesslab-cli"; test_name="int_028_terminal_bench_hard_timeout_overrides_official_result" ;;
     INT-029) exec scripts/verify-terminal-bench-docker-activity-watchdog.sh ;;
-    INT-030) package="harnesslab-cli"; test_name="int_030_terminal_bench_silent_docker_activity_is_not_no_progress" ;;
     INT-031) package="harnesslab-cli"; test_name="int_031_terminal_bench_progress_deferral_still_hard_times_out" ;;
     INT-032) package="harnesslab-cli"; test_name="int_032_resume_rejects_malformed_event_log_before_reuse" ;;
     INT-033) package="harnesslab-cli"; test_name="int_033_replay_rejects_malformed_source_event_log" ;;
     INT-034) package="harnesslab-cli"; test_name="int_034_report_open_rejects_malformed_event_log" ;;
+    INT-035) package="harnesslab-cli"; test_name="int_035_terminal_bench_stale_docker_activity_becomes_no_progress" ;;
+    INT-036) exec scripts/verify-terminal-bench-docker-activity-grace-expiry.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;
@@ -169,6 +171,9 @@ scripts/verify-terminal-bench-import-timeout-cleanup.sh
 
 echo "== terminal-bench-real-docker-activity-watchdog =="
 scripts/verify-terminal-bench-docker-activity-watchdog.sh
+
+echo "== terminal-bench-real-docker-activity-grace-expiry =="
+scripts/verify-terminal-bench-docker-activity-grace-expiry.sh
 
 echo "== registry-check =="
 scripts/verify-test-registry.sh

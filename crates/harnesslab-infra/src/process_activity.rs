@@ -8,6 +8,7 @@ pub struct NoOutputActivityEvent {
     pub run_id: String,
     pub task_id: Option<String>,
     pub event_name: String,
+    pub no_progress_event_name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

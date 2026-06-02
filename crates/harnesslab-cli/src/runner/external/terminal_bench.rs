@@ -111,11 +111,12 @@ pub(super) fn execute(
             run_id: ctx.spec.run_id.clone(),
             task_id: Some(ctx.task.task_id.clone()),
             event_name: "external_runner_activity".to_string(),
+            no_progress_event_name: Some("external_runner_no_progress".to_string()),
         }),
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
-    append_process_termination_event(ctx, &process, process_timeout_sec, no_output_timeout_sec)?;
+    append_process_termination_event(ctx, &process, process_timeout_sec)?;
     terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
@@ -233,6 +234,7 @@ fn append_runner_config_event(
     let no_output_timeout = no_output_timeout_sec
         .map(|timeout| timeout.to_string())
         .unwrap_or_else(|| "disabled".to_string());
+    let activity_grace = no_output_timeout.clone();
     let activity_patterns = terminal_bench_no_output_activity_patterns().join(",");
     let progress_paths = "official/terminal-bench/<run-id>/run.log";
     append_event(
@@ -242,7 +244,7 @@ fn append_runner_config_event(
             Some(&ctx.task.task_id),
             "external_runner_configured",
             &format!(
-                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} progress_paths={progress_paths} activity_patterns={activity_patterns}"
+                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} progress_paths={progress_paths} activity_patterns={activity_patterns}"
             ),
         ),
         &[],
@@ -267,16 +269,9 @@ fn append_process_termination_event(
     ctx: &ExternalTaskExecution<'_>,
     process: &ProcessRecord,
     process_timeout_sec: u64,
-    no_output_timeout_sec: Option<u64>,
 ) -> Result<()> {
     let (name, message) = match process.termination_reason {
-        TerminationReason::NoProgress => (
-            "external_runner_no_progress",
-            format!(
-                "terminal-bench official runner produced no log output for {}s; killed process tree",
-                no_output_timeout_sec.unwrap_or(0)
-            ),
-        ),
+        TerminationReason::NoProgress => return Ok(()),
         TerminationReason::Timeout => (
             "external_runner_timeout",
             format!(
