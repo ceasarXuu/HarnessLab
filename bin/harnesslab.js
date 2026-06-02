@@ -9,8 +9,9 @@ Usage:
   harnesslab --version
 
 The production HarnessLab CLI is currently distributed from the source
-repository. This npm package reserves the public package and command names
-while the native CLI distribution is prepared.
+repository. The scoped npm package @ceasarxuu/harnesslab publishes the
+harnesslab command while the native CLI distribution is prepared. The unscoped
+harnesslab package name is blocked by npm's similarity policy.
 
 Repository:
   https://github.com/ceasarXuu/HarnessLab

@@ -1,18 +1,29 @@
 # npm Package Reservation Playbook
 
-This playbook records the steps used to reserve the public `harnesslab` npm
-package and CLI command names.
+This playbook records the steps used to reserve the public
+`@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names.
 
-## Goal
+## Goal And Current Outcome
 
-Reserve both:
+Original goal:
 
-- npm package name: `harnesslab`
+- npm package name: unscoped `harnesslab`
 - CLI command name: `harnesslab`
+
+Current outcome:
+
+- npm package name achieved: scoped fallback `@ceasarxuu/harnesslab`
+- CLI command name achieved after install: `harnesslab`
+- npm package name not achieved: unscoped `harnesslab`
 
 The reservation package is intentionally small. It publishes package metadata,
 the license, README, and a command shim that reports the current distribution
 status.
+
+The unscoped `harnesslab` package name cannot currently be published because npm
+rejects it as too similar to the existing `harness-lab` package. The scoped name
+is the npm-recommended fallback and still reserves the `harnesslab` executable
+when installed from the scoped package.
 
 ## Preflight
 
@@ -25,7 +36,7 @@ git check-ignore -q .npmrc
 ! git ls-files --error-unmatch .env
 ! git ls-files --error-unmatch .env.local
 ! git ls-files --error-unmatch .npmrc
-curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnesslab
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/@ceasarxuu%2Fharnesslab
 ```
 
 Expected signals:
@@ -35,7 +46,12 @@ Expected signals:
 - `.env.local` and `.npmrc` are ignored.
 - The `git ls-files --error-unmatch` checks fail because local secret files
   must not be tracked.
-- Registry HTTP status is `404` before the first publish.
+- For a new package name before first publish, registry HTTP status should be
+  `404`.
+- For the current scoped fallback after publication, registry HTTP status should
+  be `200` for `@ceasarxuu/harnesslab`.
+- For the blocked unscoped name, registry HTTP status should remain `404` for
+  `harnesslab` unless npm support changes the similarity decision.
 
 ## Local Validation
 
@@ -43,8 +59,8 @@ Expected signals:
 npm run smoke:npm-bin
 npm pack --dry-run
 tmpdir=$(mktemp -d)
-npm pack --pack-destination "$tmpdir"
-npm install --prefix "$tmpdir/install" "$tmpdir/harnesslab-0.1.0.tgz"
+tarball=$(npm pack --pack-destination "$tmpdir" --silent)
+npm install --prefix "$tmpdir/install" "$tmpdir/$tarball"
 "$tmpdir/install/node_modules/.bin/harnesslab" --version
 "$tmpdir/install/node_modules/.bin/harnesslab" --help
 ```
@@ -61,15 +77,35 @@ Preferred path when npm requires 2FA:
 
 ```bash
 npm publish --access public --otp=<current-otp>
-npm view harnesslab name version bin --json
-curl -s https://api.npmjs.org/downloads/point/last-month/harnesslab
+npm view @ceasarxuu/harnesslab name version bin --json
+curl -s https://api.npmjs.org/downloads/point/last-month/%40ceasarxuu%2Fharnesslab
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+npx --yes @ceasarxuu/harnesslab --version
+npx --yes @ceasarxuu/harnesslab --help
 ```
 
 Expected signals:
 
-- `npm publish` publishes `harnesslab@0.1.0`.
-- `npm view` returns `name = harnesslab` and `bin.harnesslab`.
+- `npm publish` publishes the current `@ceasarxuu/harnesslab` version from
+  `package.json`.
+- `npm view` returns `name = @ceasarxuu/harnesslab` and `bin.harnesslab`.
 - Downloads API returns a package record instead of `package not found`.
+- Clean-directory `npx @ceasarxuu/harnesslab` executes the `harnesslab` bin from
+  the registry package.
+
+If `npm publish --access public` returns success but `npm view` and the registry
+still return `404`, check npm's staged package flow:
+
+```bash
+npm view @ceasarxuu/harnesslab name version bin --json
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/@ceasarxuu%2Fharnesslab
+```
+
+When both still return not-found after a successful publish, open npmjs.com,
+select **Staged Packages**, review the staged `@ceasarxuu/harnesslab` package,
+and click **Approve**. Approval requires 2FA / passkey verification. After
+approval, rerun the registry and `npx` checks above.
 
 If npm returns `E403` with a two-factor authentication message, the current
 token is authenticated but cannot bypass 2FA. Retry with one of:
@@ -108,8 +144,10 @@ Record sanitized evidence for the release:
 
 ```bash
 npm pack --dry-run --json
-npm view harnesslab name version bin --json
+npm view @ceasarxuu/harnesslab name version bin --json
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/@ceasarxuu%2Fharnesslab
 curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnesslab
+npm run smoke:npm-registry
 ```
 
 Do not store raw tokens, OTPs, npm debug logs, or command output containing
@@ -119,6 +157,9 @@ credential material in repository artifacts.
 
 - Do not use the `harness` command name for this package. Existing npm packages
   and Harness platform tooling already use or reference that command.
+- Do not retry unscoped `harnesslab` unless npm support changes the similarity
+  decision; current publication attempts are rejected as too similar to
+  `harness-lab`.
 - Keep the reservation package small until the native CLI distribution strategy
   is ready.
 - When the npm CLI starts shipping the native binary, replace the shim with a
