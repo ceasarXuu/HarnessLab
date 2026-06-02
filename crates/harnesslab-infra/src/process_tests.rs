@@ -184,7 +184,7 @@ fn c_sbox_003_no_output_activity_ignores_shell_text_mentions() {
 }
 
 #[test]
-fn c_sbox_003_no_output_progress_file_defers_to_hard_timeout() {
+fn c_sbox_017_no_output_progress_file_resets_watchdog_window() {
     let tmp = tempfile::tempdir().unwrap();
     let progress_path = tmp.path().join("run.log");
     let events_path = tmp.path().join("events.jsonl");
@@ -213,10 +213,14 @@ fn c_sbox_003_no_output_progress_file_defers_to_hard_timeout() {
 
     let result = HostProcessExecutor::exec(&spec).unwrap();
 
-    assert_eq!(result.termination_reason, TerminationReason::Timeout);
+    assert_eq!(result.termination_reason, TerminationReason::NoProgress);
     assert!(
-        started.elapsed() >= Duration::from_secs(4),
-        "progress file growth should defer no-output until hard timeout"
+        started.elapsed() >= Duration::from_millis(2_800),
+        "progress file growth should reset no-output from the actual write time"
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(4),
+        "stale progress must not defer until hard timeout"
     );
     let events = fs::read_to_string(events_path).unwrap();
     assert!(events.contains("external_runner_activity"));
@@ -249,11 +253,11 @@ fn c_sbox_018_progress_growth_resets_activity_grace() {
 
     assert_eq!(result.termination_reason, TerminationReason::NoProgress);
     assert!(
-        started.elapsed() >= Duration::from_millis(2_700),
-        "progress growth should reset the activity grace before the later stale activity window"
+        started.elapsed() >= Duration::from_millis(1_900),
+        "progress growth should reset activity grace from its actual write time"
     );
     assert!(
-        started.elapsed() < Duration::from_secs(5),
+        started.elapsed() < Duration::from_secs(3),
         "later stale activity should still receive only one extra watchdog window"
     );
 }
@@ -307,6 +311,51 @@ fn c_sbox_019_activity_event_emits_after_output_reset() {
         1
     );
     assert!(events.find("pattern=sleep 8") < events.find("external_runner_no_progress"));
+}
+
+#[test]
+fn c_sbox_020_progress_file_is_sampled_before_watchdog_boundary() {
+    let tmp = tempfile::tempdir().unwrap();
+    let progress_path = tmp.path().join("run.log");
+    let events_path = tmp.path().join("events.jsonl");
+    let spec = ExecSpec {
+        command: format!(
+            "sleep 0.5; printf progress >> {}; sleep 8",
+            shell_quote(&progress_path.display().to_string())
+        ),
+        stdin: None,
+        working_dir: tmp.path().join("workspace"),
+        timeout_sec: 5,
+        no_output_timeout_sec: Some(2),
+        no_output_progress_paths: vec![progress_path],
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: Some(NoOutputActivityEvent {
+            path: events_path.clone(),
+            run_id: "run-1".to_string(),
+            task_id: Some("task-1".to_string()),
+            event_name: "external_runner_activity".to_string(),
+            no_progress_event_name: Some("external_runner_no_progress".to_string()),
+        }),
+        stdout_path: tmp.path().join("stdout.log"),
+        stderr_path: tmp.path().join("stderr.log"),
+    };
+    let started = Instant::now();
+
+    let result = HostProcessExecutor::exec(&spec).unwrap();
+
+    assert_eq!(result.termination_reason, TerminationReason::NoProgress);
+    assert!(
+        started.elapsed() >= Duration::from_millis(2_300),
+        "progress must extend past the original no-output boundary"
+    );
+    assert!(
+        started.elapsed() < Duration::from_millis(3_200),
+        "early progress must be sampled when it happens instead of extending at the watchdog boundary"
+    );
+    let events = fs::read_to_string(events_path).unwrap();
+    let progress = events.find("progress file path=").unwrap();
+    let no_progress = events.find("external_runner_no_progress").unwrap();
+    assert!(progress < no_progress);
 }
 
 #[test]

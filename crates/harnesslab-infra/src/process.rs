@@ -146,25 +146,24 @@ impl HostProcessExecutor {
                 return Ok(record(spec, None, TerminationReason::Timeout));
             }
             if let Some(timeout) = no_output_timeout {
+                let now = Instant::now();
+                if let Some(path) = no_output_watchdog.changed_path() {
+                    last_output_ms.store(elapsed_ms(started), Ordering::Relaxed);
+                    no_output_watchdog.record_progress(
+                        spec.no_output_activity_event.as_ref(),
+                        path,
+                        now,
+                    );
+                }
                 let elapsed_since_start_ms = started.elapsed().as_millis();
                 let last_output = u128::from(last_output_ms.load(Ordering::Relaxed));
                 let quiet_for_ms = elapsed_since_start_ms.saturating_sub(last_output);
                 if quiet_for_ms >= timeout.as_millis() {
-                    let now = Instant::now();
                     if !no_output_watchdog.ready_to_probe(now) {
                         thread::sleep(Duration::from_millis(20));
                         continue;
                     }
                     no_output_watchdog.mark_probe(now);
-                    if let Some(path) = no_output_watchdog.changed_path() {
-                        last_output_ms.store(elapsed_ms(started), Ordering::Relaxed);
-                        no_output_watchdog.record_progress(
-                            spec.no_output_activity_event.as_ref(),
-                            path,
-                            now,
-                        );
-                        continue;
-                    }
                     let activity = process_group_activity(
                         process_group.pgid(),
                         &spec.no_output_activity_patterns,
