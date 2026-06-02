@@ -69,6 +69,7 @@ colima start --cpu 4 --memory 8 --disk 60 --runtime docker --vm-type vz --mount-
 - `~/.colima` 软链接到 `/Volumes/XU-1TB-NPM/devtools/containers/colima`。
 - `~/.lima` 软链接到 `/Volumes/XU-1TB-NPM/devtools/containers/lima`。
 - VM、Docker 镜像、容器层和 Colima 数据都应落在外置盘；Docker CLI 配置 `~/.docker` 保留在 home，体积很小。
+- Colima/Lima 的 home 目录必须位于支持 Unix socket 的文件系统上。若大盘不支持 socket，可把 `~/.colima` 保留在 NPM 盘，只把 `_lima/colima/disk` 和 `_lima/_disks/colima/datadisk` 软链接到大盘；不要把整个 Colima home 迁到不支持 socket 的盘，否则 `usernet` 会因 `bind: operation not supported` 无法启动。
 - 必须显式挂载 `/Volumes/XU-1TB-NPM:w`，否则 Docker 容器里看不到外置盘项目目录，HarnessLab 的 bind mount 会变成空目录。
 - Docker Compose/buildx 是官方 Terminal-Bench CLI 的实际依赖。Homebrew 插件安装后，`~/.docker/config.json` 需要包含 `/opt/homebrew/lib/docker/cli-plugins` 作为 `cliPluginsExtraDirs`。
 
@@ -152,7 +153,7 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
 - 先查 `results.json`，确认 `failure_class/failure_code` 和官方 `results[].failure_mode` 一致。官方结果里的 `agent_timeout` 是 benchmark verdict，必须映射为 HarnessLab `benchmark/agent_timeout`，不能误报成 `benchmark/test_failed` 或 HarnessLab 执行层超时。
 - 再查 `events.jsonl`，确认每个 task 都写入了 `external_runner_configured`，其中包含有效的 `process_timeout_sec`、`no_output_timeout_sec` 和 `activity_grace_sec`；默认无日志 watchdog 应显示为具体秒数，不应是 `disabled`。
 - 再查 `run-health.json`，确认 `agent_timeouts`、`external_runner_no_progress`、`external_runner_timeouts`、`execution_stalls`、`docker_network_failures`、`completed` 与结果一致。官方 `agent_timeout` 不计入执行层 `agent_timeouts`；只有 HarnessLab 自己杀掉进程的 agent 执行超时、runner hard timeout 或 no-progress 才会增加 `execution_stalls` 并可能触发 run-health abort。
-- 再查 `report.html`，确认任务明细展示 `benchmark/agent_timeout`、`execution/external_runner_no_progress`、`execution/external_runner_timeout` 等 snake_case 分类；如果官方结果同时给成功任务带了 `failure_mode=agent_timeout`，报告应在 `Warnings` 列展示 `agent_timeout`。
+- 再查 `report.html`，确认任务明细展示 `benchmark/agent_timeout`、`execution/external_runner_no_progress`、`execution/external_runner_timeout`、`execution/agent_cleanup_failed` 等 snake_case 分类；如果官方结果同时给成功任务带了 `failure_mode=agent_timeout`，报告应在 `Warnings` 列展示 `agent_timeout`。
 - 最后查 Docker 残留：`docker network ls --filter label=com.docker.compose.project` 和 `docker ps -a --filter label=com.docker.compose.project` 不应留下本次 run id 对应的资源。
 
 Terminal-Bench runner 有两层超时：
@@ -170,6 +171,8 @@ Terminal-Bench runner 有两层超时：
 使用 `terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"` 接入本机 CLI agent 时，HarnessLab 传给适配层的 `HARNESSLAB_AGENT_TIMEOUT_SEC` 必须保持原始 agent 预算，传给官方 `tb run` 的 `--global-agent-timeout-sec` 会额外增加清理余量，避免官方外层 timeout 先中断 `perform_task`。排查真实 run 时，如果看到 `agent_timeout` 且宿主机仍有对应 agent 子进程，优先修适配层进程树清理，而不是继续跑完整 bench。
 
 真实 full run 监控时，宿主机不得出现 PPID 为 `1` 的残留 agent 子进程，例如 `claude --dangerously-skip-permissions ...`。Terminal-Bench Python adapter 在 agent timeout 和正常 agent 命令退出后都会按运行期 ancestry 快照与 `HARNESSLAB_AGENT_RUN_TOKEN` 扫描并清理残留子进程，并在官方 task log 目录写出 `agent_cleanup.log`。如果 agent 主动清除 token 并快速 daemonize，adapter 不能安全强杀无法归属的新进程；需要诊断这类风险时可启用 strict global process scan，把 agent 窗口内新出现且无法归属的 live pid 作为 `execution/agent_cleanup_failed` 证据。如果仍出现 orphan，或结果中出现 `execution/agent_cleanup_failed`，必须提前终止 run 并修复清理边界，不能把后续结果当成有效 benchmark 分数。
+
+Terminal-Bench post-task compose cleanup 失败同样必须映射为 `execution/agent_cleanup_failed`，即使官方 `results.json` 已经给出 success 或 benchmark failure。cleanup failure 表示运行环境没有收敛，可能继续占用 Docker network/address pool；不能只写入 `events.jsonl` warning 后把任务计入有效 benchmark 得分。
 
 不要为了节省时间把 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC` 设得小于或接近 agent 预算。真实 Terminal-Bench 中部分 agent 生成脚本后会在容器内长时间无官方 `run.log` 增量，过短 watchdog 会把本应由官方 runner 给出的 `benchmark/agent_timeout` 或成功结果误判为 `execution/external_runner_no_progress`。
 
