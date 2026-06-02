@@ -142,11 +142,13 @@ CLI 不负责构建 Docker 命令，也不直接拼 report HTML。
 职责：
 
 - 检测本机 CLI Agent。
-- 生成四类内置 profile 草稿。
+- 生成四类内置 profile 草稿和可读注册表模板。
 - 加载用户手动编辑后的 profile。
-- 校验 command、input_mode、auth、skills、usage parser。
+- 校验 command、input_mode、auth、setup、skills、tools、hooks、usage parser。
+- 把语义化注册表展开为 run-time snapshot，供 sandbox runner、benchmark adapter 和报告使用。
+- 对其他 agent 生成的 profile 给出结构化诊断，错误必须指向具体字段和允许取值。
 
-Agent profile 是 opaque execution unit。核心字段：
+Agent profile 不是一段 opaque shell，而是可解释的 harness 注册表。核心字段：
 
 ```toml
 schema_version = 1
@@ -164,6 +166,28 @@ include_paths = ["~/.codex"]
 mount_ssh_socket = false
 mount_docker_socket = false
 
+[setup]
+preset = "builtin"
+required_commands = ["codex"]
+run_as = "harnesslab"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = []
+deny = []
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
 [usage]
 parser = "none"
 
@@ -176,6 +200,15 @@ parser = "none"
 - `include_paths` / `exclude_paths`：允许挂载的本机配置路径。
 - `mount_ssh_socket`：是否挂载 SSH agent socket。
 - `mount_docker_socket`：是否挂载 Docker socket，默认禁止。
+
+`setup`、`skills`、`tools`、`hooks` 必须通过 agent-kind adapter materializer 转换为具体 sandbox 文件、环境变量或命令行参数。架构约束：
+
+- 普通 profile 优先使用 `setup.preset` 和能力 allow/deny，不直接写 `sandbox_setup_command`。
+- `setup.commands` 是高级逃生口，只在 `setup.preset = "custom"` 时允许；doctor 必须标记风险并展示失败归因。
+- `skills`、`tools`、`hooks` 采用相同策略模型：继承默认集合、显式白名单、显式黑名单、或禁用全部。
+- 如果某个 `kind` 暂不支持某类能力 materialization，doctor 必须对非默认策略报错，不能继续跑出不可比较结果。
+- run snapshot 必须保存原始注册表和展开后的有效能力摘要，报告展示人类可读摘要。
+- benchmark adapter 不应解释 skills/tools/hooks 语义，只消费已经 materialize 完成的 agent runtime 配置。
 
 ### 5.4 Benchmark Registry
 
