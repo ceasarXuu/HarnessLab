@@ -2,6 +2,10 @@
 
 本文记录容易踩坑的工程操作，避免后续从头排查。
 
+## User Playbooks
+
+- [用 claude-ds 跑一次 Terminal-Bench 实验](playbooks/terminal-bench-claude-ds.md)：面向用户的最小使用路径，覆盖 agent 注册、预检查、run、结果查看、报告、replay/resume。
+
 ## M0 Rust Tooling
 
 M0 本地 gate 依赖：
