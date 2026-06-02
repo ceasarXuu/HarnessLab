@@ -488,6 +488,44 @@ requirements = ["benchmark_adapter_contract", "execution_runtime"]
 contracts = ["BenchmarkDescriptor", "DataState", "RunPreflight"]
 
 [[tests]]
+id = "C-BENCH-009"
+title = "Terminal-Bench task timeout metadata maps into runtime plan"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-009"
+file_patterns = [
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-core/src/benchmark.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract", "external_benchmark_runtime"]
+contracts = ["ExternalRunnerSpec", "VerifierSpec", "TerminalBenchTaskMetadata"]
+
+[[tests]]
+id = "C-BENCH-010"
+title = "Terminal-Bench timeout metadata ignores task instruction block text"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select C-BENCH-010"
+file_patterns = [
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["benchmark_adapter_contract", "external_benchmark_runtime"]
+contracts = ["TerminalBenchTaskMetadata"]
+
+[[tests]]
 id = "C-SBOX-001"
 title = "Docker health check is structured"
 layer = "contract"
@@ -1852,6 +1890,7 @@ owner_module = "terminal-bench-adapter"
 command = "scripts/test-after-change.sh --select PY-TB-001"
 file_patterns = [
   "integrations/terminal_bench/harnesslab_tb_agent.py",
+  "integrations/terminal_bench/harnesslab_tb_agent_extract_test.py",
   "integrations/terminal_bench/harnesslab_tb_agent_test.py",
   "integrations/terminal_bench/harnesslab_tb_process.py",
   "integrations/terminal_bench/harnesslab_tb_process_test.py",
@@ -2016,6 +2055,66 @@ requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_eve
 contracts = ["TerminalBenchExternalRunner", "ProcessCleanup", "RunMonitor", "FailureMapping"]
 
 [[tests]]
+id = "ORCH-023"
+title = "Run monitor aborts on external runner setup failure"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-023"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/monitor.rs",
+  "crates/harnesslab-cli/src/runner/monitor_tests.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = ["run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "5.3"
+[tests.verifies]
+requirements = ["execution_runtime", "external_benchmark_runtime"]
+contracts = ["RunMonitor", "FailureMapping"]
+
+[[tests]]
+id = "INT-044"
+title = "Terminal-Bench runtime exports amd64 Docker platform"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-044"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_runtime_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+]
+required_artifacts = ["events.jsonl", "results.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "BenchmarkRuntimeAdapter", "EventLog"]
+
+[[tests]]
+id = "INT-045"
+title = "Terminal-Bench run timeout does not inflate verifier timeout"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-045"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+]
+required_artifacts = ["results.json", "run.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "TimeoutPolicy"]
+
+[[tests]]
 id = "TB-001"
 title = "Terminal-Bench adapter cleanup failure overrides official success"
 layer = "unit"
@@ -2088,6 +2187,139 @@ status = "active"
 [tests.source]
 doc = "docs/architecture.md"
 section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping"]
+
+[[tests]]
+id = "TB-005"
+title = "Terminal-Bench parse error maps to agent output parse error"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-005"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping"]
+
+[[tests]]
+id = "TB-006"
+title = "Terminal-Bench no-output watchdog covers setup and build"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-006"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "ExternalMonitorPolicy"]
+
+[[tests]]
+id = "TB-007"
+title = "Terminal-Bench compose setup failure is execution failure"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-007"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/log_scan.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping"]
+
+[[tests]]
+id = "TB-008"
+title = "Terminal-Bench QEMU compatibility dataset is attempt local"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-008"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime"]
+contracts = ["TerminalBenchExternalRunner", "BenchmarkRuntimeAdapter"]
+
+[[tests]]
+id = "TB-009"
+title = "Terminal-Bench QEMU forced amd64 dataset patches serial build"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-009"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
+[tests.verifies]
+requirements = ["external_benchmark_runtime"]
+contracts = ["TerminalBenchExternalRunner", "BenchmarkRuntimeAdapter"]
+
+[[tests]]
+id = "TB-010"
+title = "Terminal-Bench QEMU dataset prep failure is structured setup failure"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-010"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = ["events.jsonl", "result.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "5.3"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping", "TaskAttemptResult"]
+
+[[tests]]
+id = "TB-011"
+title = "Terminal-Bench infra log scan ignores verifier logs"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-011"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/log_scan.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "7.6"
 [tests.verifies]
 requirements = ["external_benchmark_runtime", "execution_runtime"]
 contracts = ["TerminalBenchExternalRunner", "FailureMapping"]

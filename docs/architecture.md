@@ -404,6 +404,51 @@ parse_evaluation(raw_stdout, raw_stderr, exit_code, parser_config) -> Evaluation
 snapshot(task) -> TaskSnapshot
 ```
 
+上面是数据与任务规划 contract，只解决“这个 benchmark 有哪些任务、如何表达任务”。真实第三方 benchmark 还必须有一个 runtime adapter contract，解决“如何调用官方 runner、如何监控它、如何把官方结果投影到 HarnessLab”。因此每个外部 benchmark 实例都由两层组成：
+
+```mermaid
+flowchart LR
+  Registry["Benchmark Registry"] --> DataAdapter["BenchmarkAdapter\n(data + planning)"]
+  Orchestrator["Run Orchestrator"] --> RuntimeAdapter["BenchmarkRuntimeAdapter\n(execution + result mapping)"]
+  RuntimeAdapter --> OfficialRunner["Official Benchmark Runner"]
+  RuntimeAdapter --> AgentBridge["Agent Bridge"]
+  RuntimeAdapter --> Monitor["Execution Monitor"]
+  RuntimeAdapter --> Artifacts["Artifact Snapshot"]
+```
+
+`BenchmarkRuntimeAdapter` 必须提供：
+
+```text
+preflight(profile, run_config, benchmark_snapshot) -> RuntimePreflightResult
+prepare_task(task_snapshot, attempt_dir) -> RuntimeTaskContext
+runner_command(context) -> ExternalCommandSpec
+monitor_policy(context) -> ExternalMonitorPolicy
+parse_result(context, process_record) -> TaskAttemptResult
+post_task_cleanup(context) -> CleanupResult
+run_cleanup(run_context) -> CleanupResult
+replay_materials(context) -> ReplaySnapshot
+```
+
+运行期边界：
+
+| 职责 | Adapter 所有权 | Orchestrator 所有权 |
+|---|---|---|
+| 上游数据结构、split、task id、官方版本 | Data adapter | 保存 snapshot、选择任务 |
+| 官方 runner 命令、环境变量、平台策略 | Runtime adapter | 进程启动与日志捕获 |
+| CLI agent 接入桥、输入模式、输出规范化 | Runtime adapter | Agent profile 校验入口 |
+| 进度文件、静默 watchdog、hard timeout | Runtime adapter 给 policy | HostProcessExecutor 执行 policy |
+| 官方结果解析、失败码映射、score/usage | Runtime adapter | 统一持久化 result/report |
+| Docker compose/container/network 清理 | Runtime adapter | run 级最终 cleanup 调度 |
+| replay 所需配置快照和上游 artifact 引用 | Runtime adapter | replay 命令与 snapshot 存储 |
+
+架构原则：
+
+- 一个 benchmark family 一个 runtime adapter 实例；不要为某个任务写一次性逻辑。
+- Adapter 可以包住官方 CLI 或官方 Python API，但必须暴露统一的 HarnessLab 失败分类、artifact、日志和 replay contract。
+- Adapter 不能吞掉执行层异常。官方 runner 已经写出 success 时，如果 HarnessLab 进程被 hard timeout、no-progress watchdog 或 cleanup failure 命中，仍必须按 execution failure 处理。
+- Adapter 不能要求用户理解 Docker 细节；平台、socket、compose project、cleanup 都由 adapter 自己配置和记录。
+- Adapter 的特殊策略必须可测试、可记录到 `events.jsonl`，并能在 report 中解释。
+
 核心对象：
 
 ```text
@@ -503,6 +548,22 @@ task metadata -> sandbox workspace -> agent executes instruction -> verifier scr
 - reward 文件、测试输出、agent logs 都进入 task artifact 目录。
 - Terminal task 可以没有 git diff。
 - verifier 失败是 Benchmark Failure；sandbox、agent、setup 失败是 Execution Failure。
+
+Terminal-Bench runtime adapter 的固定 contract：
+
+| 维度 | 规则 |
+|---|---|
+| 官方 runner | 通过 `uvx --from terminal-bench tb run` 运行官方 Terminal-Bench。 |
+| 运行平台 | 普通 task 默认导出 `DOCKER_DEFAULT_PLATFORM=linux/amd64`；Apple Silicon 上的 x86 QEMU task 默认使用 `linux/arm64` 容器并交叉编译 x86_64 kernel/rootfs；可用 `HARNESSLAB_TERMINAL_BENCH_DOCKER_PLATFORM` 临时覆盖。 |
+| Agent bridge | 内置 `harnesslab_tb_agent:HarnessLabCommandAgent`，负责把本机 CLI agent 命令转换成 Terminal-Bench agent。 |
+| 输出规范化 | 优先使用 fenced code；无 code fence 时允许剥离纯自然语言前言，从第一行 shell-looking 命令开始执行，避免官方 `parse_error` 误判。 |
+| QEMU 本机兼容 | 对 `build-initramfs-qemu` 和 `build-tcc-qemu`，adapter 复制 attempt-local dataset；Apple Silicon/native arm64 模式注入 `gcc-x86-64-linux-gnu` 并使用 `ARCH=x86_64 CROSS_COMPILE=x86_64-linux-gnu-` 交叉编译；强制 amd64 emulation 模式只做 `make -j1` 降级；原始 benchmark cache 不被修改。 |
+| 官方 timeout | Adapter 从 task.yaml 读取 `max_agent_timeout_sec` 和 `max_test_timeout_sec`；`--timeout-sec` 只影响 HarnessLab/agent 预算上限，不能放大官方 verifier timeout。 |
+| 进度监控 | 注册官方 `run.log` 为进度文件，注册 Docker setup/build/pull 进程为有界活动信号。 |
+| 静默 watchdog | 默认下限覆盖首次 setup/build 静默窗口；无日志和无有效活动时才报 `execution/external_runner_no_progress`。 |
+| hard timeout | 默认 `agent_timeout + test_timeout + 1800`，可用 `HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC` 诊断覆盖。 |
+| 失败映射 | 官方 `agent_timeout/test_timeout` 是 benchmark verdict；官方 `parse_error` 映射为 `benchmark/agent_output_parse_error`；官方 setup/build 失败映射为 `execution/external_runner_setup_failed`；HarnessLab kill/cleanup 映射为 execution failure。 |
+| cleanup | 每个 task 后清理对应 compose container/network，run 结束再按 run id token 扫描兜底。 |
 
 ### 6.3 PatchStyleAdapter
 

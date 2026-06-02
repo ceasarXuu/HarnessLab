@@ -1,7 +1,13 @@
 use super::{
     ExternalTaskExecution, log_scan, terminal_bench_cleanup,
     terminal_bench_env::terminal_bench_agent_env,
-    terminal_bench_result::{missing_evaluation, terminal_bench_result_warnings},
+    terminal_bench_result::{
+        missing_evaluation, setup_failed_result, terminal_bench_result_warnings, write_task_result,
+    },
+    terminal_bench_runtime::{
+        append_runner_config_event, terminal_bench_docker_platform,
+        terminal_bench_no_output_activity_patterns, terminal_bench_runtime_dataset,
+    },
     terminal_bench_timeout::{
         terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
         terminal_bench_timeout_values,
@@ -14,9 +20,7 @@ use harnesslab_core::{
     TaskAttemptResult, TaskPlan, TaskState, TerminationReason, UsageRecord, classify_agent_process,
     health_impact_for_failure,
 };
-use harnesslab_infra::{
-    ExecSpec, HostProcessExecutor, NoOutputActivityEvent, append_event, atomic_write_json, event,
-};
+use harnesslab_infra::{ExecSpec, HostProcessExecutor, NoOutputActivityEvent, append_event, event};
 use std::fs;
 use std::path::Path;
 
@@ -36,6 +40,22 @@ pub(super) fn execute(
     let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
     let output_root = attempt_root.join("official/terminal-bench");
     let official_run_id = official_run_id(ctx.spec, ctx.task, ctx.attempt);
+    let agent = terminal_bench_agent(ctx.profile)?;
+    let docker_platform = terminal_bench_docker_platform(
+        &ctx.task.task_id,
+        std::env::var("HARNESSLAB_TERMINAL_BENCH_DOCKER_PLATFORM")
+            .ok()
+            .as_deref(),
+    );
+    let result_path = output_root.join(&official_run_id).join("results.json");
+    let runtime_dataset_path =
+        match terminal_bench_runtime_dataset(ctx, dataset_path, &docker_platform) {
+            Ok(path) => path,
+            Err(error) => {
+                let reason = format!("terminal-bench runtime dataset preparation failed: {error}");
+                return setup_failed_result(ctx, &result_path, &reason);
+            }
+        };
     terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
@@ -51,30 +71,32 @@ pub(super) fn execute(
             Some(&ctx.task.task_id),
             "external_runner_started",
             &format!(
-                "terminal-bench dataset={} official_run_id={} output={}",
+                "terminal-bench dataset={} runtime_dataset={} official_run_id={} output={}",
                 dataset_path.display(),
+                runtime_dataset_path.display(),
                 official_run_id,
                 output_root.display()
             ),
         ),
         &[],
     )?;
-    let agent = terminal_bench_agent(ctx.profile)?;
     let command = terminal_bench_command(
-        dataset_path,
+        &runtime_dataset_path,
         &agent,
         &output_root,
         &official_run_id,
         ctx.profile,
         ctx,
+        &docker_platform,
     );
     let report_command = terminal_bench_command(
-        dataset_path,
+        &runtime_dataset_path,
         &agent,
         &output_root,
         &official_run_id,
         ctx.report_profile,
         ctx,
+        &docker_platform,
     );
     write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
     let (agent_timeout_sec, test_timeout_sec, default_process_timeout_sec) =
@@ -82,6 +104,7 @@ pub(super) fn execute(
             ctx.spec.execution.timeout_sec,
             ctx.profile.timeout_sec,
             ctx.task.verifier_spec.timeout_sec,
+            task_agent_timeout(ctx),
         );
     let process_timeout_sec = terminal_bench_process_timeout_sec(
         default_process_timeout_sec,
@@ -97,7 +120,12 @@ pub(super) fn execute(
             .ok()
             .as_deref(),
     );
-    append_runner_config_event(ctx, process_timeout_sec, no_output_timeout_sec)?;
+    append_runner_config_event(
+        ctx,
+        process_timeout_sec,
+        no_output_timeout_sec,
+        &docker_platform,
+    )?;
     let process = normalize_agent_paths(HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,
@@ -125,7 +153,6 @@ pub(super) fn execute(
         &official_run_id,
         false,
     )?;
-    let result_path = output_root.join(&official_run_id).join("results.json");
     let parsed_result =
         parse_terminal_bench_result(ctx.attempt_dir, &result_path, &ctx.task.task_id);
     let agent_failure = terminal_bench_process_failure(&process);
@@ -223,56 +250,8 @@ pub(super) fn execute(
         usage,
         warnings,
     };
-    let task_dir = harnesslab_core::task_dir_name(&ctx.task.task_id)?;
-    atomic_write_json(
-        &ctx.run_dir
-            .join("tasks")
-            .join(task_dir)
-            .join("attempts")
-            .join(ctx.attempt.to_string())
-            .join("result.json"),
-        &result,
-    )?;
+    write_task_result(ctx, &result)?;
     Ok(result)
-}
-
-fn append_runner_config_event(
-    ctx: &ExternalTaskExecution<'_>,
-    process_timeout_sec: u64,
-    no_output_timeout_sec: Option<u64>,
-) -> Result<()> {
-    let no_output_timeout = no_output_timeout_sec
-        .map(|timeout| timeout.to_string())
-        .unwrap_or_else(|| "disabled".to_string());
-    let activity_grace = no_output_timeout.clone();
-    let activity_patterns = terminal_bench_no_output_activity_patterns().join(",");
-    let progress_paths = "official/terminal-bench/<run-id>/run.log";
-    append_event(
-        &ctx.run_dir.join("events.jsonl"),
-        &event(
-            &ctx.spec.run_id,
-            Some(&ctx.task.task_id),
-            "external_runner_configured",
-            &format!(
-                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} progress_paths={progress_paths} activity_patterns={activity_patterns}"
-            ),
-        ),
-        &[],
-    )
-}
-
-pub(super) fn terminal_bench_no_output_activity_patterns() -> Vec<String> {
-    [
-        "docker compose",
-        "docker-compose",
-        "docker build",
-        "docker buildx",
-        "docker-buildx",
-        "docker pull",
-    ]
-    .into_iter()
-    .map(str::to_string)
-    .collect()
 }
 
 fn append_process_termination_event(
@@ -320,11 +299,13 @@ fn terminal_bench_command(
     run_id: &str,
     profile: &AgentProfile,
     ctx: &ExternalTaskExecution<'_>,
+    docker_platform: &str,
 ) -> String {
     let (agent_timeout, test_timeout, _) = terminal_bench_timeout_values(
         ctx.spec.execution.timeout_sec,
         profile.timeout_sec,
         ctx.task.verifier_spec.timeout_sec,
+        task_agent_timeout(ctx),
     );
     let official_agent_timeout = terminal_bench_official_agent_timeout(
         agent_timeout,
@@ -333,6 +314,10 @@ fn terminal_bench_command(
     let mut command = vec![
         terminal_bench_agent_env(profile, agent_timeout),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
+        format!(
+            "export DOCKER_DEFAULT_PLATFORM={}; export BUILDKIT_PROGRESS=plain;",
+            shell_quote(docker_platform)
+        ),
         "uvx --from terminal-bench tb run".to_string(),
         format!("--dataset-path {}", shell_quote(&dataset_path.display().to_string())),
         format!("--task-id {}", shell_quote(&ctx.task.task_id)),
@@ -358,6 +343,13 @@ fn terminal_bench_command(
         }
     }
     command.join(" ")
+}
+
+fn task_agent_timeout(ctx: &ExternalTaskExecution<'_>) -> Option<u64> {
+    ctx.task
+        .external_runner
+        .as_ref()
+        .and_then(|runner| runner.agent_timeout_sec)
 }
 
 pub(super) fn terminal_bench_official_agent_timeout(

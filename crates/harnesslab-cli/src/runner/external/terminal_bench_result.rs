@@ -1,5 +1,10 @@
+use super::ExternalTaskExecution;
 use anyhow::Result;
-use harnesslab_core::{EvaluationRecord, FailureClass, FailureCode, UsageRecord};
+use harnesslab_core::{
+    EvaluationRecord, FailureClass, FailureCode, Outcome, TaskAttemptResult, TaskState,
+    UsageRecord, health_impact_for_failure,
+};
+use harnesslab_infra::{append_event, atomic_write_json, event};
 use serde_json::Value;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
@@ -84,6 +89,62 @@ pub(super) fn missing_evaluation(
         stdout_path: "verifier/stdout.log".to_string(),
         stderr_path: "verifier/stderr.log".to_string(),
     })
+}
+
+pub(super) fn setup_failed_result(
+    ctx: &ExternalTaskExecution<'_>,
+    result_path: &Path,
+    reason: &str,
+) -> Result<TaskAttemptResult> {
+    append_event(
+        &ctx.run_dir.join("events.jsonl"),
+        &event(
+            &ctx.spec.run_id,
+            Some(&ctx.task.task_id),
+            "external_runner_setup_failed",
+            reason,
+        ),
+        &[],
+    )?;
+    let evaluation = missing_evaluation(ctx.attempt_dir, result_path, reason)?;
+    let failure_class = FailureClass::Execution;
+    let failure_code = Some(FailureCode::ExternalRunnerSetupFailed);
+    let result = TaskAttemptResult {
+        schema_version: 1,
+        task_id: ctx.task.task_id.clone(),
+        attempt: ctx.attempt,
+        provenance: ctx.provenance,
+        state: TaskState::Failure,
+        outcome: Outcome::Failure,
+        failure_class,
+        failure_code,
+        health_impact: health_impact_for_failure(failure_class, failure_code),
+        benchmark_score: 0.0,
+        duration_ms: ctx.started.elapsed().as_millis() as u64,
+        agent: None,
+        evaluation: Some(evaluation),
+        patch: None,
+        usage: UsageRecord::Unknown,
+        warnings: Vec::new(),
+    };
+    write_task_result(ctx, &result)?;
+    Ok(result)
+}
+
+pub(super) fn write_task_result(
+    ctx: &ExternalTaskExecution<'_>,
+    result: &TaskAttemptResult,
+) -> Result<()> {
+    let task_dir = harnesslab_core::task_dir_name(&ctx.task.task_id)?;
+    atomic_write_json(
+        &ctx.run_dir
+            .join("tasks")
+            .join(task_dir)
+            .join("attempts")
+            .join(ctx.attempt.to_string())
+            .join("result.json"),
+        result,
+    )
 }
 
 pub(super) fn read_result_json(path: &Path) -> Result<Value> {
@@ -223,6 +284,7 @@ fn warning_code_for_success(result: &Value) -> Option<FailureCode> {
 fn failure_mode_code(mode: &str) -> Option<(FailureClass, FailureCode)> {
     match mode {
         "agent_timeout" => Some((FailureClass::Benchmark, FailureCode::AgentTimeout)),
+        "parse_error" => Some((FailureClass::Benchmark, FailureCode::AgentOutputParseError)),
         "test_timeout" => Some((FailureClass::Benchmark, FailureCode::VerifierTimeout)),
         _ => None,
     }

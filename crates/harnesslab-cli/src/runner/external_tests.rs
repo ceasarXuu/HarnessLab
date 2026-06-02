@@ -12,26 +12,32 @@ use std::fs;
 #[test]
 fn terminal_bench_timeout_values_use_run_override_when_present() {
     assert_eq!(
-        terminal_bench_timeout_values(Some(42), 5, 7),
-        (42, 42, 1884)
+        terminal_bench_timeout_values(Some(42), 5, 7, None),
+        (42, 7, 1849)
     );
 }
 
 #[test]
 fn terminal_bench_timeout_values_fall_back_to_profile_and_verifier() {
-    assert_eq!(terminal_bench_timeout_values(None, 5, 7), (5, 7, 1812));
-    assert_eq!(terminal_bench_timeout_values(None, 0, 0), (1, 1, 1802));
+    assert_eq!(
+        terminal_bench_timeout_values(None, 5, 7, None),
+        (5, 7, 1812)
+    );
+    assert_eq!(
+        terminal_bench_timeout_values(None, 0, 0, None),
+        (1, 1, 1802)
+    );
 }
 
 #[test]
 fn terminal_bench_no_output_timeout_defaults_to_setup_watchdog() {
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(300, 300, 1200, None),
-        Some(420)
+        terminal_bench_no_output_timeout_sec(300, 300, 2400, None),
+        Some(1800)
     );
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(5, 7, 612, None),
-        Some(300)
+        terminal_bench_no_output_timeout_sec(5, 7, 1812, None),
+        Some(1800)
     );
     assert_eq!(
         terminal_bench_no_output_timeout_sec(300, 300, 120, None),
@@ -54,14 +60,14 @@ fn terminal_bench_no_output_timeout_can_be_overridden_or_disabled() {
         None
     );
     assert_eq!(
-        terminal_bench_no_output_timeout_sec(300, 300, 1200, Some("invalid")),
-        Some(420)
+        terminal_bench_no_output_timeout_sec(300, 300, 2400, Some("invalid")),
+        Some(1800)
     );
 }
 
 #[test]
 fn terminal_bench_no_output_activity_patterns_are_setup_scoped() {
-    let patterns = super::terminal_bench::terminal_bench_no_output_activity_patterns();
+    let patterns = super::terminal_bench_runtime::terminal_bench_no_output_activity_patterns();
 
     assert!(patterns.contains(&"docker compose".to_string()));
     assert!(patterns.contains(&"docker-buildx".to_string()));
@@ -244,7 +250,27 @@ fn terminal_bench_result_unknown_failure_mode_falls_back_to_test_failed() {
 }
 
 #[test]
-fn terminal_bench_result_adapter_timeout_log_overrides_parse_error() {
+fn terminal_bench_result_maps_parse_error_to_agent_output_parse_error() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"parse_error"}]}"#,
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Benchmark);
+    assert_eq!(failure_code, Some(FailureCode::AgentOutputParseError));
+}
+
+#[test]
+fn terminal_bench_result_adapter_timeout_log_does_not_override_parse_error() {
     let attempt_dir = tempfile::tempdir().unwrap();
     let result_path = write_result(
         attempt_dir.path(),
@@ -264,7 +290,7 @@ fn terminal_bench_result_adapter_timeout_log_overrides_parse_error() {
         .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
-    assert_eq!(failure_code, Some(FailureCode::AgentTimeout));
+    assert_eq!(failure_code, Some(FailureCode::AgentOutputParseError));
 }
 
 #[test]
@@ -387,7 +413,7 @@ fn terminal_bench_result_official_failure_mode_wins_over_adapter_timeout_log() {
 }
 
 #[test]
-fn terminal_bench_result_stale_adapter_timeout_log_does_not_override_parse_error() {
+fn terminal_bench_result_stale_adapter_timeout_log_keeps_parse_error() {
     let attempt_dir = tempfile::tempdir().unwrap();
     let stale_log_dir = attempt_dir
         .path()
@@ -412,7 +438,7 @@ fn terminal_bench_result_stale_adapter_timeout_log_does_not_override_parse_error
         .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
-    assert_eq!(failure_code, Some(FailureCode::TestFailed));
+    assert_eq!(failure_code, Some(FailureCode::AgentOutputParseError));
 }
 
 fn write_result(root: &std::path::Path, json: &str) -> std::path::PathBuf {

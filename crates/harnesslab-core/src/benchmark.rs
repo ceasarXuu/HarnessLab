@@ -126,6 +126,8 @@ pub struct ExternalRunnerSpec {
     pub dataset_path: String,
     #[serde(default)]
     pub source_path: Option<String>,
+    #[serde(default)]
+    pub agent_timeout_sec: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

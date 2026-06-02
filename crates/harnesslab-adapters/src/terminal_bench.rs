@@ -195,6 +195,7 @@ fn plan_from_dataset(
 }
 
 fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
+    let metadata = read_task_metadata(&dataset_dir.join(task_id));
     TaskPlan {
         task_id: task_id.to_string(),
         instruction: format!("Run official Terminal-Bench task {task_id}."),
@@ -217,7 +218,7 @@ fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
         verifier_spec: VerifierSpec {
             command: "tb run".to_string(),
             working_dir: "workspace".to_string(),
-            timeout_sec: 3600,
+            timeout_sec: metadata.max_test_timeout_sec.unwrap_or(3600),
             expected_exit_codes: vec![0],
             environment_mode: VerifierEnvironment::HostProcess,
             output_parser: "terminal_bench_results_json".to_string(),
@@ -233,8 +234,46 @@ fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
             kind: ExternalRunnerKind::TerminalBench,
             dataset_path: dataset_dir.display().to_string(),
             source_path: None,
+            agent_timeout_sec: metadata.max_agent_timeout_sec,
         }),
     }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct TerminalBenchTaskMetadata {
+    max_agent_timeout_sec: Option<u64>,
+    max_test_timeout_sec: Option<u64>,
+}
+
+fn read_task_metadata(task_dir: &Path) -> TerminalBenchTaskMetadata {
+    let Ok(content) = std::fs::read_to_string(task_dir.join("task.yaml")) else {
+        return TerminalBenchTaskMetadata::default();
+    };
+    TerminalBenchTaskMetadata {
+        max_agent_timeout_sec: parse_yaml_timeout_field(&content, "max_agent_timeout_sec"),
+        max_test_timeout_sec: parse_yaml_timeout_field(&content, "max_test_timeout_sec"),
+    }
+}
+
+fn parse_yaml_timeout_field(content: &str, key: &str) -> Option<u64> {
+    let prefix = format!("{key}:");
+    content.lines().find_map(|line| {
+        if line.starts_with(char::is_whitespace) {
+            return None;
+        }
+        let line = line.split('#').next().unwrap_or("").trim();
+        let value = line.strip_prefix(&prefix)?.trim();
+        parse_timeout_seconds(value)
+    })
+}
+
+fn parse_timeout_seconds(value: &str) -> Option<u64> {
+    let token = value.split_whitespace().next()?.trim_matches('"');
+    if let Ok(seconds) = token.parse::<u64>() {
+        return (seconds > 0).then_some(seconds);
+    }
+    let seconds = token.parse::<f64>().ok()?;
+    (seconds.is_finite() && seconds > 0.0).then(|| seconds.ceil() as u64)
 }
 
 #[cfg(test)]
@@ -358,5 +397,58 @@ mod tests {
             .unwrap();
         assert_eq!(present_plan.tasks[0].task_id, "hello-world");
         assert!(present_plan.tasks[0].external_runner.is_some());
+    }
+
+    #[test]
+    fn c_bench_006_terminal_bench_maps_task_test_timeout() {
+        let root = tempfile::tempdir().unwrap();
+        let task_dir = root
+            .path()
+            .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
+        std::fs::create_dir_all(&task_dir).unwrap();
+        std::fs::write(
+            task_dir.join("task.yaml"),
+            "instruction: hi\nmax_agent_timeout_sec: 360.0\nmax_test_timeout_sec: 60.0\n",
+        )
+        .unwrap();
+
+        let plan = TerminalBenchAdapter::with_data_root(Some(root.path()))
+            .plan("full")
+            .unwrap();
+
+        assert_eq!(plan.tasks[0].verifier_spec.timeout_sec, 60);
+        assert_eq!(
+            plan.tasks[0]
+                .external_runner
+                .as_ref()
+                .unwrap()
+                .agent_timeout_sec,
+            Some(360)
+        );
+    }
+
+    #[test]
+    fn c_bench_006_terminal_bench_ignores_timeout_text_inside_block_scalars() {
+        let root = tempfile::tempdir().unwrap();
+        let task_dir = root
+            .path()
+            .join("terminal-bench/terminal-bench-core-0.1.1/timeout-task");
+        std::fs::create_dir_all(&task_dir).unwrap();
+        std::fs::write(
+            task_dir.join("task.yaml"),
+            "instruction: |\n  max_test_timeout_sec: 3\nmax_agent_timeout_sec: 12.2\n",
+        )
+        .unwrap();
+
+        let plan = TerminalBenchAdapter::with_data_root(Some(root.path()))
+            .plan("full")
+            .unwrap();
+        let task = plan.tasks.first().unwrap();
+
+        assert_eq!(task.verifier_spec.timeout_sec, 3600);
+        assert_eq!(
+            task.external_runner.as_ref().unwrap().agent_timeout_sec,
+            Some(13)
+        );
     }
 }

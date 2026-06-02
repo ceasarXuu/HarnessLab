@@ -257,6 +257,7 @@ fn swe_bench_pro_task(task_id: &str, dataset: &SweBenchProDataset) -> TaskPlan {
             kind: ExternalRunnerKind::SweBenchPro,
             dataset_path: dataset.dataset_dir.display().to_string(),
             source_path: Some(dataset.source_dir.display().to_string()),
+            agent_timeout_sec: None,
         }),
     }
 }

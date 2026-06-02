@@ -4,9 +4,15 @@ pub(super) fn terminal_bench_timeout_values(
     run_timeout: Option<u64>,
     profile_timeout: u64,
     verifier_timeout: u64,
+    task_agent_timeout: Option<u64>,
 ) -> (u64, u64, u64) {
-    let agent_timeout = run_timeout.unwrap_or(profile_timeout).max(1);
-    let test_timeout = run_timeout.unwrap_or(verifier_timeout).max(1);
+    let requested_agent_timeout = run_timeout.unwrap_or(profile_timeout).max(1);
+    let agent_timeout = task_agent_timeout
+        .filter(|timeout| *timeout > 0)
+        .map(|timeout| requested_agent_timeout.min(timeout))
+        .unwrap_or(requested_agent_timeout)
+        .max(1);
+    let test_timeout = verifier_timeout.max(1);
     let process_timeout = agent_timeout
         .saturating_add(test_timeout)
         .saturating_add(SETUP_AND_BUILD_TIMEOUT_SEC);
@@ -36,7 +42,10 @@ pub(super) fn terminal_bench_no_output_timeout_sec(
             return Some(timeout.min(cap));
         }
     }
-    let default_timeout = agent_timeout.max(test_timeout).saturating_add(120).max(300);
+    let default_timeout = agent_timeout
+        .max(test_timeout)
+        .saturating_add(120)
+        .max(SETUP_AND_BUILD_TIMEOUT_SEC);
     Some(default_timeout.min(cap))
 }
 
@@ -48,4 +57,17 @@ pub(super) fn terminal_bench_process_timeout_sec(
         .and_then(|value| value.parse::<u64>().ok())
         .filter(|value| *value > 0)
         .unwrap_or(default_timeout)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::terminal_bench_timeout_values;
+
+    #[test]
+    fn terminal_bench_task_agent_timeout_caps_run_timeout() {
+        assert_eq!(
+            terminal_bench_timeout_values(Some(1800), 1800, 60, Some(360)),
+            (360, 60, 2220)
+        );
+    }
 }

@@ -54,6 +54,7 @@ pub(super) struct RunMonitor {
     run_id: String,
     total_planned: usize,
     completed: usize,
+    environment_failures: usize,
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
@@ -75,6 +76,7 @@ struct RunHealthSnapshot<'a> {
     completed: usize,
     successes: usize,
     non_timeout_completed: usize,
+    environment_failures: usize,
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
@@ -88,6 +90,7 @@ impl RunMonitor {
             run_id: run_id.into(),
             total_planned,
             completed: 0,
+            environment_failures: 0,
             docker_network_failures: 0,
             agent_timeouts: 0,
             external_runner_no_progress: 0,
@@ -112,11 +115,14 @@ impl RunMonitor {
             self.non_timeout_completed += 1;
         }
         if result.health_impact == HealthImpact::EnvironmentUnhealthy {
-            self.docker_network_failures += 1;
+            self.environment_failures += 1;
+            if result.failure_code == Some(FailureCode::DockerNetworkPoolExhausted) {
+                self.docker_network_failures += 1;
+            }
             self.abort(
                 run_dir,
                 result,
-                "docker network pool exhausted; benchmark environment is unhealthy",
+                environment_abort_reason(result.failure_code),
             )?;
         } else if result.health_impact == HealthImpact::Stall {
             self.execution_stalls += 1;
@@ -238,6 +244,7 @@ impl RunMonitor {
             completed: self.completed,
             successes: self.successes,
             non_timeout_completed: self.non_timeout_completed,
+            environment_failures: self.environment_failures,
             docker_network_failures: self.docker_network_failures,
             agent_timeouts: self.agent_timeouts,
             external_runner_no_progress: self.external_runner_no_progress,
@@ -245,6 +252,18 @@ impl RunMonitor {
             execution_stalls: self.execution_stalls,
         };
         atomic_write_json(&run_dir.join("run-health.json"), &snapshot)
+    }
+}
+
+fn environment_abort_reason(code: Option<FailureCode>) -> &'static str {
+    match code {
+        Some(FailureCode::DockerNetworkPoolExhausted) => {
+            "docker network pool exhausted; benchmark environment is unhealthy"
+        }
+        Some(FailureCode::ExternalRunnerSetupFailed) => {
+            "external runner setup failed; benchmark environment is unhealthy"
+        }
+        _ => "benchmark environment is unhealthy",
     }
 }
 

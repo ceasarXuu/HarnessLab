@@ -226,6 +226,7 @@ Pass criteria:
 | Agent timeout | failure | execution | `agent_timeout` |
 | External benchmark runner has no durable log progress before watchdog timeout and bounded activity grace | failure | execution | `external_runner_no_progress` |
 | External benchmark runner exceeds HarnessLab hard timeout | failure | execution | `external_runner_timeout` |
+| External benchmark runner setup/build fails before agent starts | failure | execution | `external_runner_setup_failed` |
 | External benchmark reports agent timeout | failure | benchmark | `agent_timeout` |
 | Agent killed by signal | failure | execution | `agent_signaled` |
 | Agent exits non-zero before evaluation can run | failure | execution | `agent_nonzero_exit` |
@@ -534,6 +535,20 @@ Terminal smoke acceptance:
 - A HarnessLab process-level agent timeout returns `execution_failure/agent_timeout`.
 - An external benchmark-reported agent timeout returns `benchmark_failure/agent_timeout`.
 - Artifacts under configured artifact dirs are collected and listed in manifest.
+
+Terminal-Bench runtime acceptance:
+
+- The adapter runs through HarnessLab CLI using the official Terminal-Bench runner; no validation path may bypass `harnesslab run`.
+- Runtime configuration is emitted to `events.jsonl` before launching each task and includes `process_timeout_sec`, `no_output_timeout_sec`, `activity_grace_sec`, `docker_platform`, progress paths, and activity patterns.
+- The default Docker platform for ordinary Terminal-Bench tasks is `linux/amd64`; a contract test must prove `DOCKER_DEFAULT_PLATFORM=linux/amd64` is exported for non-QEMU tasks. On Apple Silicon, QEMU tasks such as `build-initramfs-qemu` and `build-tcc-qemu` must use an adapter-owned compatibility path that still produces x86_64 artifacts for the official verifier.
+- QEMU compatibility preparation must be attempt-local: for `build-initramfs-qemu` and `build-tcc-qemu`, the adapter may copy the task dataset and patch its Dockerfile, but it must not mutate the original benchmark cache. Native arm64 compatibility must cross-compile with `ARCH=x86_64 CROSS_COMPILE=x86_64-linux-gnu-`; forced amd64 emulation may serialize the kernel build to `make -j1`.
+- Adapter planning must read Terminal-Bench `task.yaml` `max_agent_timeout_sec` and `max_test_timeout_sec`. `--global-agent-timeout-sec`, `HARNESSLAB_AGENT_TIMEOUT_SEC`, `--global-test-timeout-sec`, and HarnessLab hard/no-output timeouts must be derived from those benchmark-owned limits; user `--timeout-sec` must not inflate official verifier timeout.
+- The no-output watchdog default must leave a setup/build window of at least 1800 seconds unless capped by the hard timeout. A unit test must prove the default is not the short agent/test-only window.
+- Official Terminal-Bench `failure_mode=parse_error` maps to `benchmark_failure/agent_output_parse_error` so agent output-format failures are visible separately from wrong answers.
+- Official Terminal-Bench setup/build failures, including Docker compose build errors reported as `unknown_agent_error`, map to `execution_failure/external_runner_setup_failed` and trigger run-health abort for pending tasks.
+- The Python agent bridge must strip common natural-language preambles before shell script execution while preserving shell-significant content such as arrays, heredocs, exports, and fenced scripts.
+- A real-run check for QEMU tasks must use a `.benchmarks/` subset and the normal HarnessLab CLI. Passing criteria are either valid benchmark scores for both tasks, or a classified benchmark verdict that is not caused by HarnessLab runtime/platform/watchdog/cleanup failure.
+- Any `execution_failure/external_runner_no_progress`, `execution_failure/external_runner_timeout`, `execution_failure/external_runner_setup_failed`, `execution_failure/agent_cleanup_failed`, missing official result, or unclassified parse failure in that QEMU check is a release blocker for the Terminal-Bench adapter.
 
 ### 7.7 Patch-Style Adapter
 

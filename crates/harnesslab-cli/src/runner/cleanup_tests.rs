@@ -349,6 +349,7 @@ fn terminal_bench_plan() -> BenchmarkPlan {
         kind: ExternalRunnerKind::TerminalBench,
         dataset_path: "/tmp/terminal-bench".to_string(),
         source_path: None,
+        agent_timeout_sec: None,
     });
     plan
 }
