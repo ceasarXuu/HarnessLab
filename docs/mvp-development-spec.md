@@ -326,6 +326,28 @@ exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
 
+[setup]
+preset = "builtin"
+required_commands = ["codex"]
+run_as = "harnesslab"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = []
+deny = []
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
 [usage]
 parser = "none"
 
@@ -338,9 +360,27 @@ Validation:
 - `name` must match `[a-zA-Z0-9][a-zA-Z0-9._-]*`.
 - `kind` must be one of built-in kinds or `custom`.
 - `command` must include one input variable unless input mode is `stdin` or `tty`.
+- `setup.preset` must be `none`, `builtin`, or `custom`.
+- `setup.commands` is valid only when `setup.preset = "custom"`.
+- `setup.required_commands` entries must be non-empty command names, not shell pipelines.
+- `setup.run_as` must be `root`, `harnesslab`, or `current`.
+- `skills.allow` and `skills.deny` must not contain the same item.
+- `tools.allow` and `tools.deny` must not contain the same item.
+- `hooks.allow` and `hooks.deny` must not contain the same item.
+- Non-default skills/tools/hooks policies must be materializable by the profile kind; otherwise doctor returns an error before run.
 - `input_mode` must be `argument`, `file`, `stdin`, or `tty`.
 - `timeout_sec` must be positive.
 - `mount_docker_socket` defaults to false and must produce a warning if true.
+
+Agent registration first-experience acceptance:
+
+- `harnesslab init` creates readable default profile files for detected built-in agents; a human or another agent should understand what to edit without reading Rust code.
+- Every profile field has a documented allowed value range and example in the user-facing registry reference.
+- `harnesslab doctor --json` reports invalid profile fields with the exact profile name, field path, accepted values, and a suggested fix.
+- A profile with non-default skills/tools/hooks policy must either materialize successfully for its `kind` or fail pre-run doctor with a blocking error.
+- A profile using `setup.preset = "custom"` and `setup.commands` must be marked as advanced/high-risk in doctor output.
+- Run snapshots and HTML reports include the effective setup, skills, tools, and hooks summaries so users can verify the compared harness configuration.
+- Registration validation can run without starting a benchmark, so another agent can generate a profile and immediately ask HarnessLab to verify it.
 - `version_command` is optional. If present, replay validator compares its output with the snapshot according to profile policy.
 
 ### 6.3 Init Detection Standards
