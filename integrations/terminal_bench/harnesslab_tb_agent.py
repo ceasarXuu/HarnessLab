@@ -35,7 +35,13 @@ class HarnessLabCommandAgent(BaseAgent):
         write_log(log_dir, "prompt.txt", prompt)
 
         try:
-            output = run_registered_agent(command, input_mode, prompt, timeout)
+            output = run_registered_agent(
+                command,
+                input_mode,
+                prompt,
+                timeout,
+                log_path(log_dir, "agent_cleanup.log"),
+            )
         except AgentCommandTimedOut as error:
             write_log(log_dir, "agent_error.log", str(error))
             write_log(log_dir, "agent_stdout_partial.log", error.stdout)
@@ -89,6 +95,7 @@ def run_registered_agent(
     input_mode: str,
     prompt: str,
     timeout: int,
+    cleanup_log_path: Path | None = None,
 ) -> str:
     stdin = None
     if input_mode == "stdin":
@@ -103,14 +110,14 @@ def run_registered_agent(
         try:
             rendered = command.replace("{{instruction_file}}", shlex.quote(prompt_path))
             rendered = rendered.replace("{{instruction}}", shlex.quote(prompt_path))
-            completed = run_agent_process(rendered, stdin, timeout)
+            completed = run_agent_process(rendered, stdin, timeout, cleanup_log_path)
         finally:
             Path(prompt_path).unlink(missing_ok=True)
         return completed_stdout_or_error(completed)
     else:
         raise ValueError(f"unsupported input mode: {input_mode}")
 
-    completed = run_agent_process(rendered, stdin, timeout)
+    completed = run_agent_process(rendered, stdin, timeout, cleanup_log_path)
     return completed_stdout_or_error(completed)
 
 
@@ -299,3 +306,9 @@ def write_log(log_dir: Path | None, name: str, text: str) -> None:
     if log_dir is None:
         return
     (log_dir / name).write_text(text)
+
+
+def log_path(log_dir: Path | None, name: str) -> Path | None:
+    if log_dir is None:
+        return None
+    return log_dir / name

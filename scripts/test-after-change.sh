@@ -63,6 +63,7 @@ if [[ "${1:-}" == "--select" ]]; then
     C-SBOX-016) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_activity_disappearing_kills_promptly" ;;
     C-SBOX-017) package="harnesslab-infra"; test_name="process::tests::c_sbox_003_no_output_progress_file_defers_to_hard_timeout" ;;
     C-SBOX-018) package="harnesslab-infra"; test_name="process::tests::c_sbox_018_no_output_activity_has_bounded_grace" ;;
+    C-SBOX-019) package="harnesslab-infra"; test_name="process::tests::c_sbox_019_activity_event_emits_after_output_reset" ;;
     RPT-001) package="harnesslab-report"; test_name="tests::rpt_001_report_html_contains_summary_and_relative_links" ;;
     RPT-002) package="harnesslab-report"; test_name="tests::rpt_001_report_encodes_task_ids_and_rejects_unsafe_patch_links" ;;
     ORCH-004) package="harnesslab-cli"; test_name="runner::tests::run_004_planned_attempts_repeat_each_task_by_configured_attempts" ;;
@@ -76,6 +77,10 @@ if [[ "${1:-}" == "--select" ]]; then
     ORCH-012) package="harnesslab-cli"; test_name="runner::tests::run_008_panic_message_preserves_string_payloads" ;;
     ORCH-013) package="harnesslab-cli"; test_name="runner::cleanup::tests::cleanup_001_plan_requires_docker_only_for_container_tasks" ;;
     ORCH-014) package="harnesslab-cli"; test_name="runner::sandbox::tests::docker_guard_exposes_handle_and_ignores_destroy_errors_on_drop" ;;
+    ORCH-015) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_refills_slot_before_slow_task_finishes" ;;
+    ORCH-016) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_run_health_abort" ;;
+    ORCH-017) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_worker_error" ;;
+    ORCH-018) package="harnesslab-cli"; test_name="runner::attempts::tests::run_004_attempt_scheduler_stops_refill_after_worker_panic" ;;
     REPLAY-002) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_keeps_completed_attempts_and_schedules_missing_only" ;;
     REPLAY-004) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_failed_completed_attempt_schedules_recovery_attempt" ;;
     REPLAY-005) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_does_not_create_unbounded_recovery_attempts" ;;
@@ -112,6 +117,12 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-034) package="harnesslab-cli"; test_name="int_034_report_open_rejects_malformed_event_log" ;;
     INT-035) package="harnesslab-cli"; test_name="int_035_terminal_bench_stale_docker_activity_becomes_no_progress" ;;
     INT-036) exec scripts/verify-terminal-bench-docker-activity-grace-expiry.sh ;;
+    INT-037) exec scripts/verify-terminal-bench-import-success-cleanup.sh ;;
+    INT-038) exec scripts/verify-terminal-bench-import-timeout-cleanup.sh ;;
+    TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
+    TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
+    TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
+    PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;
@@ -161,13 +172,13 @@ else
   echo "SKIP cargo-nextest: not installed; using cargo test for M0 bootstrap"
   cargo test --workspace --all-features
 fi
-PYTHONPATH="$PWD/integrations/terminal_bench" \
-  uvx --from terminal-bench python -m unittest \
-  "$PWD/integrations/terminal_bench/harnesslab_tb_agent_test.py" \
-  "$PWD/integrations/terminal_bench/harnesslab_tb_process_test.py"
+scripts/verify-terminal-bench-python-adapter.sh
 
 echo "== terminal-bench-real-import-timeout-cleanup =="
 scripts/verify-terminal-bench-import-timeout-cleanup.sh
+
+echo "== terminal-bench-real-import-success-cleanup =="
+scripts/verify-terminal-bench-import-success-cleanup.sh
 
 echo "== terminal-bench-real-docker-activity-watchdog =="
 scripts/verify-terminal-bench-docker-activity-watchdog.sh

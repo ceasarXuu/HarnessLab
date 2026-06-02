@@ -809,6 +809,27 @@ requirements = ["execution_runtime"]
 contracts = ["HostProcessExecutor", "ProcessRecord"]
 
 [[tests]]
+id = "C-SBOX-019"
+title = "Host exec activity events survive output reset"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-019"
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_activity.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime", "artifact_event_store"]
+contracts = ["HostProcessExecutor", "ProcessRecord", "EventLog"]
+
+[[tests]]
 id = "ART-003"
 title = "Atomic JSON write"
 layer = "unit"
@@ -1382,6 +1403,83 @@ requirements = ["execution_runtime"]
 contracts = ["DockerSandbox"]
 
 [[tests]]
+id = "ORCH-015"
+title = "Attempt scheduler refills worker slots dynamically"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-015"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/attempts.rs",
+  "crates/harnesslab-cli/src/runner/attempts_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
+id = "ORCH-016"
+title = "Attempt scheduler stops refill after run-health abort"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-016"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/attempts.rs",
+  "crates/harnesslab-cli/src/runner/attempts_tests.rs",
+  "crates/harnesslab-cli/src/runner/monitor.rs",
+]
+required_artifacts = ["run-health.json", "result.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator", "RunMonitor"]
+
+[[tests]]
+id = "ORCH-017"
+title = "Attempt scheduler stops refill after worker error"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-017"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/attempts.rs",
+  "crates/harnesslab-cli/src/runner/attempts_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
+id = "ORCH-018"
+title = "Attempt scheduler stops refill after worker panic"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-018"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/attempts.rs",
+  "crates/harnesslab-cli/src/runner/attempts_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunOrchestrator"]
+
+[[tests]]
 id = "INT-014"
 title = "Resume validates profile snapshot before execution"
 layer = "integration"
@@ -1623,6 +1721,130 @@ section = "HarnessLab Terminal-Bench Real-Run Checks"
 [tests.verifies]
 requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
 contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
+
+[[tests]]
+id = "PY-TB-001"
+title = "Terminal-Bench Python adapter cleans agent child processes"
+layer = "unit"
+owner_module = "terminal-bench-adapter"
+command = "scripts/test-after-change.sh --select PY-TB-001"
+file_patterns = [
+  "integrations/terminal_bench/harnesslab_tb_agent.py",
+  "integrations/terminal_bench/harnesslab_tb_agent_test.py",
+  "integrations/terminal_bench/harnesslab_tb_process.py",
+  "integrations/terminal_bench/harnesslab_tb_process_test.py",
+  "integrations/terminal_bench/harnesslab_tb_ps.py",
+  "scripts/verify-terminal-bench-python-adapter.sh",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/architecture.md"
+section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "AgentRunner", "ProcessCleanup"]
+
+[[tests]]
+id = "INT-037"
+title = "Terminal-Bench import agent persists normal-exit cleanup proof"
+layer = "integration"
+owner_module = "terminal-bench-adapter"
+command = "scripts/test-after-change.sh --select INT-037"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "integrations/terminal_bench/harnesslab_tb_agent.py",
+  "integrations/terminal_bench/harnesslab_tb_process.py",
+  "scripts/verify-terminal-bench-import-success-cleanup.sh",
+]
+required_artifacts = ["results.json", "events.jsonl", "agent_cleanup.log"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "ProcessCleanup"]
+
+[[tests]]
+id = "INT-038"
+title = "Terminal-Bench import agent persists timeout cleanup proof"
+layer = "integration"
+owner_module = "terminal-bench-adapter"
+command = "scripts/test-after-change.sh --select INT-038"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "integrations/terminal_bench/harnesslab_tb_agent.py",
+  "integrations/terminal_bench/harnesslab_tb_process.py",
+  "scripts/verify-terminal-bench-import-timeout-cleanup.sh",
+]
+required_artifacts = ["results.json", "events.jsonl", "agent_error.log", "agent_cleanup.log"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "ProcessCleanup"]
+
+[[tests]]
+id = "TB-001"
+title = "Terminal-Bench adapter cleanup failure overrides official success"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-001"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/architecture.md"
+section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup"]
+
+[[tests]]
+id = "TB-002"
+title = "Terminal-Bench live-child cleanup error is execution failure"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-002"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/architecture.md"
+section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup"]
+
+[[tests]]
+id = "TB-003"
+title = "Terminal-Bench live-child cleanup log is execution failure"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-003"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/architecture.md"
+section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "ProcessCleanup"]
 
 [[tests]]
 id = "INT-032"

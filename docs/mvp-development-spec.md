@@ -201,6 +201,7 @@ Schema version `1` currently includes these structured process termination reaso
 `no_progress` means HarnessLab killed the external process because stdout/stderr produced no new bytes within the configured watchdog window and the runner did not expose durable progress. Terminal-Bench treats official `run.log` growth as progress and active Docker setup/build subprocesses as short-lived activity, so first-time image builds are not misclassified during normal quiet phases. Activity checks are re-probed on a short cadence after the watchdog boundary and may defer for at most one extra watchdog window; process activity does not reset the no-output window, while actual `run.log` growth refreshes the progress window. Final no-progress events include `activity_grace_exhausted`, `current_activity`, `last_activity`, and `last_progress` diagnostics.
 
 Failure codes are additive within schema version `1`. Terminal-Bench runner stalls use `external_runner_no_progress` so they are distinguishable from agent-level `agent_timeout`.
+Terminal-Bench adapter cleanup failures use `agent_cleanup_failed` and are execution failures because they invalidate the run environment rather than scoring the benchmark task.
 `TaskAttemptResult.health_impact` is an adapter-agnostic run-health signal:
 
 - `none`: no run-level health impact.
@@ -676,6 +677,9 @@ Pass criteria:
 
 - `concurrency=1` produces deterministic task start order.
 - `concurrency=4` never exceeds four active task assignments.
+- Scheduler uses a worker-pool refill model: a completed fast task immediately frees a slot for the next pending attempt, even while slower active attempts continue running.
+- Once run-health abort is observed, Scheduler stops assigning new pending attempts, lets active workers finish, and writes not-yet-started attempts as `run_health_aborted`.
+- Once an internal worker error or panic is observed, Scheduler stops assigning new pending attempts and lets already-started workers finish before returning the error.
 - Failure in one task does not cancel unrelated tasks unless run-level config says fail-fast.
 - Ctrl+C transitions run to `paused` and returns exit code `130`.
 
@@ -811,6 +815,8 @@ Pass criteria:
 | SCHED-001 | Scheduler | serial order | concurrency 1 deterministic |
 | SCHED-002 | Scheduler | resource preflight | impossible resource hint blocks run |
 | SCHED-003 | Scheduler | concurrency limit | active assignments never exceed limit |
+| SCHED-004 | Scheduler | dynamic refill | fast completion starts next pending attempt before slow active attempt drains |
+| SCHED-005 | Scheduler | abort refill stop | run-health abort stops new assignment and records pending attempts as interrupted |
 | RPT-001 | Report | golden HTML | normalized HTML matches golden |
 | RPT-002 | Report | report model | serializable and independent of Docker/evaluator |
 | RPT-003 | Report | regenerable | same report model from artifact store only |

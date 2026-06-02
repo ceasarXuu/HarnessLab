@@ -258,6 +258,57 @@ fn c_sbox_018_progress_growth_resets_activity_grace() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn c_sbox_019_activity_event_emits_after_output_reset() {
+    let tmp = tempfile::tempdir().unwrap();
+    let events_path = tmp.path().join("events.jsonl");
+    let spec = ExecSpec {
+        command: "printf started; sleep 1.8; printf reset; sleep 8".to_string(),
+        stdin: None,
+        working_dir: tmp.path().join("workspace"),
+        timeout_sec: 10,
+        no_output_timeout_sec: Some(1),
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: vec!["sleep 1.8".to_string(), "sleep 8".to_string()],
+        no_output_activity_event: Some(NoOutputActivityEvent {
+            path: events_path.clone(),
+            run_id: "run-1".to_string(),
+            task_id: Some("task-1".to_string()),
+            event_name: "external_runner_activity".to_string(),
+            no_progress_event_name: Some("external_runner_no_progress".to_string()),
+        }),
+        stdout_path: tmp.path().join("stdout.log"),
+        stderr_path: tmp.path().join("stderr.log"),
+    };
+
+    let result = HostProcessExecutor::exec(&spec).unwrap();
+
+    assert_eq!(result.termination_reason, TerminationReason::NoProgress);
+    let events = fs::read_to_string(events_path).unwrap();
+    assert_eq!(
+        events
+            .matches("\"event\":\"external_runner_activity\"")
+            .count(),
+        2,
+        "each activity grace window should persist exactly one activity event: {events}"
+    );
+    assert!(events.contains("\"event\":\"external_runner_no_progress\""));
+    assert!(events.contains("pattern=sleep 1.8"));
+    assert!(events.contains("pattern=sleep 8"));
+    assert_eq!(
+        events
+            .lines()
+            .filter(|line| {
+                line.contains("\"event\":\"external_runner_activity\"")
+                    && line.contains("pattern=sleep 8")
+            })
+            .count(),
+        1
+    );
+    assert!(events.find("pattern=sleep 8") < events.find("external_runner_no_progress"));
+}
+
 #[test]
 fn c_sbox_003_timeout_kills_background_pipe_holder() {
     let tmp = tempfile::tempdir().unwrap();

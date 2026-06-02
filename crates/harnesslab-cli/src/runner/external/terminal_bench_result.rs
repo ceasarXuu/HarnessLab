@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 
 const ADAPTER_TIMEOUT_MARKER: &str = "agent command timed out;";
 const ADAPTER_CLEANUP_SUCCEEDED_MARKER: &str = "succeeded=True";
+const ADAPTER_CLEANUP_FAILED_MARKER: &str = "succeeded=False";
+const ADAPTER_LIVE_CHILDREN_MARKER: &str = "left live child processes";
 const MAX_LOG_BYTES: u64 = 256 * 1024;
 
 pub(super) fn parse_terminal_bench_result(
@@ -27,14 +29,23 @@ pub(super) fn parse_terminal_bench_result(
         .or_else(|| resolved_score(&value))
         .unwrap_or(0.0);
     write_verifier_logs(attempt_dir, result_path, &value, "")?;
-    let evaluation = EvaluationRecord {
+    let mut evaluation = EvaluationRecord {
         exit_code: Some(0),
         raw_score: score,
         stdout_path: "verifier/stdout.log".to_string(),
         stderr_path: "verifier/stderr.log".to_string(),
     };
     let usage = terminal_bench_usage(&value);
-    if score >= 1.0 {
+    if adapter_cleanup_failed(result_path) {
+        evaluation.raw_score = 0.0;
+        Ok((
+            evaluation,
+            usage,
+            FailureClass::Execution,
+            Some(FailureCode::AgentCleanupFailed),
+            0.0,
+        ))
+    } else if score >= 1.0 {
         Ok((evaluation, usage, FailureClass::None, None, score))
     } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
         Ok((evaluation, usage, failure_class, Some(failure_code), score))
@@ -151,7 +162,26 @@ fn adapter_agent_timeout_cleanup_succeeded(result_path: &Path) -> bool {
     })
 }
 
+fn adapter_cleanup_failed(result_path: &Path) -> bool {
+    let root = result_path.parent().unwrap_or(result_path);
+    find_agent_logs(root).into_iter().any(|path| {
+        read_log_tail(&path)
+            .map(|content| {
+                content.contains(ADAPTER_CLEANUP_FAILED_MARKER)
+                    || content.contains(ADAPTER_LIVE_CHILDREN_MARKER)
+            })
+            .unwrap_or(false)
+    })
+}
+
 fn find_agent_error_logs(root: &Path) -> Vec<PathBuf> {
+    find_agent_logs(root)
+        .into_iter()
+        .filter(|path| path.file_name().and_then(|name| name.to_str()) == Some("agent_error.log"))
+        .collect()
+}
+
+fn find_agent_logs(root: &Path) -> Vec<PathBuf> {
     let mut pending = vec![root.to_path_buf()];
     let mut logs = Vec::new();
     while let Some(path) = pending.pop() {
@@ -165,7 +195,10 @@ fn find_agent_error_logs(root: &Path) -> Vec<PathBuf> {
             for entry in entries.flatten() {
                 pending.push(entry.path());
             }
-        } else if path.file_name().and_then(|name| name.to_str()) == Some("agent_error.log") {
+        } else if matches!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some("agent_error.log" | "agent_cleanup.log")
+        ) {
             logs.push(path);
         }
     }

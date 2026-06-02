@@ -10,6 +10,7 @@ pub(super) struct NoOutputWatchdog {
     next_probe: Instant,
     last_event_at: Option<Instant>,
     activity_deferral_started_at: Option<Instant>,
+    activity_event_emitted: bool,
     last_activity_detail: Option<String>,
     last_progress_detail: Option<String>,
 }
@@ -21,6 +22,7 @@ impl NoOutputWatchdog {
             next_probe: started,
             last_event_at: None,
             activity_deferral_started_at: None,
+            activity_event_emitted: false,
             last_activity_detail: None,
             last_progress_detail: None,
         }
@@ -44,7 +46,7 @@ impl NoOutputWatchdog {
         path: PathBuf,
         now: Instant,
     ) {
-        self.activity_deferral_started_at = None;
+        self.clear_activity_deferral();
         self.last_progress_detail = Some(format!("path={}", path.display()));
         self.append_deferral_event(
             config,
@@ -53,6 +55,7 @@ impl NoOutputWatchdog {
                 path.display()
             ),
             now,
+            false,
         );
     }
 
@@ -67,18 +70,30 @@ impl NoOutputWatchdog {
         self.last_activity_detail = Some(detail.clone());
         let deferral_started = *self.activity_deferral_started_at.get_or_insert(now);
         if now.duration_since(deferral_started) >= timeout {
+            if !self.activity_event_emitted {
+                self.activity_event_emitted = self.append_deferral_event(
+                    config,
+                    format!("no-output watchdog deferred by active process {detail}"),
+                    now,
+                    true,
+                );
+            }
             return false;
         }
-        self.append_deferral_event(
+        if self.append_deferral_event(
             config,
             format!("no-output watchdog deferred by active process {detail}"),
             now,
-        );
+            false,
+        ) {
+            self.activity_event_emitted = true;
+        }
         true
     }
 
     pub(super) fn clear_activity_deferral(&mut self) {
         self.activity_deferral_started_at = None;
+        self.activity_event_emitted = false;
     }
 
     pub(super) fn emit_no_progress(
@@ -121,19 +136,20 @@ impl NoOutputWatchdog {
         config: Option<&NoOutputActivityEvent>,
         message: String,
         now: Instant,
-    ) {
-        let should_emit = self
-            .last_event_at
-            .map(|last| now.duration_since(last) >= ACTIVITY_EVENT_INTERVAL)
-            .unwrap_or(true);
-        if !should_emit {
-            return;
-        }
-        self.last_event_at = Some(now);
+        force: bool,
+    ) -> bool {
         let Some(config) = config else {
-            return;
+            return false;
         };
-        let _ = append_event(
+        let should_emit = force
+            || self
+                .last_event_at
+                .map(|last| now.duration_since(last) >= ACTIVITY_EVENT_INTERVAL)
+                .unwrap_or(true);
+        if !should_emit {
+            return false;
+        }
+        let appended = append_event(
             &config.path,
             &event(
                 &config.run_id,
@@ -142,7 +158,12 @@ impl NoOutputWatchdog {
                 &message,
             ),
             &[],
-        );
+        )
+        .is_ok();
+        if appended {
+            self.last_event_at = Some(now);
+        }
+        appended
     }
 }
 

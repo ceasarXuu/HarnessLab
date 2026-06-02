@@ -252,7 +252,7 @@ fn terminal_bench_result_adapter_timeout_log_overrides_parse_error() {
 }
 
 #[test]
-fn terminal_bench_result_failed_adapter_cleanup_stays_test_failed() {
+fn terminal_bench_result_failed_adapter_cleanup_is_execution_failure() {
     let attempt_dir = tempfile::tempdir().unwrap();
     let result_path = write_result(
         attempt_dir.path(),
@@ -271,8 +271,79 @@ fn terminal_bench_result_failed_adapter_cleanup_stays_test_failed() {
         )
         .unwrap();
 
-    assert_eq!(failure_class, FailureClass::Benchmark);
-    assert_eq!(failure_code, Some(FailureCode::TestFailed));
+    assert_eq!(failure_class, FailureClass::Execution);
+    assert_eq!(failure_code, Some(FailureCode::AgentCleanupFailed));
+}
+
+#[test]
+fn terminal_bench_result_failed_adapter_cleanup_overrides_success_score() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":1.0,"n_resolved":1,"n_unresolved":0,"results":[{"task_id":"hello-world","is_resolved":true}]}"#,
+    );
+    write_agent_cleanup_log(&result_path, "root_pid=1 alive_pids=[2] succeeded=False");
+
+    let (evaluation, _, failure_class, failure_code, score) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(evaluation.raw_score, 0.0);
+    assert_eq!(score, 0.0);
+    assert_eq!(failure_class, FailureClass::Execution);
+    assert_eq!(failure_code, Some(FailureCode::AgentCleanupFailed));
+}
+
+#[test]
+fn terminal_bench_result_live_child_cleanup_error_is_execution_failure() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"unknown_agent_error"}]}"#,
+    );
+    write_agent_error_log(
+        &result_path,
+        "agent command exited but left live child processes: root_pid=1 alive_pids=[2]",
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Execution);
+    assert_eq!(failure_code, Some(FailureCode::AgentCleanupFailed));
+}
+
+#[test]
+fn terminal_bench_result_live_child_cleanup_log_is_execution_failure() {
+    let attempt_dir = tempfile::tempdir().unwrap();
+    let result_path = write_result(
+        attempt_dir.path(),
+        r#"{"accuracy":0.0,"results":[{"task_id":"hello-world","is_resolved":false,"failure_mode":"unknown_agent_error"}]}"#,
+    );
+    write_agent_cleanup_log(
+        &result_path,
+        "agent command exited but left live child processes: root_pid=1 alive_pids=[2]",
+    );
+
+    let (_, _, failure_class, failure_code, _) =
+        super::terminal_bench::parse_terminal_bench_result(
+            attempt_dir.path(),
+            &result_path,
+            "hello-world",
+        )
+        .unwrap();
+
+    assert_eq!(failure_class, FailureClass::Execution);
+    assert_eq!(failure_code, Some(FailureCode::AgentCleanupFailed));
 }
 
 #[test]
@@ -340,4 +411,10 @@ fn write_agent_error_log(result_path: &std::path::Path, content: &str) {
     let log_dir = result_path.parent().unwrap().join("task/agent-logs");
     fs::create_dir_all(&log_dir).unwrap();
     fs::write(log_dir.join("agent_error.log"), content).unwrap();
+}
+
+fn write_agent_cleanup_log(result_path: &std::path::Path, content: &str) {
+    let log_dir = result_path.parent().unwrap().join("task/agent-logs");
+    fs::create_dir_all(&log_dir).unwrap();
+    fs::write(log_dir.join("agent_cleanup.log"), content).unwrap();
 }

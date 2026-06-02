@@ -178,6 +178,48 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertIn("partial-output", stdout_text)
         self.assertIn("Task instruction:", prompt_text)
 
+    def test_perform_task_persists_successful_cleanup_diagnostics(self):
+        agent = HarnessLabCommandAgent()
+        with tempfile.TemporaryDirectory() as tmp:
+            child_pid_file = Path(tmp) / "daemon.pid"
+            child_code = (
+                "import os, pathlib, sys, time; "
+                "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+                "time.sleep(60)"
+            )
+            parent_code = (
+                "import pathlib, subprocess, sys, time\n"
+                f"pid_file = pathlib.Path({str(child_pid_file)!r})\n"
+                "subprocess.Popen(\n"
+                "    [sys.executable, '-c', "
+                f"{child_code!r}, str(pid_file)],\n"
+                "    start_new_session=True,\n"
+                "    stdin=subprocess.DEVNULL,\n"
+                "    stdout=subprocess.DEVNULL,\n"
+                "    stderr=subprocess.DEVNULL,\n"
+                ")\n"
+                "deadline = time.time() + 5\n"
+                "while not pid_file.exists() and time.time() < deadline:\n"
+                "    time.sleep(0.01)\n"
+                "print('echo ok')\n"
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "HARNESSLAB_AGENT_COMMAND": f"python -c {shlex.quote(parent_code)}",
+                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
+                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                },
+                clear=False,
+            ):
+                result = agent.perform_task("do it", FakeSession(), Path(tmp))
+
+            cleanup_text = (Path(tmp) / "agent_cleanup.log").read_text()
+
+        self.assertEqual(result.failure_mode, FailureMode.NONE)
+        self.assertIn("harnesslab agent cleanup after exit", cleanup_text)
+        self.assertIn("succeeded=True", cleanup_text)
+
     def test_perform_task_maps_failed_cleanup_to_unknown_agent_error(self):
         agent = HarnessLabCommandAgent()
         cleanup = CleanupResult(
