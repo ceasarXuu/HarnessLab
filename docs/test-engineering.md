@@ -302,6 +302,14 @@ tasks/<task-id>/attempts/<n>/agent/stdout.log
 tasks/<task-id>/attempts/<n>/verifier/stdout.log
 ```
 
+Runtime-sensitive CLI tests must also assert that `run --json` exposes `exit_code`,
+`verdict`, `summary`, `results_path`, and `report_path`, and that
+`results.json.report_path` matches the reported HTML path. Tests that exercise
+benchmark-level failures must prove top-level `status = "success"` is paired
+with a non-success `verdict`, so command health is not confused with benchmark
+score. At least one run test must assert `events.jsonl` contains a `run_finished`
+message with `exit_code`, summary buckets, and `report_path`.
+
 Patch-style tests must additionally assert:
 
 ```text
@@ -320,7 +328,7 @@ Testing must prove that tests fail when HarnessLab behavior is wrong.
 | Split | Purpose | Expected Result |
 |---|---|---|
 | `success` | happy path | exit `0`, score `1` |
-| `test-fail` | verifier failure | exit `2`, `benchmark/test_failed` |
+| `test-fail` | verifier failure | exit `0`, `benchmark/test_failed` |
 | `agent-timeout` | agent timeout | exit `1`, `execution/agent_timeout` |
 | `agent-crash` | non-zero agent exit | exit `1`, `execution/agent_nonzero_exit` |
 | `missing-required-artifact` | required artifact missing | `execution/artifact_collection_failed` |
@@ -347,7 +355,7 @@ For critical behavior, tests must include negative controls:
 
 | Behavior | Negative Control |
 |---|---|
-| exit code priority | Swap `execution_failure` and `benchmark_failure` priority. |
+| exit code priority | Make benchmark verdicts incorrectly drive command failure. |
 | resume | Treat interrupted attempt as completed. |
 | replay | Ignore benchmark checksum mismatch. |
 | redaction | Write fake secret into `command.txt`. |

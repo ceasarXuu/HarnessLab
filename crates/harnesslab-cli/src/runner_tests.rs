@@ -99,7 +99,7 @@ fn core_contracts_are_exercised_from_cli_crate_context() {
     assert_eq!(derive_exit_code(&[], false), 3);
     let mut partial = attempt(FailureClass::None, None);
     partial.outcome = Outcome::PartialSuccess;
-    assert_eq!(derive_exit_code(&[partial], false), 4);
+    assert_eq!(derive_exit_code(&[partial], false), 0);
 }
 
 #[test]

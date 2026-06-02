@@ -145,11 +145,17 @@ exit 1
 "#,
     );
 
-    let (results, _, _) = run_terminal(home.path(), root.path(), bin.path(), 2);
-
+    let (results, run_dir, json) = run_terminal(home.path(), root.path(), bin.path(), 0);
     assert_eq!(results["tasks"][0]["failure_class"], "benchmark");
     assert_eq!(results["tasks"][0]["failure_code"], "test_failed");
     assert_eq!(results["tasks"][0]["usage"]["total_tokens"], 7);
+    assert_eq!(json["verdict"], "benchmark_failure");
+    assert_eq!(json["summary"]["benchmark_failure"], 1);
+    assert_eq!(json["report_path"], results["report_path"]);
+    assert_eq!(
+        json["results_path"],
+        run_dir.join("results.json").display().to_string()
+    );
 }
 
 #[test]

@@ -2,8 +2,8 @@ mod support;
 
 use std::fs;
 use support::swe::{
-    fake_swe_tools, init_home, run_swe_json, set_network_default_none, swe_bench_root, write_agent,
-    write_agent_with_mode, write_codex_agent, write_swe_gold_agent,
+    fake_swe_tools, init_home, run_swe_json, run_swe_json_with_output, set_network_default_none,
+    swe_bench_root, write_agent, write_agent_with_mode, write_codex_agent, write_swe_gold_agent,
 };
 
 #[test]
@@ -147,16 +147,24 @@ fn int_011_swe_bench_pro_real_profile_supports_file_input_mode() {
 }
 
 #[test]
-fn int_011_swe_bench_pro_no_diff_is_task_benchmark_failure() {
+fn int_011_swe_bench_pro_no_diff_exits_0_with_benchmark_verdict() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "true");
     let root = swe_bench_root();
     let bin = fake_swe_tools();
 
-    let (results, _) = run_swe_json(home.path(), root.path(), bin.path(), "fake", &[], 2);
+    let (results, run_dir, json) =
+        run_swe_json_with_output(home.path(), root.path(), bin.path(), "fake", &[], 0);
     assert_eq!(results["tasks"][0]["failure_class"], "benchmark");
     assert_eq!(results["tasks"][0]["failure_code"], "no_valid_diff");
+    assert_eq!(json["verdict"], "benchmark_failure");
+    assert_eq!(json["summary"]["benchmark_failure"], 1);
+    assert_eq!(json["report_path"], results["report_path"]);
+    assert_eq!(
+        json["results_path"],
+        run_dir.join("results.json").display().to_string()
+    );
 }
 
 #[test]

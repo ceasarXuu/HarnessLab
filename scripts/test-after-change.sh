@@ -19,7 +19,7 @@ if [[ "${1:-}" == "--select" ]]; then
     CORE-002) package="harnesslab-core"; test_name="model::tests::core_002_state_machine_rejects_terminal_to_running" ;;
     CORE-003) package="harnesslab-core"; test_name="model::tests::core_003_failure_classifier_maps_agent_timeout" ;;
     CORE-004) package="harnesslab-core"; test_name="model::tests::core_004_failure_classifier_maps_failed_verifier" ;;
-    ORCH-003) package="harnesslab-core"; test_name="model::tests::orch_003_exit_code_priority_prefers_execution_over_benchmark" ;;
+    ORCH-003) package="harnesslab-core"; test_name="model::tests::orch_003_exit_code_mapping_covers_command_health" ;;
     CFG-001) package="harnesslab-core"; test_name="config::tests::cfg_001_valid_global_config_passes" ;;
     CFG-002) package="harnesslab-core"; test_name="config::tests::cfg_002_invalid_profile_name_fails" ;;
     CFG-003|SEC-001) package="harnesslab-core"; test_name="redaction::tests::cfg_003_redacts_secret_values_without_removing_names" ;;
@@ -92,7 +92,7 @@ if [[ "${1:-}" == "--select" ]]; then
     REPLAY-003) package="harnesslab-cli"; test_name="runner::tests::replay_003_replay_spec_preserves_execution_config_and_links_source" ;;
     INT-001) package="harnesslab-cli"; test_name="int_001_init_empty_home_creates_config_and_profiles" ;;
     INT-003) package="harnesslab-cli"; test_name="int_003_fake_terminal_success_creates_report_and_results" ;;
-    INT-004) package="harnesslab-cli"; test_name="int_004_fake_terminal_test_fail_exits_2" ;;
+    INT-004) package="harnesslab-cli"; test_name="int_004_fake_terminal_test_fail_exits_0_with_benchmark_verdict" ;;
     INT-005) package="harnesslab-cli"; test_name="int_005_fake_terminal_timeout_exits_1" ;;
     INT-006) package="harnesslab-cli"; test_name="int_006_fake_patch_success_saves_diff" ;;
     INT-009) package="harnesslab-cli"; test_name="int_009_replay_success_creates_new_run" ;;

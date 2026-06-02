@@ -52,7 +52,7 @@ fn int_012_replay_uses_unredacted_runtime_profile_snapshot() {
             .contains("agent-profile.runtime.json")
     );
 
-    harnesslab()
+    let replay_output = harnesslab()
         .env("HARNESSLAB_REDACT_REPLAY_TEST", "ok")
         .args([
             "--home",
@@ -64,7 +64,24 @@ fn int_012_replay_uses_unredacted_runtime_profile_snapshot() {
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"status\":\"success\""));
+        .stdout(predicate::str::contains("\"status\":\"success\""))
+        .get_output()
+        .stdout
+        .clone();
+    let replay_json: serde_json::Value = serde_json::from_slice(&replay_output).unwrap();
+    let replay_dir = Path::new(replay_json["run_dir"].as_str().unwrap());
+    assert_eq!(replay_json["verdict"], "success");
+    assert_eq!(
+        replay_json["report_path"],
+        replay_dir.join("report.html").display().to_string()
+    );
+    assert_eq!(
+        replay_json["results_path"],
+        replay_dir.join("results.json").display().to_string()
+    );
+    let replay_results: serde_json::Value =
+        serde_json::from_reader(fs::File::open(replay_dir.join("results.json")).unwrap()).unwrap();
+    assert_eq!(replay_results["report_path"], replay_json["report_path"]);
 }
 
 #[test]

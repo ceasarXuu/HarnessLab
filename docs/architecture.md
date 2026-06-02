@@ -110,14 +110,14 @@ CLI 不负责构建 Docker 命令，也不直接拼 report HTML。
 
 | Exit code | 语义 |
 |---:|---|
-| `0` | run 完成，所有 task 为 `success`；warning 不影响 exit code。 |
+| `0` | run 完成并产出有效实验结果；`benchmark_failure`、`partial_success` 和 warning 不影响 exit code。 |
 | `1` | run 完成，但存在 `execution_failure`。 |
-| `2` | run 完成，无 execution failure，但存在 `benchmark_failure`。 |
 | `3` | run 级失败，例如配置损坏、benchmark 数据不可用、Docker 不可达。 |
-| `4` | run 完成，无 failure，但存在 `partial_success`。 |
 | `130` | 用户中断，run 已进入 `paused`，可 resume。 |
 
-如果同时存在多类问题，优先级为 `130 > 3 > 1 > 2 > 4 > 0`。`skipped` task 不单独决定 exit code；如果 skipped 是用户显式 limit/filter 的结果，按实际执行 task 结果返回。
+如果同时存在多类问题，优先级为 `130 > 3 > 1 > 0`。`skipped` task 不单独决定 exit code；如果 skipped 是用户显式 limit/filter 的结果，按实际执行 task 结果返回。
+
+`run --json` 的顶层 `status` 只表示命令健康状态：`success` 表示命令完成并写出 run artifacts，不表示所有任务得满分。自动化消费者必须读取顶层 `verdict`、`summary`、`results_path` 或 `results.json` 来判断实验结果。`verdict` 至少区分 `success`、`partial_success`、`benchmark_failure`、`execution_failure`、`interrupted`、`run_failed`。顶层 `report_path` 指向 HTML 报告，`results_path` 指向聚合 JSON。
 
 ### 5.2 Config Service
 
@@ -698,7 +698,9 @@ interrupted
 - 任何可复现输入都进入 `snapshots/` 或 `task.snapshot.json`。
 - 任何执行输出都进入 task attempt。
 - 顶层 `results.json` 是聚合索引，可以重建。
+- 顶层 `results.json` 必须保存 `report_path`，与 `run --json` 的 `report_path` 一致。
 - `events.jsonl` 是 append-only 操作日志，服务排障和未来可视化。
+- `run_finished` 事件的 message 至少包含 `exit_code`、summary bucket 和 `report_path`，用于无 HTML 的故障复盘。
 
 ## 11. 失败分类与结果模型
 
