@@ -178,7 +178,7 @@ contracts = ["FailureMapping"]
 
 [[tests]]
 id = "ORCH-003"
-title = "Exit code priority"
+title = "Run command exit code mapping"
 layer = "unit"
 owner_module = "harnesslab-core"
 command = "scripts/test-after-change.sh --select ORCH-003"
@@ -1122,8 +1122,8 @@ title = "Fake terminal benchmark failure"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-004"
-file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
-required_artifacts = ["results.json"]
+file_patterns = ["crates/harnesslab-cli/tests/run_output_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "report.html"]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"

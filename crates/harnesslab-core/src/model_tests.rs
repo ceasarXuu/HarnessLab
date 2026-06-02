@@ -115,7 +115,21 @@ fn core_001_old_task_plan_snapshot_defaults_external_runner() {
 }
 
 #[test]
-fn orch_003_exit_code_priority_prefers_execution_over_benchmark() {
+fn orch_003_exit_code_mapping_covers_command_health() {
+    assert_eq!(derive_exit_code(&[], true), 3);
+    assert_eq!(derive_exit_code(&[], false), 3);
+    assert_eq!(
+        derive_exit_code(&[attempt(FailureClass::None, None)], false),
+        0
+    );
+    let benchmark = attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed));
+    assert_eq!(derive_exit_code(&[benchmark], false), 0);
+    let mut partial = attempt(FailureClass::None, None);
+    partial.outcome = Outcome::PartialSuccess;
+    assert_eq!(derive_exit_code(&[partial], false), 0);
+    let mut interrupted = attempt(FailureClass::None, None);
+    interrupted.state = TaskState::Interrupted;
+    assert_eq!(derive_exit_code(&[interrupted], false), 130);
     let mut benchmark = attempt(FailureClass::Benchmark, Some(FailureCode::TestFailed));
     benchmark.task_id = "benchmark-task".to_string();
     let mut execution = attempt(FailureClass::Execution, Some(FailureCode::AgentTimeout));
@@ -123,22 +137,6 @@ fn orch_003_exit_code_priority_prefers_execution_over_benchmark() {
     let results = vec![benchmark, execution];
 
     assert_eq!(derive_exit_code(&results, false), 1);
-}
-
-#[test]
-fn orch_003_exit_code_covers_runlevel_interrupted_and_partial() {
-    assert_eq!(derive_exit_code(&[], true), 3);
-    assert_eq!(derive_exit_code(&[], false), 3);
-    assert_eq!(
-        derive_exit_code(&[attempt(FailureClass::None, None)], false),
-        0
-    );
-    let mut interrupted = attempt(FailureClass::None, None);
-    interrupted.state = TaskState::Interrupted;
-    assert_eq!(derive_exit_code(&[interrupted], false), 130);
-    let mut partial = attempt(FailureClass::None, None);
-    partial.outcome = Outcome::PartialSuccess;
-    assert_eq!(derive_exit_code(&[partial], false), 4);
 }
 
 #[test]

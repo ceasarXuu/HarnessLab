@@ -153,28 +153,6 @@ fn int_003_fake_terminal_success_creates_report_and_results() {
 }
 
 #[test]
-fn int_004_fake_terminal_test_fail_exits_2() {
-    let home = tempfile::tempdir().unwrap();
-    init_home(home.path());
-    write_agent(home.path(), "printf ok > result.txt", 5);
-
-    harnesslab()
-        .args([
-            "--home",
-            home.path().to_str().unwrap(),
-            "run",
-            "--agent",
-            "fake",
-            "--benchmark",
-            "fake-terminal",
-            "--split",
-            "test-fail",
-        ])
-        .assert()
-        .code(2);
-}
-
-#[test]
 fn int_005_fake_terminal_timeout_exits_1() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
@@ -253,7 +231,7 @@ fn int_006_fake_patch_success_saves_diff() {
 }
 
 #[test]
-fn int_007_fake_patch_no_diff_exits_2() {
+fn int_007_fake_patch_no_diff_exits_0_with_benchmark_verdict() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "true", 5);
@@ -271,7 +249,7 @@ fn int_007_fake_patch_no_diff_exits_2() {
             "no-diff",
         ])
         .assert()
-        .code(2);
+        .success();
 }
 
 #[test]

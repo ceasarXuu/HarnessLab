@@ -54,8 +54,13 @@ pub(crate) struct RunOutput {
     pub schema_version: u32,
     pub command: &'static str,
     pub status: &'static str,
+    pub exit_code: i32,
+    pub verdict: &'static str,
     pub run_id: String,
     pub run_dir: String,
+    pub results_path: String,
+    pub report_path: String,
+    pub summary: harnesslab_core::RunSummary,
     pub replay_source_run_id: Option<String>,
 }
 

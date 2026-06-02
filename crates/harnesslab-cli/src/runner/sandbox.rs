@@ -44,7 +44,6 @@ pub(super) fn run_agent(
             sandbox_failure: None,
         });
     }
-
     let request = docker_create_request(spec, profile, task, attempt, workspace);
     let handle = match DockerCliProvider::create(&request) {
         Ok(handle) => handle,

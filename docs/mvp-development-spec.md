@@ -233,7 +233,7 @@ Pass criteria:
 | Verifier infra crash | failure | benchmark | `verifier_error` |
 | Tests fail normally | failure | benchmark | `test_failed` |
 | Patch benchmark has no diff | failure | benchmark | `no_valid_diff` |
-| Patch cannot apply | failure | benchmark | `patch_apply_failed` |
+| Patch cannot be captured or applied because HarnessLab workspace/git plumbing failed | failure | execution | `patch_apply_failed` |
 | Usage parser missing | unchanged | warning | `usage_unknown` |
 | Usage parser fails | unchanged | warning | `usage_parser_failed` |
 
@@ -244,12 +244,18 @@ Pass criteria:
 | User interrupted run and run is resumable | `130` |
 | Run-level failure before task execution, such as invalid config, Docker unavailable, benchmark data blocker | `3` |
 | At least one task has `execution_failure` | `1` |
-| No execution failure, at least one task has `benchmark_failure` | `2` |
-| No failure, at least one task has `partial_success` | `4` |
-| All executed tasks are `success`; skipped tasks came from explicit limit/filter | `0` |
+| No execution failure; tasks contain `success`, `partial_success`, or `benchmark_failure` verdicts | `0` |
 | No task executed because filter/limit selected zero tasks | `3` with run-level validation error |
 
 Skipped tasks do not hide failures. If a task was skipped because of run-level failure, the run-level failure exit code wins.
+
+`run --json` fields:
+
+- `status` is command health only. `status = "success"` means the run completed and artifacts were written, not that every task scored.
+- `exit_code` mirrors the process exit code.
+- `verdict` is the experiment verdict bucket: `success`, `partial_success`, `benchmark_failure`, `execution_failure`, `interrupted`, or `run_failed`.
+- `summary` mirrors `results.json.summary` so automation can distinguish low score from command failure without parsing HTML.
+- `results_path` points to `results.json`; `report_path` points to `report.html`.
 
 ### 5.5 TaskAttemptAssembler
 
@@ -543,8 +549,9 @@ Patch smoke acceptance:
 
 - Agent creates valid diff; evaluator returns success.
 - Agent creates no diff; result is `benchmark_failure/no_valid_diff`.
-- Diff cannot apply; result is `benchmark_failure/patch_apply_failed`.
-- Evaluator crash; result is `benchmark_failure/evaluator_error`.
+- HarnessLab cannot capture/apply the diff because workspace or git plumbing failed; result is `execution_failure/patch_apply_failed`.
+- Official evaluator output is missing or unparsable after HarnessLab launches it; result is `execution_failure/evaluator_error`.
+- Official evaluator reports a normal failed patch; result is `benchmark_failure/test_failed` or the benchmark-specific failure code.
 
 ## 8. Execution Contracts
 
@@ -617,7 +624,7 @@ Pass criteria:
 - `separate_sandbox` verifier creates and destroys a separate sandbox.
 - `host_process` evaluator never runs inside agent sandbox.
 - Verifier stdout is preserved at `verifier/stdout.log`; stderr is preserved at `verifier/stderr.log`.
-- Evaluator parse failure maps to `benchmark_failure/evaluator_error`.
+- Verifier/evaluator test failure maps to a benchmark failure. HarnessLab cannot parse required evaluator output or cannot complete evaluator orchestration maps to `execution_failure/evaluator_error`.
 
 ### 8.5 Artifact Collector
 
@@ -847,7 +854,7 @@ Pass criteria:
 | INT-001 | init empty home | `harnesslab init --home <tmp>` | config and profile templates created |
 | INT-002 | doctor fake ok | `harnesslab doctor --home <tmp> --json` | status ok |
 | INT-003 | fake terminal success | `harnesslab run --agent fake --benchmark fake-terminal --split success` | exit 0 |
-| INT-004 | fake terminal test fail | same with fail split | exit 2 |
+| INT-004 | fake terminal test fail | same with fail split | exit 0, result contains `benchmark/test_failed` |
 | INT-005 | fake terminal timeout | timeout split | exit 1 |
 | INT-006 | fake patch success | `fake-patch` success split | diff and prediction saved |
 | INT-007 | fake patch no diff | no-diff split | benchmark/no_valid_diff |

@@ -24,7 +24,7 @@ exit 0
 "#,
     );
 
-    let (results, run_dir, _) = run_terminal(home.path(), root.path(), bin.path(), 2);
+    let (results, run_dir, _) = run_terminal(home.path(), root.path(), bin.path(), 0);
 
     assert_eq!(results["summary"]["benchmark_failure"], 1);
     assert_eq!(results["summary"]["execution_failure"], 0);
@@ -83,7 +83,7 @@ exit 0
         bin.path(),
         "full",
         &["--concurrency", "1"],
-        2,
+        0,
     );
 
     assert_eq!(fs::read_to_string(marker).unwrap().matches('x').count(), 6);
@@ -212,7 +212,7 @@ exit 0
         bin.path(),
         "smoke",
         &[],
-        &[("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "3")],
+        &[("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "6")],
         1,
     );
 

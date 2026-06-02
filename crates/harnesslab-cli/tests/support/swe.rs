@@ -10,6 +10,19 @@ pub fn run_swe_json(
     extra_env: &[(&str, &str)],
     expected_code: i32,
 ) -> (serde_json::Value, PathBuf) {
+    let (results, run_dir, _) =
+        run_swe_json_with_output(home, root, bin, agent, extra_env, expected_code);
+    (results, run_dir)
+}
+
+pub fn run_swe_json_with_output(
+    home: &Path,
+    root: &Path,
+    bin: &Path,
+    agent: &str,
+    extra_env: &[(&str, &str)],
+    expected_code: i32,
+) -> (serde_json::Value, PathBuf, serde_json::Value) {
     let mut command = harnesslab();
     command
         .env("HARNESSLAB_BENCHMARKS_DIR", root)
@@ -38,7 +51,7 @@ pub fn run_swe_json(
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
     let run_dir = PathBuf::from(json["run_dir"].as_str().unwrap());
     let results = serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
-    (results, run_dir)
+    (results, run_dir, json)
 }
 
 pub fn init_home(home: &Path) {

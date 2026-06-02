@@ -4,13 +4,14 @@ mod external;
 mod monitor;
 mod patch;
 mod replay;
+mod run_output;
 mod sandbox;
 mod schedule;
 mod shell;
 mod store;
 mod usage;
 use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
-use crate::output::{PathOutput, RunOutput};
+use crate::output::PathOutput;
 use crate::print_json;
 use anyhow::{Context, Result, bail};
 use attempts::execute_attempts;
@@ -119,19 +120,7 @@ pub(crate) fn execute_new_run(
         &plan,
         ExecutionMode::New,
     )?;
-    if json {
-        print_json(&RunOutput {
-            schema_version: 1,
-            command: "run",
-            status: if code == 0 { "success" } else { "failure" },
-            run_id,
-            run_dir: run_dir.display().to_string(),
-            replay_source_run_id: spec.replay_source_run_id,
-        })?;
-    } else {
-        println!("run: {}", run_dir.display());
-        println!("report: {}", run_dir.join("report.html").display());
-    }
+    run_output::emit_run_output(json, code, run_id, &run_dir, spec.replay_source_run_id)?;
     Ok(code)
 }
 
@@ -222,19 +211,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &plan,
         ExecutionMode::Replay,
     )?;
-    if json {
-        print_json(&RunOutput {
-            schema_version: 1,
-            command: "run",
-            status: if code == 0 { "success" } else { "failure" },
-            run_id,
-            run_dir: run_dir.display().to_string(),
-            replay_source_run_id: spec.replay_source_run_id,
-        })?;
-    } else {
-        println!("run: {}", run_dir.display());
-        println!("report: {}", run_dir.join("report.html").display());
-    }
+    run_output::emit_run_output(json, code, run_id, &run_dir, spec.replay_source_run_id)?;
     Ok(code)
 }
 
@@ -306,7 +283,9 @@ fn execute_plan(
             .cmp(&right.task_id)
             .then(left.attempt.cmp(&right.attempt))
     });
-    let results = summarize_results(&spec.run_id, attempts);
+    let report_path = run_dir.join("report.html").display().to_string();
+    let mut results = summarize_results(&spec.run_id, attempts);
+    results.report_path = Some(report_path.clone());
     atomic_write_json(&run_dir.join("results.json"), &results)?;
     let run_health = monitor::report_health(run_dir);
     let model = harnesslab_report::build_report_model(
@@ -316,7 +295,7 @@ fn execute_plan(
             agent_config_summary: store::agent_config_summary(spec, report_profile),
             benchmark: spec.benchmark.name.clone(),
             split: spec.benchmark.split.clone(),
-            report_path: run_dir.join("report.html").display().to_string(),
+            report_path: report_path.clone(),
             replay_command: store::replay_command(spec),
             original_command: store::original_command_from_snapshot(run_dir),
             resumed: matches!(mode, ExecutionMode::Resume),
@@ -329,12 +308,25 @@ fn execute_plan(
         run_dir.join("report.html"),
         harnesslab_report::render_html(&model)?,
     )?;
+    let exit_code = derive_exit_code(&results.tasks, false);
+    let summary = &results.summary;
+    let message = format!(
+        "run finished exit_code={exit_code} total_tasks={} success={} partial_success={} benchmark_failure={} execution_failure={} interrupted={} total_score={} report_path={}",
+        summary.total_tasks,
+        summary.success,
+        summary.partial_success,
+        summary.benchmark_failure,
+        summary.execution_failure,
+        summary.interrupted,
+        summary.total_score,
+        report_path
+    );
     append_event(
         &events,
-        &event(&spec.run_id, None, "run_finished", "run finished"),
+        &event(&spec.run_id, None, "run_finished", &message),
         &[],
     )?;
-    Ok(derive_exit_code(&results.tasks, false))
+    Ok(exit_code)
 }
 
 fn execute_task(

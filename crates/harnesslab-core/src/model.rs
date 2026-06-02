@@ -169,6 +169,8 @@ pub enum AttemptProvenance {
 pub struct RunResults {
     pub schema_version: u32,
     pub run_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report_path: Option<String>,
     pub tasks: Vec<TaskAttemptResult>,
     pub summary: RunSummary,
 }
@@ -353,18 +355,6 @@ pub fn derive_exit_code(results: &[TaskAttemptResult], run_level_failed: bool) -
     {
         return 1;
     }
-    if effective
-        .iter()
-        .any(|result| result.failure_class == FailureClass::Benchmark)
-    {
-        return 2;
-    }
-    if effective
-        .iter()
-        .any(|result| result.outcome == Outcome::PartialSuccess)
-    {
-        return 4;
-    }
     0
 }
 
@@ -400,6 +390,7 @@ pub fn summarize_results(run_id: impl Into<String>, tasks: Vec<TaskAttemptResult
     RunResults {
         schema_version: 1,
         run_id: run_id.into(),
+        report_path: None,
         tasks,
         summary,
     }
