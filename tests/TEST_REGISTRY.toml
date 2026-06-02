@@ -1480,6 +1480,85 @@ requirements = ["execution_runtime"]
 contracts = ["RunOrchestrator"]
 
 [[tests]]
+id = "ORCH-019"
+title = "Run monitor aborts on external runner hard timeout"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-019"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/monitor.rs",
+  "crates/harnesslab-cli/src/runner/monitor_tests.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = ["run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "5.3"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["RunMonitor", "FailureMapping"]
+
+[[tests]]
+id = "ORCH-020"
+title = "Terminal-Bench stale cleanup scans run without snapshot"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-020"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/cleanup.rs",
+  "crates/harnesslab-cli/src/runner/cleanup_tests.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["execution_runtime", "external_benchmark_runtime", "artifact_event_store"]
+contracts = ["RunOrchestrator", "TerminalBenchExternalRunner", "EventLog"]
+
+[[tests]]
+id = "ORCH-021"
+title = "Terminal-Bench stale cleanup uses stale run id"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-021"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/cleanup.rs",
+  "crates/harnesslab-cli/src/runner/cleanup_tests.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["execution_runtime", "external_benchmark_runtime", "artifact_event_store"]
+contracts = ["RunOrchestrator", "TerminalBenchExternalRunner", "EventLog"]
+
+[[tests]]
+id = "ORCH-022"
+title = "Terminal-Bench stale cleanup ignores loose directory name matches"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ORCH-022"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/cleanup.rs",
+  "crates/harnesslab-cli/src/runner/cleanup_tests.rs",
+]
+required_artifacts = ["events.jsonl"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["execution_runtime", "external_benchmark_runtime", "artifact_event_store"]
+contracts = ["RunOrchestrator", "TerminalBenchExternalRunner", "EventLog"]
+
+[[tests]]
 id = "INT-014"
 title = "Resume validates profile snapshot before execution"
 layer = "integration"
@@ -1845,6 +1924,26 @@ section = "7.1"
 [tests.verifies]
 requirements = ["external_benchmark_runtime", "execution_runtime"]
 contracts = ["TerminalBenchExternalRunner", "ProcessCleanup"]
+
+[[tests]]
+id = "TB-004"
+title = "Terminal-Bench hard timeout maps to external runner timeout"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select TB-004"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+  "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/architecture.md"
+section = "7.1"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping"]
 
 [[tests]]
 id = "INT-032"

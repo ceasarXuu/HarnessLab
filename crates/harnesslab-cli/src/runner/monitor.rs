@@ -57,6 +57,7 @@ pub(super) struct RunMonitor {
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
+    external_runner_timeouts: usize,
     execution_stalls: usize,
     non_timeout_completed: usize,
     successes: usize,
@@ -77,6 +78,7 @@ struct RunHealthSnapshot<'a> {
     docker_network_failures: usize,
     agent_timeouts: usize,
     external_runner_no_progress: usize,
+    external_runner_timeouts: usize,
     execution_stalls: usize,
 }
 
@@ -89,6 +91,7 @@ impl RunMonitor {
             docker_network_failures: 0,
             agent_timeouts: 0,
             external_runner_no_progress: 0,
+            external_runner_timeouts: 0,
             execution_stalls: 0,
             non_timeout_completed: 0,
             successes: 0,
@@ -122,6 +125,14 @@ impl RunMonitor {
             }
             if result.failure_code == Some(FailureCode::ExternalRunnerNoProgress) {
                 self.external_runner_no_progress += 1;
+            }
+            if result.failure_code == Some(FailureCode::ExternalRunnerTimeout) {
+                self.external_runner_timeouts += 1;
+                self.abort(
+                    run_dir,
+                    result,
+                    "external runner hard timeout; benchmark runner budget or setup is unhealthy",
+                )?;
             }
             if self.execution_stalls >= AGENT_TIMEOUT_ABORT_THRESHOLD
                 && self.non_timeout_completed == 0
@@ -230,6 +241,7 @@ impl RunMonitor {
             docker_network_failures: self.docker_network_failures,
             agent_timeouts: self.agent_timeouts,
             external_runner_no_progress: self.external_runner_no_progress,
+            external_runner_timeouts: self.external_runner_timeouts,
             execution_stalls: self.execution_stalls,
         };
         atomic_write_json(&run_dir.join("run-health.json"), &snapshot)

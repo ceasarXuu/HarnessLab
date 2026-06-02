@@ -14,6 +14,15 @@ pub(super) struct ComposeProjectSnapshot {
     projects: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(in crate::runner) struct RunCleanupResult {
+    pub(in crate::runner) removed: Vec<String>,
+    pub(in crate::runner) tokens: Vec<String>,
+    pub(in crate::runner) projects: Vec<String>,
+    pub(in crate::runner) snapshot_projects: usize,
+    pub(in crate::runner) matched_projects: usize,
+}
+
 pub(super) fn cleanup_task_resources(
     run_dir: &Path,
     spec: &RunSpec,
@@ -58,9 +67,55 @@ pub(super) fn cleanup_task_resources(
     }
 }
 
-pub(in crate::runner) fn cleanup_exact_projects(run_dir: &Path) -> Result<CleanupResult> {
-    let projects = recorded_projects(run_dir)?;
-    DockerCliProvider::cleanup_compose_projects(&projects)
+pub(in crate::runner) fn cleanup_run_resources(
+    run_dir: &Path,
+    run_id: &str,
+) -> Result<RunCleanupResult> {
+    let snapshot_projects = recorded_projects(run_dir)?
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    let mut projects = snapshot_projects.clone();
+    let mut matched_projects = BTreeSet::new();
+    let tokens = cleanup_match_tokens(run_id);
+    for token in &tokens {
+        let matches = DockerCliProvider::compose_projects_matching(token)?;
+        matched_projects.extend(matches.iter().cloned());
+        projects.extend(matches);
+    }
+    let projects = projects.into_iter().collect::<Vec<_>>();
+    let cleanup = DockerCliProvider::cleanup_compose_projects(&projects)?;
+    Ok(RunCleanupResult {
+        removed: cleanup.removed,
+        tokens,
+        projects,
+        snapshot_projects: snapshot_projects.len(),
+        matched_projects: matched_projects.len(),
+    })
+}
+
+fn cleanup_match_tokens(run_id: &str) -> Vec<String> {
+    let trimmed = run_id.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    let mut tokens = BTreeSet::new();
+    tokens.insert(trimmed.to_string());
+    tokens.insert(trimmed.to_ascii_lowercase());
+    tokens.insert(terminal_bench_token(trimmed));
+    tokens.into_iter().collect()
+}
+
+fn terminal_bench_token(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn append_cleanup_event(
@@ -177,5 +232,29 @@ mod tests {
         record_projects(tmp.path(), &["b".to_string(), "c".to_string()]).unwrap();
 
         assert_eq!(recorded_projects(tmp.path()).unwrap(), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn terminal_bench_cleanup_match_tokens_include_lowercase_run_id() {
+        assert_eq!(
+            cleanup_match_tokens("Agent-Terminal-20260602T032823Z"),
+            vec![
+                "Agent-Terminal-20260602T032823Z".to_string(),
+                "agent-terminal-20260602t032823z".to_string()
+            ]
+        );
+        assert!(cleanup_match_tokens(" ").is_empty());
+    }
+
+    #[test]
+    fn terminal_bench_cleanup_match_tokens_include_official_normalized_token() {
+        assert_eq!(
+            cleanup_match_tokens("Agent.Terminal_Bench-20260602T032823Z"),
+            vec![
+                "Agent.Terminal_Bench-20260602T032823Z".to_string(),
+                "agent-terminal-bench-20260602t032823z".to_string(),
+                "agent.terminal_bench-20260602t032823z".to_string(),
+            ]
+        );
     }
 }

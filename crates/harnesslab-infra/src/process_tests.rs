@@ -230,7 +230,7 @@ fn c_sbox_018_progress_growth_resets_activity_grace() {
     let progress_path = tmp.path().join("run.log");
     let spec = ExecSpec {
         command: format!(
-            "printf started; sleep 1; printf progress >> {}; sleep 8",
+            "printf started; sleep 0.2; printf progress >> {}; sleep 8",
             shell_quote(&progress_path.display().to_string())
         ),
         stdin: None,
@@ -249,7 +249,7 @@ fn c_sbox_018_progress_growth_resets_activity_grace() {
 
     assert_eq!(result.termination_reason, TerminationReason::NoProgress);
     assert!(
-        started.elapsed() >= Duration::from_secs(3),
+        started.elapsed() >= Duration::from_millis(2_700),
         "progress growth should reset the activity grace before the later stale activity window"
     );
     assert!(

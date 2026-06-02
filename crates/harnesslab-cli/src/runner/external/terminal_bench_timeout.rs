@@ -1,3 +1,5 @@
+const SETUP_AND_BUILD_TIMEOUT_SEC: u64 = 1_800;
+
 pub(super) fn terminal_bench_timeout_values(
     run_timeout: Option<u64>,
     profile_timeout: u64,
@@ -7,7 +9,7 @@ pub(super) fn terminal_bench_timeout_values(
     let test_timeout = run_timeout.unwrap_or(verifier_timeout).max(1);
     let process_timeout = agent_timeout
         .saturating_add(test_timeout)
-        .saturating_add(600);
+        .saturating_add(SETUP_AND_BUILD_TIMEOUT_SEC);
     (agent_timeout, test_timeout, process_timeout)
 }
 
