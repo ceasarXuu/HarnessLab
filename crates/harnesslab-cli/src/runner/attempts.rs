@@ -2,7 +2,9 @@ use super::execute_task;
 use anyhow::Result;
 use harnesslab_core::{AgentProfile, RunSpec, TaskAttemptResult};
 use std::any::Any;
+use std::collections::VecDeque;
 use std::path::Path;
+use std::sync::{Arc, mpsc};
 use std::thread;
 
 use super::monitor::RunMonitor;
@@ -16,66 +18,123 @@ pub(super) fn execute_attempts(
     attempts: Vec<AttemptWork>,
     concurrency: usize,
 ) -> Result<Vec<TaskAttemptResult>> {
+    let run_dir_for_executor = run_dir.to_path_buf();
+    let profile = profile.clone();
+    let report_profile = report_profile.clone();
+    let spec = spec.clone();
+    let run_id = spec.run_id.clone();
+    let executor = Arc::new(move |work: AttemptWork| {
+        execute_task(
+            &run_dir_for_executor,
+            &spec,
+            &profile,
+            &report_profile,
+            &work.task,
+            work.attempt,
+            work.provenance,
+        )
+    });
+    execute_attempts_with(run_dir, &run_id, attempts, concurrency, executor)
+}
+
+pub(super) fn execute_attempts_with(
+    run_dir: &Path,
+    run_id: &str,
+    attempts: Vec<AttemptWork>,
+    concurrency: usize,
+    executor: Arc<dyn Fn(AttemptWork) -> Result<TaskAttemptResult> + Send + Sync + 'static>,
+) -> Result<Vec<TaskAttemptResult>> {
     let mut results = Vec::new();
-    let mut monitor = RunMonitor::new(&spec.run_id, attempts.len());
-    let chunk_size = concurrency.max(1);
-    let mut cursor = 0;
-    while cursor < attempts.len() {
-        let end = (cursor + chunk_size).min(attempts.len());
-        let chunk = &attempts[cursor..end];
-        let mut handles = Vec::new();
-        for work in chunk.iter().cloned() {
-            let run_dir = run_dir.to_path_buf();
-            let profile = profile.clone();
-            let report_profile = report_profile.clone();
-            let spec = spec.clone();
-            handles.push(thread::spawn(move || {
-                execute_task(
-                    &run_dir,
-                    &spec,
-                    &profile,
-                    &report_profile,
-                    &work.task,
-                    work.attempt,
-                    work.provenance,
-                )
-            }));
+    let mut monitor = RunMonitor::new(run_id, attempts.len());
+    let mut pending = VecDeque::from(attempts);
+    let (sender, receiver) = mpsc::channel();
+    let mut active = 0usize;
+    let mut first_error = None;
+    let mut aborting = false;
+
+    while active < concurrency.max(1) {
+        if !spawn_next(&mut pending, &sender, &executor, &mut active) {
+            break;
         }
-        let mut first_error = None;
-        let mut abort_after_chunk = false;
-        for handle in handles {
-            match handle.join() {
-                Ok(Ok(result)) => {
-                    let abort = monitor.record_result(run_dir, &result)?;
-                    results.push(result);
-                    if abort.is_some() {
-                        abort_after_chunk = true;
+    }
+
+    while active > 0 {
+        match receiver.recv() {
+            Ok(AttemptMessage::Result(result)) => {
+                active -= 1;
+                match *result {
+                    Ok(result) => {
+                        let abort = monitor.record_result(run_dir, &result)?;
+                        results.push(result);
+                        if abort.is_some() {
+                            aborting = true;
+                        }
                     }
-                }
-                Ok(Err(error)) => {
-                    if first_error.is_none() {
-                        first_error = Some(error);
-                    }
-                }
-                Err(panic) => {
-                    if first_error.is_none() {
-                        first_error =
-                            Some(anyhow::anyhow!("task panicked: {}", panic_message(panic)));
+                    Err(error) => {
+                        if first_error.is_none() {
+                            first_error = Some(error);
+                            aborting = true;
+                        }
                     }
                 }
             }
+            Ok(AttemptMessage::Panic(message)) => {
+                active -= 1;
+                if first_error.is_none() {
+                    first_error = Some(anyhow::anyhow!("task panicked: {message}"));
+                    aborting = true;
+                }
+            }
+            Err(error) => {
+                if first_error.is_none() {
+                    first_error = Some(anyhow::anyhow!("task worker channel closed: {error}"));
+                }
+                break;
+            }
         }
-        if let Some(error) = first_error {
-            return Err(error);
+        while !aborting && active < concurrency.max(1) {
+            if !spawn_next(&mut pending, &sender, &executor, &mut active) {
+                break;
+            }
         }
-        if abort_after_chunk {
-            let pending = &attempts[end..];
-            results.extend(monitor.interrupted_results(run_dir, pending)?);
-            return Ok(results);
-        }
-        cursor = end;
+    }
+
+    if let Some(error) = first_error {
+        return Err(error);
+    }
+    if aborting {
+        let pending = pending.into_iter().collect::<Vec<_>>();
+        results.extend(monitor.interrupted_results(run_dir, &pending)?);
     }
     Ok(results)
+}
+
+enum AttemptMessage {
+    Result(Box<Result<TaskAttemptResult>>),
+    Panic(String),
+}
+
+fn spawn_next(
+    pending: &mut VecDeque<AttemptWork>,
+    sender: &mpsc::Sender<AttemptMessage>,
+    executor: &Arc<dyn Fn(AttemptWork) -> Result<TaskAttemptResult> + Send + Sync + 'static>,
+    active: &mut usize,
+) -> bool {
+    let Some(work) = pending.pop_front() else {
+        return false;
+    };
+    let sender = sender.clone();
+    let executor = Arc::clone(executor);
+    thread::spawn(move || {
+        let message =
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| executor(work))) {
+                Ok(result) => AttemptMessage::Result(Box::new(result)),
+                Err(panic) => AttemptMessage::Panic(panic_message(panic)),
+            };
+        let _ = sender.send(message);
+    });
+    *active += 1;
+    true
 }
 
 pub(super) fn panic_message(panic: Box<dyn Any + Send + 'static>) -> String {
@@ -87,3 +146,7 @@ pub(super) fn panic_message(panic: Box<dyn Any + Send + 'static>) -> String {
         "non-string panic payload".to_string()
     }
 }
+
+#[cfg(test)]
+#[path = "attempts_tests.rs"]
+mod tests;

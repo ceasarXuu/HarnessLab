@@ -40,6 +40,7 @@ pub enum FailureCode {
     WorkspacePrepFailed,
     AgentSpawnError,
     AgentTimeout,
+    AgentCleanupFailed,
     ExternalRunnerNoProgress,
     AgentSignaled,
     AgentNonzeroExit,

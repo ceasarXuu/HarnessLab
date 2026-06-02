@@ -169,6 +169,10 @@ Terminal-Bench runner 有两层超时：
 
 使用 `terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"` 接入本机 CLI agent 时，HarnessLab 传给适配层的 `HARNESSLAB_AGENT_TIMEOUT_SEC` 必须保持原始 agent 预算，传给官方 `tb run` 的 `--global-agent-timeout-sec` 会额外增加清理余量，避免官方外层 timeout 先中断 `perform_task`。排查真实 run 时，如果看到 `agent_timeout` 且宿主机仍有对应 agent 子进程，优先修适配层进程树清理，而不是继续跑完整 bench。
 
+真实 full run 监控时，宿主机不得出现 PPID 为 `1` 的残留 agent 子进程，例如 `claude --dangerously-skip-permissions ...`。Terminal-Bench Python adapter 在 agent timeout 和正常 agent 命令退出后都会按运行期 ancestry 快照与 `HARNESSLAB_AGENT_RUN_TOKEN` 扫描并清理残留子进程，并在官方 task log 目录写出 `agent_cleanup.log`。如果 agent 主动清除 token 并快速 daemonize，adapter 不能安全强杀无法归属的新进程；需要诊断这类风险时可启用 strict global process scan，把 agent 窗口内新出现且无法归属的 live pid 作为 `execution/agent_cleanup_failed` 证据。如果仍出现 orphan，或结果中出现 `execution/agent_cleanup_failed`，必须提前终止 run 并修复清理边界，不能把后续结果当成有效 benchmark 分数。
+
+不要为了节省时间把 `HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC` 设得小于或接近 agent 预算。真实 Terminal-Bench 中部分 agent 生成脚本后会在容器内长时间无官方 `run.log` 增量，过短 watchdog 会把本应由官方 runner 给出的 `benchmark/agent_timeout` 或成功结果误判为 `execution/external_runner_no_progress`。
+
 真实运行中看到 `terminal-bench cleanup post_task ... projects=none removed containers=0 networks=0` 不代表 HarnessLab 没有保护；通常是官方 Terminal-Bench 已先执行 `docker compose down`，HarnessLab fallback 只是在确认并清理遗留资源。
 
 ## Official SWE-bench Pro Run

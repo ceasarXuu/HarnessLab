@@ -14,10 +14,10 @@ docker info >/dev/null
 cargo build -p harnesslab-cli >/dev/null
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-WORK=".benchmarks/_harnesslab-import-timeout-cleanup-$STAMP"
+WORK=".benchmarks/_harnesslab-import-success-cleanup-$STAMP"
 HOME_DIR="$WORK/home"
-AGENT_SCRIPT="$WORK/agent-timeout-spawner.py"
-MARKER="harnesslab-real-import-timeout-$STAMP"
+AGENT_SCRIPT="$WORK/agent-success-spawner.py"
+MARKER="harnesslab-real-import-success-$STAMP"
 
 mkdir -p "$HOME_DIR/agents" "$WORK"
 
@@ -32,26 +32,27 @@ import time
 marker = os.environ["HARNESSLAB_TEST_ORPHAN_MARKER"]
 child = (
     "import sys, time; "
-    "print('child-ready', flush=True); "
     "time.sleep(60)"
 )
 subprocess.Popen(
     [sys.executable, "-c", child, marker],
     start_new_session=True,
+    stdin=subprocess.DEVNULL,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
 )
-print("agent-ready", flush=True)
-time.sleep(60)
+print('echo "Hello, world!" > hello.txt')
 PY
 
-cat >"$HOME_DIR/agents/timeout-import.toml" <<EOF
+cat >"$HOME_DIR/agents/success-import.toml" <<EOF
 schema_version = 1
-name = "timeout-import"
+name = "success-import"
 kind = "custom"
-display_name = "Timeout Import Agent"
+display_name = "Success Import Agent"
 command = "python3 $ROOT/$AGENT_SCRIPT"
 input_mode = "stdin"
 working_dir = "workspace"
-timeout_sec = 3
+timeout_sec = 5
 
 [auth]
 inherit = false
@@ -74,14 +75,14 @@ HARNESSLAB_BENCHMARKS_DIR=".benchmarks" \
 HARNESSLAB_TEST_ORPHAN_MARKER="$MARKER" \
   target/debug/harnesslab \
   --home "$HOME_DIR" \
-  run --agent timeout-import --benchmark terminal-bench --split smoke \
-  --concurrency 1 --timeout-sec 3 --json \
+  run --agent success-import --benchmark terminal-bench --split smoke \
+  --concurrency 1 --timeout-sec 120 --json \
   >"$WORK/run.json" 2>"$WORK/run.stderr"
 STATUS=$?
 set -e
 
-if [ "$STATUS" -ne 2 ]; then
-  echo "expected benchmark failure exit code 2, got $STATUS" >&2
+if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 2 ]; then
+  echo "expected success or benchmark failure exit code, got $STATUS" >&2
   cat "$WORK/run.stderr" >&2
   exit 1
 fi
@@ -96,46 +97,18 @@ python3 - "$RUN_DIR/results.json" <<'PY'
 import json, sys
 results = json.load(open(sys.argv[1]))
 task = results["tasks"][0]
-assert task["state"] == "failure", task
-assert task["failure_class"] == "benchmark", task
-assert task["failure_code"] == "agent_timeout", task
-print("result ok: benchmark/agent_timeout")
+assert task["failure_code"] != "agent_cleanup_failed", task
+print("result ok:", task["failure_class"], task["failure_code"])
 PY
 
-COMMAND_SNAPSHOT="$RUN_DIR/tasks/hello-world/attempts/1/agent/command.txt"
-if ! rg --fixed-strings -- "--agent-import-path" "$COMMAND_SNAPSHOT" >/dev/null; then
-  echo "missing import-path flag in command snapshot: $COMMAND_SNAPSHOT" >&2
-  exit 1
-fi
-if ! rg --fixed-strings "harnesslab_tb_agent:HarnessLabCommandAgent" "$COMMAND_SNAPSHOT" >/dev/null; then
-  echo "missing import-path proof in command snapshot: $COMMAND_SNAPSHOT" >&2
-  exit 1
-fi
-if ! rg --fixed-strings -- "--global-agent-timeout-sec 33" "$COMMAND_SNAPSHOT" >/dev/null; then
-  echo "missing import agent cleanup grace proof in command snapshot: $COMMAND_SNAPSHOT" >&2
-  exit 1
-fi
-if ! rg --fixed-strings "external_runner_configured" "$RUN_DIR/events.jsonl" >/dev/null; then
-  echo "missing runner configuration event" >&2
-  exit 1
-fi
-if ! rg --fixed-strings "process_timeout_sec=606" "$RUN_DIR/events.jsonl" >/dev/null; then
-  echo "missing expected real runner timeout configuration" >&2
-  exit 1
-fi
-if ! find "$RUN_DIR/tasks/hello-world/attempts/1/official" -name agent_error.log \
-  -exec rg --fixed-strings "agent command timed out;" {} \; | rg . >/dev/null; then
-  echo "missing adapter timeout agent_error.log proof" >&2
-  exit 1
-fi
-if ! find "$RUN_DIR/tasks/hello-world/attempts/1/official" -name agent_error.log \
-  -exec rg --fixed-strings "succeeded=True" {} \; | rg . >/dev/null; then
-  echo "missing adapter cleanup success proof" >&2
+if ! find "$RUN_DIR/tasks/hello-world/attempts/1/official" -name agent_cleanup.log \
+  -exec rg --fixed-strings "harnesslab agent cleanup after exit:" {} \; | rg . >/dev/null; then
+  echo "missing success-path agent_cleanup.log proof" >&2
   exit 1
 fi
 if ! find "$RUN_DIR/tasks/hello-world/attempts/1/official" -name agent_cleanup.log \
-  -exec rg --fixed-strings "harnesslab agent cleanup after timeout:" {} \; | rg . >/dev/null; then
-  echo "missing adapter timeout cleanup log proof" >&2
+  -exec rg --fixed-strings "succeeded=True" {} \; | rg . >/dev/null; then
+  echo "missing cleanup success marker in agent_cleanup.log" >&2
   exit 1
 fi
 
@@ -154,5 +127,5 @@ if docker network ls --format '{{.Name}} {{.Label "com.docker.compose.project"}}
   exit 1
 fi
 
-echo "PASS terminal-bench import timeout cleanup"
+echo "PASS terminal-bench import success cleanup"
 echo "artifacts: $WORK"

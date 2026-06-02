@@ -1,9 +1,12 @@
+import os
 import shlex
+import signal
 import subprocess
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from harnesslab_tb_agent import run_registered_agent
 from harnesslab_tb_process import AgentCommandTimedOut
@@ -30,6 +33,21 @@ def process_is_running(pid):
         return False
     state = completed.stdout.strip()
     return bool(state) and not state.startswith("Z")
+
+
+def terminate_test_process(pid):
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            subprocess.run(
+                ["kill", f"-{sig.value}", str(pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError:
+            pass
+        if wait_for_process_exit(pid, 0.5):
+            return
 
 
 def wait_for_file(path, timeout=5.0):
@@ -98,6 +116,9 @@ class HarnessLabCommandProcessTests(unittest.TestCase):
                 "    [sys.executable, '-c', "
                 f"{grandchild_code!r}, str(pid_file)],\n"
                 "    start_new_session=True,\n"
+                "    stdin=subprocess.DEVNULL,\n"
+                "    stdout=subprocess.DEVNULL,\n"
+                "    stderr=subprocess.DEVNULL,\n"
                 ")\n"
                 "deadline = time.time() + 5\n"
                 "while not pid_file.exists() and time.time() < deadline:\n"
@@ -115,6 +136,87 @@ class HarnessLabCommandProcessTests(unittest.TestCase):
         self.assertTrue(
             wait_for_process_exit(child_pid),
             f"reparented child process {child_pid} was not cleaned up",
+        )
+
+    def test_success_kills_reparented_env_tokened_descendant_process_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            child_pid_file = Path(tmp) / "daemon.pid"
+            grandchild_code = (
+                "import os, pathlib, sys, time; "
+                "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+                "time.sleep(60)"
+            )
+            parent_code = (
+                "import pathlib, subprocess, sys, time\n"
+                f"pid_file = pathlib.Path({str(child_pid_file)!r})\n"
+                "subprocess.Popen(\n"
+                "    [sys.executable, '-c', "
+                f"{grandchild_code!r}, str(pid_file)],\n"
+                "    start_new_session=True,\n"
+                "    stdin=subprocess.DEVNULL,\n"
+                "    stdout=subprocess.DEVNULL,\n"
+                "    stderr=subprocess.DEVNULL,\n"
+                ")\n"
+                "deadline = time.time() + 5\n"
+                "while not pid_file.exists() and time.time() < deadline:\n"
+                "    time.sleep(0.01)\n"
+                "print('ok')\n"
+            )
+            command = f"python -c {shlex.quote(parent_code)}"
+
+            output = run_registered_agent(command, "stdin", "ignored", 5)
+            self.assertTrue(wait_for_file(child_pid_file))
+            child_pid = int(child_pid_file.read_text())
+
+        self.assertEqual(output.strip(), "ok")
+        self.assertTrue(
+            wait_for_process_exit(child_pid),
+            f"successful command left child process {child_pid} running",
+        )
+
+    def test_success_kills_reparented_descendant_that_clears_run_token(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            child_pid_file = Path(tmp) / "daemon.pid"
+            grandchild_code = (
+                "import os, pathlib, sys, time; "
+                "pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); "
+                "time.sleep(60)"
+            )
+            parent_code = (
+                "import os, pathlib, subprocess, sys, time\n"
+                f"pid_file = pathlib.Path({str(child_pid_file)!r})\n"
+                "env = os.environ.copy()\n"
+                "env.pop('HARNESSLAB_AGENT_RUN_TOKEN', None)\n"
+                "subprocess.Popen(\n"
+                "    [sys.executable, '-c', "
+                f"{grandchild_code!r}, str(pid_file)],\n"
+                "    start_new_session=True,\n"
+                "    stdin=subprocess.DEVNULL,\n"
+                "    stdout=subprocess.DEVNULL,\n"
+                "    stderr=subprocess.DEVNULL,\n"
+                "    env=env,\n"
+                ")\n"
+                "deadline = time.time() + 5\n"
+                "while not pid_file.exists() and time.time() < deadline:\n"
+                "    time.sleep(0.01)\n"
+                "print('ok')\n"
+            )
+            command = f"python -c {shlex.quote(parent_code)}"
+
+            with patch.dict(
+                os.environ,
+                {"HARNESSLAB_AGENT_STRICT_GLOBAL_PROCESS_SCAN": "1"},
+            ):
+                with self.assertRaises(RuntimeError) as raised:
+                    run_registered_agent(command, "stdin", "ignored", 5)
+            self.assertTrue(wait_for_file(child_pid_file))
+            child_pid = int(child_pid_file.read_text())
+
+        self.assertIn("left live child processes", str(raised.exception))
+        terminate_test_process(child_pid)
+        self.assertTrue(
+            wait_for_process_exit(child_pid),
+            f"token-cleared child process {child_pid} was not cleaned up by test",
         )
 
     def test_argument_mode_timeout_uses_same_cleanup_path(self):
