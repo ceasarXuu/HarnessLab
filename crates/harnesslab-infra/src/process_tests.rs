@@ -104,6 +104,33 @@ fn c_sbox_003_no_output_activity_pattern_defers_to_hard_timeout() {
 
 #[cfg(unix)]
 #[test]
+fn c_sbox_018_no_output_activity_has_bounded_grace() {
+    let tmp = tempfile::tempdir().unwrap();
+    let spec = ExecSpec {
+        command: "printf started; sleep 8".to_string(),
+        stdin: None,
+        working_dir: tmp.path().join("workspace"),
+        timeout_sec: 10,
+        no_output_timeout_sec: Some(1),
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: vec!["sleep 8".to_string()],
+        no_output_activity_event: None,
+        stdout_path: tmp.path().join("stdout.log"),
+        stderr_path: tmp.path().join("stderr.log"),
+    };
+    let started = Instant::now();
+
+    let result = HostProcessExecutor::exec(&spec).unwrap();
+
+    assert_eq!(result.termination_reason, TerminationReason::NoProgress);
+    assert!(
+        started.elapsed() < Duration::from_millis(2_700),
+        "matching activity must not defer for more than one extra watchdog window"
+    );
+}
+
+#[cfg(unix)]
+#[test]
 fn c_sbox_003_no_output_activity_disappearing_kills_promptly() {
     let tmp = tempfile::tempdir().unwrap();
     let spec = ExecSpec {
@@ -177,6 +204,7 @@ fn c_sbox_003_no_output_progress_file_defers_to_hard_timeout() {
             run_id: "run-1".to_string(),
             task_id: Some("task-1".to_string()),
             event_name: "external_runner_activity".to_string(),
+            no_progress_event_name: None,
         }),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
@@ -193,6 +221,41 @@ fn c_sbox_003_no_output_progress_file_defers_to_hard_timeout() {
     let events = fs::read_to_string(events_path).unwrap();
     assert!(events.contains("external_runner_activity"));
     assert!(events.contains("progress file path="));
+}
+
+#[cfg(unix)]
+#[test]
+fn c_sbox_018_progress_growth_resets_activity_grace() {
+    let tmp = tempfile::tempdir().unwrap();
+    let progress_path = tmp.path().join("run.log");
+    let spec = ExecSpec {
+        command: format!(
+            "printf started; sleep 1; printf progress >> {}; sleep 8",
+            shell_quote(&progress_path.display().to_string())
+        ),
+        stdin: None,
+        working_dir: tmp.path().join("workspace"),
+        timeout_sec: 10,
+        no_output_timeout_sec: Some(1),
+        no_output_progress_paths: vec![progress_path],
+        no_output_activity_patterns: vec!["sleep 8".to_string()],
+        no_output_activity_event: None,
+        stdout_path: tmp.path().join("stdout.log"),
+        stderr_path: tmp.path().join("stderr.log"),
+    };
+    let started = Instant::now();
+
+    let result = HostProcessExecutor::exec(&spec).unwrap();
+
+    assert_eq!(result.termination_reason, TerminationReason::NoProgress);
+    assert!(
+        started.elapsed() >= Duration::from_secs(3),
+        "progress growth should reset the activity grace before the later stale activity window"
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "later stale activity should still receive only one extra watchdog window"
+    );
 }
 
 #[test]

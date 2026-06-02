@@ -575,7 +575,7 @@ Runner 需要输出：
 
 Runner 不判断任务成功。任务成功只由 benchmark evaluator/verifier 决定。
 
-`no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。no-output watchdog 只能在“stdout/stderr 无新字节、无已注册进度文件增长、无已注册活动信号”时触发；Terminal-Bench 注册官方 `run.log` 作为进度文件，并注册 Docker setup/build 子进程活动，避免首次镜像构建被误判为 runner stall。进程活动匹配只延期到下一次短周期复查，不会重置完整 watchdog 窗口；官方 `run.log` 增长才会刷新进度窗口。匹配事件应写入运行日志，便于解释后续 hard timeout 或 no-progress。
+`no_progress` 是进程生命周期状态，不是 benchmark 得分。外部 benchmark runner 可以把它映射成更具体的执行失败，例如 Terminal-Bench 的 `external_runner_no_progress`。no-output watchdog 只能在“stdout/stderr 无新字节、无已注册进度文件增长、无可接受的已注册活动信号”时触发；Terminal-Bench 注册官方 `run.log` 作为进度文件，并注册 Docker setup/build 子进程活动，避免首次镜像构建被误判为 runner stall。进程活动匹配只延期到下一次短周期复查，并且最多持续一个额外 watchdog 窗口；官方 `run.log` 增长才会刷新进度窗口。匹配事件应写入运行日志，最终 no-progress 事件必须带 `activity_grace_exhausted`、`current_activity`、`last_activity`、`last_progress` 诊断字段，便于解释 hard timeout 或 no-progress。
 外层 hard timeout 同样是 HarnessLab 执行层失败，必须压过已经写出的外部 benchmark 结果，避免把 runner teardown/setup 卡死误算成 agent 能力得分。
 
 ## 8. Sandbox Provider 架构

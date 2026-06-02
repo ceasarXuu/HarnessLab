@@ -1,4 +1,4 @@
-use crate::{NoOutputActivityEvent, ProgressWatcher, append_event, event, process_group_activity};
+use crate::{NoOutputActivityEvent, process_group_activity};
 use anyhow::{Context, Result};
 use harnesslab_core::{ProcessRecord, TerminationReason};
 use std::fs;
@@ -17,6 +17,10 @@ use std::time::{Duration, Instant};
 mod process_start_gate;
 use process_start_gate::{ChildStartGate, ChildStartGateFds};
 
+#[path = "process_no_output.rs"]
+mod process_no_output;
+use process_no_output::NoOutputWatchdog;
+
 #[cfg(unix)]
 const MAX_ACTIVE_PROCESS_GROUPS: usize = 4096;
 
@@ -26,9 +30,6 @@ static ACTIVE_PROCESS_GROUPS: [AtomicI32; MAX_ACTIVE_PROCESS_GROUPS] =
 
 #[cfg(unix)]
 static SIGNAL_HANDLERS_INSTALLED: std::sync::Once = std::sync::Once::new();
-
-const NO_OUTPUT_ACTIVITY_REPROBE: Duration = Duration::from_secs(1);
-const NO_OUTPUT_ACTIVITY_EVENT_INTERVAL: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone)]
 pub struct ExecSpec {
@@ -115,9 +116,8 @@ impl HostProcessExecutor {
             .filter(|timeout| *timeout > 0)
             .map(Duration::from_secs);
         let deadline = started + hard_timeout;
-        let mut progress_watcher = ProgressWatcher::new(spec.no_output_progress_paths.clone());
-        let mut next_activity_probe = started;
-        let mut last_activity_event_at: Option<Instant> = None;
+        let mut no_output_watchdog =
+            NoOutputWatchdog::new(spec.no_output_progress_paths.clone(), started);
         loop {
             if let Some(status) = child.try_wait()? {
                 join_stream(stdout_thread.take().expect("stdout stream thread"))?;
@@ -148,43 +148,43 @@ impl HostProcessExecutor {
             if let Some(timeout) = no_output_timeout {
                 let elapsed_since_start_ms = started.elapsed().as_millis();
                 let last_output = u128::from(last_output_ms.load(Ordering::Relaxed));
-                if elapsed_since_start_ms.saturating_sub(last_output) >= timeout.as_millis() {
+                let quiet_for_ms = elapsed_since_start_ms.saturating_sub(last_output);
+                if quiet_for_ms >= timeout.as_millis() {
                     let now = Instant::now();
-                    if now < next_activity_probe {
+                    if !no_output_watchdog.ready_to_probe(now) {
                         thread::sleep(Duration::from_millis(20));
                         continue;
                     }
-                    next_activity_probe = now + NO_OUTPUT_ACTIVITY_REPROBE;
-                    if let Some(activity) = process_group_activity(
+                    no_output_watchdog.mark_probe(now);
+                    if let Some(path) = no_output_watchdog.changed_path() {
+                        last_output_ms.store(elapsed_ms(started), Ordering::Relaxed);
+                        no_output_watchdog.record_progress(
+                            spec.no_output_activity_event.as_ref(),
+                            path,
+                            now,
+                        );
+                        continue;
+                    }
+                    let activity = process_group_activity(
                         process_group.pgid(),
                         &spec.no_output_activity_patterns,
                     )
-                    .unwrap_or(None)
+                    .unwrap_or(None);
+                    if let Some(activity) = &activity
+                        && no_output_watchdog.record_activity_or_expired(
+                            spec.no_output_activity_event.as_ref(),
+                            activity,
+                            now,
+                            timeout,
+                        )
                     {
-                        append_no_output_deferral_event(
-                            spec,
-                            format!(
-                                "no-output watchdog deferred by active process pid={} command={} pattern={}",
-                                activity.pid, activity.command_name, activity.pattern
-                            ),
-                            now,
-                            &mut last_activity_event_at,
-                        );
                         continue;
                     }
-                    if let Some(path) = progress_watcher.changed_path() {
-                        last_output_ms.store(elapsed_ms(started), Ordering::Relaxed);
-                        append_no_output_deferral_event(
-                            spec,
-                            format!(
-                                "no-output watchdog deferred by progress file path={}",
-                                path.display()
-                            ),
-                            now,
-                            &mut last_activity_event_at,
-                        );
-                        continue;
-                    }
+                    no_output_watchdog.emit_no_progress(
+                        spec.no_output_activity_event.as_ref(),
+                        timeout,
+                        activity.as_ref(),
+                    );
                     kill_process_tree(&mut child, &process_group);
                     child.wait().context("wait for no-progress process kill")?;
                     join_stream_timeout(
@@ -196,39 +196,13 @@ impl HostProcessExecutor {
                         Duration::from_secs(2),
                     )?;
                     return Ok(record(spec, None, TerminationReason::NoProgress));
+                } else {
+                    no_output_watchdog.clear_activity_deferral();
                 }
             }
             thread::sleep(Duration::from_millis(20));
         }
     }
-}
-
-fn append_no_output_deferral_event(
-    spec: &ExecSpec,
-    message: String,
-    now: Instant,
-    last_activity_event_at: &mut Option<Instant>,
-) {
-    let should_emit = last_activity_event_at
-        .map(|last| now.duration_since(last) >= NO_OUTPUT_ACTIVITY_EVENT_INTERVAL)
-        .unwrap_or(true);
-    if !should_emit {
-        return;
-    }
-    *last_activity_event_at = Some(now);
-    let Some(config) = &spec.no_output_activity_event else {
-        return;
-    };
-    let _ = append_event(
-        &config.path,
-        &event(
-            &config.run_id,
-            config.task_id.as_deref(),
-            &config.event_name,
-            &message,
-        ),
-        &[],
-    );
 }
 
 struct SpawnedChild {

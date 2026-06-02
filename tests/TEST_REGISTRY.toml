@@ -732,6 +732,7 @@ owner_module = "harnesslab-infra"
 command = "scripts/test-after-change.sh --select C-SBOX-015"
 file_patterns = [
   "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
   "crates/harnesslab-infra/src/process_activity.rs",
   "crates/harnesslab-infra/src/process_tests.rs",
 ]
@@ -752,6 +753,7 @@ owner_module = "harnesslab-infra"
 command = "scripts/test-after-change.sh --select C-SBOX-016"
 file_patterns = [
   "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
   "crates/harnesslab-infra/src/process_activity.rs",
   "crates/harnesslab-infra/src/process_tests.rs",
 ]
@@ -772,7 +774,29 @@ owner_module = "harnesslab-infra"
 command = "scripts/test-after-change.sh --select C-SBOX-017"
 file_patterns = [
   "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
   "crates/harnesslab-infra/src/process_progress.rs",
+  "crates/harnesslab-infra/src/process_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8.2"
+[tests.verifies]
+requirements = ["execution_runtime"]
+contracts = ["HostProcessExecutor", "ProcessRecord"]
+
+[[tests]]
+id = "C-SBOX-018"
+title = "Host exec no-output activity has bounded grace"
+layer = "contract"
+owner_module = "harnesslab-infra"
+command = "scripts/test-after-change.sh --select C-SBOX-018"
+file_patterns = [
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_activity.rs",
   "crates/harnesslab-infra/src/process_tests.rs",
 ]
 required_artifacts = []
@@ -1527,26 +1551,11 @@ file_patterns = [
   "scripts/verify-terminal-bench-docker-activity-watchdog.sh",
   "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
   "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
   "crates/harnesslab-infra/src/process_activity.rs",
   "crates/harnesslab-infra/src/process_progress.rs",
 ]
 required_artifacts = ["results.json", "events.jsonl", "report.html"]
-status = "active"
-[tests.source]
-doc = "docs/development-operations.md"
-section = "HarnessLab Terminal-Bench Real-Run Checks"
-[tests.verifies]
-requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
-contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "EventLog"]
-
-[[tests]]
-id = "INT-030"
-title = "Terminal-Bench synthetic Docker activity does not trigger no-progress"
-layer = "integration"
-owner_module = "harnesslab-cli"
-command = "scripts/test-after-change.sh --select INT-030"
-file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
-required_artifacts = ["results.json", "events.jsonl"]
 status = "active"
 [tests.source]
 doc = "docs/development-operations.md"
@@ -1562,6 +1571,50 @@ layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-031"
 file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_watchdog_contract.rs"]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
+
+[[tests]]
+id = "INT-035"
+title = "Terminal-Bench stale Docker activity becomes no-progress"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-035"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_activity_grace_contract.rs",
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_activity.rs",
+]
+required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "artifact_event_store"]
+contracts = ["TerminalBenchExternalRunner", "HostProcessExecutor", "RunMonitor", "EventLog"]
+
+[[tests]]
+id = "INT-036"
+title = "Terminal-Bench real Docker stale activity expires"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-036"
+file_patterns = [
+  "scripts/verify-terminal-bench-docker-activity-grace-expiry.sh",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-infra/src/process.rs",
+  "crates/harnesslab-infra/src/process_no_output.rs",
+  "crates/harnesslab-infra/src/process_activity.rs",
+  "crates/harnesslab-infra/src/process_progress.rs",
+]
 required_artifacts = ["results.json", "events.jsonl", "run-health.json"]
 status = "active"
 [tests.source]
