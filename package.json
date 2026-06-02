@@ -1,6 +1,6 @@
 {
-  "name": "harnesslab",
-  "version": "0.1.0",
+  "name": "@ceasarxuu/harnesslab",
+  "version": "0.1.1",
   "description": "HarnessLab command reservation package for benchmark harness workflows.",
   "license": "MIT",
   "repository": {
@@ -23,6 +23,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "smoke:npm-bin": "scripts/verify-npm-reservation-package.sh"
+    "smoke:npm-bin": "scripts/verify-npm-reservation-package.sh",
+    "smoke:npm-registry": "scripts/verify-npm-registry-package.sh"
   }
 }
