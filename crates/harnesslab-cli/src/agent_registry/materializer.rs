@@ -1,8 +1,8 @@
 use anyhow::Result;
-use harnesslab_core::{
-    AgentKind, AgentProfile, CapabilityPolicy, RunAs, SetupPreset, policy_is_default,
-};
+use harnesslab_core::{AgentKind, AgentProfile, ProfileValidationError, RunAs, SetupPreset};
 use serde::Serialize;
+
+use super::capability_catalog::{MaterializedCapabilities, resolve_profile_capabilities};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct MaterializedAgentProfile {
@@ -11,24 +11,36 @@ pub(crate) struct MaterializedAgentProfile {
     pub skills_summary: String,
     pub tools_summary: String,
     pub hooks_summary: String,
+    pub capabilities: MaterializedCapabilities,
     pub run_as: RunAs,
     pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct MaterializationError {
-    pub field: &'static str,
+    pub field: String,
     pub message: String,
     pub suggested_fix: String,
+    pub errors: Vec<ProfileValidationError>,
 }
 
 pub(crate) fn materialize_profile(
     profile: &AgentProfile,
 ) -> Result<MaterializedAgentProfile, MaterializationError> {
-    reject_unsupported_policy(profile, "skills", &profile.skills)?;
-    reject_unsupported_policy(profile, "tools", &profile.tools)?;
-    reject_unsupported_policy(profile, "hooks", &profile.hooks)?;
+    let capabilities = resolve_profile_capabilities(profile);
+    let capability_errors = capabilities.errors();
+    if let Some(error) = capability_errors.first() {
+        return Err(MaterializationError {
+            field: error.field.clone(),
+            message: error.message.clone(),
+            suggested_fix: error.suggested_fix.clone(),
+            errors: capability_errors,
+        });
+    }
     let mut warnings = Vec::new();
+    for reason in capabilities.unsupported_reasons() {
+        warnings.push(format!("capability_materializer_unverified:{reason}"));
+    }
     let setup_script = match profile.setup.preset {
         SetupPreset::None => legacy_setup(profile, &mut warnings),
         SetupPreset::Builtin => {
@@ -42,9 +54,10 @@ pub(crate) fn materialize_profile(
     Ok(MaterializedAgentProfile {
         setup_script: setup_script.filter(|script| !script.trim().is_empty()),
         setup_summary: setup_summary(profile),
-        skills_summary: policy_summary(&profile.skills),
-        tools_summary: policy_summary(&profile.tools),
-        hooks_summary: policy_summary(&profile.hooks),
+        skills_summary: policy_summary(&capabilities.skills),
+        tools_summary: policy_summary(&capabilities.tools),
+        hooks_summary: policy_summary(&capabilities.hooks),
+        capabilities,
         run_as: profile.setup.run_as,
         warnings,
     })
@@ -68,26 +81,6 @@ pub(crate) fn materialization_error_to_anyhow(error: MaterializationError) -> an
         error.message,
         error.suggested_fix
     )
-}
-
-fn reject_unsupported_policy(
-    profile: &AgentProfile,
-    field: &'static str,
-    policy: &CapabilityPolicy,
-) -> Result<(), MaterializationError> {
-    if policy_is_default(policy) {
-        return Ok(());
-    }
-    Err(MaterializationError {
-        field,
-        message: format!(
-            "non-default {field} policy is not materializable for kind {:?}",
-            profile.kind
-        ),
-        suggested_fix: format!(
-            "use default {field} policy or implement a {field} materializer for this kind"
-        ),
-    })
 }
 
 fn legacy_setup(profile: &AgentProfile, warnings: &mut Vec<String>) -> Option<String> {
@@ -146,10 +139,15 @@ fn setup_summary(profile: &AgentProfile) -> String {
     )
 }
 
-fn policy_summary(policy: &CapabilityPolicy) -> String {
+fn policy_summary(policy: &harnesslab_core::ResolvedCapabilityPolicy) -> String {
     format!(
-        "inherit={}; allow={:?}; deny={:?}; include_paths={:?}",
-        policy.inherit, policy.allow, policy.deny, policy.include_paths
+        "inherit={}; allow={:?}; deny={:?}; include_paths={:?}; effective={:?}; unsupported_reason={:?}",
+        policy.inherit,
+        policy.allow,
+        policy.deny,
+        policy.include_paths,
+        policy.effective,
+        policy.unsupported_reason()
     )
 }
 
@@ -201,9 +199,22 @@ mod tests {
 
         let error = materialize_profile(&profile).unwrap_err();
 
-        assert_eq!(error.field, "tools");
+        assert_eq!(error.field, "tools.deny[0]");
         assert!(error.message.contains("Custom"));
         assert!(error.suggested_fix.contains("default tools policy"));
+        assert_eq!(error.errors[0].field, "tools.deny[0]");
+    }
+
+    #[test]
+    fn agt_reg_008_fake_profile_blocks_non_default_tools_until_runtime_enforces_it() {
+        let mut profile = default_agent_profile("fake", AgentKind::Fake, "agent");
+        profile.tools.inherit = false;
+        profile.tools.allow = vec!["bash".to_string()];
+
+        let error = materialize_profile(&profile).unwrap_err();
+
+        assert_eq!(error.field, "tools.inherit");
+        assert!(error.message.contains("not materializable"));
     }
 
     #[test]

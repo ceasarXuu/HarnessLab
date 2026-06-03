@@ -1,5 +1,6 @@
 use crate::agent_registry::materialize_profile;
 use crate::benchmark_data::resolve_benchmarks_dir;
+use crate::doctor_capabilities::append_capability_policy_checks;
 use crate::output::{DoctorCheck, DoctorOutput};
 use crate::print_json;
 use anyhow::Result;
@@ -113,6 +114,7 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
             "Agent profile configuration is valid",
         ));
     }
+    append_capability_policy_checks(profile, checks);
     append_materialization_check(profile, checks);
     let available = first_command_word(&profile.command)
         .map(command_exists)
@@ -138,13 +140,18 @@ fn append_materialization_check(profile: &AgentProfile, checks: &mut Vec<DoctorC
             checks.push(check_with_details(
                 &format!("agent.{}.capabilities.materialization", profile.name),
                 status,
-                "error",
+                if status == "warning" {
+                    "warning"
+                } else {
+                    "error"
+                },
                 "Agent registry materialization checked",
                 serde_json::json!({
                     "setup": materialized.setup_summary,
                     "skills": materialized.skills_summary,
                     "tools": materialized.tools_summary,
                     "hooks": materialized.hooks_summary,
+                    "capabilities": materialized.capabilities,
                     "warnings": materialized.warnings,
                 }),
             ));
@@ -158,6 +165,7 @@ fn append_materialization_check(profile: &AgentProfile, checks: &mut Vec<DoctorC
                 "field": error.field,
                 "message": error.message,
                 "suggested_fix": error.suggested_fix,
+                "errors": error.errors,
             }),
         )),
     }

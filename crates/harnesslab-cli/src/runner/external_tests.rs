@@ -3,7 +3,9 @@ use super::terminal_bench_timeout::{
     terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
     terminal_bench_timeout_values,
 };
-use crate::agent_registry::{MaterializedAgentProfile, materialize_profile};
+use crate::agent_registry::{
+    MaterializedAgentProfile, materialize_profile, resolve_profile_capabilities,
+};
 use harnesslab_core::{
     AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, RunAs, TerminationReason,
     default_agent_profile,
@@ -132,6 +134,7 @@ fn agt_reg_005_terminal_bench_env_uses_materialized_setup_not_raw_profile() {
         skills_summary: "skills".to_string(),
         tools_summary: "tools".to_string(),
         hooks_summary: "hooks".to_string(),
+        capabilities: resolve_profile_capabilities(&profile),
         run_as: RunAs::Current,
         warnings: Vec::new(),
     };

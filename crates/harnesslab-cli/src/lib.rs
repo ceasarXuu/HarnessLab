@@ -2,6 +2,7 @@ mod agent_registry;
 mod app;
 mod benchmark_data;
 mod doctor;
+mod doctor_capabilities;
 mod output;
 mod runner;
 

@@ -151,19 +151,19 @@ fn agt_reg_001_profile_rejects_setup_and_policy_conflicts() {
         report
             .errors
             .iter()
-            .any(|error| error.field == "skills.allow")
+            .any(|error| error.field == "skills.allow[0]")
     );
     assert!(
         report
             .errors
             .iter()
-            .any(|error| error.field == "tools.allow")
+            .any(|error| error.field == "tools.allow[0]")
     );
     assert!(
         report
             .errors
             .iter()
-            .any(|error| error.field == "hooks.allow")
+            .any(|error| error.field == "hooks.allow[0]")
     );
 }
 
@@ -218,7 +218,7 @@ fn agt_reg_001_validation_report_covers_field_errors_and_warnings() {
     let fields = report
         .errors
         .iter()
-        .map(|error| error.field)
+        .map(|error| error.field.as_str())
         .collect::<Vec<_>>();
 
     assert!(!report.is_valid());
@@ -228,10 +228,10 @@ fn agt_reg_001_validation_report_covers_field_errors_and_warnings() {
     assert!(fields.contains(&"timeout_sec"));
     assert!(fields.contains(&"setup.commands"));
     assert!(fields.contains(&"setup.required_commands"));
-    assert!(fields.contains(&"skills"));
-    assert!(fields.contains(&"skills.allow"));
-    assert!(fields.contains(&"tools"));
-    assert!(fields.contains(&"hooks"));
+    assert!(fields.contains(&"skills.allow[0]"));
+    assert!(fields.contains(&"skills.allow[1]"));
+    assert!(fields.contains(&"tools.allow[0]"));
+    assert!(fields.contains(&"hooks.deny[0]"));
     assert_eq!(report.warnings[0].field, "auth.mount_docker_socket");
 }
 
@@ -247,7 +247,8 @@ fn agt_reg_001_validation_report_covers_file_input_and_default_policy() {
         error.field == "command"
             && error
                 .accepted_values
-                .contains(&"command containing {{instruction_file}}")
+                .iter()
+                .any(|value| value == "command containing {{instruction_file}}")
     }));
     profile.command = "agent run {{instruction_file}}".to_string();
     assert!(profile.validation_report().is_valid());
@@ -272,7 +273,7 @@ fn agt_reg_001_validate_covers_field_mapping_and_policy_defaults() {
     assert_eq!(
         profile.validate(),
         Err(ConfigError::InvalidField {
-            field: "setup.commands",
+            field: "setup.commands".to_string(),
             message: "setup.commands is only valid when setup.preset is custom".to_string(),
             accepted: "see doctor --json details",
         })
@@ -295,7 +296,7 @@ include_paths = []
         include_paths: Vec::new(),
     };
     crate::validate_policy("capabilities", &conflict, &mut policy_errors);
-    assert_eq!(policy_errors[0].field, "capabilities");
+    assert_eq!(policy_errors[0].field, "capabilities.allow[0]");
 }
 
 #[test]
