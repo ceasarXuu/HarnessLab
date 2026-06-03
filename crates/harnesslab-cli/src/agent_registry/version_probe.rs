@@ -89,6 +89,8 @@ fn run_version_probe(
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: stdout_path.clone(),
         stderr_path: stderr_path.clone(),
     })?;

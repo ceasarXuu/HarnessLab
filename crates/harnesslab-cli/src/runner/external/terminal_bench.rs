@@ -146,6 +146,8 @@ pub(super) fn execute(
             event_name: "external_runner_activity".to_string(),
             no_progress_event_name: Some("external_runner_no_progress".to_string()),
         }),
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);

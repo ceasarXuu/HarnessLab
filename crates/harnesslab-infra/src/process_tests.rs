@@ -16,6 +16,8 @@ fn c_sbox_002_host_exec_echo_captures_stdout() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -24,6 +26,37 @@ fn c_sbox_002_host_exec_echo_captures_stdout() {
 
     assert_eq!(result.exit_code, Some(0));
     assert_eq!(fs::read_to_string(spec.stdout_path).unwrap(), "hello");
+}
+
+#[test]
+fn agt_reg_012_host_exec_uses_explicit_environment_policy() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut env_vars = std::collections::BTreeMap::new();
+    env_vars.insert(
+        "PATH".to_string(),
+        std::env::var("PATH").unwrap_or_default(),
+    );
+    env_vars.insert("HARNESSLAB_EXPLICIT_ENV".to_string(), "visible".to_string());
+    let spec = ExecSpec {
+        command: "printf '%s:%s' \"${HARNESSLAB_EXPLICIT_ENV:-}\" \"${HARNESSLAB_AMBIENT_ENV:-}\""
+            .to_string(),
+        stdin: None,
+        working_dir: tmp.path().join("workspace"),
+        timeout_sec: 5,
+        no_output_timeout_sec: None,
+        no_output_progress_paths: Vec::new(),
+        no_output_activity_patterns: Vec::new(),
+        no_output_activity_event: None,
+        env_clear: true,
+        env_vars,
+        stdout_path: tmp.path().join("stdout.log"),
+        stderr_path: tmp.path().join("stderr.log"),
+    };
+
+    let result = HostProcessExecutor::exec(&spec).unwrap();
+
+    assert_eq!(result.exit_code, Some(0));
+    assert_eq!(fs::read_to_string(spec.stdout_path).unwrap(), "visible:");
 }
 
 #[test]
@@ -38,6 +71,8 @@ fn c_sbox_003_host_exec_timeout_is_structured() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -59,6 +94,8 @@ fn c_sbox_003_host_exec_no_output_timeout_is_structured() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -87,6 +124,8 @@ fn c_sbox_003_no_output_activity_pattern_defers_to_hard_timeout() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: vec!["sleep 5".to_string()],
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -115,6 +154,8 @@ fn c_sbox_018_no_output_activity_has_bounded_grace() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: vec!["sleep 8".to_string()],
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -142,6 +183,8 @@ fn c_sbox_003_no_output_activity_disappearing_kills_promptly() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: vec!["sleep 2".to_string()],
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -169,6 +212,8 @@ fn c_sbox_003_no_output_activity_ignores_shell_text_mentions() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: vec!["docker buildx".to_string()],
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -206,6 +251,8 @@ fn c_sbox_017_no_output_progress_file_resets_watchdog_window() {
             event_name: "external_runner_activity".to_string(),
             no_progress_event_name: None,
         }),
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -244,6 +291,8 @@ fn c_sbox_018_progress_growth_resets_activity_grace() {
         no_output_progress_paths: vec![progress_path],
         no_output_activity_patterns: vec!["sleep 8".to_string()],
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -282,6 +331,8 @@ fn c_sbox_019_activity_event_emits_after_output_reset() {
             event_name: "external_runner_activity".to_string(),
             no_progress_event_name: Some("external_runner_no_progress".to_string()),
         }),
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -336,6 +387,8 @@ fn c_sbox_020_progress_file_is_sampled_before_watchdog_boundary() {
             event_name: "external_runner_activity".to_string(),
             no_progress_event_name: Some("external_runner_no_progress".to_string()),
         }),
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -370,6 +423,8 @@ fn c_sbox_003_timeout_kills_background_pipe_holder() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -396,6 +451,8 @@ fn c_sbox_002_stdin_broken_pipe_is_not_spawn_failure() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
@@ -417,6 +474,8 @@ fn c_sbox_002_host_exec_preserves_stdin_through_start_gate() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };
