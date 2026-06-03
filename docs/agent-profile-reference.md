@@ -2,6 +2,8 @@
 
 Agent Profile 是 HarnessLab 注册和评测一个完整 CLI harness 的单文件注册表。每个 profile 表达一个可比较配置：agent kind、启动命令、认证继承、setup、skills、tools、hooks、usage parser 和报告标签。
 
+如果你要从零完成注册流程，先看 [Agent Registration Guide](agent-registration-guide.md)。本文只作为字段参考手册使用。
+
 先用机器可读 schema 辅助生成或校验：
 
 ```bash
