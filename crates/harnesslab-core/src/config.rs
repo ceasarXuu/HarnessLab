@@ -285,7 +285,21 @@ pub fn normalized_auth_host_path(value: &str) -> String {
 
 pub fn redacted_profile_snapshot(profile: &AgentProfile, secrets: &[&str]) -> AgentProfile {
     let mut snapshot = profile.clone();
-    snapshot.command = crate::redact_known_secret(&snapshot.command, secrets);
+    snapshot.command = crate::redact_public_value(&snapshot.command, secrets);
+    if let Some(version_command) = &snapshot.version_command {
+        snapshot.version_command = Some(crate::redact_public_value(version_command, secrets));
+    }
+    snapshot.setup.commands = snapshot
+        .setup
+        .commands
+        .iter()
+        .map(|command| crate::redact_public_value(command, secrets))
+        .collect();
+    snapshot.labels = snapshot
+        .labels
+        .iter()
+        .map(|(key, value)| (key.clone(), crate::redact_public_value(value, secrets)))
+        .collect();
     snapshot
 }
 

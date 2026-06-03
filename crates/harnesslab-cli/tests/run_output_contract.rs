@@ -1,6 +1,9 @@
+mod support;
+
 use assert_cmd::Command;
 use std::fs;
 use std::path::Path;
+use support::assert_public_artifacts_do_not_contain;
 
 #[test]
 fn int_004_fake_terminal_test_fail_exits_0_with_benchmark_verdict() {
@@ -86,12 +89,36 @@ fn agt_reg_004_run_persists_redacted_materialized_runtime_snapshot() {
     assert!(materialized.contains("advanced_custom_setup"));
     assert!(materialized.contains("[REDACTED]"));
     assert!(!materialized.contains("do-not-leak"));
+    let materialized_json: serde_json::Value = serde_json::from_str(&materialized).unwrap();
+    assert_eq!(
+        materialized_json["capabilities"]["tools"]["candidate_effective"][0],
+        "bash"
+    );
+    assert_eq!(
+        materialized_json["capabilities"]["tools"]["enforcement"]["mode"],
+        "unsupported"
+    );
+    assert!(
+        materialized_json["capabilities"]["tools"]["effective"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+
+    let version_snapshot = fs::read_to_string(run_dir.join("agent-version.snapshot.json")).unwrap();
+    assert!(version_snapshot.contains("runtime-version"));
 
     let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
     assert!(report.contains("Setup:"));
     assert!(report.contains("Skills:"));
     assert!(report.contains("Tools:"));
     assert!(report.contains("Hooks:"));
+    assert!(report.contains("Effective capabilities:"));
+    assert!(report.contains("agent-runtime.materialized.json"));
+    assert!(report.contains("Version probe: status=ok"));
+    assert!(report.contains("agent-version.snapshot.json"));
+    assert!(report.contains("runtime-version"));
+    assert_public_artifacts_do_not_contain(run_dir, "do-not-leak");
 }
 
 fn init_home(home: &Path) {
@@ -120,6 +147,9 @@ exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
 
+[setup]
+run_as = "current"
+
 [usage]
 parser = "none"
 "#
@@ -134,6 +164,7 @@ name = "fake"
 kind = "fake"
 display_name = "Fake"
 command = "printf ok > result.txt"
+version_command = "printf runtime-version"
 input_mode = "stdin"
 working_dir = "workspace"
 timeout_sec = 5

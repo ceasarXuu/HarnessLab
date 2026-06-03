@@ -331,6 +331,7 @@ fn run_006_run_agent_host_executes_inside_workspace() {
         profile: &profile,
         report_profile: &profile,
         materialized_profile: &materialized_profile,
+        report_materialized_profile: &materialized_profile,
         task: &task,
         attempt: 1,
         attempt_dir: tmp.path(),

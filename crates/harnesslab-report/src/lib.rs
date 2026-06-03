@@ -24,6 +24,11 @@ pub struct ReportModel {
     pub skills_summary: String,
     pub tools_summary: String,
     pub hooks_summary: String,
+    pub skills_effective_summary: String,
+    pub tools_effective_summary: String,
+    pub hooks_effective_summary: String,
+    pub version_probe_summary: String,
+    pub has_version_probe_snapshot: bool,
     pub replay_command: String,
     pub original_command: String,
 }
@@ -57,6 +62,11 @@ pub struct ReportContext {
     pub skills_summary: String,
     pub tools_summary: String,
     pub hooks_summary: String,
+    pub skills_effective_summary: String,
+    pub tools_effective_summary: String,
+    pub hooks_effective_summary: String,
+    pub version_probe_summary: String,
+    pub has_version_probe_snapshot: bool,
     pub benchmark: String,
     pub split: String,
     pub report_path: String,
@@ -88,9 +98,11 @@ pub struct ReportContext {
   <p>Report: <code>{{ model.report_path }}</code></p>
   <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
   <p>Run health: <strong>{{ model.run_health_status }}</strong>{% if model.has_run_health_reason %}: {{ model.run_health_reason }}{% endif %}. <a href="run-health.json">run-health.json</a></p>
-  <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, command: <a href="command.txt">command.txt</a>.</p>
+  <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, materialized runtime: <a href="agent-runtime.materialized.json">agent-runtime.materialized.json</a>, command: <a href="command.txt">command.txt</a>.</p>
   <p>Setup: {{ model.setup_summary }}.</p>
   <p>Skills: {{ model.skills_summary }}. Tools: {{ model.tools_summary }}. Hooks: {{ model.hooks_summary }}.</p>
+  <p>Effective capabilities: skills {{ model.skills_effective_summary }}; tools {{ model.tools_effective_summary }}; hooks {{ model.hooks_effective_summary }}.</p>
+  <p>Version probe: {{ model.version_probe_summary }}{% if model.has_version_probe_snapshot %}. <a href="agent-version.snapshot.json">agent-version.snapshot.json</a>{% endif %}</p>
   <h2>Summary</h2>
   <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, interrupted {{ model.summary.interrupted }}, score {{ model.summary.total_score }}.</p>
   <p>Usage: {{ model.total_usage }}</p>
@@ -199,6 +211,11 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
         skills_summary: context.skills_summary,
         tools_summary: context.tools_summary,
         hooks_summary: context.hooks_summary,
+        skills_effective_summary: context.skills_effective_summary,
+        tools_effective_summary: context.tools_effective_summary,
+        hooks_effective_summary: context.hooks_effective_summary,
+        version_probe_summary: context.version_probe_summary,
+        has_version_probe_snapshot: context.has_version_probe_snapshot,
         replay_command: context.replay_command,
         original_command: context.original_command,
     }
@@ -320,10 +337,14 @@ mod tests {
         assert!(html.contains("Skills: inherit=true"));
         assert!(html.contains("Tools: inherit=true"));
         assert!(html.contains("Hooks: inherit=true"));
+        assert!(html.contains("Effective capabilities:"));
+        assert!(html.contains("Version probe: status=ok"));
         assert!(html.contains("Run health:"));
         assert!(html.contains("interrupted 0"));
         assert!(html.contains("<th>Warnings</th>"));
         assert!(html.contains("agent-profile.snapshot.json"));
+        assert!(html.contains("agent-runtime.materialized.json"));
+        assert!(html.contains("agent-version.snapshot.json"));
         assert!(html.contains("command.txt"));
         assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
         assert!(html.contains("tasks/task-1/attempts/1/verifier/stdout.log"));
@@ -385,6 +406,11 @@ mod tests {
             skills_summary: "inherit=true".to_string(),
             tools_summary: "inherit=true".to_string(),
             hooks_summary: "inherit=true".to_string(),
+            skills_effective_summary: "effective=[]; candidate_effective=[]; enforcement=unsupported; unsupported_reason=not implemented".to_string(),
+            tools_effective_summary: "effective=[bash]; candidate_effective=[bash]; enforcement=enforced".to_string(),
+            hooks_effective_summary: "effective=[]; candidate_effective=[]; enforcement=enforced".to_string(),
+            version_probe_summary: "status=ok; exit_code=Some(0); termination_reason=Some(Completed); stdout_tail=\"v1\"; stderr_tail=\"\"; message=version_command completed successfully".to_string(),
+            has_version_probe_snapshot: true,
             benchmark: "fake-terminal".to_string(),
             split: "success".to_string(),
             report_path: "/runs/run-1/report.html".to_string(),

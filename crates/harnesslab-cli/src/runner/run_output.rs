@@ -1,4 +1,4 @@
-use crate::output::RunOutput;
+use crate::output::{PathOutput, RunOutput};
 use crate::print_json;
 use anyhow::{Context, Result};
 use harnesslab_core::RunResults;
@@ -34,6 +34,21 @@ pub(super) fn emit_run_output(
     } else {
         println!("run: {}", run_dir.display());
         println!("report: {report_path}");
+        Ok(())
+    }
+}
+
+pub(super) fn emit_resume_output(json: bool, run_dir: &Path) -> Result<()> {
+    if json {
+        print_json(&PathOutput {
+            schema_version: 1,
+            command: "run resume",
+            status: "accepted",
+            run_dir: run_dir.display().to_string(),
+        })
+    } else {
+        println!("run resume: {}", run_dir.display());
+        println!("report: {}", run_dir.join("report.html").display());
         Ok(())
     }
 }

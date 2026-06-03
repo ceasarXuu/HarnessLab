@@ -18,6 +18,7 @@ pub(super) struct TaskExecutionContext {
     pub(super) profile: AgentProfile,
     pub(super) report_profile: AgentProfile,
     pub(super) materialized_profile: MaterializedAgentProfile,
+    pub(super) report_materialized_profile: MaterializedAgentProfile,
 }
 
 pub(super) fn execute_attempts(
@@ -26,6 +27,7 @@ pub(super) fn execute_attempts(
     profile: &AgentProfile,
     report_profile: &AgentProfile,
     materialized_profile: &MaterializedAgentProfile,
+    report_materialized_profile: &MaterializedAgentProfile,
     attempts: Vec<AttemptWork>,
     concurrency: usize,
 ) -> Result<Vec<TaskAttemptResult>> {
@@ -35,6 +37,7 @@ pub(super) fn execute_attempts(
         profile: profile.clone(),
         report_profile: report_profile.clone(),
         materialized_profile: materialized_profile.clone(),
+        report_materialized_profile: report_materialized_profile.clone(),
     };
     let run_id = spec.run_id.clone();
     let executor = Arc::new(move |work: AttemptWork| execute_task(&context, work));

@@ -4,7 +4,9 @@ mod external;
 mod mode;
 mod monitor;
 mod patch;
+mod redaction;
 mod replay;
+mod report_context;
 mod run_output;
 mod sandbox;
 mod sandbox_setup;
@@ -15,11 +17,10 @@ mod usage;
 mod verifier;
 mod version;
 use crate::agent_registry::{
-    MaterializedAgentProfile, materialization_error_to_anyhow, materialize_profile,
+    AgentVersionSnapshot, MaterializedAgentProfile, materialization_error_to_anyhow,
+    materialize_profile,
 };
 use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
-use crate::output::PathOutput;
-use crate::print_json;
 use anyhow::{Context, Result, bail};
 use attempts::{TaskExecutionContext, execute_attempts};
 use cleanup::RunSandboxCleanup;
@@ -111,6 +112,7 @@ pub(crate) fn execute_new_run(
     let original_command =
         store::original_run_command(home, agent_name, benchmark_name, split, &spec, &config);
     let report_profile = store::public_profile_snapshot(&profile);
+    let report_materialized = store::public_materialized_snapshot(&profile, &materialized, &[]);
     write_run_inputs(
         &run_dir,
         &spec,
@@ -118,6 +120,7 @@ pub(crate) fn execute_new_run(
         &report_profile,
         &materialized,
         version_snapshot.as_ref(),
+        &[],
         &plan,
         &original_command,
     )?;
@@ -127,6 +130,8 @@ pub(crate) fn execute_new_run(
         &profile,
         &report_profile,
         &materialized,
+        &report_materialized,
+        version_snapshot.as_ref(),
         &plan,
         ExecutionMode::New,
     )?;
@@ -150,28 +155,22 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
     let materialized = materialize_profile(&profile).map_err(materialization_error_to_anyhow)?;
+    let report_materialized = store::load_materialized_profile_snapshot(run_dir)?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;
     store::log_profile_snapshot_loaded(run_dir, &spec.run_id, profile_source.as_str(), "resume")?;
+    let version_snapshot = store::load_agent_version_snapshot(run_dir)?;
     let code = execute_plan(
         run_dir,
         &spec,
         &profile,
         &report_profile,
         &materialized,
+        &report_materialized,
+        version_snapshot.as_ref(),
         &plan,
         ExecutionMode::Resume,
     )?;
-    if json {
-        print_json(&PathOutput {
-            schema_version: 1,
-            command: "run resume",
-            status: "accepted",
-            run_dir: run_dir.display().to_string(),
-        })?;
-    } else {
-        println!("run resume: {}", run_dir.display());
-        println!("report: {}", run_dir.join("report.html").display());
-    }
+    run_output::emit_resume_output(json, run_dir)?;
     Ok(code)
 }
 
@@ -199,7 +198,11 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     );
     let run_dir = store::runs_dir(home, &config).join(&run_id);
     fs::create_dir_all(&run_dir)?;
-    let version_snapshot = version::probe_profile_version(&profile, &run_dir)?;
+    let replay_redactions = redaction::profile_redaction_values(&profile, &report_profile)?;
+    let report_materialized =
+        store::public_materialized_snapshot(&profile, &materialized, &replay_redactions);
+    let version_snapshot =
+        version::probe_profile_version_with_extra_secrets(&profile, &run_dir, &replay_redactions)?;
     let spec =
         replay_spec_from_source(&source_spec, run_id.clone(), store::now_rfc3339(), &run_dir);
     validate_run_spec(&spec)?;
@@ -211,6 +214,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &report_profile,
         &materialized,
         version_snapshot.as_ref(),
+        &replay_redactions,
         &plan,
         &original_command,
     )?;
@@ -220,6 +224,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &run_dir,
         &spec.run_id,
         version_snapshot.as_ref(),
+        &replay_redactions,
     )?;
     let code = execute_plan(
         &run_dir,
@@ -227,6 +232,8 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &profile,
         &report_profile,
         &materialized,
+        &report_materialized,
+        version_snapshot.as_ref(),
         &plan,
         ExecutionMode::Replay,
     )?;
@@ -240,6 +247,8 @@ fn execute_plan(
     profile: &AgentProfile,
     report_profile: &AgentProfile,
     materialized_profile: &MaterializedAgentProfile,
+    report_materialized_profile: &MaterializedAgentProfile,
+    version_snapshot: Option<&AgentVersionSnapshot>,
     plan: &harnesslab_core::BenchmarkPlan,
     mode: ExecutionMode,
 ) -> Result<i32> {
@@ -296,6 +305,7 @@ fn execute_plan(
         profile,
         report_profile,
         materialized_profile,
+        report_materialized_profile,
         pending,
         spec.execution.concurrency,
     )?);
@@ -308,35 +318,17 @@ fn execute_plan(
     let mut results = summarize_results(&spec.run_id, attempts);
     results.report_path = Some(report_path.clone());
     atomic_write_json(&run_dir.join("results.json"), &results)?;
-    let run_health = monitor::report_health(run_dir);
-    let model = harnesslab_report::build_report_model(
-        harnesslab_report::ReportContext {
-            run_id: spec.run_id.clone(),
-            agent: spec.agent_profile_ref.clone(),
-            agent_config_summary: store::agent_config_summary(
-                spec,
-                report_profile,
-                materialized_profile,
-            ),
-            setup_summary: materialized_profile.setup_summary.clone(),
-            skills_summary: materialized_profile.skills_summary.clone(),
-            tools_summary: materialized_profile.tools_summary.clone(),
-            hooks_summary: materialized_profile.hooks_summary.clone(),
-            benchmark: spec.benchmark.name.clone(),
-            split: spec.benchmark.split.clone(),
-            report_path: report_path.clone(),
-            replay_command: store::replay_command(spec),
-            original_command: store::original_command_from_snapshot(run_dir),
-            resumed: matches!(mode, ExecutionMode::Resume),
-            run_health_status: run_health.status,
-            run_health_reason: run_health.reason,
-        },
-        results.clone(),
-    );
-    fs::write(
-        run_dir.join("report.html"),
-        harnesslab_report::render_html(&model)?,
-    )?;
+    report_context::write_report(report_context::ReportWriteRequest {
+        run_dir,
+        spec,
+        report_profile,
+        report_materialized: report_materialized_profile,
+        version_snapshot,
+        report_path: report_path.clone(),
+        run_health: monitor::report_health(run_dir),
+        resumed: matches!(mode, ExecutionMode::Resume),
+        results: &results,
+    })?;
     let exit_code = derive_exit_code(&results.tasks, false);
     let summary = &results.summary;
     let message = format!(
@@ -364,6 +356,7 @@ fn execute_task(ctx: &TaskExecutionContext, work: AttemptWork) -> Result<TaskAtt
     let profile = &ctx.profile;
     let report_profile = &ctx.report_profile;
     let materialized_profile = &ctx.materialized_profile;
+    let report_materialized_profile = &ctx.report_materialized_profile;
     let task = &work.task;
     let attempt = work.attempt;
     let provenance = work.provenance;
@@ -391,6 +384,7 @@ fn execute_task(ctx: &TaskExecutionContext, work: AttemptWork) -> Result<TaskAtt
             profile,
             report_profile,
             materialized_profile,
+            report_materialized_profile,
             task,
             attempt,
             provenance,
@@ -403,6 +397,7 @@ fn execute_task(ctx: &TaskExecutionContext, work: AttemptWork) -> Result<TaskAtt
         profile,
         report_profile,
         materialized_profile,
+        report_materialized_profile,
         task,
         attempt,
         attempt_dir: &attempt_dir,

@@ -1,7 +1,10 @@
+mod support;
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use std::path::Path;
+use support::assert_public_artifacts_do_not_contain;
 
 #[test]
 fn int_012_replay_text_output_succeeds() {
@@ -443,6 +446,9 @@ exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
 
+[setup]
+run_as = "current"
+
 [usage]
 parser = "none"
 "#
@@ -477,31 +483,6 @@ fn run_success_with_env(home: &Path, env: Option<(&str, &str)>) -> Vec<u8> {
         .get_output()
         .stdout
         .clone()
-}
-
-fn assert_public_artifacts_do_not_contain(run_dir: &Path, secret: &str) {
-    let mut stack = vec![run_dir.to_path_buf()];
-    while let Some(path) = stack.pop() {
-        for entry in fs::read_dir(&path).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-                continue;
-            }
-            if path.file_name().and_then(|name| name.to_str()) == Some("agent-profile.runtime.json")
-            {
-                continue;
-            }
-            let bytes = fs::read(&path).unwrap();
-            let content = String::from_utf8_lossy(&bytes);
-            assert!(
-                !content.contains(secret),
-                "public artifact {} leaked secret",
-                path.display()
-            );
-        }
-    }
 }
 
 fn harnesslab() -> Command {

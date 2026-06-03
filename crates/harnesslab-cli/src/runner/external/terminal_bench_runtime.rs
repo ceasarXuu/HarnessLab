@@ -319,6 +319,7 @@ mod tests {
             profile: &profile,
             report_profile: &profile,
             materialized_profile: &materialized_profile,
+            report_materialized_profile: &materialized_profile,
             task: &task,
             attempt: 1,
             provenance: AttemptProvenance::Original,
