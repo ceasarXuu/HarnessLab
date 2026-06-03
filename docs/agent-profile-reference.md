@@ -64,49 +64,48 @@ model = "deepseek"
 
 | Field | Required | Values | Example | Runtime status | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `schema_version` | yes | `1` | `1` | enforced by config loader | Profile schema version. |
-| `name` | yes | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `claude-ds` | enforced by config loader and `--agent` lookup | Value passed to `--agent`. |
-| `kind` | yes | `codex`, `claude-code`, `opencode`, `pi-coding-agent`, `custom`, `fake` | `claude-code` | selects setup defaults, capability catalog, and materialization support | Harness kind. `fake` is for tests, not normal user registration. |
-| `display_name` | yes | string | `Claude DS` | stored in snapshots/reports | Human-facing report name. |
-| `command` | yes | shell command | `claude-ds -p` | executed by runner after setup; public artifacts are redacted | Agent command template. Do not put secret values here. |
-| `input_mode` | yes | `stdin`, `argument`, `file`, `tty` | `stdin` | enforced by command renderer | How HarnessLab passes the task instruction. `argument` requires `{{instruction}}`; `file` requires `{{instruction_file}}` or `{{instruction}}`. |
-| `working_dir` | yes | `workspace`, `run_dir` | `workspace` | enforced by process runner | Agent process working directory. |
-| `timeout_sec` | yes | positive integer seconds | `300` | used as per-task process timeout unless benchmark/run config is stricter | Default per-task agent timeout. |
-| `version_command` | no | shell command or omitted | `claude --version` | probed by doctor/run/replay with redacted bounded output | Optional version probe; mismatch on replay is a warning/event, not a benchmark score. |
-| `auth.inherit` | yes | `true`, `false` | `true` | enforced for host and Docker auth inheritance | Enables declared env/path inheritance. If `false`, `inherit_env` and `include_paths` are not inherited. |
-| `auth.inherit_env` | yes | environment variable name array | `["ANTHROPIC_AUTH_TOKEN"]` | only used when `auth.inherit = true`; host execution receives an explicit env map | Names to pass through; values are read from the host environment. |
-| `auth.include_paths` | yes | path or `host:container:mode` array | `["~/.claude:/root/.claude:ro"]` | only used when `auth.inherit = true`; Docker mount dry-run checks readability/mountability | Auth/config paths mounted into sandbox. |
-| `auth.exclude_paths` | yes | path array | `[]` | used when resolving inherited auth paths | Removes inherited paths. |
-| `auth.mount_ssh_socket` | yes | `true`, `false` | `false` | used when resolving auth mounts; doctor checks availability | Mounts SSH agent socket. |
-| `auth.mount_docker_socket` | yes | `true`, `false` | `false` | doctor warns/errors because this is high privilege | Mounts Docker socket. |
-| `setup.preset` | no | `none`, `builtin`, `custom` | `builtin` | materialized before agent execution where supported | Setup strategy before running agent in sandbox/external bridge. |
-| `setup.required_commands` | no | bare command names using letters, digits, `.`, `_`, `+`, `-` | `["claude", "claude-ds"]` | checked by doctor; builtin/custom setup state is explained | Commands expected after setup. No shell pipes, paths, or arguments. |
-| `setup.run_as` | no | `root`, `harnesslab`, `current` | `harnesslab` | enforceable in Docker sandbox; host paths block unless `current` | User used for agent execution. Use `current` for host-only tasks. |
-| `setup.commands` | no | shell command array | `[]` | executed only with `setup.preset = "custom"`; public artifacts are redacted | Advanced custom setup. Keep secrets out of commands. |
-| `skills.inherit` | no | `true`, `false` | `true` | resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default skills for this harness kind when `skills.allow` is empty. |
-| `skills.allow` | no | known skill names for the selected catalog | `["code-review"]` | explicit desired skill set; unknown entries are field errors | Skill whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `skills.deny`. |
-| `skills.deny` | no | known skill names for the selected catalog | `["test-runner"]` | subtracts from inherited defaults or explicit allow; unknown entries are field errors | Skill blacklist. |
-| `skills.include_paths` | no | path array | `["~/.claude/skills"]` | accepted only for `skills`; rejected for `tools`/`hooks` | Extra skill locations. |
-| `tools.inherit` | no | `true`, `false` | `true` | resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default tools when `tools.allow` is empty. |
-| `tools.allow` | no | known tool names for the selected catalog | `["bash"]` | explicit desired tool set; unknown entries are field errors | Tool whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `tools.deny`. |
-| `tools.deny` | no | known tool names for the selected catalog | `["web_search"]` | subtracts from inherited defaults or explicit allow; unknown entries are field errors | Tool blacklist. |
-| `hooks.inherit` | no | `true`, `false` | `true` | resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default hooks when `hooks.allow` is empty. |
-| `hooks.allow` | no | known hook names for the selected catalog | `["pre_tool_use"]` | explicit desired hook set; unknown entries are field errors | Hook whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `hooks.deny`. |
-| `hooks.deny` | no | known hook names for the selected catalog | `["post_tool_use"]` | subtracts from inherited defaults or explicit allow; unknown entries are field errors | Hook blacklist. |
-| `usage.parser` | yes | `none`, `regex`, `json_path` | `none` | enforced by usage collector | Token/cost parser. `none` records usage as unknown. |
-| `usage.source` | no | `agent_stdout`, `agent_stderr`, `agent_logs`, `file:<safe-relative-path>` | `agent_logs` | safe paths only; no run-dir escape | Input source for usage parsing. |
-| `usage.input_tokens_key` | no | string | `input_tokens` | used by structured/JSON usage parsing | Field/key name for input tokens. |
-| `usage.output_tokens_key` | no | string | `output_tokens` | used by structured/JSON usage parsing | Field/key name for output tokens. |
-| `usage.total_tokens_key` | no | string | `total_tokens` | used by structured/JSON usage parsing | Field/key name for total tokens. |
-| `usage.cost_usd_key` | no | string | `cost_usd` | used by structured/JSON usage parsing | Field/key name for USD cost. |
-| `labels.*` | no | string key/value | `model = "deepseek"` | stored in profile snapshots/reports; adapter-specific known labels are consumed by adapters | Report labels and benchmark adapter hints. |
-| `labels.model` | no | string | `deepseek` | report/common model label | Human-readable model label. |
-| `labels.terminal_bench_agent` | no | Terminal-Bench agent name | `codex` | consumed by Terminal-Bench adapter | Uses a Terminal-Bench built-in agent. |
-| `labels.terminal_bench_agent_import_path` | no | Python import path | `harnesslab_tb_agent:HarnessLabCommandAgent` | consumed by Terminal-Bench adapter; host-agent run_as precheck applies | Uses HarnessLab's Terminal-Bench bridge agent. |
-| `labels.terminal_bench_agent_pythonpath` | no | absolute path or Python path string | `/repo/integrations/terminal_bench` | consumed by Terminal-Bench adapter | Python path for the Terminal-Bench bridge. |
-| `labels.terminal_bench_model` | no | string | `deepseek` | consumed by Terminal-Bench adapter | Model label for Terminal-Bench. |
-| `labels.swe_bench_pro_agent` | no | `gold` or adapter-supported value | `gold` | consumed by SWE-bench Pro adapter; host-agent run_as precheck applies for `gold` | Selects special SWE-bench Pro agent behavior. |
-| `labels.sandbox_setup_command` | no | shell command | `npm install -g @anthropic-ai/claude-code` | legacy compatibility only; prefer `[setup]` | Legacy setup field for old profiles and old snapshots. |
+| `schema_version` | yes | `1` | `1` | active; enforced by config loader | Profile schema version. Schema: Profile schema version. |
+| `name` | yes | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `claude-ds` | active; enforced by config loader and `--agent` lookup | Value passed to `--agent`. Schema: Profile name used by --agent. |
+| `kind` | yes | `codex`, `claude-code`, `opencode`, `pi-coding-agent`, `custom`, `fake` | `claude-code` | active; selects setup defaults, capability catalog, and materialization support | Harness kind. `fake` is for tests, not normal user registration. Schema: CLI harness kind. |
+| `display_name` | yes | `string` | `Claude DS` | active; stored in snapshots/reports | Human-facing report name. Schema: Human-readable report name. |
+| `command` | yes | `shell command` | `claude-ds -p --bare --output-format text` | active; executed by runner after setup; public artifacts are redacted | Agent command template. Do not put secret values here. Schema: Agent command template. |
+| `input_mode` | yes | `stdin`, `argument`, `file`, `tty` | `stdin` | active; enforced by command renderer | How HarnessLab passes the task instruction. `argument` requires `{{instruction}}`; `file` requires `{{instruction_file}}` or `{{instruction}}`. Schema: How the task instruction is passed to the agent. |
+| `working_dir` | yes | `workspace`, `run_dir` | `workspace` | active; enforced by process runner | Agent process working directory. Schema: Agent working directory. |
+| `timeout_sec` | yes | `positive integer` seconds | `300` | active; used as per-task process timeout unless benchmark/run config is stricter | Default per-task agent timeout. Schema: Default per-task agent timeout. |
+| `version_command` | no | `shell command` or omitted | `claude --version` | active; probed by doctor/run/replay with redacted bounded output | Optional version probe; mismatch on replay is a warning/event, not a benchmark score. Schema: Optional bounded CLI version probe. |
+| `auth.inherit` | yes | `true`, `false` | `true` | active; enforced for host and Docker auth inheritance | Enables declared env/path inheritance. If `false`, `inherit_env` and `include_paths` are not inherited. Schema: Enable declared auth env/path inheritance. |
+| `auth.inherit_env` | yes | `string[]` environment variable names | `["ANTHROPIC_AUTH_TOKEN"]` | active; only used when `auth.inherit = true`; host execution receives an explicit env map | Names to pass through; values are read from the host environment. Schema: Environment variable names to pass through. |
+| `auth.include_paths` | yes | `path[]` or `host:container:mode[]` | `["~/.claude:/root/.claude:ro"]` | active; only used when `auth.inherit = true`; Docker mount dry-run checks readability/mountability | Auth/config paths mounted into sandbox. Schema: Auth/config paths to mount. |
+| `auth.exclude_paths` | yes | `path[]` | `["~/.claude/logs"]` | active; used when resolving inherited auth paths | Removes inherited paths. Schema: Inherited auth paths to exclude. |
+| `auth.mount_ssh_socket` | yes | `true`, `false` | `false` | active; used when resolving auth mounts; doctor checks availability | Mounts SSH agent socket. Schema: Mount SSH agent socket. |
+| `auth.mount_docker_socket` | yes | `true`, `false` | `false` | active; doctor warns/errors because this is high privilege | Mounts Docker socket. Schema: Mount Docker socket; high privilege. |
+| `setup.preset` | no | `none`, `builtin`, `custom` | `builtin` | active; materialized before agent execution where supported | Setup strategy before running agent in sandbox/external bridge. Schema: Sandbox setup strategy. |
+| `setup.required_commands` | no | `command name[]`; bare command names using letters, digits, `.`, `_`, `+`, `-` | `["claude", "claude-ds"]` | active; checked by doctor; builtin/custom setup state is explained | Commands expected after setup. No shell pipes, paths, or arguments. Schema: Commands that must exist after setup. |
+| `setup.run_as` | no | `root`, `harnesslab`, `current` | `current` when omitted; built-in Docker-oriented templates may set `harnesslab` | active; enforceable in Docker sandbox; host paths block unless `current` | User used for agent execution. Use `current` for host-only tasks. Schema: User used to run the agent command. |
+| `setup.commands` | no | `shell command[]` | `["npm install -g @anthropic-ai/claude-code"]` | active; executed only with `setup.preset = "custom"`; public artifacts are redacted | Advanced custom setup. Keep secrets out of commands. Schema: Advanced custom setup commands. |
+| `skills.inherit` | no | `true`, `false` | `true` | active; resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default skills for this harness kind when `skills.allow` is empty. Schema: Inherit default skills. |
+| `skills.allow` | no | `string[]` known skill names for the selected catalog | `["code-review"]` | active; explicit desired skill set; unknown entries are field errors | Skill whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `skills.deny`. Schema: Skill whitelist. |
+| `skills.deny` | no | `string[]` known skill names for the selected catalog | `["test-runner"]` | active; subtracts from inherited defaults or explicit allow; unknown entries are field errors | Skill blacklist. Schema: Skill blacklist. |
+| `skills.include_paths` | no | `path[]` | `["~/.claude/skills"]` | active; accepted only for `skills`; rejected for `tools`/`hooks` | Extra skill locations. Schema: Extra skill paths. |
+| `tools.inherit` | no | `true`, `false` | `true` | active; resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default tools when `tools.allow` is empty. Schema: Inherit default tools. |
+| `tools.allow` | no | `string[]` known tool names for the selected catalog | `["bash"]` | active; explicit desired tool set; unknown entries are field errors | Tool whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `tools.deny`. Schema: Tool whitelist. |
+| `tools.deny` | no | `string[]` known tool names for the selected catalog | `["web_search"]` | active; subtracts from inherited defaults or explicit allow; unknown entries are field errors | Tool blacklist. Schema: Tool blacklist. |
+| `hooks.inherit` | no | `true`, `false` | `true` | active; resolved into `candidate_effective`; non-default policies block unless materializer is verified | Inherit default hooks when `hooks.allow` is empty. Schema: Inherit default hooks. |
+| `hooks.allow` | no | `string[]` known hook names for the selected catalog | `["pre_tool_use"]` | active; explicit desired hook set; unknown entries are field errors | Hook whitelist. If non-empty, it is the source set even when `inherit = false`. Must not overlap `hooks.deny`. Schema: Hook whitelist. |
+| `hooks.deny` | no | `string[]` known hook names for the selected catalog | `["post_tool_use"]` | active; subtracts from inherited defaults or explicit allow; unknown entries are field errors | Hook blacklist. Schema: Hook blacklist. |
+| `usage.parser` | yes | `none`, `regex`, `json_path` | `none` | active; enforced by usage collector | Token/cost parser. `none` records usage as unknown. Schema: Token/cost usage parser. |
+| `usage.source` | no | `agent_stdout`, `agent_stderr`, `agent_logs`, `file:<safe-relative-path>` | `agent_logs` | active; safe paths only; no run-dir escape | Input source for usage parsing. Schema: Input source for usage parsing. |
+| `usage.input_tokens_key` | no | `string` | `input_tokens` | active; used by structured/JSON usage parsing | Field/key name for input tokens. Schema: Field/key name for input tokens. |
+| `usage.output_tokens_key` | no | `string` | `output_tokens` | active; used by structured/JSON usage parsing | Field/key name for output tokens. Schema: Field/key name for output tokens. |
+| `usage.total_tokens_key` | no | `string` | `total_tokens` | active; used by structured/JSON usage parsing | Field/key name for total tokens. Schema: Field/key name for total tokens. |
+| `usage.cost_usd_key` | no | `string` | `cost_usd` | active; used by structured/JSON usage parsing | Field/key name for USD cost. Schema: Field/key name for USD cost. |
+| `labels` | no | `key/value` string map | `{"model":"deepseek"}` | active; stored in profile snapshots/reports; adapter-specific known labels are consumed by adapters | Report labels and benchmark adapter hints. Schema: Open report labels and benchmark adapter hints map. |
+| `labels.model` | no | `string` | `deepseek` | active; report/common model label | Human-readable model label. Schema: Common report model/config label. |
+| `labels.terminal_bench_agent` | no | `terminal-bench agent name` | `codex` | active; consumed by Terminal-Bench adapter | Uses a Terminal-Bench built-in agent. Schema: Terminal-Bench built-in agent name. |
+| `labels.terminal_bench_agent_import_path` | no | `python import path` | `harnesslab_tb_agent:HarnessLabCommandAgent` | active; consumed by Terminal-Bench adapter; host-agent run_as precheck applies | Uses HarnessLab's Terminal-Bench bridge agent. Schema: Terminal-Bench import-path bridge agent. |
+| `labels.terminal_bench_agent_pythonpath` | no | `absolute path`, `python path string` | `/repo/integrations/terminal_bench` | active; consumed by Terminal-Bench adapter | Python path for the Terminal-Bench bridge. Schema: Python path prepended before loading the Terminal-Bench bridge. |
+| `labels.terminal_bench_model` | no | `string` | `deepseek` | active; consumed by Terminal-Bench adapter | Model label for Terminal-Bench. Schema: Model label consumed by Terminal-Bench built-in agents. |
+| `labels.sandbox_setup_command` | no | `shell command` | `npm install -g @anthropic-ai/claude-code` | legacy; legacy compatibility only; prefer `[setup]` | Legacy setup field for old profiles and old snapshots. Schema: Legacy setup escape hatch; new profiles should use [setup]. |
 
 ## Materialization Rules
 

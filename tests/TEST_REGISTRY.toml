@@ -2670,3 +2670,130 @@ section = "8"
 [tests.verifies]
 requirements = ["agent_profile_policy_precheck"]
 contracts = ["RunPrecheck", "AgentRegistry"]
+
+[[tests]]
+id = "AGT-REG-007"
+title = "Agent schema covers supported profile parameters"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-007"
+file_patterns = [
+  "crates/harnesslab-core/src/agent_profile_reference.rs",
+  "crates/harnesslab-cli/tests/agent_registry_contract.rs",
+  "docs/agent-profile-reference.md",
+  "docs/agent-registration-guide.md",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+[tests.verifies]
+requirements = ["agent_profile_schema_complete", "agent_profile_semantic_schema"]
+contracts = ["AgentSchema", "AgentProfile"]
+
+[[tests]]
+id = "AGT-REG-008"
+title = "Capability policies resolve catalogs and exact doctor errors"
+layer = "integration"
+owner_module = "harnesslab-core,harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-008"
+file_patterns = [
+  "crates/harnesslab-core/src/capability_policy.rs",
+  "crates/harnesslab-cli/src/agent_registry/capability_catalog.rs",
+  "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+  "crates/harnesslab-cli/src/doctor_capabilities.rs",
+  "crates/harnesslab-cli/tests/doctor_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+[tests.verifies]
+requirements = ["agent_profile_policy_materialization", "agent_profile_policy_precheck"]
+contracts = ["CapabilityPolicy", "Doctor", "AgentRegistry"]
+
+[[tests]]
+id = "AGT-REG-009"
+title = "Required command diagnostics report provider and field paths"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-009"
+file_patterns = [
+  "crates/harnesslab-core/src/agent_profile.rs",
+  "crates/harnesslab-cli/src/doctor_setup.rs",
+  "crates/harnesslab-cli/tests/doctor_setup_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["agent_profile_diagnostics"]
+contracts = ["Doctor", "AgentProfile", "SetupConfig"]
+
+[[tests]]
+id = "AGT-REG-010"
+title = "Version command probe snapshots and replay comparison"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-010"
+file_patterns = [
+  "crates/harnesslab-cli/src/agent_registry/version_probe.rs",
+  "crates/harnesslab-cli/src/runner/version.rs",
+  "crates/harnesslab-cli/tests/doctor_contract.rs",
+  "crates/harnesslab-cli/tests/replay_contract.rs",
+]
+required_artifacts = ["agent-version.snapshot.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+[tests.verifies]
+requirements = ["agent_profile_version_probe", "replay_runtime", "secret_redaction"]
+contracts = ["AgentVersionProbe", "Replay", "RunArtifacts"]
+
+[[tests]]
+id = "AGT-REG-011"
+title = "Host auth inheritance is explicit and isolated"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-011"
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/sandbox.rs",
+  "crates/harnesslab-cli/tests/host_auth_contract.rs",
+]
+required_artifacts = ["results.json", "stdout.log"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"
+[tests.verifies]
+requirements = ["agent_profile_auth_isolation", "execution_runtime"]
+contracts = ["HostExecution", "AuthConfig", "RunArtifacts"]
+
+[[tests]]
+id = "AGT-REG-012"
+title = "Host-incompatible run_as blocks before task execution"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-012"
+file_patterns = [
+  "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+  "crates/harnesslab-cli/src/doctor_run_as.rs",
+  "crates/harnesslab-cli/src/runner/external.rs",
+  "crates/harnesslab-cli/tests/agent_registry_contract.rs",
+  "crates/harnesslab-cli/tests/doctor_run_as_contract.rs",
+  "crates/harnesslab-cli/tests/external_smoke_contract.rs",
+  "crates/harnesslab-cli/tests/terminal_bench_run_as_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"
+[tests.verifies]
+requirements = ["agent_profile_run_as_enforcement"]
+contracts = ["RunPrecheck", "Doctor", "TerminalBenchExternalRunner", "SweBenchProExternalRunner"]

@@ -214,6 +214,7 @@ Host execution and Docker execution share the same resolved auth source. Host ex
 
 `setup.run_as` 的 materialization 边界也必须显式：
 
+- Omitted `setup.run_as` values default to `current`; templates can still write a stricter explicit value such as `harnesslab`.
 - Docker sandbox 可以 materialize `root`、`harnesslab`、`current`。
 - Host execution, Terminal-Bench import-agent host path, and SWE-bench Pro `gold` host path currently only support `current`.
 - Host-incompatible `run_as` must be blocked before task execution. Silent fallback is not allowed.

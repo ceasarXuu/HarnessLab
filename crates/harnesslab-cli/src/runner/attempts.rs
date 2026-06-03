@@ -21,27 +21,35 @@ pub(super) struct TaskExecutionContext {
     pub(super) report_materialized_profile: MaterializedAgentProfile,
 }
 
+impl TaskExecutionContext {
+    pub(super) fn from_refs(
+        run_dir: &Path,
+        spec: &RunSpec,
+        profile: &AgentProfile,
+        report_profile: &AgentProfile,
+        materialized_profile: &MaterializedAgentProfile,
+        report_materialized_profile: &MaterializedAgentProfile,
+    ) -> Self {
+        Self {
+            run_dir: run_dir.to_path_buf(),
+            spec: spec.clone(),
+            profile: profile.clone(),
+            report_profile: report_profile.clone(),
+            materialized_profile: materialized_profile.clone(),
+            report_materialized_profile: report_materialized_profile.clone(),
+        }
+    }
+}
+
 pub(super) fn execute_attempts(
-    run_dir: &Path,
-    spec: &RunSpec,
-    profile: &AgentProfile,
-    report_profile: &AgentProfile,
-    materialized_profile: &MaterializedAgentProfile,
-    report_materialized_profile: &MaterializedAgentProfile,
+    context: TaskExecutionContext,
     attempts: Vec<AttemptWork>,
     concurrency: usize,
 ) -> Result<Vec<TaskAttemptResult>> {
-    let context = TaskExecutionContext {
-        run_dir: run_dir.to_path_buf(),
-        spec: spec.clone(),
-        profile: profile.clone(),
-        report_profile: report_profile.clone(),
-        materialized_profile: materialized_profile.clone(),
-        report_materialized_profile: report_materialized_profile.clone(),
-    };
-    let run_id = spec.run_id.clone();
+    let run_dir = context.run_dir.clone();
+    let run_id = context.spec.run_id.clone();
     let executor = Arc::new(move |work: AttemptWork| execute_task(&context, work));
-    execute_attempts_with(run_dir, &run_id, attempts, concurrency, executor)
+    execute_attempts_with(&run_dir, &run_id, attempts, concurrency, executor)
 }
 
 pub(super) fn execute_attempts_with(

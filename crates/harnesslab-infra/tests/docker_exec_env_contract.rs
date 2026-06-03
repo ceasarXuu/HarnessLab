@@ -5,7 +5,7 @@ use std::process::Command;
 
 #[cfg(unix)]
 #[test]
-fn agt_reg_012_docker_exec_preserves_client_env_without_agent_env_leak() {
+fn c_sbox_010_docker_exec_preserves_client_env_without_agent_env_leak() {
     let tmp = tempfile::tempdir().unwrap();
     let bin = tmp.path().join("bin");
     fs::create_dir_all(&bin).unwrap();

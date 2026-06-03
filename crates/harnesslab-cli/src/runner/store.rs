@@ -91,34 +91,53 @@ pub(super) fn public_profile_snapshot(profile: &AgentProfile) -> AgentProfile {
     snapshot
 }
 
-pub(super) fn write_run_inputs(
-    run_dir: &Path,
-    spec: &RunSpec,
-    runtime_profile: &AgentProfile,
-    report_profile: &AgentProfile,
-    materialized_profile: &MaterializedAgentProfile,
-    version_snapshot: Option<&AgentVersionSnapshot>,
-    extra_secret_refs: &[String],
-    plan: &harnesslab_core::BenchmarkPlan,
-    original_command: &str,
-) -> Result<()> {
-    let secrets = secret_values(runtime_profile);
-    let secret_refs = combined_secret_refs(&secrets, extra_secret_refs);
-    atomic_write_json(&run_dir.join("run.json"), spec)?;
-    atomic_write_json(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT), runtime_profile)?;
-    restrict_runtime_snapshot(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT))?;
-    atomic_write_json(&run_dir.join(REPORT_PROFILE_SNAPSHOT), report_profile)?;
+pub(super) struct RunInputsRequest<'a> {
+    pub(super) run_dir: &'a Path,
+    pub(super) spec: &'a RunSpec,
+    pub(super) runtime_profile: &'a AgentProfile,
+    pub(super) report_profile: &'a AgentProfile,
+    pub(super) materialized_profile: &'a MaterializedAgentProfile,
+    pub(super) version_snapshot: Option<&'a AgentVersionSnapshot>,
+    pub(super) extra_secret_refs: &'a [String],
+    pub(super) plan: &'a harnesslab_core::BenchmarkPlan,
+    pub(super) original_command: &'a str,
+}
+
+pub(super) fn write_run_inputs(request: RunInputsRequest<'_>) -> Result<()> {
+    let secrets = secret_values(request.runtime_profile);
+    let secret_refs = combined_secret_refs(&secrets, request.extra_secret_refs);
+    atomic_write_json(&request.run_dir.join("run.json"), request.spec)?;
     atomic_write_json(
-        &run_dir.join(MATERIALIZED_PROFILE_SNAPSHOT),
-        &redacted_materialized_snapshot(materialized_profile, &secret_refs),
+        &request.run_dir.join(RUNTIME_PROFILE_SNAPSHOT),
+        request.runtime_profile,
     )?;
-    if let Some(version_snapshot) = version_snapshot {
-        atomic_write_json(&run_dir.join(AGENT_VERSION_SNAPSHOT), version_snapshot)?;
+    restrict_runtime_snapshot(&request.run_dir.join(RUNTIME_PROFILE_SNAPSHOT))?;
+    atomic_write_json(
+        &request.run_dir.join(REPORT_PROFILE_SNAPSHOT),
+        request.report_profile,
+    )?;
+    atomic_write_json(
+        &request.run_dir.join(MATERIALIZED_PROFILE_SNAPSHOT),
+        &redacted_materialized_snapshot(request.materialized_profile, &secret_refs),
+    )?;
+    if let Some(version_snapshot) = request.version_snapshot {
+        atomic_write_json(
+            &request.run_dir.join(AGENT_VERSION_SNAPSHOT),
+            version_snapshot,
+        )?;
     }
-    atomic_write_json(&run_dir.join("benchmark.snapshot.json"), plan)?;
+    atomic_write_json(
+        &request.run_dir.join("benchmark.snapshot.json"),
+        request.plan,
+    )?;
     fs::write(
-        run_dir.join("command.txt"),
-        root_command_snapshot(spec, report_profile, original_command, &secret_refs),
+        request.run_dir.join("command.txt"),
+        root_command_snapshot(
+            request.spec,
+            request.report_profile,
+            request.original_command,
+            &secret_refs,
+        ),
     )?;
     Ok(())
 }

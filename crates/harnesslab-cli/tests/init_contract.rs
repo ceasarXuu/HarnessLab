@@ -37,6 +37,16 @@ fn int_001_init_empty_home_creates_config_and_profiles() {
     assert!(codex.contains("~/.codex:/root/.codex:rw"));
     let parsed: harnesslab_core::AgentProfile = toml::from_str(&codex).unwrap();
     assert_eq!(parsed.setup.preset, harnesslab_core::SetupPreset::Builtin);
+    assert_eq!(parsed.setup.run_as, harnesslab_core::RunAs::Harnesslab);
+    for profile in [
+        "agents/claude-code-default.toml",
+        "agents/opencode-default.toml",
+        "agents/pi-coding-agent-default.toml",
+    ] {
+        let profile_toml = fs::read_to_string(home.path().join(profile)).unwrap();
+        let parsed: harnesslab_core::AgentProfile = toml::from_str(&profile_toml).unwrap();
+        assert_eq!(parsed.setup.run_as, harnesslab_core::RunAs::Harnesslab);
+    }
     let pi = fs::read_to_string(home.path().join("agents/pi-coding-agent-default.toml")).unwrap();
     assert!(pi.contains("pi coding --version || pi --version"));
     let readme = fs::read_to_string(home.path().join("agents/README.md")).unwrap();

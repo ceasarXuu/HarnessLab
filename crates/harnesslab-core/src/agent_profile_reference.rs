@@ -103,14 +103,14 @@ pub fn agent_profile_field_reference() -> Vec<AgentProfileFieldReference> {
             "auth.include_paths",
             true,
             vec!["path[]", "host:container:mode[]"],
-            json!([]),
+            json!(["~/.claude:/root/.claude:ro"]),
             "Auth/config paths to mount.",
         ),
         field(
             "auth.exclude_paths",
             true,
             vec!["path[]"],
-            json!([]),
+            json!(["~/.claude/logs"]),
             "Inherited auth paths to exclude.",
         ),
         field(
@@ -141,18 +141,19 @@ pub fn agent_profile_field_reference() -> Vec<AgentProfileFieldReference> {
             json!(["claude", "claude-ds"]),
             "Commands that must exist after setup.",
         ),
-        field(
+        field_with_default(
             "setup.run_as",
             false,
             vec!["root", "harnesslab", "current"],
             json!("harnesslab"),
+            Some(json!("current")),
             "User used to run the agent command.",
         ),
         field(
             "setup.commands",
             false,
             vec!["shell command[]"],
-            json!([]),
+            json!(["npm install -g @anthropic-ai/claude-code"]),
             "Advanced custom setup commands.",
         ),
         field(
@@ -166,14 +167,14 @@ pub fn agent_profile_field_reference() -> Vec<AgentProfileFieldReference> {
             "skills.allow",
             false,
             vec!["string[]"],
-            json!(["skill-a"]),
+            json!(["code-review"]),
             "Skill whitelist.",
         ),
         field(
             "skills.deny",
             false,
             vec!["string[]"],
-            json!(["skill-b"]),
+            json!(["test-runner"]),
             "Skill blacklist.",
         ),
         field(

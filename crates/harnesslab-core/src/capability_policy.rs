@@ -151,17 +151,17 @@ pub fn resolve_capability_policy(
         }
     }
 
-    if let CapabilityEnforcement::Unsupported { reason } = &catalog.enforcement {
-        if !policy_is_default(policy) {
-            errors.push(ProfileValidationError {
-                field: first_non_default_field(field, policy),
-                message: format!("non-default {field} policy is not materializable: {reason}"),
-                accepted_values: vec!["default policy".to_string()],
-                suggested_fix: format!(
-                    "use the default {field} policy or select an agent kind with {field} enforcement"
-                ),
-            });
-        }
+    if let CapabilityEnforcement::Unsupported { reason } = &catalog.enforcement
+        && !policy_is_default(policy)
+    {
+        errors.push(ProfileValidationError {
+            field: first_non_default_field(field, policy),
+            message: format!("non-default {field} policy is not materializable: {reason}"),
+            accepted_values: vec!["default policy".to_string()],
+            suggested_fix: format!(
+                "use the default {field} policy or select an agent kind with {field} enforcement"
+            ),
+        });
     }
 
     let candidate_effective = if !policy.allow.is_empty() {

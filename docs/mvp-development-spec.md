@@ -367,7 +367,7 @@ Validation:
 - `setup.preset` must be `none`, `builtin`, or `custom`.
 - `setup.commands` is valid only when `setup.preset = "custom"`.
 - `setup.required_commands` entries must be non-empty command names, not shell pipelines.
-- `setup.run_as` must be `root`, `harnesslab`, or `current`.
+- `setup.run_as` must be `root`, `harnesslab`, or `current`; omitted values default to `current`.
 - `skills.allow` and `skills.deny` must not contain the same item.
 - `tools.allow` and `tools.deny` must not contain the same item.
 - `hooks.allow` and `hooks.deny` must not contain the same item.

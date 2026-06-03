@@ -28,8 +28,8 @@ pub enum SetupPreset {
 #[serde(rename_all = "kebab-case")]
 pub enum RunAs {
     Root,
-    #[default]
     Harnesslab,
+    #[default]
     Current,
 }
 
@@ -71,7 +71,7 @@ impl Default for SetupConfig {
         Self {
             preset: SetupPreset::Builtin,
             required_commands: Vec::new(),
-            run_as: RunAs::Harnesslab,
+            run_as: RunAs::Current,
             commands: Vec::new(),
         }
     }

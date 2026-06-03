@@ -29,7 +29,7 @@ fn c_sbox_002_host_exec_echo_captures_stdout() {
 }
 
 #[test]
-fn agt_reg_012_host_exec_uses_explicit_environment_policy() {
+fn c_sbox_002_host_exec_uses_explicit_environment_policy() {
     let tmp = tempfile::tempdir().unwrap();
     let mut env_vars = std::collections::BTreeMap::new();
     env_vars.insert(

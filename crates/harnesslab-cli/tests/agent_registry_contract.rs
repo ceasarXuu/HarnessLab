@@ -2,6 +2,8 @@ use assert_cmd::Command;
 use std::fs;
 use std::path::Path;
 
+mod support;
+
 #[test]
 fn agt_reg_003_agent_schema_json_exposes_profile_field_ranges() {
     let output = Command::cargo_bin("harnesslab")
@@ -18,7 +20,7 @@ fn agt_reg_003_agent_schema_json_exposes_profile_field_ranges() {
     assert_eq!(json["command"], "agent schema");
     assert_field_value(&json, "setup.preset", "builtin");
     assert_field_value(&json, "setup.run_as", "harnesslab");
-    assert_field_example(&json, "skills.allow", serde_json::json!(["skill-a"]));
+    assert_field_example(&json, "skills.allow", serde_json::json!(["code-review"]));
     assert_field_example(&json, "tools.deny", serde_json::json!(["web_search"]));
     assert_field_example(&json, "hooks.deny", serde_json::json!(["post_tool_use"]));
     assert_field_example(&json, "usage.source", serde_json::json!("agent_logs"));
@@ -111,6 +113,25 @@ fn agt_reg_007_agent_schema_json_covers_supported_profile_parameters() {
             "missing status for {path}"
         );
     }
+}
+
+#[test]
+fn agt_reg_007_agent_schema_docs_match_supported_profile_parameters() {
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .args(["agent", "schema", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    support::agent_schema_docs::assert_schema_docs_match(&json);
+
+    let run_as = find_field(&json, "setup.run_as");
+    assert_eq!(run_as["default_value"], serde_json::json!("current"));
+    assert_eq!(run_as["example"], serde_json::json!("harnesslab"));
 }
 
 #[test]

@@ -168,71 +168,71 @@ model = "deepseek"
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `schema_version` | 是 | 当前固定 `1` | `1` | loader 强校验 | Agent profile schema 版本。除非 HarnessLab 升级 schema，否则不要改。 |
-| `name` | 是 | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `"claude-ds"` | loader 强校验，并用于 `--agent` 查找 | profile 唯一名称，也是运行时 `--agent claude-ds` 使用的值。必须以 ASCII 字母或数字开头。 |
-| `kind` | 是 | `codex`、`claude-code`、`opencode`、`pi-coding-agent`、`custom`、`fake` | `"claude-code"` | 选择 setup 默认值、能力 catalog 和 materializer 支持边界 | CLI harness 类型。HarnessLab 用它选择默认 auth、setup 和 materialization 规则。`fake` 仅用于契约测试。 |
-| `display_name` | 是 | 任意可读字符串 | `"Claude Code via DeepSeek API"` | 写入 snapshot/report | 报告中展示给用户看的名称。可以比 `name` 更长、更易读。 |
-| `command` | 是 | shell command 字符串 | `"claude-ds -p --bare --output-format text"` | setup 后由 runner 执行；公开 artifacts 会 redact | HarnessLab 启动 agent 的命令模板。不要写 API key。`input_mode = "argument"` 时必须包含 `{{instruction}}`；`input_mode = "file"` 时必须包含 `{{instruction_file}}` 或 `{{instruction}}`。 |
-| `input_mode` | 是 | `stdin`、`argument`、`file`、`tty` | `"stdin"` | command renderer 强校验 | HarnessLab 如何把任务说明交给 agent。`stdin` 通过标准输入传入；`argument` 放入命令参数；`file` 写入文件后传路径；`tty` 用终端语义运行。 |
-| `working_dir` | 是 | `workspace`、`run_dir` | `"workspace"` | process runner 执行 | agent 进程的启动目录。`workspace` 表示 benchmark 工作区；`run_dir` 表示 HarnessLab run 目录。 |
-| `timeout_sec` | 是 | 正整数秒数 | `300` | 用作单 task 默认进程超时，benchmark/run 配置可进一步收紧 | 单个 task 的默认 agent 超时。 |
-| `version_command` | 否 | shell command 字符串或省略 | `"claude --version"` | doctor/run/replay bounded probe；输出 redacted | 可选版本探测命令，用于记录/诊断 agent CLI 版本。失败不应被当作解题失败。 |
+| `schema_version` | 是 | 当前固定 `1` | `1` | active；loader 强校验 | Agent profile schema 版本。除非 HarnessLab 升级 schema，否则不要改。 Schema: Profile schema version. |
+| `name` | 是 | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `"claude-ds"` | active；loader 强校验，并用于 `--agent` 查找 | profile 唯一名称，也是运行时 `--agent claude-ds` 使用的值。必须以 ASCII 字母或数字开头。 Schema: Profile name used by --agent. |
+| `kind` | 是 | `codex`、`claude-code`、`opencode`、`pi-coding-agent`、`custom`、`fake` | `"claude-code"` | active；选择 setup 默认值、能力 catalog 和 materializer 支持边界 | CLI harness 类型。HarnessLab 用它选择默认 auth、setup 和 materialization 规则。`fake` 仅用于契约测试。 Schema: CLI harness kind. |
+| `display_name` | 是 | `string` 任意可读字符串 | `"Claude DS"` | active；写入 snapshot/report | 报告中展示给用户看的名称。可以比 `name` 更长、更易读。 Schema: Human-readable report name. |
+| `command` | 是 | `shell command` 字符串 | `"claude-ds -p --bare --output-format text"` | active；setup 后由 runner 执行；公开 artifacts 会 redact | HarnessLab 启动 agent 的命令模板。不要写 API key。`input_mode = "argument"` 时必须包含 `{{instruction}}`；`input_mode = "file"` 时必须包含 `{{instruction_file}}` 或 `{{instruction}}`。 Schema: Agent command template. |
+| `input_mode` | 是 | `stdin`、`argument`、`file`、`tty` | `"stdin"` | active；command renderer 强校验 | HarnessLab 如何把任务说明交给 agent。`stdin` 通过标准输入传入；`argument` 放入命令参数；`file` 写入文件后传路径；`tty` 用终端语义运行。 Schema: How the task instruction is passed to the agent. |
+| `working_dir` | 是 | `workspace`、`run_dir` | `"workspace"` | active；process runner 执行 | agent 进程的启动目录。`workspace` 表示 benchmark 工作区；`run_dir` 表示 HarnessLab run 目录。 Schema: Agent working directory. |
+| `timeout_sec` | 是 | `positive integer` 正整数秒数 | `300` | active；用作单 task 默认进程超时，benchmark/run 配置可进一步收紧 | 单个 task 的默认 agent 超时。 Schema: Default per-task agent timeout. |
+| `version_command` | 否 | `shell command` 字符串或省略 | `"claude --version"` | active；doctor/run/replay bounded probe；输出 redacted | 可选版本探测命令，用于记录/诊断 agent CLI 版本。失败不应被当作解题失败。 Schema: Optional bounded CLI version probe. |
 
 #### `[auth]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `auth.inherit` | 是 | `true`、`false` | `true` | host/Docker 都按显式 auth source 执行 | 是否启用声明式认证继承。设为 `false` 时，不继承 `inherit_env` 和 `include_paths` 中的认证信息。 |
-| `auth.inherit_env` | 是 | 环境变量名数组 | `["ANTHROPIC_AUTH_TOKEN"]` | 仅在 `auth.inherit = true` 时传入；host 使用显式 env map | 允许传入运行环境的环境变量名。这里只写变量名，不写变量值。 |
-| `auth.include_paths` | 是 | 路径数组，或 `host:container:mode` 数组 | `["~/.claude:/root/.claude:ro"]` | 仅在 `auth.inherit = true` 时参与挂载；doctor 做可读/可挂载检查 | 显式挂载到运行环境的认证/配置路径。`mode` 常用 `ro` 或 `rw`。 |
-| `auth.exclude_paths` | 是 | 路径数组 | `["~/.claude/logs"]` | 解析 inherited auth paths 时生效 | 从继承路径中排除的路径，用于避免挂载不需要或敏感的目录。 |
-| `auth.mount_ssh_socket` | 是 | `true`、`false` | `false` | auth mount 解析时生效；doctor 检查可用性 | 是否挂载 SSH agent socket。只在 agent 需要 SSH 认证时开启。 |
-| `auth.mount_docker_socket` | 是 | `true`、`false` | `false` | doctor 作为高权限风险提示/阻断 | 是否挂载 Docker socket。权限很高，`doctor` 会提示风险；普通 benchmark agent 不应开启。 |
+| `auth.inherit` | 是 | `true`、`false` | `true` | active；host/Docker 都按显式 auth source 执行 | 是否启用声明式认证继承。设为 `false` 时，不继承 `inherit_env` 和 `include_paths` 中的认证信息。 Schema: Enable declared auth env/path inheritance. |
+| `auth.inherit_env` | 是 | `string[]` 环境变量名数组 | `["ANTHROPIC_AUTH_TOKEN"]` | active；仅在 `auth.inherit = true` 时传入；host 使用显式 env map | 允许传入运行环境的环境变量名。这里只写变量名，不写变量值。 Schema: Environment variable names to pass through. |
+| `auth.include_paths` | 是 | `path[]` 路径数组，或 `host:container:mode[]` 数组 | `["~/.claude:/root/.claude:ro"]` | active；仅在 `auth.inherit = true` 时参与挂载；doctor 做可读/可挂载检查 | 显式挂载到运行环境的认证/配置路径。`mode` 常用 `ro` 或 `rw`。 Schema: Auth/config paths to mount. |
+| `auth.exclude_paths` | 是 | `path[]` 路径数组 | `["~/.claude/logs"]` | active；解析 inherited auth paths 时生效 | 从继承路径中排除的路径，用于避免挂载不需要或敏感的目录。 Schema: Inherited auth paths to exclude. |
+| `auth.mount_ssh_socket` | 是 | `true`、`false` | `false` | active；auth mount 解析时生效；doctor 检查可用性 | 是否挂载 SSH agent socket。只在 agent 需要 SSH 认证时开启。 Schema: Mount SSH agent socket. |
+| `auth.mount_docker_socket` | 是 | `true`、`false` | `false` | active；doctor 作为高权限风险提示/阻断 | 是否挂载 Docker socket。权限很高，`doctor` 会提示风险；普通 benchmark agent 不应开启。 Schema: Mount Docker socket; high privilege. |
 
 #### `[setup]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `setup.preset` | 否 | `none`、`builtin`、`custom` | `"builtin"` | materializer 在 agent 执行前落实；不支持时阻断 | setup 策略。`none` 不做额外准备；`builtin` 使用 HarnessLab 内置规则；`custom` 才允许执行 `setup.commands`。 |
-| `setup.required_commands` | 否 | 裸命令名数组；字符可包含字母、数字、`.`、`_`、`+`、`-` | `["claude", "claude-ds"]` | doctor 检查；builtin/custom 提供状态会进入诊断 | setup 完成后必须能找到的命令。不要写路径、shell 管道或带参数命令。 |
-| `setup.run_as` | 否 | `root`、`harnesslab`、`current` | `"harnesslab"` | Docker 可落实；host 路径除 `current` 外提前阻断 | agent 命令使用哪个用户运行。host-only task 使用 `current`。 |
-| `setup.commands` | 否 | shell command 数组 | `["npm install -g @anthropic-ai/claude-code"]` | 仅 `setup.preset = "custom"` 执行；公开 artifacts 会 redact | 高级自定义 setup 命令。只有 `setup.preset = "custom"` 时有效。不要在这里写 secret。 |
+| `setup.preset` | 否 | `none`、`builtin`、`custom` | `"builtin"` | active；materializer 在 agent 执行前落实；不支持时阻断 | setup 策略。`none` 不做额外准备；`builtin` 使用 HarnessLab 内置规则；`custom` 才允许执行 `setup.commands`。 Schema: Sandbox setup strategy. |
+| `setup.required_commands` | 否 | `command name[]` 裸命令名数组；字符可包含字母、数字、`.`、`_`、`+`、`-` | `["claude", "claude-ds"]` | active；doctor 检查；builtin/custom 提供状态会进入诊断 | setup 完成后必须能找到的命令。不要写路径、shell 管道或带参数命令。 Schema: Commands that must exist after setup. |
+| `setup.run_as` | 否 | `root`、`harnesslab`、`current` | 省略时为 `"current"`；面向 Docker 的内置模板可能写 `"harnesslab"` | active；Docker 可落实；host 路径除 `current` 外提前阻断 | agent 命令使用哪个用户运行。host-only task 使用 `current`。 Schema: User used to run the agent command. |
+| `setup.commands` | 否 | `shell command[]` 数组 | `["npm install -g @anthropic-ai/claude-code"]` | active；仅 `setup.preset = "custom"` 执行；公开 artifacts 会 redact | 高级自定义 setup 命令。只有 `setup.preset = "custom"` 时有效。不要在这里写 secret。 Schema: Advanced custom setup commands. |
 
 #### `[skills]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `skills.inherit` | 否 | `true`、`false` | `true` | 解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承该 agent kind 的默认 skills。首次注册建议保持 `true`。 |
-| `skills.allow` | 否 | 当前 catalog 已知 skill 名称数组 | `["code-review"]` | 非空时作为显式目标集合；未知项是字段错误 | skills 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `skills.deny` 重复。 |
-| `skills.deny` | 否 | 当前 catalog 已知 skill 名称数组 | `["test-runner"]` | 从默认集合或显式 `allow` 中扣除；未知项是字段错误 | skills 黑名单。不能和 `skills.allow` 重复。 |
-| `skills.include_paths` | 否 | 路径数组 | `["~/.claude/skills"]` | 只对 skills 合法；tools/hooks 没有 include_paths | 额外 skills 目录。路径类配置放这里，不要放进 `allow` 或 `deny`。 |
+| `skills.inherit` | 否 | `true`、`false` | `true` | active；解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承该 agent kind 的默认 skills。首次注册建议保持 `true`。 Schema: Inherit default skills. |
+| `skills.allow` | 否 | `string[]` 当前 catalog 已知 skill 名称数组 | `["code-review"]` | active；非空时作为显式目标集合；未知项是字段错误 | skills 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `skills.deny` 重复。 Schema: Skill whitelist. |
+| `skills.deny` | 否 | `string[]` 当前 catalog 已知 skill 名称数组 | `["test-runner"]` | active；从默认集合或显式 `allow` 中扣除；未知项是字段错误 | skills 黑名单。不能和 `skills.allow` 重复。 Schema: Skill blacklist. |
+| `skills.include_paths` | 否 | `path[]` 路径数组 | `["~/.claude/skills"]` | active；只对 skills 合法；tools/hooks 没有 include_paths | 额外 skills 目录。路径类配置放这里，不要放进 `allow` 或 `deny`。 Schema: Extra skill paths. |
 
 #### `[tools]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `tools.inherit` | 否 | `true`、`false` | `true` | 解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承默认 tools。首次注册建议保持 `true`。 |
-| `tools.allow` | 否 | 当前 catalog 已知 tool 名称数组 | `["bash"]` | 非空时作为显式目标集合；未知项是字段错误 | tools 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `tools.deny` 重复。 |
-| `tools.deny` | 否 | 当前 catalog 已知 tool 名称数组 | `["web_search"]` | 从默认集合或显式 `allow` 中扣除；未知项是字段错误 | tools 黑名单。不能和 `tools.allow` 重复。 |
+| `tools.inherit` | 否 | `true`、`false` | `true` | active；解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承默认 tools。首次注册建议保持 `true`。 Schema: Inherit default tools. |
+| `tools.allow` | 否 | `string[]` 当前 catalog 已知 tool 名称数组 | `["bash"]` | active；非空时作为显式目标集合；未知项是字段错误 | tools 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `tools.deny` 重复。 Schema: Tool whitelist. |
+| `tools.deny` | 否 | `string[]` 当前 catalog 已知 tool 名称数组 | `["web_search"]` | active；从默认集合或显式 `allow` 中扣除；未知项是字段错误 | tools 黑名单。不能和 `tools.allow` 重复。 Schema: Tool blacklist. |
 
 #### `[hooks]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `hooks.inherit` | 否 | `true`、`false` | `true` | 解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承默认 hooks。首次注册建议保持 `true`。 |
-| `hooks.allow` | 否 | 当前 catalog 已知 hook 名称数组 | `["pre_tool_use"]` | 非空时作为显式目标集合；未知项是字段错误 | hooks 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `hooks.deny` 重复。 |
-| `hooks.deny` | 否 | 当前 catalog 已知 hook 名称数组 | `["post_tool_use"]` | 从默认集合或显式 `allow` 中扣除；未知项是字段错误 | hooks 黑名单。不能和 `hooks.allow` 重复。 |
+| `hooks.inherit` | 否 | `true`、`false` | `true` | active；解析为 `candidate_effective`；非默认策略需 verified materializer | 是否继承默认 hooks。首次注册建议保持 `true`。 Schema: Inherit default hooks. |
+| `hooks.allow` | 否 | `string[]` 当前 catalog 已知 hook 名称数组 | `["pre_tool_use"]` | active；非空时作为显式目标集合；未知项是字段错误 | hooks 白名单。非空时集合来自 `allow`，即使 `inherit = false` 也有效。不能和 `hooks.deny` 重复。 Schema: Hook whitelist. |
+| `hooks.deny` | 否 | `string[]` 当前 catalog 已知 hook 名称数组 | `["post_tool_use"]` | active；从默认集合或显式 `allow` 中扣除；未知项是字段错误 | hooks 黑名单。不能和 `hooks.allow` 重复。 Schema: Hook blacklist. |
 
 #### `[usage]` 参数
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `usage.parser` | 是 | `none`、`regex`、`json_path` | `"none"` | usage collector 执行；`none` 记录未知用量 | token/cost 采集方式。`none` 表示不解析用量。 |
-| `usage.source` | 否 | `agent_stdout`、`agent_stderr`、`agent_logs`、`file:<safe-relative-path>` | `"agent_logs"` | safe path 校验，禁止逃逸 run 目录 | usage parser 的输入来源。`file:` 路径不能逃逸 run 目录。 |
-| `usage.input_tokens_key` | 否 | 字符串 | `"input_tokens"` | 结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示输入 token 字段名。 |
-| `usage.output_tokens_key` | 否 | 字符串 | `"output_tokens"` | 结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示输出 token 字段名。 |
-| `usage.total_tokens_key` | 否 | 字符串 | `"total_tokens"` | 结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示总 token 字段名。 |
-| `usage.cost_usd_key` | 否 | 字符串 | `"cost_usd"` | 结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示美元成本字段名。 |
+| `usage.parser` | 是 | `none`、`regex`、`json_path` | `"none"` | active；usage collector 执行；`none` 记录未知用量 | token/cost 采集方式。`none` 表示不解析用量。 Schema: Token/cost usage parser. |
+| `usage.source` | 否 | `agent_stdout`、`agent_stderr`、`agent_logs`、`file:<safe-relative-path>` | `"agent_logs"` | active；safe path 校验，禁止逃逸 run 目录 | usage parser 的输入来源。`file:` 路径不能逃逸 run 目录。 Schema: Input source for usage parsing. |
+| `usage.input_tokens_key` | 否 | `string` 字符串 | `"input_tokens"` | active；结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示输入 token 字段名。 Schema: Field/key name for input tokens. |
+| `usage.output_tokens_key` | 否 | `string` 字符串 | `"output_tokens"` | active；结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示输出 token 字段名。 Schema: Field/key name for output tokens. |
+| `usage.total_tokens_key` | 否 | `string` 字符串 | `"total_tokens"` | active；结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示总 token 字段名。 Schema: Field/key name for total tokens. |
+| `usage.cost_usd_key` | 否 | `string` 字符串 | `"cost_usd"` | active；结构化/JSON usage 解析时使用 | `json_path` 或结构化解析时表示美元成本字段名。 Schema: Field/key name for USD cost. |
 
 #### `[labels]` 参数
 
@@ -240,13 +240,13 @@ model = "deepseek"
 
 | 参数 | 必填 | 取值范围 | 示例 | 生效状态 | 解释 |
 | --- | --- | --- | --- | --- | --- |
-| `labels.<key>` | 否 | 字符串 key/value | `model = "deepseek"` | 写入 snapshot/report；已知 key 可能被 adapter 消费 | 通用报告标签。适合记录模型、provider、wrapper、策略名等可比较条件。 |
-| `labels.model` | 否 | 字符串 | `"deepseek"` | 常用 report/model 标签 | 常用模型标签。报告中用于展示这个 profile 的模型/配置。 |
-| `labels.terminal_bench_model` | 否 | 字符串 | `"deepseek"` | Terminal-Bench adapter 消费 | Terminal-Bench adapter 使用的模型标签；未设置时通常可用 `labels.model` 作为 fallback。 |
-| `labels.terminal_bench_agent` | 否 | Terminal-Bench 内置 agent 名称 | `"codex"` | Terminal-Bench adapter 消费 | 让 Terminal-Bench 使用官方内置 agent 名称。和 `terminal_bench_agent_import_path` 二选一。 |
-| `labels.terminal_bench_agent_import_path` | 否 | Python import path | `"harnesslab_tb_agent:HarnessLabCommandAgent"` | Terminal-Bench adapter 消费；host-agent run_as precheck 适用 | 让 Terminal-Bench 通过 import path 加载 HarnessLab bridge agent。 |
-| `labels.terminal_bench_agent_pythonpath` | 否 | 绝对路径或 Python path 字符串 | `"/path/to/HarnessLab/integrations/terminal_bench"` | Terminal-Bench adapter 消费 | 传给 Terminal-Bench bridge 的 Python path。使用源码运行时通常需要设置。 |
-| `labels.sandbox_setup_command` | 否 | shell command 字符串 | `"npm install -g @anthropic-ai/claude-code"` | 旧快照/旧 profile 兼容；新注册优先用 `[setup]` | 旧 profile 兼容字段。新注册不要优先使用；应改用 `[setup]`。 |
+| `labels` | 否 | `key/value` 字符串 map | `{"model":"deepseek"}` | active；写入 snapshot/report；已知 key 可能被 adapter 消费 | 通用报告标签。适合记录模型、provider、wrapper、策略名等可比较条件。 Schema: Open report labels and benchmark adapter hints map. |
+| `labels.model` | 否 | `string` 字符串 | `"deepseek"` | active；常用 report/model 标签 | 常用模型标签。报告中用于展示这个 profile 的模型/配置。 Schema: Common report model/config label. |
+| `labels.terminal_bench_model` | 否 | `string` 字符串 | `"deepseek"` | active；Terminal-Bench adapter 消费 | Terminal-Bench adapter 使用的模型标签；未设置时通常可用 `labels.model` 作为 fallback。 Schema: Model label consumed by Terminal-Bench built-in agents. |
+| `labels.terminal_bench_agent` | 否 | `terminal-bench agent name` Terminal-Bench 内置 agent 名称 | `"codex"` | active；Terminal-Bench adapter 消费 | 让 Terminal-Bench 使用官方内置 agent 名称。和 `terminal_bench_agent_import_path` 二选一。 Schema: Terminal-Bench built-in agent name. |
+| `labels.terminal_bench_agent_import_path` | 否 | `python import path` | `"harnesslab_tb_agent:HarnessLabCommandAgent"` | active；Terminal-Bench adapter 消费；host-agent run_as precheck 适用 | 让 Terminal-Bench 通过 import path 加载 HarnessLab bridge agent。 Schema: Terminal-Bench import-path bridge agent. |
+| `labels.terminal_bench_agent_pythonpath` | 否 | `absolute path` 或 `python path string` | `"/repo/integrations/terminal_bench"` | active；Terminal-Bench adapter 消费 | 传给 Terminal-Bench bridge 的 Python path。使用源码运行时通常需要设置。 Schema: Python path prepended before loading the Terminal-Bench bridge. |
+| `labels.sandbox_setup_command` | 否 | `shell command` 字符串 | `"npm install -g @anthropic-ai/claude-code"` | legacy；`legacy` 旧快照/旧 profile 兼容；新注册优先用 `[setup]` | 旧 profile 兼容字段。新注册不要优先使用；应改用 `[setup]`。 Schema: Legacy setup escape hatch; new profiles should use [setup]. |
 
 关键规则：
 
@@ -342,6 +342,7 @@ deny = []
 
 `setup.run_as` 的生效范围也有限制：
 
+- 如果 profile 省略 `setup.run_as`，默认按 `current` 处理；`harnesslab init` 生成的部分 Docker-oriented 内置模板可能显式写成 `harnesslab`。
 - Docker sandbox 中可以 materialize `root`、`harnesslab`、`current`。
 - host task、Terminal-Bench import-agent host path、SWE-bench Pro `gold` host path 只支持 `current`。
 - 如果 host 路径遇到 `run_as = "root"` 或 `"harnesslab"`，`run` 会在 task 执行前阻断，不会静默降级。

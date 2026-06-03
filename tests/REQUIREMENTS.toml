@@ -230,3 +230,58 @@ required_runtime_proof = false
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "8"
+
+[[requirements]]
+id = "agent_profile_policy_materialization"
+title = "Agent capability policies resolve against catalogs before runtime materialization"
+area = "config"
+risk = "critical"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+
+[[requirements]]
+id = "agent_profile_schema_complete"
+title = "Agent schema and user docs expose every supported first-class profile field and known label"
+area = "config"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+
+[[requirements]]
+id = "agent_profile_version_probe"
+title = "Agent version commands are probed, snapshotted, redacted and compared on replay"
+area = "replay"
+risk = "high"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "10.2"
+
+[[requirements]]
+id = "agent_profile_auth_isolation"
+title = "Host execution only receives declared inherited auth environment"
+area = "execution"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"
+
+[[requirements]]
+id = "agent_profile_run_as_enforcement"
+title = "Host-incompatible agent run_as declarations block before task execution"
+area = "execution"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"

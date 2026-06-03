@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 #[test]
-fn agt_reg_012_host_agent_does_not_see_ambient_env_when_auth_inherit_false() {
+fn agt_reg_011_host_agent_does_not_see_ambient_env_when_auth_inherit_false() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
@@ -19,27 +19,48 @@ fn agt_reg_012_host_agent_does_not_see_ambient_env_when_auth_inherit_false() {
     let run_dir = Path::new(json["run_dir"].as_str().unwrap());
 
     assert_eq!(json["verdict"], "success");
-    let stdout =
-        fs::read_to_string(run_dir.join("tasks/fake-terminal-success/attempts/1/agent/stdout.log"))
-            .unwrap();
-    assert!(stdout.is_empty());
+    assert_results_success(run_dir);
+    assert_agent_stdout(run_dir, "");
 }
 
 #[test]
-fn agt_reg_012_host_agent_sees_declared_env_when_auth_inherit_true() {
+fn agt_reg_011_host_agent_sees_declared_env_when_auth_inherit_true() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
         home.path(),
-        r#"test "$HARNESSLAB_HOST_AUTH_SECRET" = "allowed" && printf ok > result.txt"#,
+        r#"test "$HARNESSLAB_HOST_AUTH_SECRET" = "allowed" && printf auth-ok && printf ok > result.txt"#,
         true,
         &["HARNESSLAB_HOST_AUTH_SECRET"],
     );
 
     let output = run_success_with_env(home.path(), "HARNESSLAB_HOST_AUTH_SECRET", "allowed");
     let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
 
     assert_eq!(json["verdict"], "success");
+    assert_results_success(run_dir);
+    assert_agent_stdout(run_dir, "auth-ok");
+}
+
+#[test]
+fn agt_reg_011_host_agent_does_not_see_undeclared_env_when_auth_inherit_true() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent(
+        home.path(),
+        r#"if [ -n "${HARNESSLAB_HOST_AUTH_SECRET:-}" ]; then exit 66; fi; printf ok > result.txt"#,
+        true,
+        &[],
+    );
+
+    let output = run_success_with_env(home.path(), "HARNESSLAB_HOST_AUTH_SECRET", "hidden");
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+
+    assert_eq!(json["verdict"], "success");
+    assert_results_success(run_dir);
+    assert_agent_stdout(run_dir, "");
 }
 
 fn init_home(home: &Path) {
@@ -115,6 +136,19 @@ fn run_success_with_env(home: &Path, key: &str, value: &str) -> Vec<u8> {
         .get_output()
         .stdout
         .clone()
+}
+
+fn assert_results_success(run_dir: &Path) {
+    let results: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("results.json")).unwrap()).unwrap();
+    assert_eq!(results["summary"]["success"], 1);
+}
+
+fn assert_agent_stdout(run_dir: &Path, expected: &str) {
+    let stdout =
+        fs::read_to_string(run_dir.join("tasks/fake-terminal-success/attempts/1/agent/stdout.log"))
+            .unwrap();
+    assert_eq!(stdout, expected);
 }
 
 fn harnesslab() -> Command {
