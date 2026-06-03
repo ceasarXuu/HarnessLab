@@ -94,7 +94,17 @@ model = "deepseek"
 | `hooks.allow` | no | string array | `["pre_tool_use"]` | Hook whitelist. Must not overlap `hooks.deny`. |
 | `hooks.deny` | no | string array | `["post_tool_use"]` | Hook blacklist. |
 | `usage.parser` | yes | `none`, `regex`, `json_path` | `none` | Token/cost parser. |
+| `usage.source` | no | `agent_stdout`, `agent_stderr`, `agent_logs`, `file:<safe-relative-path>` | `agent_logs` | Input source for usage parsing. |
+| `usage.input_tokens_key` | no | string | `input_tokens` | Field/key name for input tokens. |
+| `usage.output_tokens_key` | no | string | `output_tokens` | Field/key name for output tokens. |
+| `usage.total_tokens_key` | no | string | `total_tokens` | Field/key name for total tokens. |
+| `usage.cost_usd_key` | no | string | `cost_usd` | Field/key name for USD cost. |
 | `labels.*` | no | string key/value | `model = "deepseek"` | Report labels and benchmark adapter hints. |
+| `labels.terminal_bench_agent` | no | Terminal-Bench agent name | `codex` | Uses a Terminal-Bench built-in agent. |
+| `labels.terminal_bench_agent_import_path` | no | Python import path | `harnesslab_tb_agent:HarnessLabCommandAgent` | Uses HarnessLab's Terminal-Bench bridge agent. |
+| `labels.terminal_bench_agent_pythonpath` | no | absolute path or Python path string | `/repo/integrations/terminal_bench` | Python path for the Terminal-Bench bridge. |
+| `labels.terminal_bench_model` | no | string | `deepseek` | Model label consumed by Terminal-Bench adapters. |
+| `labels.sandbox_setup_command` | no | shell command | `npm install -g @anthropic-ai/claude-code` | Legacy compatibility setup field; new profiles should use `[setup]`. |
 
 ## Materialization Rules
 
