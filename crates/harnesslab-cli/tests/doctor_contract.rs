@@ -318,9 +318,9 @@ parser = "none"
     assert_eq!(check["status"], "error");
     assert_error_field(check, "setup.commands", "custom", "setup.preset");
     assert_error_field(check, "setup.required_commands", "letters", "bare command");
-    assert_error_field(check, "skills.allow", "disjoint", "remove duplicate");
-    assert_error_field(check, "tools.allow", "disjoint", "remove duplicate");
-    assert_error_field(check, "hooks.allow", "disjoint", "remove duplicate");
+    assert_error_field(check, "skills.allow[0]", "disjoint", "remove duplicate");
+    assert_error_field(check, "tools.allow[0]", "disjoint", "remove duplicate");
+    assert_error_field(check, "hooks.allow[0]", "disjoint", "remove duplicate");
 }
 
 #[test]
@@ -397,6 +397,301 @@ parser = "none"
             .as_str()
             .unwrap()
             .contains("default tools policy")
+    );
+}
+
+#[test]
+fn agt_reg_008_doctor_deduplicates_inherit_false_allow_as_candidate_set() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/fake-tools.toml"),
+        r#"schema_version = 1
+name = "fake-tools"
+kind = "fake"
+display_name = "Fake Tools"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = false
+allow = ["bash", "bash"]
+deny = []
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.fake-tools.tools.policy");
+    assert_eq!(check["status"], "error");
+    assert_eq!(check["severity"], "error");
+    assert_eq!(check["details"]["inherit"], false);
+    assert_eq!(
+        check["details"]["candidate_effective"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>(),
+        vec!["bash"]
+    );
+    assert!(check["details"]["effective"].as_array().unwrap().is_empty());
+    assert_eq!(check["details"]["field_path"], "tools.inherit");
+}
+
+#[test]
+fn agt_reg_008_doctor_errors_when_allow_entry_is_not_available() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/missing-allow.toml"),
+        r#"schema_version = 1
+name = "missing-allow"
+kind = "fake"
+display_name = "Missing Allow"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = ["missing-tool"]
+deny = []
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.missing-allow.tools.policy");
+    assert_eq!(check["status"], "error");
+    assert_eq!(check["details"]["field_path"], "tools.allow[0]");
+    assert_error_field(check, "tools.allow[0]", "bash", "known tools");
+}
+
+#[test]
+fn agt_reg_008_doctor_reports_unknown_deny_and_non_skill_include_paths() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/bad-policy.toml"),
+        r#"schema_version = 1
+name = "bad-policy"
+kind = "fake"
+display_name = "Bad Policy"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = []
+deny = ["missing-tool"]
+include_paths = ["./tools"]
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.bad-policy.tools.policy");
+    assert_eq!(check["status"], "error");
+    assert_error_field(check, "tools.deny[0]", "bash", "known tools");
+    assert_error_field(
+        check,
+        "tools.include_paths[0]",
+        "skills.include_paths",
+        "remove it from tools",
+    );
+}
+
+#[test]
+fn agt_reg_008_doctor_warns_for_unsupported_default_policy_without_effective_set() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/default-codex.toml"),
+        r#"schema_version = 1
+name = "default-codex"
+kind = "codex"
+display_name = "Default Codex"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let policy = find_check(&json, "agent.default-codex.tools.policy");
+    assert_eq!(policy["status"], "warning");
+    assert_eq!(policy["severity"], "warning");
+    assert_eq!(policy["details"]["materializer_verified"], false);
+    assert!(
+        policy["details"]["candidate_effective"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value == "bash")
+    );
+    assert!(
+        policy["details"]["effective"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    let materialization = find_check(&json, "agent.default-codex.capabilities.materialization");
+    assert_eq!(materialization["status"], "warning");
+    assert_eq!(materialization["severity"], "warning");
+    assert!(
+        materialization["details"]["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value
+                .as_str()
+                .unwrap_or_default()
+                .contains("capability_materializer_unverified"))
     );
 }
 

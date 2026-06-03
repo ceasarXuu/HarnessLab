@@ -100,6 +100,13 @@ mod tests {
             skills_summary: "inherit=true".to_string(),
             tools_summary: "inherit=true".to_string(),
             hooks_summary: "inherit=true".to_string(),
+            capabilities: crate::agent_registry::resolve_profile_capabilities(
+                &harnesslab_core::default_agent_profile(
+                    "test",
+                    harnesslab_core::AgentKind::Custom,
+                    "agent",
+                ),
+            ),
             run_as: RunAs::Current,
             warnings: Vec::new(),
         }

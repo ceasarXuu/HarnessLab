@@ -118,7 +118,7 @@ pub enum ConfigError {
     InvalidDefaults,
     #[error("invalid {field}: {message}; accepted={accepted}")]
     InvalidField {
-        field: &'static str,
+        field: String,
         message: String,
         accepted: &'static str,
     },
@@ -177,7 +177,7 @@ impl AgentProfile {
         let report = self.validation_report();
         if let Some(error) = report.errors.first() {
             return Err(ConfigError::InvalidField {
-                field: error.field,
+                field: error.field.clone(),
                 message: error.message.clone(),
                 accepted: "see doctor --json details",
             });

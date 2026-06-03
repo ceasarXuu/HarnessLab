@@ -1,6 +1,7 @@
 pub mod agent_profile;
 pub mod agent_profile_reference;
 pub mod benchmark;
+pub mod capability_policy;
 pub mod config;
 pub mod model;
 pub mod path_safety;
@@ -10,6 +11,7 @@ pub mod usage;
 pub use agent_profile::*;
 pub use agent_profile_reference::*;
 pub use benchmark::*;
+pub use capability_policy::*;
 pub use config::*;
 pub use model::*;
 pub use path_safety::*;
