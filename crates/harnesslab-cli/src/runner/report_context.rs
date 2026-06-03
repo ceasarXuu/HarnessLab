@@ -5,36 +5,39 @@ use std::fs;
 use std::path::Path;
 
 pub(super) fn build_report_context(
-    spec: &RunSpec,
-    profile: &AgentProfile,
-    materialized: &MaterializedAgentProfile,
-    version_snapshot: Option<&AgentVersionSnapshot>,
-    report_path: String,
-    run_health: super::monitor::ReportHealth,
-    run_dir: &Path,
-    resumed: bool,
+    request: &ReportWriteRequest<'_>,
 ) -> harnesslab_report::ReportContext {
     harnesslab_report::ReportContext {
-        run_id: spec.run_id.clone(),
-        agent: spec.agent_profile_ref.clone(),
-        agent_config_summary: super::store::agent_config_summary(spec, profile, materialized),
-        setup_summary: materialized.setup_summary.clone(),
-        skills_summary: materialized.skills_summary.clone(),
-        tools_summary: materialized.tools_summary.clone(),
-        hooks_summary: materialized.hooks_summary.clone(),
-        skills_effective_summary: capability_effective_summary(&materialized.capabilities.skills),
-        tools_effective_summary: capability_effective_summary(&materialized.capabilities.tools),
-        hooks_effective_summary: capability_effective_summary(&materialized.capabilities.hooks),
-        version_probe_summary: version_probe_summary(version_snapshot),
-        has_version_probe_snapshot: version_snapshot.is_some(),
-        benchmark: spec.benchmark.name.clone(),
-        split: spec.benchmark.split.clone(),
-        report_path,
-        replay_command: super::store::replay_command(spec),
-        original_command: super::store::original_command_from_snapshot(run_dir),
-        resumed,
-        run_health_status: run_health.status,
-        run_health_reason: run_health.reason,
+        run_id: request.spec.run_id.clone(),
+        agent: request.spec.agent_profile_ref.clone(),
+        agent_config_summary: super::store::agent_config_summary(
+            request.spec,
+            request.report_profile,
+            request.report_materialized,
+        ),
+        setup_summary: request.report_materialized.setup_summary.clone(),
+        skills_summary: request.report_materialized.skills_summary.clone(),
+        tools_summary: request.report_materialized.tools_summary.clone(),
+        hooks_summary: request.report_materialized.hooks_summary.clone(),
+        skills_effective_summary: capability_effective_summary(
+            &request.report_materialized.capabilities.skills,
+        ),
+        tools_effective_summary: capability_effective_summary(
+            &request.report_materialized.capabilities.tools,
+        ),
+        hooks_effective_summary: capability_effective_summary(
+            &request.report_materialized.capabilities.hooks,
+        ),
+        version_probe_summary: version_probe_summary(request.version_snapshot),
+        has_version_probe_snapshot: request.version_snapshot.is_some(),
+        benchmark: request.spec.benchmark.name.clone(),
+        split: request.spec.benchmark.split.clone(),
+        report_path: request.report_path.clone(),
+        replay_command: super::store::replay_command(request.spec),
+        original_command: super::store::original_command_from_snapshot(request.run_dir),
+        resumed: request.resumed,
+        run_health_status: request.run_health.status.clone(),
+        run_health_reason: request.run_health.reason.clone(),
     }
 }
 
@@ -52,16 +55,7 @@ pub(super) struct ReportWriteRequest<'a> {
 
 pub(super) fn write_report(request: ReportWriteRequest<'_>) -> Result<()> {
     let model = harnesslab_report::build_report_model(
-        build_report_context(
-            request.spec,
-            request.report_profile,
-            request.report_materialized,
-            request.version_snapshot,
-            request.report_path,
-            request.run_health,
-            request.run_dir,
-            request.resumed,
-        ),
+        build_report_context(&request),
         request.results.clone(),
     );
     fs::write(

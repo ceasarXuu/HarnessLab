@@ -17,8 +17,7 @@ mod usage;
 mod verifier;
 mod version;
 use crate::agent_registry::{
-    AgentVersionSnapshot, MaterializedAgentProfile, materialization_error_to_anyhow,
-    materialize_profile,
+    AgentVersionSnapshot, materialization_error_to_anyhow, materialize_profile,
 };
 use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
 use anyhow::{Context, Result, bail};
@@ -26,10 +25,10 @@ use attempts::{TaskExecutionContext, execute_attempts};
 use cleanup::RunSandboxCleanup;
 use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
-    AgentProfile, AttemptProvenance, BenchmarkRef, FailureClass, FailureCode, Outcome, RunPaths,
-    RunSpec, TaskAttemptResult, TaskPlan, TaskState, classify_agent_process,
-    classify_evaluation_process, derive_exit_code, health_impact_for_failure, summarize_results,
-    task_dir_name, validate_benchmark_plan, validate_global_config, validate_run_spec,
+    AttemptProvenance, BenchmarkRef, FailureClass, FailureCode, Outcome, RunPaths, RunSpec,
+    TaskAttemptResult, TaskPlan, TaskState, classify_agent_process, classify_evaluation_process,
+    derive_exit_code, health_impact_for_failure, summarize_results, task_dir_name,
+    validate_benchmark_plan, validate_global_config, validate_run_spec,
 };
 use harnesslab_infra::{
     append_event, atomic_write_json, collect_artifacts, command_exists, event, first_command_word,
@@ -44,13 +43,14 @@ use shell::run_shell;
 use std::fs;
 use std::path::Path;
 pub(crate) use store::runs_dir;
-use store::{load_config, load_profile, write_run_inputs};
+use store::{RunInputsRequest, load_config, load_profile, write_run_inputs};
 use usage::collect_usage;
 use verifier::run_verifier;
 
 #[cfg(test)]
 use {
     attempts::panic_message,
+    harnesslab_core::AgentProfile,
     sandbox::{docker_create_request, render_command, task_requires_docker},
     schedule::{attempt_result_path, planned_attempts},
 };
@@ -113,24 +113,26 @@ pub(crate) fn execute_new_run(
         store::original_run_command(home, agent_name, benchmark_name, split, &spec, &config);
     let report_profile = store::public_profile_snapshot(&profile);
     let report_materialized = store::public_materialized_snapshot(&profile, &materialized, &[]);
-    write_run_inputs(
-        &run_dir,
-        &spec,
-        &profile,
-        &report_profile,
-        &materialized,
-        version_snapshot.as_ref(),
-        &[],
-        &plan,
-        &original_command,
-    )?;
+    write_run_inputs(RunInputsRequest {
+        run_dir: &run_dir,
+        spec: &spec,
+        runtime_profile: &profile,
+        report_profile: &report_profile,
+        materialized_profile: &materialized,
+        version_snapshot: version_snapshot.as_ref(),
+        extra_secret_refs: &[],
+        plan: &plan,
+        original_command: &original_command,
+    })?;
     let code = execute_plan(
-        &run_dir,
-        &spec,
-        &profile,
-        &report_profile,
-        &materialized,
-        &report_materialized,
+        TaskExecutionContext::from_refs(
+            &run_dir,
+            &spec,
+            &profile,
+            &report_profile,
+            &materialized,
+            &report_materialized,
+        ),
         version_snapshot.as_ref(),
         &plan,
         ExecutionMode::New,
@@ -160,12 +162,14 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
     store::log_profile_snapshot_loaded(run_dir, &spec.run_id, profile_source.as_str(), "resume")?;
     let version_snapshot = store::load_agent_version_snapshot(run_dir)?;
     let code = execute_plan(
-        run_dir,
-        &spec,
-        &profile,
-        &report_profile,
-        &materialized,
-        &report_materialized,
+        TaskExecutionContext::from_refs(
+            run_dir,
+            &spec,
+            &profile,
+            &report_profile,
+            &materialized,
+            &report_materialized,
+        ),
         version_snapshot.as_ref(),
         &plan,
         ExecutionMode::Resume,
@@ -207,17 +211,17 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         replay_spec_from_source(&source_spec, run_id.clone(), store::now_rfc3339(), &run_dir);
     validate_run_spec(&spec)?;
     let original_command = store::original_replay_command(home, source);
-    write_run_inputs(
-        &run_dir,
-        &spec,
-        &profile,
-        &report_profile,
-        &materialized,
-        version_snapshot.as_ref(),
-        &replay_redactions,
-        &plan,
-        &original_command,
-    )?;
+    write_run_inputs(RunInputsRequest {
+        run_dir: &run_dir,
+        spec: &spec,
+        runtime_profile: &profile,
+        report_profile: &report_profile,
+        materialized_profile: &materialized,
+        version_snapshot: version_snapshot.as_ref(),
+        extra_secret_refs: &replay_redactions,
+        plan: &plan,
+        original_command: &original_command,
+    })?;
     store::log_profile_snapshot_loaded(&run_dir, &spec.run_id, profile_source.as_str(), "replay")?;
     version::append_replay_version_warning(
         source,
@@ -227,12 +231,14 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &replay_redactions,
     )?;
     let code = execute_plan(
-        &run_dir,
-        &spec,
-        &profile,
-        &report_profile,
-        &materialized,
-        &report_materialized,
+        TaskExecutionContext::from_refs(
+            &run_dir,
+            &spec,
+            &profile,
+            &report_profile,
+            &materialized,
+            &report_materialized,
+        ),
         version_snapshot.as_ref(),
         &plan,
         ExecutionMode::Replay,
@@ -242,16 +248,15 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
 }
 
 fn execute_plan(
-    run_dir: &Path,
-    spec: &RunSpec,
-    profile: &AgentProfile,
-    report_profile: &AgentProfile,
-    materialized_profile: &MaterializedAgentProfile,
-    report_materialized_profile: &MaterializedAgentProfile,
+    context: TaskExecutionContext,
     version_snapshot: Option<&AgentVersionSnapshot>,
     plan: &harnesslab_core::BenchmarkPlan,
     mode: ExecutionMode,
 ) -> Result<i32> {
+    let run_dir = context.run_dir.as_path();
+    let spec = &context.spec;
+    let report_profile = &context.report_profile;
+    let report_materialized_profile = &context.report_materialized_profile;
     let events = run_dir.join("events.jsonl");
     if matches!(mode, ExecutionMode::Resume) {
         append_event(
@@ -300,12 +305,7 @@ fn execute_plan(
         }
     }
     attempts.extend(execute_attempts(
-        run_dir,
-        spec,
-        profile,
-        report_profile,
-        materialized_profile,
-        report_materialized_profile,
+        context.clone(),
         pending,
         spec.execution.concurrency,
     )?);

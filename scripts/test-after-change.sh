@@ -1,6 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+run_filtered_tests() {
+  local selected_id="$1"
+  local package="$2"
+  local target="$3"
+  local test_filter="$4"
+  local expected_count="$5"
+  local -a cargo_args=(-p "$package" --all-features)
+  if [[ "$target" == "lib" ]]; then
+    cargo_args+=(--lib)
+  elif [[ "$target" == test:* ]]; then
+    cargo_args+=(--test "${target#test:}")
+  fi
+
+  set +e
+  output="$(cargo test "${cargo_args[@]}" "$test_filter" -- --nocapture 2>&1)"
+  cargo_status=$?
+  set -e
+  printf '%s\n' "$output"
+  if [[ "$cargo_status" -ne 0 ]]; then
+    exit "$cargo_status"
+  fi
+  if ! grep -Eq "^running ${expected_count} tests?$" <<<"$output"; then
+    echo "selected test group did not run expected count: ${selected_id} -> ${test_filter}, expected ${expected_count}" >&2
+    exit 1
+  fi
+  ok_count="$(grep -Ec "^test .*${test_filter//./\\.}.*\\.\\.\\. ok$" <<<"$output" || true)"
+  if [[ "$ok_count" -ne "$expected_count" ]]; then
+    echo "selected test group did not report expected ok lines: ${selected_id} -> ${test_filter}, expected ${expected_count}, got ${ok_count}" >&2
+    exit 1
+  fi
+}
+
 if [[ "${1:-}" == "--select" ]]; then
   id="${2:?missing test id}"
   test_target="${HARNESSLAB_TEST_TARGET:-}"
@@ -149,6 +181,12 @@ if [[ "${1:-}" == "--select" ]]; then
     TB-010) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prep_failure_is_structured_task_result"; test_target="lib" ;;
     TB-011) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::ignores_verifier_logs_with_docker_error_text"; test_target="lib" ;;
     AGT-REG-005) cargo test -p harnesslab-cli agt_reg_005 -- --nocapture; exec scripts/verify-terminal-bench-registered-setup.sh ;;
+    AGT-REG-007) run_filtered_tests "$id" "harnesslab-cli" "test:agent_registry_contract" "agt_reg_007" 2; exit 0 ;;
+    AGT-REG-008) run_filtered_tests "$id" "harnesslab-core" "lib" "agt_reg_008" 5; run_filtered_tests "$id" "harnesslab-cli" "lib" "agt_reg_008" 1; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_contract" "agt_reg_008" 4; exit 0 ;;
+    AGT-REG-009) run_filtered_tests "$id" "harnesslab-cli" "test:doctor_setup_contract" "agt_reg_009" 4; exit 0 ;;
+    AGT-REG-010) run_filtered_tests "$id" "harnesslab-cli" "lib" "agt_reg_010" 4; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_contract" "agt_reg_010" 2; run_filtered_tests "$id" "harnesslab-cli" "test:replay_contract" "agt_reg_010" 5; exit 0 ;;
+    AGT-REG-011) run_filtered_tests "$id" "harnesslab-cli" "test:host_auth_contract" "agt_reg_011" 3; exit 0 ;;
+    AGT-REG-012) run_filtered_tests "$id" "harnesslab-cli" "test:agent_registry_contract" "agt_reg_012" 2; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_run_as_contract" "agt_reg_012" 4; run_filtered_tests "$id" "harnesslab-cli" "test:terminal_bench_run_as_contract" "agt_reg_012" 1; run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "agt_reg_012" 1; exit 0 ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;

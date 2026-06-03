@@ -5,7 +5,7 @@ use std::path::Path;
 const MISSING_DOCKER_HOST: &str = "unix:///tmp/harnesslab-test-missing-docker.sock";
 
 #[test]
-fn agt_reg_011_doctor_errors_when_required_command_is_missing_without_setup() {
+fn agt_reg_009_doctor_errors_when_required_command_is_missing_without_setup() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
@@ -36,7 +36,7 @@ fn agt_reg_011_doctor_errors_when_required_command_is_missing_without_setup() {
 }
 
 #[test]
-fn agt_reg_011_doctor_explains_builtin_setup_can_provide_required_command() {
+fn agt_reg_009_doctor_explains_builtin_setup_can_provide_required_command() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
@@ -65,7 +65,7 @@ fn agt_reg_011_doctor_explains_builtin_setup_can_provide_required_command() {
 }
 
 #[test]
-fn agt_reg_011_doctor_marks_custom_setup_required_command_as_sandbox_dependent() {
+fn agt_reg_009_doctor_marks_custom_setup_required_command_as_sandbox_dependent() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
@@ -95,7 +95,7 @@ fn agt_reg_011_doctor_marks_custom_setup_required_command_as_sandbox_dependent()
 }
 
 #[test]
-fn agt_reg_011_doctor_reports_invalid_required_command_field() {
+fn agt_reg_009_doctor_reports_invalid_required_command_field() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(
