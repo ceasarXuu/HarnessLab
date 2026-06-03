@@ -105,6 +105,10 @@ pub fn write_agent(home: &Path, agent: &str, model: Option<&str>, import_path: O
 }
 
 pub fn write_agent_with_labels(home: &Path, labels: &str) {
+    write_agent_with_labels_and_run_as(home, labels, "current");
+}
+
+pub fn write_agent_with_labels_and_run_as(home: &Path, labels: &str, run_as: &str) {
     let content = format!(
         r#"schema_version = 1
 name = "fake"
@@ -122,6 +126,12 @@ include_paths = []
 exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "{run_as}"
+commands = []
 
 [usage]
 parser = "none"
@@ -216,7 +226,7 @@ pub fn harnesslab() -> Command {
     }
 }
 
-fn path_with(bin: &Path) -> String {
+pub fn path_with(bin: &Path) -> String {
     let current = std::env::var("PATH").unwrap_or_default();
     format!("{}:{current}", bin.display())
 }

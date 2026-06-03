@@ -116,6 +116,7 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
     }
     append_capability_policy_checks(profile, checks);
     append_materialization_check(profile, checks);
+    crate::doctor_run_as::append_run_as_check(profile, checks);
     append_version_command_check(home, profile, checks);
     crate::doctor_setup::append_required_commands_check(profile, checks);
     let available = first_command_word(&profile.command)

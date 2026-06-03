@@ -145,6 +145,72 @@ fn agt_reg_006_non_materializable_policy_blocks_run_before_run_dir() {
     assert_eq!(fs::read_dir(home.path().join("runs")).unwrap().count(), 0);
 }
 
+#[test]
+fn agt_reg_012_host_run_as_blocks_before_run_dir() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_host_run_as_agent(home.path(), "harnesslab");
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "host-run-as",
+            "--benchmark",
+            "fake-terminal",
+            "--split",
+            "success",
+            "--json",
+        ])
+        .assert()
+        .code(3)
+        .get_output()
+        .stderr
+        .clone();
+
+    let stderr = String::from_utf8(output).unwrap();
+    assert!(stderr.contains("setup.run_as"));
+    assert!(stderr.contains("host task"));
+    assert!(stderr.contains("current"));
+    assert_eq!(fs::read_dir(home.path().join("runs")).unwrap().count(), 0);
+}
+
+#[test]
+fn agt_reg_012_host_root_run_as_blocks_before_run_dir() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_host_run_as_agent(home.path(), "root");
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "host-run-as",
+            "--benchmark",
+            "fake-terminal",
+            "--split",
+            "success",
+            "--json",
+        ])
+        .assert()
+        .code(3)
+        .get_output()
+        .stderr
+        .clone();
+
+    let stderr = String::from_utf8(output).unwrap();
+    assert!(stderr.contains("setup.run_as"));
+    assert!(stderr.contains("Root"));
+    assert!(stderr.contains("current"));
+    assert_eq!(fs::read_dir(home.path().join("runs")).unwrap().count(), 0);
+}
+
 fn assert_field_value(json: &serde_json::Value, path: &str, expected: &str) {
     let field = find_field(json, path);
     assert!(
@@ -223,6 +289,57 @@ deny = []
 [usage]
 parser = "none"
 "#,
+    )
+    .unwrap();
+}
+
+fn write_host_run_as_agent(home: &Path, run_as: &str) {
+    fs::write(
+        home.join("agents/host-run-as.toml"),
+        format!(
+            r#"schema_version = 1
+name = "host-run-as"
+kind = "fake"
+display_name = "Host Run As"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "{run_as}"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = []
+deny = []
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+        ),
     )
     .unwrap();
 }

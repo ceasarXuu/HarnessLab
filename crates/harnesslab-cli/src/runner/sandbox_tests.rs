@@ -104,6 +104,7 @@ fn docker_command_prefixes_builtin_and_custom_setup() {
     assert!(rendered.contains("harnesslab agent setup starting"));
     assert!(rendered.contains("sh -c 'install-agent'"));
     assert!(rendered.contains("harnesslab agent setup failed:"));
+    assert!(rendered.contains("runuser -u harnesslab"));
     assert!(rendered.contains("agent"));
     custom
         .labels
@@ -111,7 +112,7 @@ fn docker_command_prefixes_builtin_and_custom_setup() {
     assert!(
         render_command(&custom, &task, tmp.path(), true)
             .unwrap()
-            .contains("agent")
+            .contains("runuser -u harnesslab")
     );
 }
 
