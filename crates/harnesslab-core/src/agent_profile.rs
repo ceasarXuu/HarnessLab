@@ -242,7 +242,7 @@ fn default_true() -> bool {
     true
 }
 
-fn is_valid_command_name(value: &str) -> bool {
+pub fn is_valid_command_name(value: &str) -> bool {
     !value.is_empty()
         && value
             .chars()

@@ -3,6 +3,7 @@ mod app;
 mod benchmark_data;
 mod doctor;
 mod doctor_capabilities;
+mod doctor_setup;
 mod output;
 mod runner;
 

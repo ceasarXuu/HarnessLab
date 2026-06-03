@@ -117,6 +117,7 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
     append_capability_policy_checks(profile, checks);
     append_materialization_check(profile, checks);
     append_version_command_check(home, profile, checks);
+    crate::doctor_setup::append_required_commands_check(profile, checks);
     let available = first_command_word(&profile.command)
         .map(command_exists)
         .unwrap_or(false);
@@ -388,7 +389,7 @@ fn check(id: &str, status: &str, severity: &str, message: &str) -> DoctorCheck {
     }
 }
 
-fn check_with_details(
+pub(crate) fn check_with_details(
     id: &str,
     status: &str,
     severity: &str,
