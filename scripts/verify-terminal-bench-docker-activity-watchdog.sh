@@ -29,6 +29,24 @@ awk -v stamp="$STAMP" '
   }
 ' "$DOCKERFILE" > "$DOCKERFILE.tmp"
 mv "$DOCKERFILE.tmp" "$DOCKERFILE"
+cat > "$DATASET_TASK/tests/setup-uv-pytest.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+EOF
+cat > "$DATASET_TASK/tests/run-uv-pytest.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+python3 - <<'PY'
+from pathlib import Path
+
+hello_path = Path("/app/hello.txt")
+assert hello_path.exists(), f"File {hello_path} does not exist"
+assert hello_path.read_text() == "Hello, world!\n"
+PY
+printf '=========================== short test summary info ============================\n'
+printf 'PASSED tests/test_outputs.py::test_hello_file_exists\n'
+printf 'PASSED tests/test_outputs.py::test_hello_file_content\n'
+EOF
 
 target/debug/harnesslab --home "$HOME_DIR" init >"$WORK/init.log"
 

@@ -24,7 +24,13 @@ pub(super) fn run_agent(
         == Some("gold")
     {
         return Ok(SweAgentRun {
-            process: apply_gold_patch(ctx.attempt_dir, workspace, instance, ctx.report_profile)?,
+            process: apply_gold_patch(
+                ctx.attempt_dir,
+                workspace,
+                instance,
+                ctx.profile,
+                ctx.report_profile,
+            )?,
             sandbox_failure: None,
         });
     }
@@ -39,15 +45,17 @@ pub(super) fn run_agent(
             sandbox_task.sandbox_spec.image
         ),
     )?;
-    let agent_run = super::super::super::sandbox::run_agent(
-        ctx.spec,
-        ctx.profile,
-        ctx.report_profile,
-        &sandbox_task,
-        ctx.attempt,
-        ctx.attempt_dir,
-        workspace,
-    )?;
+    let agent_run =
+        super::super::super::sandbox::run_agent(super::super::super::sandbox::AgentRunRequest {
+            spec: ctx.spec,
+            profile: ctx.profile,
+            report_profile: ctx.report_profile,
+            materialized_profile: ctx.materialized_profile,
+            task: &sandbox_task,
+            attempt: ctx.attempt,
+            attempt_dir: ctx.attempt_dir,
+            workspace,
+        })?;
     if let Some(code) = agent_run.sandbox_failure {
         super::append_swe_event(
             ctx,
@@ -123,11 +131,17 @@ fn apply_gold_patch(
     attempt_dir: &Path,
     workspace: &Path,
     instance: &SweInstance,
-    profile: &AgentProfile,
+    runtime_profile: &AgentProfile,
+    report_profile: &AgentProfile,
 ) -> Result<ProcessRecord> {
     let agent_dir = attempt_dir.join("agent");
     fs::create_dir_all(&agent_dir)?;
-    super::super::write_external_command_snapshot(attempt_dir, profile, "git apply -")?;
+    super::super::write_external_command_snapshot(
+        attempt_dir,
+        runtime_profile,
+        report_profile,
+        "git apply -",
+    )?;
     let status = Command::new("git")
         .arg("apply")
         .arg("-")

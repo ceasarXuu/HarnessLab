@@ -164,3 +164,69 @@ required_runtime_proof = true
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "14"
+
+[[requirements]]
+id = "agent_profile_semantic_schema"
+title = "Agent profiles support semantic setup, skills, tools and hooks fields"
+area = "config"
+risk = "critical"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+
+[[requirements]]
+id = "agent_profile_diagnostics"
+title = "Doctor reports agent profile field paths, allowed values and fixes"
+area = "config"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+
+[[requirements]]
+id = "agent_profile_init_templates"
+title = "Init writes readable commented agent profile templates"
+area = "cli"
+risk = "high"
+expected_layers = ["integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+
+[[requirements]]
+id = "agent_profile_materialized_runtime"
+title = "Runs persist materialized agent runtime summaries without leaking known secrets"
+area = "artifact"
+risk = "critical"
+expected_layers = ["unit", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "9"
+
+[[requirements]]
+id = "terminal_bench_materialized_setup"
+title = "Terminal-Bench bridge receives and executes materialized agent setup"
+area = "adapter"
+risk = "critical"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "16"
+
+[[requirements]]
+id = "agent_profile_policy_precheck"
+title = "Unsupported non-default agent capability policies block before benchmark execution"
+area = "execution"
+risk = "critical"
+expected_layers = ["integration"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"

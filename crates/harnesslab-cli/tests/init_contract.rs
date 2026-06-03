@@ -26,10 +26,21 @@ fn int_001_init_empty_home_creates_config_and_profiles() {
     }
 
     let codex = fs::read_to_string(home.path().join("agents/codex-default.toml")).unwrap();
+    assert!(codex.contains("# HarnessLab agent profile"));
+    assert!(codex.contains("[setup]"));
+    assert!(codex.contains("[skills]"));
+    assert!(codex.contains("[tools]"));
+    assert!(codex.contains("[hooks]"));
+    assert!(codex.contains("allow = []"));
+    assert!(!codex.contains("sandbox_setup_command"));
     assert!(codex.contains("OPENAI_API_KEY"));
     assert!(codex.contains("~/.codex:/root/.codex:rw"));
+    let parsed: harnesslab_core::AgentProfile = toml::from_str(&codex).unwrap();
+    assert_eq!(parsed.setup.preset, harnesslab_core::SetupPreset::Builtin);
     let pi = fs::read_to_string(home.path().join("agents/pi-coding-agent-default.toml")).unwrap();
     assert!(pi.contains("pi coding --version || pi --version"));
+    let readme = fs::read_to_string(home.path().join("agents/README.md")).unwrap();
+    assert!(readme.contains("harnesslab agent schema --json"));
 }
 
 #[test]

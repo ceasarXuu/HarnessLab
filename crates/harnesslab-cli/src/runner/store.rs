@@ -1,3 +1,4 @@
+use crate::agent_registry::MaterializedAgentProfile;
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentProfile, GlobalConfig, RunSpec, is_valid_profile_name, redact_known_secret,
@@ -10,6 +11,7 @@ use time::OffsetDateTime;
 
 pub(super) const RUNTIME_PROFILE_SNAPSHOT: &str = "agent-profile.runtime.json";
 pub(super) const REPORT_PROFILE_SNAPSHOT: &str = "agent-profile.snapshot.json";
+pub(super) const MATERIALIZED_PROFILE_SNAPSHOT: &str = "agent-runtime.materialized.json";
 const ORIGINAL_COMMAND_UNAVAILABLE: &str = "[ORIGINAL_COMMAND_UNAVAILABLE]";
 
 #[derive(Debug)]
@@ -89,6 +91,7 @@ pub(super) fn write_run_inputs(
     spec: &RunSpec,
     runtime_profile: &AgentProfile,
     report_profile: &AgentProfile,
+    materialized_profile: &MaterializedAgentProfile,
     plan: &harnesslab_core::BenchmarkPlan,
     original_command: &str,
 ) -> Result<()> {
@@ -98,6 +101,10 @@ pub(super) fn write_run_inputs(
     atomic_write_json(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT), runtime_profile)?;
     restrict_runtime_snapshot(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT))?;
     atomic_write_json(&run_dir.join(REPORT_PROFILE_SNAPSHOT), report_profile)?;
+    atomic_write_json(
+        &run_dir.join(MATERIALIZED_PROFILE_SNAPSHOT),
+        &redacted_materialized_snapshot(materialized_profile, &secret_refs),
+    )?;
     atomic_write_json(&run_dir.join("benchmark.snapshot.json"), plan)?;
     fs::write(
         run_dir.join("command.txt"),
@@ -116,6 +123,17 @@ pub(super) fn secret_values(profile: &AgentProfile) -> Vec<String> {
         .collect()
 }
 
+fn redacted_materialized_snapshot(
+    materialized: &MaterializedAgentProfile,
+    secrets: &[&str],
+) -> MaterializedAgentProfile {
+    let mut snapshot = materialized.clone();
+    if let Some(setup_script) = &snapshot.setup_script {
+        snapshot.setup_script = Some(redact_known_secret(setup_script, secrets));
+    }
+    snapshot
+}
+
 pub(super) fn root_command_snapshot(
     spec: &RunSpec,
     profile: &AgentProfile,
@@ -123,13 +141,14 @@ pub(super) fn root_command_snapshot(
     secrets: &[&str],
 ) -> String {
     format!(
-        "original_command={}\nreplay_command={}\nagent_profile={}\nagent_kind={:?}\nagent_runtime_snapshot={}\nagent_report_snapshot={}\nagent_command_template={}\n",
+        "original_command={}\nreplay_command={}\nagent_profile={}\nagent_kind={:?}\nagent_runtime_snapshot={}\nagent_report_snapshot={}\nagent_materialized_snapshot={}\nagent_command_template={}\n",
         redact_known_secret(original_command, secrets),
         replay_command(spec),
         profile.name,
         profile.kind,
         RUNTIME_PROFILE_SNAPSHOT,
         REPORT_PROFILE_SNAPSHOT,
+        MATERIALIZED_PROFILE_SNAPSHOT,
         redact_known_secret(&profile.command, secrets)
     )
 }
@@ -206,15 +225,23 @@ fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
-pub(super) fn agent_config_summary(spec: &RunSpec, profile: &AgentProfile) -> String {
+pub(super) fn agent_config_summary(
+    spec: &RunSpec,
+    profile: &AgentProfile,
+    materialized: &MaterializedAgentProfile,
+) -> String {
     format!(
-        "kind={:?}; input_mode={:?}; timeout_sec={}; concurrency={}; attempts={}; network={:?}; command={}",
+        "kind={:?}; input_mode={:?}; timeout_sec={}; concurrency={}; attempts={}; network={:?}; setup={}; skills={}; tools={}; hooks={}; command={}",
         profile.kind,
         profile.input_mode,
         profile.timeout_sec,
         spec.execution.concurrency,
         spec.execution.attempts,
         spec.execution.network,
+        materialized.setup_summary,
+        materialized.skills_summary,
+        materialized.tools_summary,
+        materialized.hooks_summary,
         profile.command
     )
 }

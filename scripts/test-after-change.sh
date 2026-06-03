@@ -136,6 +136,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-043) package="harnesslab-cli"; test_name="int_043_cleanup_failure_does_not_mask_runner_timeout_health" ;;
     INT-044) package="harnesslab-cli"; test_name="int_044_terminal_bench_runtime_exports_amd64_platform_by_default"; test_target="test:terminal_bench_runtime_contract" ;;
     INT-045) package="harnesslab-cli"; test_name="int_011_terminal_bench_run_timeout_override_does_not_inflate_test_timeout"; test_target="test:terminal_bench_contract" ;;
+    INT-046) package="harnesslab-cli"; test_name="int_046_terminal_bench_bridge_setup_failure_drops_stale_benchmark_warning"; test_target="test:terminal_bench_setup_failure_contract" ;;
     TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
     TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
     TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
@@ -147,6 +148,7 @@ if [[ "${1:-}" == "--select" ]]; then
     TB-009) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prepares_forced_amd64_qemu_dataset"; test_target="lib" ;;
     TB-010) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prep_failure_is_structured_task_result"; test_target="lib" ;;
     TB-011) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::ignores_verifier_logs_with_docker_error_text"; test_target="lib" ;;
+    AGT-REG-005) cargo test -p harnesslab-cli agt_reg_005 -- --nocapture; exec scripts/verify-terminal-bench-registered-setup.sh ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
@@ -200,14 +202,27 @@ fi
 echo "== environment preflight =="
 rustc --version
 cargo --version
-if ! cargo nextest --version | grep -q "cargo-nextest 0.9.136"; then
-  echo "ERROR cargo-nextest: expected 0.9.136" >&2
-  exit 1
-fi
 if ! cargo llvm-cov --version | grep -q "cargo-llvm-cov 0.8.7"; then
   echo "ERROR cargo-llvm-cov: expected 0.8.7" >&2
   exit 1
 fi
+test_runner="${HARNESSLAB_TEST_RUNNER:-cargo}"
+case "$test_runner" in
+  cargo)
+    echo "test runner: cargo"
+    ;;
+  nextest)
+    if ! cargo nextest --version | grep -q "cargo-nextest 0.9.136"; then
+      echo "ERROR cargo-nextest: expected 0.9.136" >&2
+      exit 1
+    fi
+    echo "test runner: nextest"
+    ;;
+  *)
+    echo "ERROR HARNESSLAB_TEST_RUNNER must be cargo or nextest" >&2
+    exit 1
+    ;;
+esac
 
 echo "== format =="
 cargo fmt --all --check
@@ -216,13 +231,15 @@ echo "== lint =="
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 echo "== tests =="
-if cargo nextest --version >/dev/null 2>&1; then
+if [[ "$test_runner" == "nextest" ]]; then
   cargo nextest run --workspace --all-features
 else
-  echo "SKIP cargo-nextest: not installed; using cargo test for M0 bootstrap"
   cargo test --workspace --all-features
 fi
 scripts/verify-terminal-bench-python-adapter.sh
+
+echo "== terminal-bench-real-registered-setup =="
+scripts/verify-terminal-bench-registered-setup.sh
 
 echo "== terminal-bench-real-import-timeout-cleanup =="
 scripts/verify-terminal-bench-import-timeout-cleanup.sh

@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+use crate::{CapabilityPolicy, RunAs, SetupConfig, SetupPreset};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GlobalConfig {
     pub schema_version: u32,
@@ -40,6 +42,14 @@ pub struct AgentProfile {
     pub timeout_sec: u64,
     pub version_command: Option<String>,
     pub auth: AuthConfig,
+    #[serde(default)]
+    pub setup: SetupConfig,
+    #[serde(default)]
+    pub skills: CapabilityPolicy,
+    #[serde(default)]
+    pub tools: CapabilityPolicy,
+    #[serde(default)]
+    pub hooks: CapabilityPolicy,
     pub usage: UsageConfig,
     #[serde(default)]
     pub labels: std::collections::BTreeMap<String, String>,
@@ -106,6 +116,12 @@ pub enum ConfigError {
     InvalidTimeout,
     #[error("execution defaults must be positive")]
     InvalidDefaults,
+    #[error("invalid {field}: {message}; accepted={accepted}")]
+    InvalidField {
+        field: &'static str,
+        message: String,
+        accepted: &'static str,
+    },
 }
 
 impl Default for GlobalConfig {
@@ -158,13 +174,22 @@ impl AgentProfile {
         if self.timeout_sec == 0 {
             return Err(ConfigError::InvalidTimeout);
         }
-        let mut warnings = Vec::new();
-        if self.auth.mount_docker_socket {
-            warnings.push(ValidationWarning {
-                code: "docker_socket_requested".to_string(),
-                message: "mount_docker_socket expands container privileges".to_string(),
+        let report = self.validation_report();
+        if let Some(error) = report.errors.first() {
+            return Err(ConfigError::InvalidField {
+                field: error.field,
+                message: error.message.clone(),
+                accepted: "see doctor --json details",
             });
         }
+        let warnings = report
+            .warnings
+            .into_iter()
+            .map(|warning| ValidationWarning {
+                code: warning.code,
+                message: warning.message,
+            })
+            .collect::<Vec<_>>();
         Ok(warnings)
     }
 }
@@ -276,8 +301,37 @@ pub fn default_agent_profile(name: &str, kind: AgentKind, command: &str) -> Agen
         timeout_sec: 3600,
         version_command: default_version_command(kind),
         auth: default_auth_config(kind),
+        setup: default_setup_config(kind),
+        skills: CapabilityPolicy::default(),
+        tools: CapabilityPolicy::default(),
+        hooks: CapabilityPolicy::default(),
         usage: UsageConfig::default(),
         labels: default_labels(kind),
+    }
+}
+
+fn default_setup_config(kind: AgentKind) -> SetupConfig {
+    let required_commands = match kind {
+        AgentKind::Codex => vec!["codex"],
+        AgentKind::ClaudeCode => vec!["claude"],
+        AgentKind::Opencode => vec!["opencode"],
+        AgentKind::PiCodingAgent => vec!["pi"],
+        AgentKind::Fake | AgentKind::Custom => Vec::new(),
+    }
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    SetupConfig {
+        preset: match kind {
+            AgentKind::Fake => SetupPreset::None,
+            _ => SetupPreset::Builtin,
+        },
+        required_commands,
+        run_as: match kind {
+            AgentKind::Fake => RunAs::Current,
+            _ => RunAs::Harnesslab,
+        },
+        commands: Vec::new(),
     }
 }
 

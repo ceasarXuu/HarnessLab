@@ -52,8 +52,6 @@ pub(super) fn parse_terminal_bench_result(
         ))
     } else if score >= 1.0 {
         Ok((evaluation, usage, FailureClass::None, None, score))
-    } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
-        Ok((evaluation, usage, failure_class, Some(failure_code), score))
     } else if adapter_agent_timeout_cleanup_succeeded(result_path) {
         Ok((
             evaluation,
@@ -62,6 +60,8 @@ pub(super) fn parse_terminal_bench_result(
             Some(FailureCode::AgentTimeout),
             score,
         ))
+    } else if let Some((failure_class, failure_code)) = terminal_bench_failure(&value, task_id) {
+        Ok((evaluation, usage, failure_class, Some(failure_code), score))
     } else {
         Ok((
             evaluation,

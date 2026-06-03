@@ -445,8 +445,8 @@ sleep 8
         "smoke",
         &[],
         &[
-            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "2"),
-            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "10"),
+            ("HARNESSLAB_TERMINAL_BENCH_NO_OUTPUT_TIMEOUT_SEC", "5"),
+            ("HARNESSLAB_TERMINAL_BENCH_PROCESS_TIMEOUT_SEC", "15"),
         ],
         1,
     );

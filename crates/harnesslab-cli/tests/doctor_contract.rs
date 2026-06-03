@@ -253,6 +253,174 @@ source = "unsafe/../../usage.json"
     );
 }
 
+#[test]
+fn agt_reg_002_doctor_reports_setup_and_policy_field_paths() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/bad-registry.toml"),
+        r#"schema_version = 1
+name = "bad-registry"
+kind = "custom"
+display_name = "Bad Registry"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "builtin"
+required_commands = ["sh | cat"]
+run_as = "harnesslab"
+commands = ["echo not allowed"]
+
+[skills]
+inherit = true
+allow = ["a"]
+deny = ["a"]
+include_paths = []
+
+[tools]
+inherit = true
+allow = ["bash"]
+deny = ["bash"]
+
+[hooks]
+inherit = true
+allow = ["pre_tool_use"]
+deny = ["pre_tool_use"]
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.bad-registry.validation");
+    assert_eq!(check["status"], "error");
+    assert_error_field(check, "setup.commands", "custom", "setup.preset");
+    assert_error_field(check, "setup.required_commands", "letters", "bare command");
+    assert_error_field(check, "skills.allow", "disjoint", "remove duplicate");
+    assert_error_field(check, "tools.allow", "disjoint", "remove duplicate");
+    assert_error_field(check, "hooks.allow", "disjoint", "remove duplicate");
+}
+
+#[test]
+fn agt_reg_006_doctor_blocks_non_materializable_policy() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/bad-tools.toml"),
+        r#"schema_version = 1
+name = "bad-tools"
+kind = "custom"
+display_name = "Bad Tools"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[skills]
+inherit = true
+allow = []
+deny = []
+include_paths = []
+
+[tools]
+inherit = true
+allow = []
+deny = ["bash"]
+
+[hooks]
+inherit = true
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.bad-tools.capabilities.materialization");
+    assert_eq!(check["status"], "error");
+    assert!(
+        check["details"]["field"]
+            .as_str()
+            .unwrap()
+            .contains("tools")
+    );
+    assert!(
+        check["details"]["suggested_fix"]
+            .as_str()
+            .unwrap()
+            .contains("default tools policy")
+    );
+}
+
+fn assert_error_field(check: &serde_json::Value, field: &str, accepted: &str, suggested: &str) {
+    let error = check["details"]["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|error| error["field"] == field)
+        .unwrap_or_else(|| panic!("missing error field {field}"));
+    assert!(
+        error["accepted_values"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value.as_str().unwrap_or_default().contains(accepted)),
+        "missing accepted value {accepted} in {error}"
+    );
+    assert!(
+        error["suggested_fix"].as_str().unwrap().contains(suggested),
+        "missing suggested fix {suggested} in {error}"
+    );
+}
+
 fn find_check<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
     json["checks"]
         .as_array()

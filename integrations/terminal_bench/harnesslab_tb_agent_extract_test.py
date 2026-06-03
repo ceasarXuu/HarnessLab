@@ -1,5 +1,9 @@
 import unittest
 
+import pytest
+
+pytest.importorskip("terminal_bench.agents.base_agent")
+
 from harnesslab_tb_agent import extract_shell_script
 
 

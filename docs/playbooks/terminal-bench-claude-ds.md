@@ -57,9 +57,7 @@ target/debug/harnesslab --home "$HARNESSLAB_HOME" init
 
 ## 2. 注册 claude-ds agent
 
-Agent 注册是 HarnessLab 的第一体验。理想情况下，用户或另一个辅助 agent 只需要写一份可读注册表：说明这个 harness 怎么启动、继承哪些认证、启用/禁用哪些 skills/tools/hooks。HarnessLab 负责校验、解释并展开为 sandbox 运行细节。
-
-当前 MVP 里，`claude-ds` 仍需要通过 `labels.sandbox_setup_command` 做一段高级 setup，这是可运行的兼容写法，不是最终希望用户长期手写的注册体验。后续应迁移到参数化 `[setup]` 字段。
+Agent 注册是 HarnessLab 的第一体验。用户或另一个辅助 agent 只需要写一份可读注册表：说明这个 harness 怎么启动、继承哪些认证、启用/禁用哪些 skills/tools/hooks。HarnessLab 负责校验、解释并展开为 sandbox 运行细节。
 
 先确认 HarnessLab 仓库绝对路径：
 
@@ -72,7 +70,7 @@ pwd
 ```toml
 schema_version = 1
 name = "claude-ds"
-kind = "custom"
+kind = "claude-code"
 display_name = "Claude Code via DeepSeek API"
 command = "claude-ds -p --bare --output-format text"
 input_mode = "stdin"
@@ -100,75 +98,6 @@ exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
 
-[usage]
-parser = "none"
-source = "agent_logs"
-input_tokens_key = "input_tokens"
-output_tokens_key = "output_tokens"
-total_tokens_key = "total_tokens"
-cost_usd_key = "cost_usd"
-
-[labels]
-terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"
-terminal_bench_agent_pythonpath = "<HARNESSLAB_REPO>/integrations/terminal_bench"
-sandbox_setup_command = """
-if ! command -v claude >/dev/null 2>&1; then
-  if command -v npm >/dev/null 2>&1; then
-    npm install -g @anthropic-ai/claude-code >/tmp/harnesslab-claude-code-install.log 2>&1 || {
-      cat /tmp/harnesslab-claude-code-install.log >&2
-      exit 127
-    }
-  else
-    echo 'claude CLI missing and npm unavailable' >&2
-    exit 127
-  fi
-fi
-if ! id -u harnesslab >/dev/null 2>&1; then
-  useradd -m -s /bin/bash harnesslab
-fi
-chown -R harnesslab:harnesslab /workspace /home/harnesslab
-cat >/usr/local/bin/claude-ds <<'EOF'
-#!/usr/bin/env bash
-set -e
-if [ "$(id -u)" = "0" ]; then
-  exec runuser -u harnesslab --preserve-environment -- claude --dangerously-skip-permissions "$@"
-fi
-exec claude --dangerously-skip-permissions "$@"
-EOF
-chmod +x /usr/local/bin/claude-ds
-"""
-```
-
-关键字段说明：
-
-| 字段 | 取值范围 | 示例 | 说明 |
-| --- | --- | --- | --- |
-| `schema_version` | 当前固定 `1` | `1` | profile schema 版本。 |
-| `name` | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `claude-ds` | `--agent` 使用的 profile 名称。 |
-| `kind` | `codex` / `claude-code` / `opencode` / `pi-coding-agent` / `custom` / `fake` | `custom` | 用于选择默认检测、认证继承和 adapter 行为。 |
-| `display_name` | 任意可读字符串 | `Claude Code via DeepSeek API` | 报告中展示的名称。 |
-| `command` | shell 命令字符串 | `claude-ds -p --bare --output-format text` | HarnessLab 启动 agent 的命令模板。不要直接写密钥。 |
-| `input_mode` | `stdin` / `argument` / `file` / `tty` | `stdin` | 任务说明如何传给 agent。 |
-| `working_dir` | `workspace` / `run_dir` | `workspace` | agent 的启动目录。 |
-| `timeout_sec` | 正整数秒 | `300` | profile 默认 agent 预算；Terminal-Bench task 自带更小预算时会被 task 配置收敛。 |
-| `auth.inherit` | `true` / `false` | `true` | 是否继承 `inherit_env` 和 `include_paths` 中声明的认证/配置。 |
-| `auth.inherit_env` | 环境变量名数组 | `["ANTHROPIC_AUTH_TOKEN"]` | 允许进入运行环境的变量名，只写变量名，不写值。 |
-| `auth.include_paths` | 路径数组，支持 `host:container:mode` | `[]` | 显式挂载的认证/配置路径。 |
-| `auth.exclude_paths` | 路径数组 | `[]` | 从继承路径中排除的路径。 |
-| `mount_ssh_socket` | `true` / `false` | `false` | 是否挂载 SSH agent socket。 |
-| `mount_docker_socket` | `true` / `false` | `false` | 是否挂载 Docker socket；默认禁止。 |
-| `usage.parser` | `none` / `regex` / `json_path` | `none` | token/cost 采集方式。 |
-| `terminal_bench_agent_import_path` | Python import path | `harnesslab_tb_agent:HarnessLabCommandAgent` | 接入官方 Terminal-Bench `--agent-import-path`。 |
-| `terminal_bench_agent_pythonpath` | 绝对路径 | `<HARNESSLAB_REPO>/integrations/terminal_bench` | Terminal-Bench bridge 代码目录，不要保留 `<HARNESSLAB_REPO>` 字面量。 |
-| `sandbox_setup_command` | shell 命令字符串 | 见上方示例 | 当前 MVP 高级逃生口，用于在 benchmark 容器里准备 `claude`/`claude-ds`。后续应被参数化 `[setup]` 替代。 |
-
-如果你的 `claude-ds` wrapper 使用不同环境变量，只需要调整 `inherit_env`。不要把 API key 直接写进 `command`。
-
-### 2.1 目标注册表中的 setup 和能力开关
-
-正式注册表应把 setup、skills、tools、hooks 放在独立段落，而不是塞进 `labels`：
-
-```toml
 [setup]
 preset = "builtin"
 required_commands = ["claude", "claude-ds"]
@@ -190,9 +119,61 @@ deny = []
 inherit = true
 allow = []
 deny = []
+
+[usage]
+parser = "none"
+source = "agent_logs"
+input_tokens_key = "input_tokens"
+output_tokens_key = "output_tokens"
+total_tokens_key = "total_tokens"
+cost_usd_key = "cost_usd"
+
+[labels]
+terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"
+terminal_bench_agent_pythonpath = "<HARNESSLAB_REPO>/integrations/terminal_bench"
+model = "deepseek"
 ```
 
-字段规则：
+关键字段说明：
+
+| 字段 | 取值范围 | 示例 | 说明 |
+| --- | --- | --- | --- |
+| `schema_version` | 当前固定 `1` | `1` | profile schema 版本。 |
+| `name` | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `claude-ds` | `--agent` 使用的 profile 名称。 |
+| `kind` | `codex` / `claude-code` / `opencode` / `pi-coding-agent` / `custom` / `fake` | `claude-code` | 用于选择默认检测、认证继承、内置 setup 和 adapter 行为。 |
+| `display_name` | 任意可读字符串 | `Claude Code via DeepSeek API` | 报告中展示的名称。 |
+| `command` | shell 命令字符串 | `claude-ds -p --bare --output-format text` | HarnessLab 启动 agent 的命令模板。不要直接写密钥。 |
+| `input_mode` | `stdin` / `argument` / `file` / `tty` | `stdin` | 任务说明如何传给 agent。 |
+| `working_dir` | `workspace` / `run_dir` | `workspace` | agent 的启动目录。 |
+| `timeout_sec` | 正整数秒 | `300` | profile 默认 agent 预算；Terminal-Bench task 自带更小预算时会被 task 配置收敛。 |
+| `auth.inherit` | `true` / `false` | `true` | 是否继承 `inherit_env` 和 `include_paths` 中声明的认证/配置。 |
+| `auth.inherit_env` | 环境变量名数组 | `["ANTHROPIC_AUTH_TOKEN"]` | 允许进入运行环境的变量名，只写变量名，不写值。 |
+| `auth.include_paths` | 路径数组，支持 `host:container:mode` | `[]` | 显式挂载的认证/配置路径。 |
+| `auth.exclude_paths` | 路径数组 | `[]` | 从继承路径中排除的路径。 |
+| `mount_ssh_socket` | `true` / `false` | `false` | 是否挂载 SSH agent socket。 |
+| `mount_docker_socket` | `true` / `false` | `false` | 是否挂载 Docker socket；默认禁止。 |
+| `setup.preset` | `none` / `builtin` / `custom` | `builtin` | `builtin` 用 HarnessLab 内置逻辑安装/准备该 kind 的 CLI；`custom` 才允许 `setup.commands`。 |
+| `setup.required_commands` | 命令名数组 | `["claude", "claude-ds"]` | setup 后必须存在的命令。包含 `claude-ds` 时，Claude Code adapter 会在容器内生成 wrapper。 |
+| `setup.run_as` | `root` / `harnesslab` / `current` | `harnesslab` | agent 命令在 sandbox 内的运行用户。 |
+| `setup.commands` | shell 命令数组 | `[]` | 高级 escape hatch，仅 `preset = "custom"` 时允许。 |
+| `skills.inherit` | `true` / `false` | `true` | 是否继承该 agent kind 的默认 skills。 |
+| `skills.allow` | 字符串数组 | `[]` | skills 白名单；空数组表示不额外限制。 |
+| `skills.deny` | 字符串数组 | `[]` | skills 黑名单；不能和 `allow` 重复。 |
+| `skills.include_paths` | 路径数组 | `[]` | 额外 skills 路径。 |
+| `tools.inherit` | `true` / `false` | `true` | 是否继承默认 tools。 |
+| `tools.allow` | 字符串数组 | `[]` | tools 白名单。 |
+| `tools.deny` | 字符串数组 | `[]` | tools 黑名单；不能和 `allow` 重复。 |
+| `hooks.inherit` | `true` / `false` | `true` | 是否继承默认 hooks。 |
+| `hooks.allow` | 字符串数组 | `[]` | hooks 白名单。 |
+| `hooks.deny` | 字符串数组 | `[]` | hooks 黑名单；不能和 `allow` 重复。 |
+| `usage.parser` | `none` / `regex` / `json_path` | `none` | token/cost 采集方式。 |
+| `terminal_bench_agent_import_path` | Python import path | `harnesslab_tb_agent:HarnessLabCommandAgent` | 接入官方 Terminal-Bench `--agent-import-path`。 |
+| `terminal_bench_agent_pythonpath` | 绝对路径 | `<HARNESSLAB_REPO>/integrations/terminal_bench` | Terminal-Bench bridge 代码目录，不要保留 `<HARNESSLAB_REPO>` 字面量。 |
+| `labels.model` | 字符串 | `deepseek` | 报告展示用模型/配置标签。 |
+
+如果你的 `claude-ds` wrapper 使用不同环境变量，只需要调整 `inherit_env`。不要把 API key 直接写进 `command`。
+
+### 2.1 setup 和能力开关规则
 
 | 段落 | 字段 | 取值范围 | 说明 |
 | --- | --- | --- | --- |
@@ -211,7 +192,7 @@ deny = []
 | `hooks` | `allow` | 字符串数组 | hooks 白名单。 |
 | `hooks` | `deny` | 字符串数组 | hooks 黑名单；不能和 `allow` 重复。 |
 
-当前 CLI 版本还没有完整 materialize 这些 `[setup]`、`[skills]`、`[tools]`、`[hooks]` 字段。它们是注册体验必须补齐的功能契约：在代码支持前，不要用“声明了白名单/黑名单”的 profile 做正式对比分数。
+当前版本会严格阻断无法 materialize 的非默认 `skills/tools/hooks` 策略。也就是说，声明了白名单/黑名单但对应 harness adapter 还不能证明可执行时，`doctor` 和 `run` 会提前报错，而不是静默忽略。
 
 ## 3. 运行预检查
 
@@ -472,7 +453,7 @@ which claude-ds
 claude-ds -p --bare --output-format text
 ```
 
-如果宿主机可用但 benchmark 容器里不可用，检查 `sandbox_setup_command` 是否成功安装 `claude` 并写入 `/usr/local/bin/claude-ds`。
+如果宿主机可用但 benchmark 容器里不可用，先看 run 目录里的 `agent-runtime.materialized.json` 和 task 级 `agent_setup_*.log`，确认 `[setup] preset = "builtin"` 已安装 `claude` 并写入 `/usr/local/bin/claude-ds`。
 
 ### API key 没有传入
 

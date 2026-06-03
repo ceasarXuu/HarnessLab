@@ -1,3 +1,4 @@
+mod agent_registry;
 mod app;
 mod benchmark_data;
 mod doctor;
@@ -52,6 +53,10 @@ pub(crate) enum Command {
 #[derive(Debug, Subcommand)]
 pub(crate) enum AgentCommand {
     List {
+        #[arg(long)]
+        json: bool,
+    },
+    Schema {
         #[arg(long)]
         json: bool,
     },

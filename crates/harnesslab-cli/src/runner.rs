@@ -6,42 +6,49 @@ mod patch;
 mod replay;
 mod run_output;
 mod sandbox;
+mod sandbox_setup;
 mod schedule;
 mod shell;
 mod store;
 mod usage;
+mod verifier;
+use crate::agent_registry::{
+    MaterializedAgentProfile, materialization_error_to_anyhow, materialize_profile,
+};
 use crate::benchmark_data::{ensure_split_runnable, resolve_benchmarks_dir};
 use crate::output::PathOutput;
 use crate::print_json;
 use anyhow::{Context, Result, bail};
-use attempts::execute_attempts;
+use attempts::{TaskExecutionContext, execute_attempts};
 use cleanup::RunSandboxCleanup;
 use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
-    AgentProfile, AttemptProvenance, BenchmarkRef, EvaluationRecord, FailureClass, FailureCode,
-    Outcome, RunPaths, RunSpec, TaskAttemptResult, TaskPlan, TaskState, classify_agent_process,
+    AgentProfile, AttemptProvenance, BenchmarkRef, FailureClass, FailureCode, Outcome, RunPaths,
+    RunSpec, TaskAttemptResult, TaskPlan, TaskState, classify_agent_process,
     classify_evaluation_process, derive_exit_code, health_impact_for_failure, summarize_results,
     task_dir_name, validate_benchmark_plan, validate_global_config, validate_run_spec,
 };
 use harnesslab_infra::{
-    ExecSpec, HostProcessExecutor, append_event, atomic_write_json, collect_artifacts,
-    command_exists, event, first_command_word, read_json,
+    append_event, atomic_write_json, collect_artifacts, command_exists, event, first_command_word,
+    read_json,
 };
 use patch::{capture_patch, patch_failure};
 use replay::{replay_plan_from_source, replay_spec_from_source};
-use sandbox::run_agent;
-use schedule::partition_attempts;
+use sandbox::{AgentRunRequest, run_agent};
+use schedule::{AttemptWork, partition_attempts};
 use shell::run_shell;
 use std::fs;
 use std::path::Path;
 use store::{load_config, load_profile, write_run_inputs};
 use usage::collect_usage;
+use verifier::run_verifier;
 #[derive(Debug, Clone, Copy)]
 enum ExecutionMode {
     New,
     Resume,
     Replay,
 }
+
 #[cfg(test)]
 use {
     attempts::panic_message,
@@ -61,6 +68,7 @@ pub(crate) fn execute_new_run(
     validate_global_config(&config)?;
     let profile = load_profile(home, agent_name)?;
     profile.validate()?;
+    let materialized = materialize_profile(&profile).map_err(materialization_error_to_anyhow)?;
     let benchmark_root = resolve_benchmarks_dir(home, Some(&config));
     let adapter = adapter_for_with_root(benchmark_name, benchmark_root.as_deref())
         .with_context(|| format!("unknown benchmark {benchmark_name}"))?;
@@ -109,6 +117,7 @@ pub(crate) fn execute_new_run(
         &spec,
         &profile,
         &report_profile,
+        &materialized,
         &plan,
         &original_command,
     )?;
@@ -117,6 +126,7 @@ pub(crate) fn execute_new_run(
         &spec,
         &profile,
         &report_profile,
+        &materialized,
         &plan,
         ExecutionMode::New,
     )?;
@@ -143,6 +153,7 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
     validate_run_spec(&spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
+    let materialized = materialize_profile(&profile).map_err(materialization_error_to_anyhow)?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;
     store::log_profile_snapshot_loaded(run_dir, &spec.run_id, profile_source.as_str(), "resume")?;
     let code = execute_plan(
@@ -150,6 +161,7 @@ pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32
         &spec,
         &profile,
         &report_profile,
+        &materialized,
         &plan,
         ExecutionMode::Resume,
     )?;
@@ -175,6 +187,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     let plan = replay_plan_from_source(source, &source_spec)?;
     validate_benchmark_plan(&plan)?;
     profile.validate()?;
+    let materialized = materialize_profile(&profile).map_err(materialization_error_to_anyhow)?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;
     if let Some(command) = first_command_word(&profile.command)
         && !command_exists(command)
@@ -199,6 +212,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &spec,
         &profile,
         &report_profile,
+        &materialized,
         &plan,
         &original_command,
     )?;
@@ -208,6 +222,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &spec,
         &profile,
         &report_profile,
+        &materialized,
         &plan,
         ExecutionMode::Replay,
     )?;
@@ -220,6 +235,7 @@ fn execute_plan(
     spec: &RunSpec,
     profile: &AgentProfile,
     report_profile: &AgentProfile,
+    materialized_profile: &MaterializedAgentProfile,
     plan: &harnesslab_core::BenchmarkPlan,
     mode: ExecutionMode,
 ) -> Result<i32> {
@@ -275,6 +291,7 @@ fn execute_plan(
         spec,
         profile,
         report_profile,
+        materialized_profile,
         pending,
         spec.execution.concurrency,
     )?);
@@ -292,7 +309,15 @@ fn execute_plan(
         harnesslab_report::ReportContext {
             run_id: spec.run_id.clone(),
             agent: spec.agent_profile_ref.clone(),
-            agent_config_summary: store::agent_config_summary(spec, report_profile),
+            agent_config_summary: store::agent_config_summary(
+                spec,
+                report_profile,
+                materialized_profile,
+            ),
+            setup_summary: materialized_profile.setup_summary.clone(),
+            skills_summary: materialized_profile.skills_summary.clone(),
+            tools_summary: materialized_profile.tools_summary.clone(),
+            hooks_summary: materialized_profile.hooks_summary.clone(),
             benchmark: spec.benchmark.name.clone(),
             split: spec.benchmark.split.clone(),
             report_path: report_path.clone(),
@@ -329,15 +354,15 @@ fn execute_plan(
     Ok(exit_code)
 }
 
-fn execute_task(
-    run_dir: &Path,
-    spec: &RunSpec,
-    profile: &AgentProfile,
-    report_profile: &AgentProfile,
-    task: &TaskPlan,
-    attempt: u32,
-    provenance: AttemptProvenance,
-) -> Result<TaskAttemptResult> {
+fn execute_task(ctx: &TaskExecutionContext, work: AttemptWork) -> Result<TaskAttemptResult> {
+    let run_dir = &ctx.run_dir;
+    let spec = &ctx.spec;
+    let profile = &ctx.profile;
+    let report_profile = &ctx.report_profile;
+    let materialized_profile = &ctx.materialized_profile;
+    let task = &work.task;
+    let attempt = work.attempt;
+    let provenance = work.provenance;
     let started = std::time::Instant::now();
     let task_dir = task_dir_name(&task.task_id)?;
     let attempt_dir = run_dir
@@ -361,6 +386,7 @@ fn execute_task(
             spec,
             profile,
             report_profile,
+            materialized_profile,
             task,
             attempt,
             provenance,
@@ -368,15 +394,16 @@ fn execute_task(
             started,
         });
     }
-    let agent_run = run_agent(
+    let agent_run = run_agent(AgentRunRequest {
         spec,
         profile,
         report_profile,
+        materialized_profile,
         task,
         attempt,
-        &attempt_dir,
-        &workspace,
-    )?;
+        attempt_dir: &attempt_dir,
+        workspace: &workspace,
+    })?;
     let agent_failure = agent_run.sandbox_failure.map_or_else(
         || classify_agent_process(&agent_run.process),
         |code| harnesslab_core::Failure {
@@ -462,34 +489,6 @@ fn prepare_workspace(workspace: &Path, task: &TaskPlan) -> Result<()> {
         )?;
     }
     Ok(())
-}
-fn run_verifier(workspace: &Path, attempt_dir: &Path, task: &TaskPlan) -> Result<EvaluationRecord> {
-    let result = HostProcessExecutor::exec(&ExecSpec {
-        command: task.verifier_spec.command.clone(),
-        stdin: None,
-        working_dir: workspace.to_path_buf(),
-        timeout_sec: task.verifier_spec.timeout_sec,
-        no_output_timeout_sec: None,
-        no_output_progress_paths: Vec::new(),
-        no_output_activity_patterns: Vec::new(),
-        no_output_activity_event: None,
-        stdout_path: attempt_dir.join("verifier/stdout.log"),
-        stderr_path: attempt_dir.join("verifier/stderr.log"),
-    })?;
-    Ok(EvaluationRecord {
-        exit_code: result.exit_code,
-        raw_score: if task
-            .verifier_spec
-            .expected_exit_codes
-            .contains(&result.exit_code.unwrap_or(-1))
-        {
-            1.0
-        } else {
-            0.0
-        },
-        stdout_path: "verifier/stdout.log".to_string(),
-        stderr_path: "verifier/stderr.log".to_string(),
-    })
 }
 #[cfg(test)]
 #[path = "runner_tests.rs"]

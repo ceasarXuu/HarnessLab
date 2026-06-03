@@ -18,7 +18,7 @@ pub(super) struct NoOutputWatchdog {
 impl NoOutputWatchdog {
     pub(super) fn new(progress_paths: Vec<PathBuf>, started: Instant) -> Self {
         Self {
-            progress_watcher: ProgressWatcher::new(progress_paths),
+            progress_watcher: ProgressWatcher::new_counting_existing_content(progress_paths),
             next_probe: started,
             last_event_at: None,
             activity_deferral_started_at: None,

@@ -3,8 +3,9 @@ use super::terminal_bench_timeout::{
     terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
     terminal_bench_timeout_values,
 };
+use crate::agent_registry::{MaterializedAgentProfile, materialize_profile};
 use harnesslab_core::{
-    AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, TerminationReason,
+    AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, RunAs, TerminationReason,
     default_agent_profile,
 };
 use std::fs;
@@ -113,10 +114,32 @@ fn terminal_bench_hard_timeout_maps_to_external_runner_timeout() {
 #[test]
 fn terminal_bench_env_uses_effective_agent_timeout() {
     let profile = default_agent_profile("custom", AgentKind::Custom, "agent");
+    let materialized = materialize_profile(&profile).unwrap();
 
-    let env = terminal_bench_agent_env(&profile, 42);
+    let env = terminal_bench_agent_env(&profile, &materialized, 42);
 
     assert!(env.contains("export HARNESSLAB_AGENT_TIMEOUT_SEC='42'"));
+    assert!(env.contains("export HARNESSLAB_AGENT_SETUP_COMMAND=''"));
+}
+
+#[test]
+fn agt_reg_005_terminal_bench_env_uses_materialized_setup_not_raw_profile() {
+    let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent");
+    profile.setup.commands = vec!["raw-profile-setup".to_string()];
+    let materialized = MaterializedAgentProfile {
+        setup_script: Some("materialized-only-setup".to_string()),
+        setup_summary: "summary".to_string(),
+        skills_summary: "skills".to_string(),
+        tools_summary: "tools".to_string(),
+        hooks_summary: "hooks".to_string(),
+        run_as: RunAs::Current,
+        warnings: Vec::new(),
+    };
+
+    let env = terminal_bench_agent_env(&profile, &materialized, 42);
+
+    assert!(env.contains("export HARNESSLAB_AGENT_SETUP_COMMAND='materialized-only-setup'"));
+    assert!(!env.contains("raw-profile-setup"));
 }
 
 #[test]
@@ -135,10 +158,11 @@ fn terminal_bench_import_agent_official_timeout_adds_cleanup_grace() {
 fn terminal_bench_tty_mode_maps_to_stdin_for_import_agent() {
     let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent");
     profile.input_mode = InputMode::Tty;
+    let materialized = materialize_profile(&profile).unwrap();
 
     assert_eq!(terminal_bench_input_mode(&profile), "stdin");
     assert!(
-        terminal_bench_agent_env(&profile, 5)
+        terminal_bench_agent_env(&profile, &materialized, 5)
             .contains("export HARNESSLAB_AGENT_INPUT_MODE='stdin'")
     );
 }
@@ -270,7 +294,7 @@ fn terminal_bench_result_maps_parse_error_to_agent_output_parse_error() {
 }
 
 #[test]
-fn terminal_bench_result_adapter_timeout_log_does_not_override_parse_error() {
+fn terminal_bench_result_adapter_timeout_log_overrides_parse_error() {
     let attempt_dir = tempfile::tempdir().unwrap();
     let result_path = write_result(
         attempt_dir.path(),
@@ -290,7 +314,7 @@ fn terminal_bench_result_adapter_timeout_log_does_not_override_parse_error() {
         .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
-    assert_eq!(failure_code, Some(FailureCode::AgentOutputParseError));
+    assert_eq!(failure_code, Some(FailureCode::AgentTimeout));
 }
 
 #[test]
@@ -389,7 +413,7 @@ fn terminal_bench_result_live_child_cleanup_log_is_execution_failure() {
 }
 
 #[test]
-fn terminal_bench_result_official_failure_mode_wins_over_adapter_timeout_log() {
+fn terminal_bench_result_adapter_timeout_log_overrides_later_test_timeout() {
     let attempt_dir = tempfile::tempdir().unwrap();
     let result_path = write_result(
         attempt_dir.path(),
@@ -409,7 +433,7 @@ fn terminal_bench_result_official_failure_mode_wins_over_adapter_timeout_log() {
         .unwrap();
 
     assert_eq!(failure_class, FailureClass::Benchmark);
-    assert_eq!(failure_code, Some(FailureCode::VerifierTimeout));
+    assert_eq!(failure_code, Some(FailureCode::AgentTimeout));
 }
 
 #[test]
