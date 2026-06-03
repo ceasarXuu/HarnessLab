@@ -1,4 +1,4 @@
-use crate::agent_registry::materialize_profile;
+use crate::agent_registry::{VersionProbeStatus, materialize_profile, probe_agent_version};
 use crate::benchmark_data::resolve_benchmarks_dir;
 use crate::doctor_capabilities::append_capability_policy_checks;
 use crate::output::{DoctorCheck, DoctorOutput};
@@ -116,6 +116,7 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
     }
     append_capability_policy_checks(profile, checks);
     append_materialization_check(profile, checks);
+    append_version_command_check(home, profile, checks);
     let available = first_command_word(&profile.command)
         .map(command_exists)
         .unwrap_or(false);
@@ -127,6 +128,50 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
     ));
     append_auth_checks(home, profile, checks);
     checks.push(usage_check(profile));
+}
+
+fn append_version_command_check(
+    home: &Path,
+    profile: &AgentProfile,
+    checks: &mut Vec<DoctorCheck>,
+) {
+    if profile.version_command.is_none() {
+        return;
+    }
+    let secrets = profile_secret_values(profile);
+    let secret_refs = secrets.iter().map(String::as_str).collect::<Vec<_>>();
+    match probe_agent_version(
+        profile,
+        home,
+        &home.join(".doctor-version-probes").join(&profile.name),
+        &secret_refs,
+    ) {
+        Ok(Some(snapshot)) => {
+            let (status, severity) = match snapshot.status {
+                VersionProbeStatus::Ok => ("ok", "warning"),
+                VersionProbeStatus::Warning => ("warning", "warning"),
+                VersionProbeStatus::Error => ("error", "error"),
+            };
+            checks.push(check_with_details(
+                &format!("agent.{}.version_command", profile.name),
+                status,
+                severity,
+                &snapshot.message,
+                serde_json::json!({ "version_probe": snapshot }),
+            ));
+        }
+        Ok(None) => {}
+        Err(error) => checks.push(check_with_details(
+            &format!("agent.{}.version_command", profile.name),
+            "warning",
+            "warning",
+            "version_command probe failed",
+            serde_json::json!({
+                "field": "version_command",
+                "error": error.to_string(),
+            }),
+        )),
+    }
 }
 
 fn append_materialization_check(profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {
@@ -169,6 +214,16 @@ fn append_materialization_check(profile: &AgentProfile, checks: &mut Vec<DoctorC
             }),
         )),
     }
+}
+
+fn profile_secret_values(profile: &AgentProfile) -> Vec<String> {
+    profile
+        .auth
+        .inherit_env
+        .iter()
+        .filter_map(|name| std::env::var(name).ok())
+        .filter(|value| !value.is_empty())
+        .collect()
 }
 
 fn append_auth_checks(_home: &Path, profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {

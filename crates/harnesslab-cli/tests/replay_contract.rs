@@ -235,6 +235,165 @@ fn int_014_resume_rejects_invalid_profile_snapshot() {
         .stderr(predicate::str::contains("unsupported schema_version 2"));
 }
 
+#[test]
+fn agt_reg_010_run_stores_agent_version_snapshot() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_version_command(home.path(), "printf ok > result.txt", "printf v1");
+
+    let output = run_success(home.path());
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    let snapshot: serde_json::Value = serde_json::from_reader(
+        fs::File::open(run_dir.join("agent-version.snapshot.json")).unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(snapshot["field"], "version_command");
+    assert_eq!(snapshot["status"], "ok");
+    assert_eq!(snapshot["stdout_tail"], "v1");
+}
+
+#[test]
+fn agt_reg_010_run_redacts_version_probe_public_artifacts() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_version_command(home.path(), "printf ok > result.txt", "printf sk-secret");
+
+    let output = run_success(home.path());
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    let snapshot_text = fs::read_to_string(run_dir.join("agent-version.snapshot.json")).unwrap();
+    let stdout_log = fs::read_to_string(run_dir.join("agent-version-probe/stdout.log")).unwrap();
+
+    assert!(!snapshot_text.contains("sk-secret"));
+    assert!(!stdout_log.contains("sk-secret"));
+    assert!(snapshot_text.contains("[REDACTED]"));
+    assert!(stdout_log.contains("[REDACTED]"));
+    assert_public_artifacts_do_not_contain(run_dir, "sk-secret");
+}
+
+#[test]
+fn agt_reg_010_replay_emits_version_mismatch_event() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_version_command(
+        home.path(),
+        "printf ok > result.txt",
+        "printf $HARNESSLAB_VERSION_PROBE_TEST",
+    );
+    let output = run_success_with_env(home.path(), Some(("HARNESSLAB_VERSION_PROBE_TEST", "v1")));
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+
+    let replay_output = harnesslab()
+        .env("HARNESSLAB_VERSION_PROBE_TEST", "v2")
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "replay",
+            run_dir.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let replay_json: serde_json::Value = serde_json::from_slice(&replay_output).unwrap();
+    let replay_dir = Path::new(replay_json["run_dir"].as_str().unwrap());
+    let events = fs::read_to_string(replay_dir.join("events.jsonl")).unwrap();
+
+    assert!(events.contains("agent_version_mismatch"));
+    assert!(events.contains("current version_command probe differs"));
+    assert!(events.contains("source=status=Ok"));
+    assert!(events.contains("current=status=Ok"));
+    assert!(
+        events.find("agent_version_mismatch").unwrap() < events.find("run_started").unwrap(),
+        "version mismatch should be emitted before replay task execution"
+    );
+}
+
+#[test]
+fn agt_reg_010_replay_emits_version_compare_skip_when_source_snapshot_missing() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_version_command(home.path(), "printf ok > result.txt", "printf v1");
+    let output = run_success(home.path());
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    fs::remove_file(run_dir.join("agent-version.snapshot.json")).unwrap();
+
+    let replay_output = harnesslab()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "replay",
+            run_dir.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let replay_json: serde_json::Value = serde_json::from_slice(&replay_output).unwrap();
+    let replay_dir = Path::new(replay_json["run_dir"].as_str().unwrap());
+    let events = fs::read_to_string(replay_dir.join("events.jsonl")).unwrap();
+
+    assert!(events.contains("agent_version_compare_skipped"));
+    assert!(events.contains("source run has no agent-version.snapshot.json"));
+}
+
+#[test]
+fn agt_reg_010_replay_emits_version_compare_skip_when_current_probe_missing() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_agent_with_version_command(home.path(), "printf ok > result.txt", "printf v1");
+    let output = run_success(home.path());
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let run_dir = Path::new(json["run_dir"].as_str().unwrap());
+    let runtime_profile_path = run_dir.join("agent-profile.runtime.json");
+    let mut runtime_profile: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&runtime_profile_path).unwrap()).unwrap();
+    runtime_profile
+        .as_object_mut()
+        .unwrap()
+        .remove("version_command");
+    fs::write(
+        &runtime_profile_path,
+        serde_json::to_vec_pretty(&runtime_profile).unwrap(),
+    )
+    .unwrap();
+
+    let replay_output = harnesslab()
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "replay",
+            run_dir.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let replay_json: serde_json::Value = serde_json::from_slice(&replay_output).unwrap();
+    let replay_dir = Path::new(replay_json["run_dir"].as_str().unwrap());
+    let events = fs::read_to_string(replay_dir.join("events.jsonl")).unwrap();
+
+    assert!(events.contains("agent_version_compare_skipped"));
+    assert!(events.contains("current profile has no version_command probe"));
+    assert!(
+        events.find("agent_version_compare_skipped").unwrap() < events.find("run_started").unwrap(),
+        "version compare skip should be emitted before replay task execution"
+    );
+}
+
 fn init_home(home: &Path) {
     harnesslab()
         .args(["--home", home.to_str().unwrap(), "init"])
@@ -246,7 +405,20 @@ fn write_agent(home: &Path, command: &str) {
     write_agent_with_inherit_env(home, command, &[]);
 }
 
+fn write_agent_with_version_command(home: &Path, command: &str, version_command: &str) {
+    write_agent_content(
+        home,
+        command,
+        &[],
+        &format!("version_command = \"{version_command}\"\n"),
+    );
+}
+
 fn write_agent_with_inherit_env(home: &Path, command: &str, inherit_env: &[&str]) {
+    write_agent_content(home, command, inherit_env, "");
+}
+
+fn write_agent_content(home: &Path, command: &str, inherit_env: &[&str], extra_fields: &str) {
     let inherit_env = inherit_env
         .iter()
         .map(|name| format!("\"{name}\""))
@@ -261,6 +433,7 @@ command = "{command}"
 input_mode = "stdin"
 working_dir = "workspace"
 timeout_sec = 5
+{extra_fields}
 
 [auth]
 inherit = false

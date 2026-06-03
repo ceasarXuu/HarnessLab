@@ -1,4 +1,4 @@
-use crate::agent_registry::MaterializedAgentProfile;
+use crate::agent_registry::{AgentVersionSnapshot, MaterializedAgentProfile, sanitize_probe_text};
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentProfile, GlobalConfig, RunSpec, is_valid_profile_name, redact_known_secret,
@@ -12,6 +12,7 @@ use time::OffsetDateTime;
 pub(super) const RUNTIME_PROFILE_SNAPSHOT: &str = "agent-profile.runtime.json";
 pub(super) const REPORT_PROFILE_SNAPSHOT: &str = "agent-profile.snapshot.json";
 pub(super) const MATERIALIZED_PROFILE_SNAPSHOT: &str = "agent-runtime.materialized.json";
+pub(super) const AGENT_VERSION_SNAPSHOT: &str = "agent-version.snapshot.json";
 const ORIGINAL_COMMAND_UNAVAILABLE: &str = "[ORIGINAL_COMMAND_UNAVAILABLE]";
 
 #[derive(Debug)]
@@ -33,7 +34,7 @@ pub(super) fn load_config(home: &Path) -> Result<GlobalConfig> {
     )?)?)
 }
 
-pub(super) fn runs_dir(home: &Path, config: &GlobalConfig) -> PathBuf {
+pub(crate) fn runs_dir(home: &Path, config: &GlobalConfig) -> PathBuf {
     if config.runs_dir == "~/.harnesslab/runs" {
         return home.join("runs");
     }
@@ -83,7 +84,11 @@ pub(super) fn load_report_profile(run_dir: &Path) -> Result<AgentProfile> {
 pub(super) fn public_profile_snapshot(profile: &AgentProfile) -> AgentProfile {
     let secrets = secret_values(profile);
     let secret_refs = secrets.iter().map(String::as_str).collect::<Vec<_>>();
-    redacted_profile_snapshot(profile, &secret_refs)
+    let mut snapshot = redacted_profile_snapshot(profile, &secret_refs);
+    if let Some(version_command) = &snapshot.version_command {
+        snapshot.version_command = Some(sanitize_probe_text(version_command, &secret_refs));
+    }
+    snapshot
 }
 
 pub(super) fn write_run_inputs(
@@ -92,6 +97,7 @@ pub(super) fn write_run_inputs(
     runtime_profile: &AgentProfile,
     report_profile: &AgentProfile,
     materialized_profile: &MaterializedAgentProfile,
+    version_snapshot: Option<&AgentVersionSnapshot>,
     plan: &harnesslab_core::BenchmarkPlan,
     original_command: &str,
 ) -> Result<()> {
@@ -105,12 +111,23 @@ pub(super) fn write_run_inputs(
         &run_dir.join(MATERIALIZED_PROFILE_SNAPSHOT),
         &redacted_materialized_snapshot(materialized_profile, &secret_refs),
     )?;
+    if let Some(version_snapshot) = version_snapshot {
+        atomic_write_json(&run_dir.join(AGENT_VERSION_SNAPSHOT), version_snapshot)?;
+    }
     atomic_write_json(&run_dir.join("benchmark.snapshot.json"), plan)?;
     fs::write(
         run_dir.join("command.txt"),
         root_command_snapshot(spec, report_profile, original_command, &secret_refs),
     )?;
     Ok(())
+}
+
+pub(super) fn load_agent_version_snapshot(run_dir: &Path) -> Result<Option<AgentVersionSnapshot>> {
+    let path = run_dir.join(AGENT_VERSION_SNAPSHOT);
+    if path.exists() {
+        return Ok(Some(read_json(&path)?));
+    }
+    Ok(None)
 }
 
 pub(super) fn secret_values(profile: &AgentProfile) -> Vec<String> {
