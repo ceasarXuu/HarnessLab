@@ -8,6 +8,7 @@ use harnesslab_core::{
     effective_auth_mount_specs,
 };
 use harnesslab_infra::{DockerCliProvider, DockerCreateRequest, ExecSpec, HostProcessExecutor};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -67,6 +68,8 @@ pub(super) fn run_agent(request: AgentRunRequest<'_>) -> Result<AgentExecution> 
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: true,
+        env_vars: resolved_agent_env(profile, task),
         stdout_path: attempt_dir.join("agent/stdout.log"),
         stderr_path: attempt_dir.join("agent/stderr.log"),
     };
@@ -129,7 +132,7 @@ pub(super) fn docker_create_request(
         workspace_host_path: workspace.to_path_buf(),
         workspace_container_path: "/workspace".to_string(),
         network: spec.execution.network,
-        env_vars: merged_env_vars(profile, task),
+        env_vars: docker_env_vars(profile, task),
         mounts: merged_mounts(profile, task),
         privileged: task.sandbox_spec.privileged,
         cpu_cores: task.sandbox_spec.resource_limits.cpu_cores,
@@ -163,7 +166,7 @@ fn redacted_rendered_command(profile: &AgentProfile, rendered_command: &str) -> 
     rendered_command.to_string()
 }
 
-fn merged_env_vars(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
+fn docker_env_vars(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
     let mut values = task.sandbox_spec.env_vars.clone();
     if !profile.auth.inherit {
         return values;
@@ -174,6 +177,38 @@ fn merged_env_vars(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {
         }
     }
     values
+}
+
+fn resolved_agent_env(profile: &AgentProfile, task: &TaskPlan) -> BTreeMap<String, String> {
+    let mut values = launch_baseline_env();
+    for entry in &task.sandbox_spec.env_vars {
+        if let Some((name, value)) = entry.split_once('=') {
+            values.insert(name.to_string(), value.to_string());
+        } else if let Ok(value) = std::env::var(entry) {
+            values.insert(entry.clone(), value);
+        }
+    }
+    if profile.auth.inherit {
+        for name in &profile.auth.inherit_env {
+            if let Ok(value) = std::env::var(name) {
+                values.entry(name.clone()).or_insert(value);
+            }
+        }
+    }
+    values
+}
+
+fn launch_baseline_env() -> BTreeMap<String, String> {
+    [
+        "PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "TERM",
+    ]
+    .into_iter()
+    .filter_map(|name| {
+        std::env::var(name)
+            .ok()
+            .map(|value| (name.to_string(), value))
+    })
+    .collect()
 }
 
 fn merged_mounts(profile: &AgentProfile, task: &TaskPlan) -> Vec<String> {

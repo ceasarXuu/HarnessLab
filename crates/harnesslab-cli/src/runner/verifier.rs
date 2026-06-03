@@ -17,6 +17,8 @@ pub(super) fn run_verifier(
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: attempt_dir.join("verifier/stdout.log"),
         stderr_path: attempt_dir.join("verifier/stderr.log"),
     })?;

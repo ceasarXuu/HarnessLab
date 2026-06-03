@@ -66,6 +66,8 @@ fn c_sbox_014_signal_helper_runs_host_executor() {
         no_output_progress_paths: Vec::new(),
         no_output_activity_patterns: Vec::new(),
         no_output_activity_event: None,
+        env_clear: false,
+        env_vars: std::collections::BTreeMap::new(),
         stdout_path: tmp.path().join("stdout.log"),
         stderr_path: tmp.path().join("stderr.log"),
     };

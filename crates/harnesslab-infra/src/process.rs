@@ -1,6 +1,7 @@
 use crate::{NoOutputActivityEvent, process_group_activity};
 use anyhow::{Context, Result};
 use harnesslab_core::{ProcessRecord, TerminationReason};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -41,6 +42,8 @@ pub struct ExecSpec {
     pub no_output_progress_paths: Vec<std::path::PathBuf>,
     pub no_output_activity_patterns: Vec<String>,
     pub no_output_activity_event: Option<NoOutputActivityEvent>,
+    pub env_clear: bool,
+    pub env_vars: BTreeMap<String, String>,
     pub stdout_path: std::path::PathBuf,
     pub stderr_path: std::path::PathBuf,
 }
@@ -221,6 +224,10 @@ fn spawn_child(spec: &ExecSpec) -> std::io::Result<SpawnedChild> {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if spec.env_clear {
+        command.env_clear();
+    }
+    command.envs(&spec.env_vars);
     configure_child_process_group(&mut command, start_gate.child_fds());
     let child = command.spawn()?;
     start_gate.close_child_end();

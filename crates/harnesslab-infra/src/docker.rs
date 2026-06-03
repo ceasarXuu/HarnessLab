@@ -126,7 +126,12 @@ impl DockerCliProvider {
     }
 
     pub fn exec(handle: &SandboxHandle, spec: &ExecSpec) -> Result<ProcessRecord> {
-        let wrapped = ExecSpec {
+        let wrapped = Self::exec_host_spec(handle, spec);
+        HostProcessExecutor::exec(&wrapped)
+    }
+
+    fn exec_host_spec(handle: &SandboxHandle, spec: &ExecSpec) -> ExecSpec {
+        ExecSpec {
             command: docker_shell_command(&Self::exec_args(handle, &spec.command)),
             stdin: spec.stdin.clone(),
             working_dir: spec.working_dir.clone(),
@@ -135,10 +140,11 @@ impl DockerCliProvider {
             no_output_progress_paths: spec.no_output_progress_paths.clone(),
             no_output_activity_patterns: spec.no_output_activity_patterns.clone(),
             no_output_activity_event: spec.no_output_activity_event.clone(),
+            env_clear: false,
+            env_vars: std::collections::BTreeMap::new(),
             stdout_path: spec.stdout_path.clone(),
             stderr_path: spec.stderr_path.clone(),
-        };
-        HostProcessExecutor::exec(&wrapped)
+        }
     }
 
     pub fn copy_out(
