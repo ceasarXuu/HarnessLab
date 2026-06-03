@@ -1,6 +1,9 @@
+use crate::agent_registry::MaterializedAgentProfile;
+use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentProfile, AttemptProvenance, ExternalRunnerKind, RunSpec, TaskAttemptResult, TaskPlan,
+    redact_known_secret,
 };
 use std::fs;
 use std::path::Path;
@@ -38,6 +41,7 @@ pub(super) struct ExternalTaskExecution<'a> {
     pub(super) spec: &'a RunSpec,
     pub(super) profile: &'a AgentProfile,
     pub(super) report_profile: &'a AgentProfile,
+    pub(super) materialized_profile: &'a MaterializedAgentProfile,
     pub(super) task: &'a TaskPlan,
     pub(super) attempt: u32,
     pub(super) provenance: AttemptProvenance,
@@ -63,19 +67,43 @@ pub(super) fn execute_external_task(ctx: ExternalTaskExecution<'_>) -> Result<Ta
 
 pub(super) fn write_external_command_snapshot(
     attempt_dir: &Path,
-    profile: &AgentProfile,
+    runtime_profile: &AgentProfile,
+    report_profile: &AgentProfile,
     command: &str,
 ) -> Result<()> {
     let agent_dir = attempt_dir.join("agent");
     fs::create_dir_all(&agent_dir)?;
+    let secrets = external_snapshot_secret_refs(runtime_profile);
+    let secret_refs = secrets.iter().map(String::as_str).collect::<Vec<_>>();
     fs::write(
         agent_dir.join("command.txt"),
         format!(
             "template={}\nrendered={}\ninput_mode=external\n",
-            profile.command, command
+            redact_known_secret(&report_profile.command, &secret_refs),
+            redact_known_secret(command, &secret_refs)
         ),
     )?;
     Ok(())
+}
+
+fn external_snapshot_secret_refs(runtime_profile: &AgentProfile) -> Vec<String> {
+    let mut refs = Vec::new();
+    for secret in store::secret_values(runtime_profile) {
+        if secret.is_empty() {
+            continue;
+        }
+        push_unique(&mut refs, secret.clone());
+        let escaped = secret.replace('\'', "'\\''");
+        push_unique(&mut refs, escaped.clone());
+        push_unique(&mut refs, format!("'{escaped}'"));
+    }
+    refs
+}
+
+fn push_unique(values: &mut Vec<String>, value: String) {
+    if !values.contains(&value) {
+        values.push(value);
+    }
 }
 #[cfg(test)]
 #[path = "external_tests.rs"]

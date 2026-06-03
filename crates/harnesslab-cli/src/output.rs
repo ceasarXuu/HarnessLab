@@ -18,6 +18,14 @@ pub(crate) struct ListOutput {
 }
 
 #[derive(Serialize)]
+pub(crate) struct AgentSchemaOutput {
+    pub schema_version: u32,
+    pub command: &'static str,
+    pub status: &'static str,
+    pub fields: Vec<harnesslab_core::AgentProfileFieldReference>,
+}
+
+#[derive(Serialize)]
 pub(crate) struct DoctorOutput {
     pub schema_version: u32,
     pub status: &'static str,

@@ -66,6 +66,239 @@ fn cfg_002_profile_rejects_missing_input_variable_and_timeout() {
 }
 
 #[test]
+fn agt_reg_001_profile_deserializes_setup_skills_tools_hooks() {
+    let profile: AgentProfile = toml::from_str(
+        r#"schema_version = 1
+name = "claude-ds"
+kind = "claude-code"
+display_name = "Claude DS"
+command = "claude-ds -p"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 300
+
+[auth]
+inherit = true
+inherit_env = ["ANTHROPIC_AUTH_TOKEN"]
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "builtin"
+required_commands = ["claude", "claude-ds"]
+run_as = "harnesslab"
+commands = []
+
+[skills]
+inherit = true
+allow = ["skill-a"]
+deny = ["skill-b"]
+include_paths = ["~/.claude/skills"]
+
+[tools]
+inherit = true
+allow = []
+deny = ["web_search"]
+
+[hooks]
+inherit = false
+allow = []
+deny = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(profile.setup.preset, SetupPreset::Builtin);
+    assert_eq!(profile.setup.run_as, RunAs::Harnesslab);
+    assert_eq!(profile.skills.allow, vec!["skill-a"]);
+    assert_eq!(profile.tools.deny, vec!["web_search"]);
+    assert!(!profile.hooks.inherit);
+}
+
+#[test]
+fn agt_reg_001_profile_rejects_setup_and_policy_conflicts() {
+    let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent");
+    profile.setup.preset = SetupPreset::Builtin;
+    profile.setup.commands = vec!["echo advanced".to_string()];
+    profile.setup.required_commands = vec!["agent | cat".to_string()];
+    profile.skills.allow = vec!["skill-a".to_string()];
+    profile.skills.deny = vec!["skill-a".to_string()];
+    profile.tools.allow = vec!["bash".to_string()];
+    profile.tools.deny = vec!["bash".to_string()];
+    profile.hooks.allow = vec!["pre".to_string()];
+    profile.hooks.deny = vec!["pre".to_string()];
+
+    let report = profile.validation_report();
+
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.field == "setup.commands")
+    );
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.field == "setup.required_commands")
+    );
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.field == "skills.allow")
+    );
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.field == "tools.allow")
+    );
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|error| error.field == "hooks.allow")
+    );
+}
+
+#[test]
+fn agt_reg_001_old_profile_shape_gets_defaults() {
+    let profile: AgentProfile = toml::from_str(
+        r#"schema_version = 1
+name = "old"
+kind = "custom"
+display_name = "Old"
+command = "agent"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 60
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(profile.setup, SetupConfig::default());
+    assert_eq!(profile.skills, CapabilityPolicy::default());
+    assert_eq!(profile.tools, CapabilityPolicy::default());
+    assert_eq!(profile.hooks, CapabilityPolicy::default());
+}
+
+#[test]
+fn agt_reg_001_validation_report_covers_field_errors_and_warnings() {
+    let mut profile = default_agent_profile("bad/name", AgentKind::Custom, "agent");
+    profile.schema_version = 2;
+    profile.input_mode = InputMode::Argument;
+    profile.timeout_sec = 0;
+    profile.auth.mount_docker_socket = true;
+    profile.setup.preset = SetupPreset::Builtin;
+    profile.setup.commands = vec!["install-agent".to_string()];
+    profile.setup.required_commands = vec!["valid-tool".to_string(), "/bad/tool".to_string()];
+    profile.skills.allow = vec!["skill/a".to_string(), "dup".to_string()];
+    profile.skills.deny = vec!["dup".to_string()];
+    profile.tools.allow = vec![" ".to_string()];
+    profile.hooks.deny = vec!["hook\\path".to_string()];
+
+    let report = profile.validation_report();
+    let fields = report
+        .errors
+        .iter()
+        .map(|error| error.field)
+        .collect::<Vec<_>>();
+
+    assert!(!report.is_valid());
+    assert!(fields.contains(&"schema_version"));
+    assert!(fields.contains(&"name"));
+    assert!(fields.contains(&"command"));
+    assert!(fields.contains(&"timeout_sec"));
+    assert!(fields.contains(&"setup.commands"));
+    assert!(fields.contains(&"setup.required_commands"));
+    assert!(fields.contains(&"skills"));
+    assert!(fields.contains(&"skills.allow"));
+    assert!(fields.contains(&"tools"));
+    assert!(fields.contains(&"hooks"));
+    assert_eq!(report.warnings[0].field, "auth.mount_docker_socket");
+}
+
+#[test]
+fn agt_reg_001_validation_report_covers_file_input_and_default_policy() {
+    let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent run");
+    profile.input_mode = InputMode::File;
+
+    let report = profile.validation_report();
+
+    assert!(!report.is_valid());
+    assert!(report.errors.iter().any(|error| {
+        error.field == "command"
+            && error
+                .accepted_values
+                .contains(&"command containing {{instruction_file}}")
+    }));
+    profile.command = "agent run {{instruction_file}}".to_string();
+    assert!(profile.validation_report().is_valid());
+    assert!(crate::policy_is_default(&CapabilityPolicy::default()));
+    let custom_policy = CapabilityPolicy {
+        inherit: true,
+        allow: vec!["skill-a".to_string()],
+        deny: Vec::new(),
+        include_paths: Vec::new(),
+    };
+    assert!(!crate::policy_is_default(&custom_policy));
+}
+
+#[test]
+fn agt_reg_001_validate_covers_field_mapping_and_policy_defaults() {
+    let mut profile = default_agent_profile("custom", AgentKind::Custom, "agent run");
+    profile.input_mode = InputMode::File;
+    assert_eq!(profile.validate(), Err(ConfigError::MissingInputVariable));
+
+    profile.command = "agent run {{instruction_file}}".to_string();
+    profile.setup.commands = vec!["install-agent".to_string()];
+    assert_eq!(
+        profile.validate(),
+        Err(ConfigError::InvalidField {
+            field: "setup.commands",
+            message: "setup.commands is only valid when setup.preset is custom".to_string(),
+            accepted: "see doctor --json details",
+        })
+    );
+
+    let policy: CapabilityPolicy = toml::from_str(
+        r#"allow = ["skill-a"]
+deny = []
+include_paths = []
+"#,
+    )
+    .unwrap();
+    assert!(policy.inherit);
+
+    let mut policy_errors = Vec::new();
+    let conflict = CapabilityPolicy {
+        inherit: true,
+        allow: vec!["same".to_string()],
+        deny: vec!["same".to_string()],
+        include_paths: Vec::new(),
+    };
+    crate::validate_policy("capabilities", &conflict, &mut policy_errors);
+    assert_eq!(policy_errors[0].field, "capabilities");
+}
+
+#[test]
 fn cfg_004_path_expands_home_and_relative_paths() {
     let home = Path::new("/home/test");
     let base = Path::new("/repo");

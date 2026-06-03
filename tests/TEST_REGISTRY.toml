@@ -2115,6 +2115,27 @@ requirements = ["external_benchmark_runtime", "execution_runtime"]
 contracts = ["TerminalBenchExternalRunner", "TimeoutPolicy"]
 
 [[tests]]
+id = "INT-046"
+title = "Terminal-Bench setup failure drops stale benchmark warning"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select INT-046"
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_setup_failure_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/log_scan.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+]
+required_artifacts = ["results.json", "report.html", "agent_setup_error.log"]
+status = "active"
+[tests.source]
+doc = "docs/development-operations.md"
+section = "HarnessLab Terminal-Bench Real-Run Checks"
+[tests.verifies]
+requirements = ["external_benchmark_runtime", "execution_runtime", "report_html"]
+contracts = ["TerminalBenchExternalRunner", "FailureMapping", "ReportHtml"]
+
+[[tests]]
 id = "TB-001"
 title = "Terminal-Bench adapter cleanup failure overrides official success"
 layer = "unit"
@@ -2512,3 +2533,140 @@ section = "5"
 [tests.verifies]
 requirements = ["coverage_gate"]
 contracts = ["CoverageGate"]
+
+[[tests]]
+id = "AGT-REG-001"
+title = "Agent profile semantic schema parses and validates"
+layer = "unit"
+owner_module = "harnesslab-core"
+command = "cargo test -p harnesslab-core agt_reg_001 -- --nocapture"
+file_patterns = [
+  "crates/harnesslab-core/src/agent_profile.rs",
+  "crates/harnesslab-core/src/config.rs",
+  "crates/harnesslab-core/src/config_tests.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+[tests.verifies]
+requirements = ["agent_profile_semantic_schema"]
+contracts = ["AgentProfile"]
+
+[[tests]]
+id = "AGT-REG-002"
+title = "Doctor exposes field-level agent profile diagnostics"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "cargo test -p harnesslab-cli agt_reg_002 -- --nocapture"
+file_patterns = [
+  "crates/harnesslab-core/src/agent_profile.rs",
+  "crates/harnesslab-cli/src/doctor.rs",
+  "crates/harnesslab-cli/tests/doctor_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "12"
+[tests.verifies]
+requirements = ["agent_profile_diagnostics"]
+contracts = ["Doctor"]
+
+[[tests]]
+id = "AGT-REG-003"
+title = "Init templates and schema reference are readable"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "cargo test -p harnesslab-cli agt_reg_003 -- --nocapture && cargo test -p harnesslab-cli int_001_init_empty_home_creates_config_and_profiles -- --nocapture"
+file_patterns = [
+  "crates/harnesslab-core/src/agent_profile_reference.rs",
+  "crates/harnesslab-cli/src/agent_registry/templates.rs",
+  "crates/harnesslab-cli/tests/agent_registry_contract.rs",
+  "crates/harnesslab-cli/tests/init_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "6.2"
+[tests.verifies]
+requirements = ["agent_profile_init_templates"]
+contracts = ["InitFlow", "AgentSchema"]
+
+[[tests]]
+id = "AGT-REG-004"
+title = "Materialized agent runtime is saved and reported"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "cargo test -p harnesslab-cli agt_reg_004 -- --nocapture && cargo test -p harnesslab-report rpt_001 -- --nocapture"
+file_patterns = [
+  "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+  "crates/harnesslab-cli/src/runner/sandbox_setup.rs",
+  "crates/harnesslab-cli/src/runner/store.rs",
+  "crates/harnesslab-cli/tests/run_output_contract.rs",
+  "crates/harnesslab-cli/tests/terminal_bench_redaction_contract.rs",
+  "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = ["agent-runtime.materialized.json", "report.html"]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "9"
+[tests.verifies]
+requirements = ["agent_profile_materialized_runtime", "secret_redaction", "report_html"]
+contracts = ["AgentRegistry", "RunArtifacts", "ReportHtml"]
+
+[[tests]]
+id = "AGT-REG-005"
+title = "Terminal-Bench bridge executes materialized setup"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select AGT-REG-005"
+file_patterns = [
+  "scripts/verify-terminal-bench-registered-setup.sh",
+  "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+  "crates/harnesslab-cli/src/runner/external_tests.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_env.rs",
+  "integrations/terminal_bench/harnesslab_tb_agent.py",
+  "integrations/terminal_bench/harnesslab_tb_agent_registry_test.py",
+]
+required_artifacts = [
+  "doctor.json",
+  "run.json",
+  "results.json",
+  "agent-runtime.materialized.json",
+  "agent_setup_command.sha256",
+  "agent_setup_stdout.log",
+  "agent_setup_stderr.log",
+]
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "16"
+[tests.verifies]
+requirements = ["terminal_bench_materialized_setup", "external_benchmark_runtime"]
+contracts = ["AgentRegistry", "TerminalBenchExternalRunner", "TerminalBenchBridge", "RunArtifacts"]
+
+[[tests]]
+id = "AGT-REG-006"
+title = "Unsupported capability policies block run precheck"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "cargo test -p harnesslab-cli agt_reg_006 -- --nocapture"
+file_patterns = [
+  "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/tests/agent_registry_contract.rs",
+  "crates/harnesslab-cli/tests/doctor_contract.rs",
+]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/mvp-development-spec.md"
+section = "8"
+[tests.verifies]
+requirements = ["agent_profile_policy_precheck"]
+contracts = ["RunPrecheck", "AgentRegistry"]

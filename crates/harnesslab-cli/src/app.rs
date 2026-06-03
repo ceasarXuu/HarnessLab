@@ -1,14 +1,15 @@
+use crate::agent_registry::{agents_readme, profile_template};
 use crate::benchmark_data::resolve_benchmarks_dir;
-use crate::output::{BenchmarkInfoOutput, BenchmarkListOutput, InitOutput, ListOutput, PathOutput};
+use crate::output::{
+    AgentSchemaOutput, BenchmarkInfoOutput, BenchmarkListOutput, InitOutput, ListOutput, PathOutput,
+};
 use crate::runner::{RunOverrides, execute_new_run, replay_run, resume_run};
 use crate::{
     AgentCommand, BenchmarkCommand, Cli, Command, ReportCommand, RunAction, RunArgs, print_json,
 };
 use anyhow::{Context, Result};
 use harnesslab_adapters::built_in_descriptors_with_root;
-use harnesslab_core::{
-    AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run, default_agent_profile,
-};
+use harnesslab_core::{AgentKind, AgentProfile, GlobalConfig, data_state_blocks_run};
 use harnesslab_infra::{command_exists, command_succeeds, latest_run_dir, validate_event_log};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -19,6 +20,7 @@ pub(crate) fn dispatch(cli: Cli) -> Result<i32> {
         Command::Init { json } => init(&home, json),
         Command::Agent { command } => match command {
             AgentCommand::List { json } => agent_list(&home, json),
+            AgentCommand::Schema { json } => agent_schema(json),
         },
         Command::Doctor { json } => crate::doctor::run(&home, json),
         Command::Benchmark { command } => match command {
@@ -46,12 +48,12 @@ fn init(home: &Path, json: bool) -> Result<i32> {
         if profile.is_detected() {
             detected.push(profile.name.to_string());
         }
-        let profile = default_agent_profile(profile.name, profile.kind, profile.command);
         write_if_missing(
             &home.join("agents").join(format!("{}.toml", profile.name)),
-            &toml::to_string_pretty(&profile)?,
+            &profile_template(profile.name, profile.kind, profile.command),
         )?;
     }
+    write_if_missing(&home.join("agents").join("README.md"), agents_readme())?;
 
     if json {
         print_json(&InitOutput {
@@ -95,6 +97,29 @@ fn agent_list(home: &Path, json: bool) -> Result<i32> {
     } else {
         for profile in profiles {
             println!("{}", profile.name);
+        }
+    }
+    Ok(0)
+}
+
+fn agent_schema(json: bool) -> Result<i32> {
+    let fields = harnesslab_core::agent_profile_field_reference();
+    if json {
+        print_json(&AgentSchemaOutput {
+            schema_version: 1,
+            command: "agent schema",
+            status: "ok",
+            fields,
+        })?;
+    } else {
+        println!("Agent profile fields:");
+        for field in fields {
+            let values = if field.allowed_values.is_empty() {
+                "string".to_string()
+            } else {
+                field.allowed_values.join(" | ")
+            };
+            println!("  - {}: {}", field.path, values);
         }
     }
     Ok(0)

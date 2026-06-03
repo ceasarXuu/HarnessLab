@@ -7,7 +7,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from terminal_bench.agents.failure_mode import FailureMode
+import pytest
+
+terminal_bench = pytest.importorskip("terminal_bench.agents.failure_mode")
+FailureMode = terminal_bench.FailureMode
 
 from harnesslab_tb_process import AgentCommandTimedOut, CleanupResult
 

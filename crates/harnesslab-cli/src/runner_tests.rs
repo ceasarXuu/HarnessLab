@@ -59,6 +59,10 @@ fn agt_004_manual_profile_can_be_serialized() {
             mount_docker_socket: false,
         },
         usage: UsageConfig::default(),
+        setup: Default::default(),
+        skills: Default::default(),
+        tools: Default::default(),
+        hooks: Default::default(),
         labels: Default::default(),
     };
 
@@ -319,17 +323,19 @@ fn run_006_run_agent_host_executes_inside_workspace() {
     let tmp = tempfile::tempdir().unwrap();
     let workspace = tmp.path().join("workspace");
     let profile = default_agent_profile("fake", AgentKind::Fake, "printf ok > result.txt");
+    let materialized_profile = crate::agent_registry::materialize_profile(&profile).unwrap();
     let task = test_task();
 
-    let result = run_agent(
-        &valid_spec(),
-        &profile,
-        &profile,
-        &task,
-        1,
-        tmp.path(),
-        &workspace,
-    )
+    let result = run_agent(AgentRunRequest {
+        spec: &valid_spec(),
+        profile: &profile,
+        report_profile: &profile,
+        materialized_profile: &materialized_profile,
+        task: &task,
+        attempt: 1,
+        attempt_dir: tmp.path(),
+        workspace: &workspace,
+    })
     .unwrap();
 
     assert_eq!(result.process.exit_code, Some(0));

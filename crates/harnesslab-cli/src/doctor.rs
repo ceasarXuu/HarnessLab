@@ -1,3 +1,4 @@
+use crate::agent_registry::materialize_profile;
 use crate::benchmark_data::resolve_benchmarks_dir;
 use crate::output::{DoctorCheck, DoctorOutput};
 use crate::print_json;
@@ -87,35 +88,32 @@ pub(crate) fn run(home: &Path, json: bool) -> Result<i32> {
 }
 
 fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {
-    match profile.validate() {
-        Ok(warnings) => {
-            if warnings.is_empty() {
-                checks.push(check(
-                    &format!("agent.{}.validation", profile.name),
-                    "ok",
-                    "error",
-                    "Agent profile configuration is valid",
-                ));
-            } else {
-                checks.push(check_with_details(
-                    &format!("agent.{}.validation", profile.name),
-                    "warning",
-                    "warning",
-                    "Agent profile configuration has warnings",
-                    serde_json::json!({
-                        "warnings": warnings.iter().map(|warning| &warning.code).collect::<Vec<_>>()
-                    }),
-                ));
-            }
-        }
-        Err(error) => checks.push(check_with_details(
+    let report = profile.validation_report();
+    if !report.errors.is_empty() {
+        checks.push(check_with_details(
             &format!("agent.{}.validation", profile.name),
             "error",
             "error",
-            &error.to_string(),
-            serde_json::json!({ "error": error.to_string() }),
-        )),
+            "Agent profile configuration is invalid",
+            serde_json::json!({ "errors": report.errors }),
+        ));
+    } else if !report.warnings.is_empty() {
+        checks.push(check_with_details(
+            &format!("agent.{}.validation", profile.name),
+            "warning",
+            "warning",
+            "Agent profile configuration has warnings",
+            serde_json::json!({ "warnings": report.warnings }),
+        ));
+    } else {
+        checks.push(check(
+            &format!("agent.{}.validation", profile.name),
+            "ok",
+            "error",
+            "Agent profile configuration is valid",
+        ));
     }
+    append_materialization_check(profile, checks);
     let available = first_command_word(&profile.command)
         .map(command_exists)
         .unwrap_or(false);
@@ -127,6 +125,42 @@ fn append_profile_checks(home: &Path, profile: &AgentProfile, checks: &mut Vec<D
     ));
     append_auth_checks(home, profile, checks);
     checks.push(usage_check(profile));
+}
+
+fn append_materialization_check(profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {
+    match materialize_profile(profile) {
+        Ok(materialized) => {
+            let status = if materialized.warnings.is_empty() {
+                "ok"
+            } else {
+                "warning"
+            };
+            checks.push(check_with_details(
+                &format!("agent.{}.capabilities.materialization", profile.name),
+                status,
+                "error",
+                "Agent registry materialization checked",
+                serde_json::json!({
+                    "setup": materialized.setup_summary,
+                    "skills": materialized.skills_summary,
+                    "tools": materialized.tools_summary,
+                    "hooks": materialized.hooks_summary,
+                    "warnings": materialized.warnings,
+                }),
+            ));
+        }
+        Err(error) => checks.push(check_with_details(
+            &format!("agent.{}.capabilities.materialization", profile.name),
+            "error",
+            "error",
+            "Agent registry policy cannot be materialized",
+            serde_json::json!({
+                "field": error.field,
+                "message": error.message,
+                "suggested_fix": error.suggested_fix,
+            }),
+        )),
+    }
 }
 
 fn append_auth_checks(_home: &Path, profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {

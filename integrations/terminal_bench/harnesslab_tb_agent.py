@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shlex
@@ -33,6 +34,30 @@ class HarnessLabCommandAgent(BaseAgent):
         prompt = self._command_prompt(self._render_instruction(instruction))
         log_dir = prepare_log_dir(logging_dir)
         write_log(log_dir, "prompt.txt", prompt)
+        setup_command = os.environ.get("HARNESSLAB_AGENT_SETUP_COMMAND", "")
+        if setup_command.strip():
+            write_log(log_dir, "agent_setup_command.sha256", sha256_hex(setup_command))
+            try:
+                setup = subprocess.run(
+                    setup_command,
+                    shell=True,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=max(timeout, 1),
+                )
+            except Exception as error:
+                write_log(log_dir, "agent_setup_error.log", f"harnesslab agent setup failed: {error}")
+                return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
+            write_log(log_dir, "agent_setup_stdout.log", setup.stdout or "")
+            write_log(log_dir, "agent_setup_stderr.log", setup.stderr or "")
+            if setup.returncode != 0:
+                write_log(
+                    log_dir,
+                    "agent_setup_error.log",
+                    f"harnesslab agent setup failed: exit_code={setup.returncode}",
+                )
+                return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
 
         try:
             output = run_registered_agent(
@@ -99,10 +124,10 @@ def run_registered_agent(
 ) -> str:
     stdin = None
     if input_mode == "stdin":
-        rendered = command
+        rendered = wrap_run_as(command)
         stdin = prompt
     elif input_mode == "argument":
-        rendered = command.replace("{{instruction}}", shlex.quote(prompt))
+        rendered = wrap_run_as(command.replace("{{instruction}}", shlex.quote(prompt)))
     elif input_mode == "file":
         with tempfile.NamedTemporaryFile("w", delete=False) as handle:
             handle.write(prompt)
@@ -110,6 +135,7 @@ def run_registered_agent(
         try:
             rendered = command.replace("{{instruction_file}}", shlex.quote(prompt_path))
             rendered = rendered.replace("{{instruction}}", shlex.quote(prompt_path))
+            rendered = wrap_run_as(rendered)
             completed = run_agent_process(rendered, stdin, timeout, cleanup_log_path)
         finally:
             Path(prompt_path).unlink(missing_ok=True)
@@ -119,6 +145,18 @@ def run_registered_agent(
 
     completed = run_agent_process(rendered, stdin, timeout, cleanup_log_path)
     return completed_stdout_or_error(completed)
+
+
+def wrap_run_as(command: str) -> str:
+    run_as = os.environ.get("HARNESSLAB_AGENT_RUN_AS", "current")
+    if run_as != "harnesslab":
+        return command
+    quoted = shlex.quote(command)
+    return (
+        'if [ "$(id -u)" = "0" ] && id -u harnesslab >/dev/null 2>&1; '
+        f"then exec runuser -u harnesslab --preserve-environment -- bash -lc {quoted}; "
+        f"else exec bash -lc {quoted}; fi"
+    )
 
 
 def completed_stdout_or_error(completed: subprocess.CompletedProcess) -> str:
@@ -382,6 +420,10 @@ def write_log(log_dir: Path | None, name: str, text: str) -> None:
     if log_dir is None:
         return
     (log_dir / name).write_text(text)
+
+
+def sha256_hex(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def log_path(log_dir: Path | None, name: str) -> Path | None:

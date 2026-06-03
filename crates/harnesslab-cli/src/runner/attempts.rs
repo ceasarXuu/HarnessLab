@@ -1,4 +1,5 @@
 use super::execute_task;
+use crate::agent_registry::MaterializedAgentProfile;
 use anyhow::Result;
 use harnesslab_core::{AgentProfile, RunSpec, TaskAttemptResult};
 use std::any::Any;
@@ -10,30 +11,33 @@ use std::thread;
 use super::monitor::RunMonitor;
 use super::schedule::AttemptWork;
 
+#[derive(Clone)]
+pub(super) struct TaskExecutionContext {
+    pub(super) run_dir: std::path::PathBuf,
+    pub(super) spec: RunSpec,
+    pub(super) profile: AgentProfile,
+    pub(super) report_profile: AgentProfile,
+    pub(super) materialized_profile: MaterializedAgentProfile,
+}
+
 pub(super) fn execute_attempts(
     run_dir: &Path,
     spec: &RunSpec,
     profile: &AgentProfile,
     report_profile: &AgentProfile,
+    materialized_profile: &MaterializedAgentProfile,
     attempts: Vec<AttemptWork>,
     concurrency: usize,
 ) -> Result<Vec<TaskAttemptResult>> {
-    let run_dir_for_executor = run_dir.to_path_buf();
-    let profile = profile.clone();
-    let report_profile = report_profile.clone();
-    let spec = spec.clone();
+    let context = TaskExecutionContext {
+        run_dir: run_dir.to_path_buf(),
+        spec: spec.clone(),
+        profile: profile.clone(),
+        report_profile: report_profile.clone(),
+        materialized_profile: materialized_profile.clone(),
+    };
     let run_id = spec.run_id.clone();
-    let executor = Arc::new(move |work: AttemptWork| {
-        execute_task(
-            &run_dir_for_executor,
-            &spec,
-            &profile,
-            &report_profile,
-            &work.task,
-            work.attempt,
-            work.provenance,
-        )
-    });
+    let executor = Arc::new(move |work: AttemptWork| execute_task(&context, work));
     execute_attempts_with(run_dir, &run_id, attempts, concurrency, executor)
 }
 

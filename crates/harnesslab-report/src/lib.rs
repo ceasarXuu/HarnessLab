@@ -20,6 +20,10 @@ pub struct ReportModel {
     pub rows: Vec<TaskRow>,
     pub total_usage: String,
     pub agent_config_summary: String,
+    pub setup_summary: String,
+    pub skills_summary: String,
+    pub tools_summary: String,
+    pub hooks_summary: String,
     pub replay_command: String,
     pub original_command: String,
 }
@@ -49,6 +53,10 @@ pub struct ReportContext {
     pub run_id: String,
     pub agent: String,
     pub agent_config_summary: String,
+    pub setup_summary: String,
+    pub skills_summary: String,
+    pub tools_summary: String,
+    pub hooks_summary: String,
     pub benchmark: String,
     pub split: String,
     pub report_path: String,
@@ -81,6 +89,8 @@ pub struct ReportContext {
   <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
   <p>Run health: <strong>{{ model.run_health_status }}</strong>{% if model.has_run_health_reason %}: {{ model.run_health_reason }}{% endif %}. <a href="run-health.json">run-health.json</a></p>
   <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, command: <a href="command.txt">command.txt</a>.</p>
+  <p>Setup: {{ model.setup_summary }}.</p>
+  <p>Skills: {{ model.skills_summary }}. Tools: {{ model.tools_summary }}. Hooks: {{ model.hooks_summary }}.</p>
   <h2>Summary</h2>
   <p>Total {{ model.summary.total_tasks }}, success {{ model.summary.success }}, benchmark failures {{ model.summary.benchmark_failure }}, execution failures {{ model.summary.execution_failure }}, interrupted {{ model.summary.interrupted }}, score {{ model.summary.total_score }}.</p>
   <p>Usage: {{ model.total_usage }}</p>
@@ -185,6 +195,10 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
         rows,
         total_usage: total_usage_text(&results.tasks),
         agent_config_summary: context.agent_config_summary,
+        setup_summary: context.setup_summary,
+        skills_summary: context.skills_summary,
+        tools_summary: context.tools_summary,
+        hooks_summary: context.hooks_summary,
         replay_command: context.replay_command,
         original_command: context.original_command,
     }
@@ -302,6 +316,10 @@ mod tests {
         assert!(html.contains("HarnessLab Run Report"));
         assert!(html.contains("cost not comparable"));
         assert!(html.contains("Agent config:"));
+        assert!(html.contains("Setup: preset=None"));
+        assert!(html.contains("Skills: inherit=true"));
+        assert!(html.contains("Tools: inherit=true"));
+        assert!(html.contains("Hooks: inherit=true"));
         assert!(html.contains("Run health:"));
         assert!(html.contains("interrupted 0"));
         assert!(html.contains("<th>Warnings</th>"));
@@ -363,6 +381,10 @@ mod tests {
             agent_config_summary:
                 "kind=fake; input_mode=stdin; timeout_sec=3600; concurrency=4; attempts=1; network=full"
                     .to_string(),
+            setup_summary: "preset=None".to_string(),
+            skills_summary: "inherit=true".to_string(),
+            tools_summary: "inherit=true".to_string(),
+            hooks_summary: "inherit=true".to_string(),
             benchmark: "fake-terminal".to_string(),
             split: "success".to_string(),
             report_path: "/runs/run-1/report.html".to_string(),

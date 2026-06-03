@@ -13,6 +13,11 @@ impl ProgressWatcher {
         Self { paths, states }
     }
 
+    pub fn new_counting_existing_content(paths: Vec<PathBuf>) -> Self {
+        let states = paths.iter().map(|_| FileState::missing()).collect();
+        Self { paths, states }
+    }
+
     pub fn changed_path(&mut self) -> Option<PathBuf> {
         for (index, path) in self.paths.iter().enumerate() {
             let current = FileState::read(path);
@@ -32,6 +37,10 @@ struct FileState {
 }
 
 impl FileState {
+    fn missing() -> Self {
+        Self { len: None }
+    }
+
     fn read(path: &PathBuf) -> Self {
         match fs::metadata(path) {
             Ok(metadata) => Self {
@@ -87,6 +96,27 @@ mod tests {
         fs::write(&path, "started\nnext").unwrap();
 
         assert_eq!(watcher.changed_path(), Some(path));
+    }
+
+    #[test]
+    fn counting_existing_content_treats_initial_nonempty_file_as_progress() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("run.log");
+        fs::write(&path, "started").unwrap();
+        let mut watcher = ProgressWatcher::new_counting_existing_content(vec![path.clone()]);
+
+        assert_eq!(watcher.changed_path(), Some(path));
+        assert_eq!(watcher.changed_path(), None);
+    }
+
+    #[test]
+    fn counting_existing_content_ignores_initial_empty_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("run.log");
+        fs::write(&path, "").unwrap();
+        let mut watcher = ProgressWatcher::new_counting_existing_content(vec![path]);
+
+        assert_eq!(watcher.changed_path(), None);
     }
 
     #[test]

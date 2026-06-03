@@ -98,7 +98,12 @@ pub(super) fn execute(
         ctx,
         &docker_platform,
     );
-    write_external_command_snapshot(ctx.attempt_dir, ctx.report_profile, &report_command)?;
+    write_external_command_snapshot(
+        ctx.attempt_dir,
+        ctx.profile,
+        ctx.report_profile,
+        &report_command,
+    )?;
     let (agent_timeout_sec, test_timeout_sec, default_process_timeout_sec) =
         terminal_bench_timeout_values(
             ctx.spec.execution.timeout_sec,
@@ -203,10 +208,14 @@ pub(super) fn execute(
         failure_code = Some(FailureCode::AgentCleanupFailed);
         score = 0.0;
     }
-    let mut warnings =
-        terminal_bench_result_warnings(&result_path, &ctx.task.task_id, official_failure_class);
+    let mut warnings = if infra_failure.is_some() {
+        Vec::new()
+    } else {
+        terminal_bench_result_warnings(&result_path, &ctx.task.task_id, official_failure_class)
+    };
     if failure_class == FailureClass::Execution
         && official_failure_class == FailureClass::Benchmark
+        && infra_failure.is_none()
         && let Some(code) = official_failure_code
     {
         warnings.push(code);
@@ -312,7 +321,7 @@ fn terminal_bench_command(
         matches!(agent, TerminalBenchAgent::ImportPath(_)),
     );
     let mut command = vec![
-        terminal_bench_agent_env(profile, agent_timeout),
+        terminal_bench_agent_env(profile, ctx.materialized_profile, agent_timeout),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
         format!(
             "export DOCKER_DEFAULT_PLATFORM={}; export BUILDKIT_PROGRESS=plain;",

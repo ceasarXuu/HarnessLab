@@ -80,15 +80,17 @@ HARNESSLAB_TEST_ORPHAN_MARKER="$MARKER" \
 STATUS=$?
 set -e
 
-if [ "$STATUS" -ne 2 ]; then
-  echo "expected benchmark failure exit code 2, got $STATUS" >&2
+if [ "$STATUS" -ne 0 ]; then
+  echo "expected successful CLI exit for benchmark verdict, got $STATUS" >&2
   cat "$WORK/run.stderr" >&2
   exit 1
 fi
 
 RUN_DIR="$(python3 - "$WORK/run.json" <<'PY'
 import json, sys
-print(json.load(open(sys.argv[1]))["run_dir"])
+payload = json.load(open(sys.argv[1]))
+assert payload["verdict"] == "benchmark_failure", payload
+print(payload["run_dir"])
 PY
 )"
 
@@ -119,7 +121,7 @@ if ! rg --fixed-strings "external_runner_configured" "$RUN_DIR/events.jsonl" >/d
   echo "missing runner configuration event" >&2
   exit 1
 fi
-if ! rg --fixed-strings "process_timeout_sec=1806" "$RUN_DIR/events.jsonl" >/dev/null; then
+if ! rg --fixed-strings "process_timeout_sec=1863" "$RUN_DIR/events.jsonl" >/dev/null; then
   echo "missing expected real runner timeout configuration" >&2
   exit 1
 fi

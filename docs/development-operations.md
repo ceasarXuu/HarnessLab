@@ -5,6 +5,7 @@
 ## User Playbooks
 
 - [用 claude-ds 跑一次 Terminal-Bench 实验](playbooks/terminal-bench-claude-ds.md)：面向用户的最小使用路径，覆盖 agent 注册、预检查、run、结果查看、报告、replay/resume。
+- [Agent Profile Reference](agent-profile-reference.md)：注册表字段、取值范围、materialization 支持矩阵和验证清单。
 - [npm 包名和 CLI 命令占位发布](playbooks/npm-package-reservation.md)：记录 `@ceasarxuu/harnesslab`、`harnessrig`、`harnessyard` npm 包名和对应命令占位发布的预检、验证和发布复用步骤。
 
 ## M0 Rust Tooling
@@ -12,14 +13,14 @@
 M0 本地 gate 依赖：
 
 ```bash
-cargo install cargo-nextest --version 0.9.136 --locked
 cargo install cargo-llvm-cov --version 0.8.7 --locked
 rustup toolchain install nightly-2026-05-26 --component llvm-tools-preview
 ```
 
 原因：
 
-- `cargo nextest` 用于快速测试执行；未安装时 gate 曾降级到 `cargo test`，但这不能作为最终验收。
+- `scripts/test-after-change.sh` 默认使用 `cargo test --workspace --all-features` 执行全量测试，避免本机 `cargo nextest` discovery 在 macOS pipe/list 阶段挂起时污染验收。
+- 如需使用 nextest 快路径，显式运行 `HARNESSLAB_TEST_RUNNER=nextest scripts/test-after-change.sh`，并先安装 `cargo install cargo-nextest --version 0.9.136 --locked`。
 - `cargo llvm-cov --branch` 会使用 nightly-only `-Z coverage-options=branch`，stable Rust 会失败；本项目固定使用 `nightly-2026-05-26`。
 - 生产编译仍使用 `rust-toolchain.toml` 固定的 stable Rust；coverage 单独使用 `rust-toolchain.coverage.toml`。
 - coverage gate 先执行一次带 instrumentation 的测试，再从同一份 profdata 导出 LCOV、Cobertura 和 JSON，避免三个报告来自不同测试轮次。
@@ -32,7 +33,7 @@ scripts/test-after-change.sh
 
 关键通过信号：
 
-- nextest summary 显示所有测试通过且 `0 skipped`。
+- `== tests ==` 阶段显示 `cargo test --workspace --all-features` 全部通过；如果显式选择 nextest，则 nextest summary 必须显示所有测试通过且 `0 skipped`。
 - `xtask check-coverage` 输出 line coverage `>= 95%`、branch coverage `>= 70%`，并额外执行 critical module 阈值。
 - `xtask check-coverage` 会同时检查 `coverage-critical.toml` 中的 critical module 阈值。
 - `scripts/check-new-file-coverage.sh` 会检查新增生产 Rust 文件是否进入 LCOV 报告。
@@ -152,6 +153,14 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
   run --agent claude-ds --benchmark terminal-bench --split full \
   --concurrency 1 --timeout-sec 180
 ```
+
+验证 agent 注册和 materialized setup 时，使用正式黑盒脚本：
+
+```bash
+scripts/test-after-change.sh --select AGT-REG-005
+```
+
+该脚本会执行 `harnesslab init`、写入临时注册 profile、运行 `doctor --json`，再通过 `harnesslab run --agent registered-setup --benchmark terminal-bench --split smoke --json` 启动真实 Terminal-Bench import-agent 流程。验收证据必须包括 run 根目录的 `agent-runtime.materialized.json`、`command.txt`，以及官方 task log 目录里的 `agent_setup_command.sha256`、`agent_setup_stdout.log` 和 `agent_setup_stderr.log`；其中 `agent_setup_command.sha256` 要与 `agent-runtime.materialized.json.setup_script` 的 sha256 一致，`agent_setup_stdout.log` 要能证明 setup 在 registered agent 命令前运行。
 
 检查顺序：
 

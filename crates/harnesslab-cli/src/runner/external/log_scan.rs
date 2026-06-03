@@ -7,6 +7,7 @@ const DOCKER_NETWORK_POOL_EXHAUSTED: &str =
     "all predefined address pools have been fully subnetted";
 const TERMINAL_BENCH_COMPOSE_BUILD_FAILED: &str = "Docker compose command failed with exit code";
 const TERMINAL_BENCH_COMPOSE_CALLED_PROCESS_ERROR: &str = "Command '['docker', 'compose'";
+const HARNESSLAB_AGENT_SETUP_FAILED: &str = "harnesslab agent setup failed:";
 const MAX_LOG_BYTES: u64 = 256 * 1024;
 
 pub(super) fn terminal_bench_infra_failure(attempt_dir: &Path) -> Option<FailureCode> {
@@ -18,6 +19,7 @@ pub(super) fn terminal_bench_infra_failure(attempt_dir: &Path) -> Option<Failure
         if content.contains(TERMINAL_BENCH_COMPOSE_BUILD_FAILED)
             || (content.contains(TERMINAL_BENCH_COMPOSE_CALLED_PROCESS_ERROR)
                 && content.contains("returned non-zero exit status"))
+            || content.contains(HARNESSLAB_AGENT_SETUP_FAILED)
         {
             return Some(FailureCode::ExternalRunnerSetupFailed);
         }
@@ -50,7 +52,7 @@ fn collect_official_run_logs(root: &Path, logs: &mut Vec<PathBuf>) {
             for entry in entries.flatten() {
                 pending.push(entry.path());
             }
-        } else if path.file_name().and_then(|name| name.to_str()) == Some("run.log") {
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("log") {
             logs.push(path);
         }
     }
@@ -96,6 +98,25 @@ mod tests {
         fs::write(
             log_dir.join("run.log"),
             "Docker compose command failed with exit code 1\nfailed to solve: gcc: internal compiler error",
+        )
+        .unwrap();
+
+        assert_eq!(
+            terminal_bench_infra_failure(tmp.path()),
+            Some(FailureCode::ExternalRunnerSetupFailed)
+        );
+    }
+
+    #[test]
+    fn detects_harnesslab_bridge_setup_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let log_dir = tmp
+            .path()
+            .join("official/terminal-bench/run/task/agent-logs");
+        fs::create_dir_all(&log_dir).unwrap();
+        fs::write(
+            log_dir.join("agent_setup_error.log"),
+            "harnesslab agent setup failed: exit_code=127",
         )
         .unwrap();
 

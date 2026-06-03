@@ -312,11 +312,13 @@ mod tests {
         );
         let spec = run_spec(run_dir.path());
         let task = qemu_task(source.path());
+        let materialized_profile = crate::agent_registry::materialize_profile(&profile).unwrap();
         let ctx = super::super::ExternalTaskExecution {
             run_dir: run_dir.path(),
             spec: &spec,
             profile: &profile,
             report_profile: &profile,
+            materialized_profile: &materialized_profile,
             task: &task,
             attempt: 1,
             provenance: AttemptProvenance::Original,
