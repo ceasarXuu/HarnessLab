@@ -7,6 +7,9 @@ pub struct AgentProfileFieldReference {
     pub required: bool,
     pub allowed_values: Vec<&'static str>,
     pub example: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_value: Option<serde_json::Value>,
+    pub status: &'static str,
     pub description: &'static str,
 }
 
@@ -74,6 +77,13 @@ pub fn agent_profile_field_reference() -> Vec<AgentProfileFieldReference> {
             vec!["positive integer"],
             json!(300),
             "Default per-task agent timeout.",
+        ),
+        field(
+            "version_command",
+            false,
+            vec!["shell command"],
+            json!("claude --version"),
+            "Optional bounded CLI version probe.",
         ),
         field(
             "auth.inherit",
@@ -222,12 +232,100 @@ pub fn agent_profile_field_reference() -> Vec<AgentProfileFieldReference> {
             json!("none"),
             "Token/cost usage parser.",
         ),
+        field_with_default(
+            "usage.source",
+            false,
+            vec![
+                "agent_stdout",
+                "agent_stderr",
+                "agent_logs",
+                "file:<safe-relative-path>",
+            ],
+            json!("agent_logs"),
+            Some(json!("agent_logs")),
+            "Input source for usage parsing.",
+        ),
+        field_with_default(
+            "usage.input_tokens_key",
+            false,
+            vec!["string"],
+            json!("input_tokens"),
+            Some(json!("input_tokens")),
+            "Field/key name for input tokens.",
+        ),
+        field_with_default(
+            "usage.output_tokens_key",
+            false,
+            vec!["string"],
+            json!("output_tokens"),
+            Some(json!("output_tokens")),
+            "Field/key name for output tokens.",
+        ),
+        field_with_default(
+            "usage.total_tokens_key",
+            false,
+            vec!["string"],
+            json!("total_tokens"),
+            Some(json!("total_tokens")),
+            "Field/key name for total tokens.",
+        ),
+        field_with_default(
+            "usage.cost_usd_key",
+            false,
+            vec!["string"],
+            json!("cost_usd"),
+            Some(json!("cost_usd")),
+            "Field/key name for USD cost.",
+        ),
         field(
             "labels",
             false,
             vec!["key/value"],
             json!({"model":"deepseek"}),
-            "Report labels and benchmark adapter hints.",
+            "Open report labels and benchmark adapter hints map.",
+        ),
+        field(
+            "labels.model",
+            false,
+            vec!["string"],
+            json!("deepseek"),
+            "Common report model/config label.",
+        ),
+        field(
+            "labels.terminal_bench_agent",
+            false,
+            vec!["terminal-bench agent name"],
+            json!("codex"),
+            "Terminal-Bench built-in agent name.",
+        ),
+        field(
+            "labels.terminal_bench_agent_import_path",
+            false,
+            vec!["python import path"],
+            json!("harnesslab_tb_agent:HarnessLabCommandAgent"),
+            "Terminal-Bench import-path bridge agent.",
+        ),
+        field(
+            "labels.terminal_bench_agent_pythonpath",
+            false,
+            vec!["absolute path", "python path string"],
+            json!("/repo/integrations/terminal_bench"),
+            "Python path prepended before loading the Terminal-Bench bridge.",
+        ),
+        field(
+            "labels.terminal_bench_model",
+            false,
+            vec!["string"],
+            json!("deepseek"),
+            "Model label consumed by Terminal-Bench built-in agents.",
+        ),
+        field_with_status(
+            "labels.sandbox_setup_command",
+            false,
+            vec!["shell command"],
+            json!("npm install -g @anthropic-ai/claude-code"),
+            "legacy",
+            "Legacy setup escape hatch; new profiles should use [setup].",
         ),
     ]
 }
@@ -239,11 +337,71 @@ fn field(
     example: serde_json::Value,
     description: &'static str,
 ) -> AgentProfileFieldReference {
+    field_with_default_and_status(
+        path,
+        required,
+        allowed_values,
+        example,
+        None,
+        "active",
+        description,
+    )
+}
+
+fn field_with_default(
+    path: &'static str,
+    required: bool,
+    allowed_values: Vec<&'static str>,
+    example: serde_json::Value,
+    default_value: Option<serde_json::Value>,
+    description: &'static str,
+) -> AgentProfileFieldReference {
+    field_with_default_and_status(
+        path,
+        required,
+        allowed_values,
+        example,
+        default_value,
+        "active",
+        description,
+    )
+}
+
+fn field_with_status(
+    path: &'static str,
+    required: bool,
+    allowed_values: Vec<&'static str>,
+    example: serde_json::Value,
+    status: &'static str,
+    description: &'static str,
+) -> AgentProfileFieldReference {
+    field_with_default_and_status(
+        path,
+        required,
+        allowed_values,
+        example,
+        None,
+        status,
+        description,
+    )
+}
+
+fn field_with_default_and_status(
+    path: &'static str,
+    required: bool,
+    allowed_values: Vec<&'static str>,
+    example: serde_json::Value,
+    default_value: Option<serde_json::Value>,
+    status: &'static str,
+    description: &'static str,
+) -> AgentProfileFieldReference {
     AgentProfileFieldReference {
         path,
         required,
         allowed_values,
         example,
+        default_value,
+        status,
         description,
     }
 }

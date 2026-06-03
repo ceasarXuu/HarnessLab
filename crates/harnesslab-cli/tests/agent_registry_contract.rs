@@ -21,6 +21,96 @@ fn agt_reg_003_agent_schema_json_exposes_profile_field_ranges() {
     assert_field_example(&json, "skills.allow", serde_json::json!(["skill-a"]));
     assert_field_example(&json, "tools.deny", serde_json::json!(["web_search"]));
     assert_field_example(&json, "hooks.deny", serde_json::json!(["post_tool_use"]));
+    assert_field_example(&json, "usage.source", serde_json::json!("agent_logs"));
+    assert_field_value(
+        &json,
+        "labels.terminal_bench_agent_import_path",
+        "python import path",
+    );
+    assert_eq!(
+        find_field(&json, "labels.sandbox_setup_command")["status"],
+        "legacy"
+    );
+}
+
+#[test]
+fn agt_reg_007_agent_schema_json_covers_supported_profile_parameters() {
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .args(["agent", "schema", "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let expected = [
+        "schema_version",
+        "name",
+        "kind",
+        "display_name",
+        "command",
+        "input_mode",
+        "working_dir",
+        "timeout_sec",
+        "version_command",
+        "auth.inherit",
+        "auth.inherit_env",
+        "auth.include_paths",
+        "auth.exclude_paths",
+        "auth.mount_ssh_socket",
+        "auth.mount_docker_socket",
+        "setup.preset",
+        "setup.required_commands",
+        "setup.run_as",
+        "setup.commands",
+        "skills.inherit",
+        "skills.allow",
+        "skills.deny",
+        "skills.include_paths",
+        "tools.inherit",
+        "tools.allow",
+        "tools.deny",
+        "hooks.inherit",
+        "hooks.allow",
+        "hooks.deny",
+        "usage.parser",
+        "usage.source",
+        "usage.input_tokens_key",
+        "usage.output_tokens_key",
+        "usage.total_tokens_key",
+        "usage.cost_usd_key",
+        "labels",
+        "labels.model",
+        "labels.terminal_bench_agent",
+        "labels.terminal_bench_agent_import_path",
+        "labels.terminal_bench_agent_pythonpath",
+        "labels.terminal_bench_model",
+        "labels.sandbox_setup_command",
+    ];
+    for path in expected {
+        let field = find_field(&json, path);
+        assert!(
+            field["description"]
+                .as_str()
+                .is_some_and(|value| !value.is_empty()),
+            "missing description for {path}"
+        );
+        assert!(
+            field["allowed_values"]
+                .as_array()
+                .is_some_and(|values| !values.is_empty()),
+            "missing allowed values for {path}"
+        );
+        assert!(field.get("example").is_some(), "missing example for {path}");
+        assert!(
+            field["status"]
+                .as_str()
+                .is_some_and(|value| !value.is_empty()),
+            "missing status for {path}"
+        );
+    }
 }
 
 #[test]
