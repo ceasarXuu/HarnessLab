@@ -695,6 +695,133 @@ parser = "none"
     );
 }
 
+#[test]
+fn agt_reg_010_doctor_warns_when_version_command_cannot_run() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/missing-version.toml"),
+        r#"schema_version = 1
+name = "missing-version"
+kind = "fake"
+display_name = "Missing Version"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+version_command = "definitely-missing-harnesslab-version-probe --version"
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.missing-version.version_command");
+    assert_eq!(check["status"], "warning");
+    assert_eq!(check["severity"], "warning");
+    assert!(
+        check["message"]
+            .as_str()
+            .unwrap()
+            .contains("version_command")
+    );
+    assert_eq!(
+        check["details"]["version_probe"]["field"],
+        "version_command"
+    );
+}
+
+#[test]
+fn agt_reg_010_doctor_redacts_version_command_probe_output() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    fs::write(
+        home.path().join("agents/leaky-version.toml"),
+        r#"schema_version = 1
+name = "leaky-version"
+kind = "fake"
+display_name = "Leaky Version"
+command = "sh"
+input_mode = "stdin"
+working_dir = "workspace"
+timeout_sec = 1
+version_command = "printf sk-secret"
+
+[auth]
+inherit = false
+inherit_env = []
+include_paths = []
+exclude_paths = []
+mount_ssh_socket = false
+mount_docker_socket = false
+
+[setup]
+preset = "none"
+required_commands = []
+run_as = "current"
+commands = []
+
+[usage]
+parser = "none"
+"#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("DOCKER_HOST", MISSING_DOCKER_HOST)
+        .args(["--home", home.path().to_str().unwrap(), "doctor", "--json"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let output_text = String::from_utf8(output.clone()).unwrap();
+    assert!(!output_text.contains("sk-secret"));
+    assert!(output_text.contains("[REDACTED]"));
+    let json: serde_json::Value = serde_json::from_slice(&output).unwrap();
+    let check = find_check(&json, "agent.leaky-version.version_command");
+    assert_eq!(check["status"], "ok");
+    assert!(
+        check["details"]["version_probe"]["stdout_tail"]
+            .as_str()
+            .unwrap()
+            .contains("[REDACTED]")
+    );
+    let stdout_log = fs::read_to_string(
+        home.path()
+            .join(".doctor-version-probes/leaky-version/stdout.log"),
+    )
+    .unwrap();
+    assert!(!stdout_log.contains("sk-secret"));
+    assert!(stdout_log.contains("[REDACTED]"));
+}
+
 fn assert_error_field(check: &serde_json::Value, field: &str, accepted: &str, suggested: &str) {
     let error = check["details"]["errors"]
         .as_array()

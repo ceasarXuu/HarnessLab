@@ -1,6 +1,7 @@
 mod attempts;
 mod cleanup;
 mod external;
+mod mode;
 mod monitor;
 mod patch;
 mod replay;
@@ -12,6 +13,7 @@ mod shell;
 mod store;
 mod usage;
 mod verifier;
+mod version;
 use crate::agent_registry::{
     MaterializedAgentProfile, materialization_error_to_anyhow, materialize_profile,
 };
@@ -32,6 +34,7 @@ use harnesslab_infra::{
     append_event, atomic_write_json, collect_artifacts, command_exists, event, first_command_word,
     read_json,
 };
+use mode::ExecutionMode;
 use patch::{capture_patch, patch_failure};
 use replay::{replay_plan_from_source, replay_spec_from_source};
 use sandbox::{AgentRunRequest, run_agent};
@@ -39,15 +42,10 @@ use schedule::{AttemptWork, partition_attempts};
 use shell::run_shell;
 use std::fs;
 use std::path::Path;
+pub(crate) use store::runs_dir;
 use store::{load_config, load_profile, write_run_inputs};
 use usage::collect_usage;
 use verifier::run_verifier;
-#[derive(Debug, Clone, Copy)]
-enum ExecutionMode {
-    New,
-    Resume,
-    Replay,
-}
 
 #[cfg(test)]
 use {
@@ -82,6 +80,7 @@ pub(crate) fn execute_new_run(
     );
     let run_dir = store::runs_dir(home, &config).join(&run_id);
     fs::create_dir_all(&run_dir)?;
+    let version_snapshot = version::probe_profile_version(&profile, &run_dir)?;
     let spec = RunSpec {
         schema_version: 1,
         run_id: run_id.clone(),
@@ -118,6 +117,7 @@ pub(crate) fn execute_new_run(
         &profile,
         &report_profile,
         &materialized,
+        version_snapshot.as_ref(),
         &plan,
         &original_command,
     )?;
@@ -139,10 +139,6 @@ pub(crate) struct RunOverrides {
     pub(crate) concurrency: Option<usize>,
     pub(crate) attempts: Option<u32>,
     pub(crate) timeout_sec: Option<u64>,
-}
-
-pub(crate) fn runs_dir(home: &Path, config: &harnesslab_core::GlobalConfig) -> std::path::PathBuf {
-    store::runs_dir(home, config)
 }
 
 pub(crate) fn resume_run(_home: &Path, run_dir: &Path, json: bool) -> Result<i32> {
@@ -203,6 +199,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     );
     let run_dir = store::runs_dir(home, &config).join(&run_id);
     fs::create_dir_all(&run_dir)?;
+    let version_snapshot = version::probe_profile_version(&profile, &run_dir)?;
     let spec =
         replay_spec_from_source(&source_spec, run_id.clone(), store::now_rfc3339(), &run_dir);
     validate_run_spec(&spec)?;
@@ -213,10 +210,17 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
         &profile,
         &report_profile,
         &materialized,
+        version_snapshot.as_ref(),
         &plan,
         &original_command,
     )?;
     store::log_profile_snapshot_loaded(&run_dir, &spec.run_id, profile_source.as_str(), "replay")?;
+    version::append_replay_version_warning(
+        source,
+        &run_dir,
+        &spec.run_id,
+        version_snapshot.as_ref(),
+    )?;
     let code = execute_plan(
         &run_dir,
         &spec,
