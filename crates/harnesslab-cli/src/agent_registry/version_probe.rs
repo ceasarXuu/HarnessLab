@@ -1,5 +1,5 @@
 use anyhow::Result;
-use harnesslab_core::{AgentProfile, TerminationReason, redact_known_secret};
+use harnesslab_core::{AgentProfile, TerminationReason, redact_public_value};
 use harnesslab_infra::{ExecSpec, HostProcessExecutor};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -134,42 +134,7 @@ fn read_tail(path: &Path) -> Result<String> {
 }
 
 pub(crate) fn sanitize_probe_text(value: &str, secrets: &[&str]) -> String {
-    let redacted = redact_known_secret(value, secrets);
-    redacted
-        .split_inclusive(char::is_whitespace)
-        .map(redact_probe_token)
-        .collect()
-}
-
-fn redact_probe_token(token: &str) -> String {
-    let trimmed = token.trim_end_matches(char::is_whitespace);
-    let suffix = &token[trimmed.len()..];
-    if is_sensitive_probe_token(trimmed) {
-        format!("[REDACTED]{suffix}")
-    } else {
-        token.to_string()
-    }
-}
-
-fn is_sensitive_probe_token(token: &str) -> bool {
-    let normalized = token
-        .trim_matches(|c: char| c == '\'' || c == '"' || c == '`' || c == ';' || c == ',')
-        .to_ascii_lowercase();
-    normalized.contains("sk-")
-        || normalized.contains("github_pat_")
-        || normalized.contains("ghp_")
-        || normalized.contains("gho_")
-        || normalized.contains("ghu_")
-        || normalized.contains("ghs_")
-        || normalized.contains("xoxb-")
-        || normalized.contains("xoxp-")
-        || normalized.contains("api_key")
-        || normalized.contains("apikey")
-        || normalized.contains("access_token")
-        || normalized.contains("auth_token")
-        || normalized.contains("password")
-        || normalized.contains("passwd")
-        || normalized.contains("secret")
+    redact_public_value(value, secrets)
 }
 
 fn now_rfc3339() -> String {

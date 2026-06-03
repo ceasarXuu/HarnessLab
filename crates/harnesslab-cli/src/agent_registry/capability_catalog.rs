@@ -13,7 +13,7 @@ pub(crate) fn resolve_profile_capabilities(profile: &AgentProfile) -> Materializ
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub(crate) struct MaterializedCapabilities {
     pub skills: ResolvedCapabilityPolicy,
     pub tools: ResolvedCapabilityPolicy,

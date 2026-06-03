@@ -51,6 +51,7 @@ pub(super) fn run_agent(
             profile: ctx.profile,
             report_profile: ctx.report_profile,
             materialized_profile: ctx.materialized_profile,
+            report_materialized_profile: ctx.report_materialized_profile,
             task: &sandbox_task,
             attempt: ctx.attempt,
             attempt_dir: ctx.attempt_dir,

@@ -1,10 +1,10 @@
 use anyhow::Result;
 use harnesslab_core::{AgentKind, AgentProfile, ProfileValidationError, RunAs, SetupPreset};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::capability_catalog::{MaterializedCapabilities, resolve_profile_capabilities};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct MaterializedAgentProfile {
     pub setup_script: Option<String>,
     pub setup_summary: String,

@@ -45,13 +45,13 @@ pub struct CapabilityPolicy {
     pub include_paths: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProfileValidationReport {
     pub errors: Vec<ProfileValidationError>,
     pub warnings: Vec<ProfileValidationWarning>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProfileValidationError {
     pub field: String,
     pub message: String,
@@ -59,7 +59,7 @@ pub struct ProfileValidationError {
     pub suggested_fix: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProfileValidationWarning {
     pub code: String,
     pub field: String,

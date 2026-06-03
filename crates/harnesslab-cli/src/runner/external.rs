@@ -3,7 +3,7 @@ use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentProfile, AttemptProvenance, ExternalRunnerKind, RunSpec, TaskAttemptResult, TaskPlan,
-    redact_known_secret,
+    redact_public_value,
 };
 use std::fs;
 use std::path::Path;
@@ -79,6 +79,7 @@ pub(super) struct ExternalTaskExecution<'a> {
     pub(super) profile: &'a AgentProfile,
     pub(super) report_profile: &'a AgentProfile,
     pub(super) materialized_profile: &'a MaterializedAgentProfile,
+    pub(super) report_materialized_profile: &'a MaterializedAgentProfile,
     pub(super) task: &'a TaskPlan,
     pub(super) attempt: u32,
     pub(super) provenance: AttemptProvenance,
@@ -116,8 +117,8 @@ pub(super) fn write_external_command_snapshot(
         agent_dir.join("command.txt"),
         format!(
             "template={}\nrendered={}\ninput_mode=external\n",
-            redact_known_secret(&report_profile.command, &secret_refs),
-            redact_known_secret(command, &secret_refs)
+            redact_public_value(&report_profile.command, &secret_refs),
+            redact_public_value(command, &secret_refs)
         ),
     )?;
     Ok(())

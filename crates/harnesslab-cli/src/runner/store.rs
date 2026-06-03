@@ -1,7 +1,7 @@
 use crate::agent_registry::{AgentVersionSnapshot, MaterializedAgentProfile, sanitize_probe_text};
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentProfile, GlobalConfig, RunSpec, is_valid_profile_name, redact_known_secret,
+    AgentProfile, GlobalConfig, RunSpec, is_valid_profile_name, redact_public_value,
     redacted_profile_snapshot,
 };
 use harnesslab_infra::{append_event, atomic_write_json, event, read_json};
@@ -98,11 +98,12 @@ pub(super) fn write_run_inputs(
     report_profile: &AgentProfile,
     materialized_profile: &MaterializedAgentProfile,
     version_snapshot: Option<&AgentVersionSnapshot>,
+    extra_secret_refs: &[String],
     plan: &harnesslab_core::BenchmarkPlan,
     original_command: &str,
 ) -> Result<()> {
     let secrets = secret_values(runtime_profile);
-    let secret_refs = secrets.iter().map(String::as_str).collect::<Vec<_>>();
+    let secret_refs = combined_secret_refs(&secrets, extra_secret_refs);
     atomic_write_json(&run_dir.join("run.json"), spec)?;
     atomic_write_json(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT), runtime_profile)?;
     restrict_runtime_snapshot(&run_dir.join(RUNTIME_PROFILE_SNAPSHOT))?;
@@ -130,6 +131,12 @@ pub(super) fn load_agent_version_snapshot(run_dir: &Path) -> Result<Option<Agent
     Ok(None)
 }
 
+pub(super) fn load_materialized_profile_snapshot(
+    run_dir: &Path,
+) -> Result<MaterializedAgentProfile> {
+    read_json(&run_dir.join(MATERIALIZED_PROFILE_SNAPSHOT))
+}
+
 pub(super) fn secret_values(profile: &AgentProfile) -> Vec<String> {
     profile
         .auth
@@ -140,13 +147,23 @@ pub(super) fn secret_values(profile: &AgentProfile) -> Vec<String> {
         .collect()
 }
 
+pub(super) fn public_materialized_snapshot(
+    runtime_profile: &AgentProfile,
+    materialized: &MaterializedAgentProfile,
+    extra_secret_refs: &[String],
+) -> MaterializedAgentProfile {
+    let secrets = secret_values(runtime_profile);
+    let secret_refs = combined_secret_refs(&secrets, extra_secret_refs);
+    redacted_materialized_snapshot(materialized, &secret_refs)
+}
+
 fn redacted_materialized_snapshot(
     materialized: &MaterializedAgentProfile,
     secrets: &[&str],
 ) -> MaterializedAgentProfile {
     let mut snapshot = materialized.clone();
     if let Some(setup_script) = &snapshot.setup_script {
-        snapshot.setup_script = Some(redact_known_secret(setup_script, secrets));
+        snapshot.setup_script = Some(redact_public_value(setup_script, secrets));
     }
     snapshot
 }
@@ -159,15 +176,27 @@ pub(super) fn root_command_snapshot(
 ) -> String {
     format!(
         "original_command={}\nreplay_command={}\nagent_profile={}\nagent_kind={:?}\nagent_runtime_snapshot={}\nagent_report_snapshot={}\nagent_materialized_snapshot={}\nagent_command_template={}\n",
-        redact_known_secret(original_command, secrets),
+        redact_public_value(original_command, secrets),
         replay_command(spec),
         profile.name,
         profile.kind,
         RUNTIME_PROFILE_SNAPSHOT,
         REPORT_PROFILE_SNAPSHOT,
         MATERIALIZED_PROFILE_SNAPSHOT,
-        redact_known_secret(&profile.command, secrets)
+        redact_public_value(&profile.command, secrets)
     )
+}
+
+pub(super) fn combined_secret_refs<'a>(
+    env_secrets: &'a [String],
+    extra_secret_refs: &'a [String],
+) -> Vec<&'a str> {
+    env_secrets
+        .iter()
+        .chain(extra_secret_refs.iter())
+        .map(String::as_str)
+        .filter(|value| !value.is_empty())
+        .collect()
 }
 
 pub(super) fn original_run_command(

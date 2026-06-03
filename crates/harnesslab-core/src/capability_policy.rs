@@ -26,7 +26,7 @@ pub struct CapabilityCatalog {
     pub enforcement: CapabilityEnforcement,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolvedCapabilityPolicy {
     pub domain: CapabilityDomain,
     pub inherit: bool,

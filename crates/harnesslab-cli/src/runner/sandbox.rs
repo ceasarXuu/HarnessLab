@@ -5,7 +5,7 @@ use crate::runner::sandbox_setup;
 use anyhow::Result;
 use harnesslab_core::{
     AgentProfile, FailureCode, InputMode, RunSpec, TaskPlan, TerminationReason,
-    effective_auth_mount_specs,
+    effective_auth_mount_specs, redact_public_value,
 };
 use harnesslab_infra::{DockerCliProvider, DockerCreateRequest, ExecSpec, HostProcessExecutor};
 use std::collections::BTreeMap;
@@ -22,6 +22,7 @@ pub(super) struct AgentRunRequest<'a> {
     pub(super) profile: &'a AgentProfile,
     pub(super) report_profile: &'a AgentProfile,
     pub(super) materialized_profile: &'a MaterializedAgentProfile,
+    pub(super) report_materialized_profile: &'a MaterializedAgentProfile,
     pub(super) task: &'a TaskPlan,
     pub(super) attempt: u32,
     pub(super) attempt_dir: &'a Path,
@@ -34,6 +35,7 @@ pub(super) fn run_agent(request: AgentRunRequest<'_>) -> Result<AgentExecution> 
         profile,
         report_profile,
         materialized_profile,
+        report_materialized_profile,
         task,
         attempt,
         attempt_dir,
@@ -52,7 +54,7 @@ pub(super) fn run_agent(request: AgentRunRequest<'_>) -> Result<AgentExecution> 
         task,
         workspace,
         uses_docker,
-        materialized_profile,
+        report_materialized_profile,
     )?;
     write_agent_command_snapshot(attempt_dir, report_profile, &report_command)?;
     if uses_docker {
@@ -151,8 +153,8 @@ fn write_agent_command_snapshot(
         agent_dir.join("command.txt"),
         format!(
             "template={}\nrendered={}\ninput_mode={:?}\n",
-            profile.command,
-            redacted_rendered_command(profile, rendered_command),
+            redact_public_value(&profile.command, &[]),
+            redact_public_value(&redacted_rendered_command(profile, rendered_command), &[]),
             profile.input_mode
         ),
     )?;

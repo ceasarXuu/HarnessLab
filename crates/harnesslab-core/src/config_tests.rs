@@ -368,11 +368,26 @@ fn cfg_004_effective_auth_mount_specs_match_runtime_rules() {
 
 #[test]
 fn cfg_005_profile_snapshot_redacts_command_secret() {
-    let profile = default_agent_profile("custom", AgentKind::Custom, "run sk-secret");
+    let mut profile = default_agent_profile("custom", AgentKind::Custom, "run sk-secret");
+    profile.version_command = Some("printf sk-secret".to_string());
+    profile.setup.commands = vec!["install sk-secret".to_string()];
+    profile.labels.insert(
+        "sandbox_setup_command".to_string(),
+        "legacy sk-secret".to_string(),
+    );
 
     let snapshot = redacted_profile_snapshot(&profile, &["sk-secret"]);
 
     assert_eq!(snapshot.command, "run [REDACTED]");
+    assert_eq!(
+        snapshot.version_command.as_deref(),
+        Some("printf [REDACTED]")
+    );
+    assert_eq!(snapshot.setup.commands, vec!["install [REDACTED]"]);
+    assert_eq!(
+        snapshot.labels.get("sandbox_setup_command").unwrap(),
+        "legacy [REDACTED]"
+    );
 }
 
 #[test]
