@@ -1,4 +1,4 @@
-use crate::agent_registry::MaterializedAgentProfile;
+use crate::agent_registry::{MaterializedAgentProfile, run_as_requires_sandbox};
 use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
@@ -22,6 +22,7 @@ pub(super) fn is_external_task(task: &TaskPlan) -> bool {
 }
 
 pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
+    validate_run_as_for_plan(profile, tasks)?;
     for task in tasks {
         let Some(runner) = &task.external_runner else {
             continue;
@@ -34,6 +35,42 @@ pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPla
         }
     }
     Ok(())
+}
+
+fn validate_run_as_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
+    if !run_as_requires_sandbox(profile.setup.run_as) {
+        return Ok(());
+    }
+    if let Some((task, reason)) = tasks
+        .iter()
+        .find_map(|task| host_agent_execution_reason(profile, task).map(|reason| (task, reason)))
+    {
+        bail!(
+            "setup.run_as={:?} is not enforceable for {}; task={}; host execution only supports setup.run_as=\"current\"; use a sandboxed agent path or set setup.run_as=\"current\"",
+            profile.setup.run_as,
+            reason,
+            task.task_id
+        );
+    }
+    Ok(())
+}
+
+fn host_agent_execution_reason(profile: &AgentProfile, task: &TaskPlan) -> Option<&'static str> {
+    let Some(runner) = &task.external_runner else {
+        return (!super::sandbox::task_requires_docker(task)).then_some("host task");
+    };
+    match runner.kind {
+        ExternalRunnerKind::TerminalBench => profile
+            .labels
+            .contains_key("terminal_bench_agent_import_path")
+            .then_some("terminal-bench import agent host path"),
+        ExternalRunnerKind::SweBenchPro => (profile
+            .labels
+            .get("swe_bench_pro_agent")
+            .map(String::as_str)
+            == Some("gold"))
+        .then_some("swe-bench-pro gold host path"),
+    }
 }
 
 pub(super) struct ExternalTaskExecution<'a> {

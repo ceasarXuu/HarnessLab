@@ -124,7 +124,12 @@ parser = "none"
 }
 
 pub fn write_swe_gold_agent(home: &Path) {
-    let content = r#"schema_version = 1
+    write_swe_gold_agent_with_run_as(home, "current");
+}
+
+pub fn write_swe_gold_agent_with_run_as(home: &Path, run_as: &str) {
+    let content = format!(
+        r#"schema_version = 1
 name = "swe-gold"
 kind = "fake"
 display_name = "SWE Gold"
@@ -141,12 +146,19 @@ exclude_paths = []
 mount_ssh_socket = false
 mount_docker_socket = false
 
+[setup]
+preset = "none"
+required_commands = []
+run_as = "{run_as}"
+commands = []
+
 [usage]
 parser = "none"
 
 [labels]
 swe_bench_pro_agent = "gold"
-"#;
+"#,
+    );
     fs::write(home.join("agents/swe-gold.toml"), content).unwrap();
 }
 
@@ -300,7 +312,7 @@ fn write_executable(path: &Path, content: &str) {
     }
 }
 
-fn path_with(bin: &Path) -> String {
+pub fn path_with(bin: &Path) -> String {
     let current = std::env::var("PATH").unwrap_or_default();
     format!("{}:{current}", bin.display())
 }

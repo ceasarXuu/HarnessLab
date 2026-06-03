@@ -74,6 +74,10 @@ pub(crate) fn wrap_rendered_command(command: &str, run_as: RunAs) -> String {
     }
 }
 
+pub(crate) fn run_as_requires_sandbox(run_as: RunAs) -> bool {
+    matches!(run_as, RunAs::Root | RunAs::Harnesslab)
+}
+
 pub(crate) fn materialization_error_to_anyhow(error: MaterializationError) -> anyhow::Error {
     anyhow::anyhow!(
         "{}: {}; suggested_fix={}",

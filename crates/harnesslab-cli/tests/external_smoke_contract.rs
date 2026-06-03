@@ -1,9 +1,11 @@
 mod support;
 
+use assert_cmd::Command;
 use std::fs;
 use support::swe::{
-    fake_swe_tools, init_home, run_swe_json, run_swe_json_with_output, set_network_default_none,
-    swe_bench_root, write_agent, write_agent_with_mode, write_codex_agent, write_swe_gold_agent,
+    fake_swe_tools, init_home, path_with, run_swe_json, run_swe_json_with_output,
+    set_network_default_none, swe_bench_root, write_agent, write_agent_with_mode,
+    write_codex_agent, write_swe_gold_agent, write_swe_gold_agent_with_run_as,
 };
 
 #[test]
@@ -19,6 +21,43 @@ fn int_011_swe_bench_pro_smoke_runs_external_evaluator_contract() {
     assert_eq!(results["tasks"][0]["benchmark_score"], 1.0);
     assert_eq!(results["tasks"][0]["patch"]["status"], "captured");
     assert!(run_dir.join("report.html").is_file());
+}
+
+#[test]
+fn agt_reg_012_swe_gold_run_as_blocks_before_run_dir() {
+    let home = tempfile::tempdir().unwrap();
+    init_home(home.path());
+    write_swe_gold_agent_with_run_as(home.path(), "harnesslab");
+    let root = swe_bench_root();
+    let bin = fake_swe_tools();
+
+    let output = Command::cargo_bin("harnesslab")
+        .unwrap()
+        .env("HARNESSLAB_BENCHMARKS_DIR", root.path())
+        .env("PATH", path_with(bin.path()))
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "--agent",
+            "swe-gold",
+            "--benchmark",
+            "swe-bench-pro",
+            "--split",
+            "smoke",
+            "--json",
+        ])
+        .assert()
+        .code(3)
+        .get_output()
+        .stderr
+        .clone();
+
+    let stderr = String::from_utf8(output).unwrap();
+    assert!(stderr.contains("setup.run_as"));
+    assert!(stderr.contains("swe-bench-pro gold host path"));
+    assert!(stderr.contains("current"));
+    assert_eq!(fs::read_dir(home.path().join("runs")).unwrap().count(), 0);
 }
 
 #[test]
