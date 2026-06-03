@@ -163,6 +163,19 @@ scripts/test-after-change.sh --select AGT-REG-005
 
 该脚本会执行 `harnesslab init`、写入临时注册 profile、运行 `doctor --json`，再通过 `harnesslab run --agent registered-setup --benchmark terminal-bench --split smoke --json` 启动真实 Terminal-Bench import-agent 流程。验收证据必须包括 run 根目录的 `agent-runtime.materialized.json`、`command.txt`，以及官方 task log 目录里的 `agent_setup_command.sha256`、`agent_setup_stdout.log` 和 `agent_setup_stderr.log`；其中 `agent_setup_command.sha256` 要与 `agent-runtime.materialized.json.setup_script` 的 sha256 一致，`agent_setup_stdout.log` 要能证明 setup 在 registered agent 命令前运行。
 
+Agent 注册相关变更的运维检查要同时覆盖这些 artifacts：
+
+- `agent-profile.runtime.json`：private runtime snapshot，只用于 resume/replay，不作为可分享 artifact。
+- `agent-profile.snapshot.json`：公开 redacted profile snapshot；`command`、`version_command`、`setup.commands`、known labels 中的 secret 必须被 redact。
+- `agent-runtime.materialized.json`：公开 materialized runtime snapshot；必须包含结构化 `capabilities.*`，报告中的 effective capability 摘要应来自这里。
+- `agent-version.snapshot.json`：存在 `version_command` 时生成；doctor/run/replay 都必须使用 bounded probe，stdout/stderr 只保留 redacted tail。
+- `report.html`：必须链接 profile/runtime/version snapshots，并展示 effective capability sets 和 version probe status。
+- `tasks/**/agent/command.txt`：公开 command snapshot；host、Docker、Terminal-Bench、SWE-bench Pro 路径都必须使用同一 public redaction 语义。
+
+Replay 排查时不要只看当前 shell 环境。Replay 会从 source run 的 runtime profile 与 redacted report profile 差异中恢复 source-known redaction basis，用于继续 redact version probe、materialized setup、events 和 report。如果 replay 在当前环境变量缺失时泄漏 source run 已知 secret，优先检查 `runner/redaction.rs` 的 substring recovery 和 `runner/version.rs` 的 replay warning redaction。
+
+Host auth 隔离排查时，用黑盒测试证明 ambient env 没有进入 host agent 进程。`auth.inherit=false` 不应传入父进程完整环境；`auth.inherit=true` 也只传入声明的 `inherit_env` 加 task env 和最小 launch baseline。Host run 的 `setup.run_as` 只能是 `current`；如果看到 host path 使用 `root` 或 `harnesslab` 没有被 precheck 阻断，这是运行语义 bug，不是 warning。
+
 检查顺序：
 
 - 先查 `results.json`，确认 `failure_class/failure_code` 和官方 `results[].failure_mode` 一致。官方结果里的 `agent_timeout` 是 benchmark verdict，必须映射为 HarnessLab `benchmark/agent_timeout`，不能误报成 `benchmark/test_failed` 或 HarnessLab 执行层超时。

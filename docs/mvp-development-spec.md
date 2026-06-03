@@ -156,6 +156,9 @@ Validation rules:
 - `agent_profile_ref` must resolve before run creation.
 - `benchmark.name` and `benchmark.split` must resolve before run creation.
 - `attempts >= 1`, `concurrency >= 1`.
+- Agent profile materialization must complete before task scheduling. Non-materializable capability policies, invalid required commands, and host-incompatible `setup.run_as` are command failures, not benchmark verdicts.
+- Run inputs must persist both private and public profile state: `agent-profile.runtime.json` for replay/resume, `agent-profile.snapshot.json` for redacted sharing, `agent-runtime.materialized.json` for structured resolved setup/capabilities, and `agent-version.snapshot.json` when `version_command` is configured.
+- Public run artifacts must redact known secret values and common sensitive tokens in command-like fields, reports, task command snapshots, and version probe logs.
 
 ### 5.2 TaskAttemptResult
 
@@ -257,6 +260,7 @@ Skipped tasks do not hide failures. If a task was skipped because of run-level f
 - `verdict` is the experiment verdict bucket: `success`, `partial_success`, `benchmark_failure`, `execution_failure`, `interrupted`, or `run_failed`.
 - `summary` mirrors `results.json.summary` so automation can distinguish low score from command failure without parsing HTML.
 - `results_path` points to `results.json`; `report_path` points to `report.html`.
+- `report.html` must link the redacted profile snapshot, materialized runtime snapshot, command snapshot, run-health snapshot, and version snapshot when available. It must display effective capability sets and version probe status from persisted artifacts.
 
 ### 5.5 TaskAttemptAssembler
 

@@ -194,21 +194,29 @@ parser = "none"
 [labels]
 ```
 
-`auth.inherit` 是快捷开关，表示使用该 `kind` 的内置默认继承规则。规则展开后必须落到显式字段：
+`auth.inherit` 是认证继承开关，不是“继承整个父进程环境”的许可。规则展开后必须落到显式字段：
 
 - `inherit_env`：允许传入 sandbox 的环境变量名称。
 - `include_paths` / `exclude_paths`：允许挂载的本机配置路径。
 - `mount_ssh_socket`：是否挂载 SSH agent socket。
 - `mount_docker_socket`：是否挂载 Docker socket，默认禁止。
 
+Host execution and Docker execution share the same resolved auth source. Host execution must use explicit environment construction; `auth.inherit = false` means profile-declared env/path inheritance is disabled and the parent process environment is not passed through wholesale. A minimal launch baseline such as `PATH`, `HOME`, `TMPDIR`, and locale may be preserved, but that baseline is process infrastructure, not auth inheritance.
+
 `setup`、`skills`、`tools`、`hooks` 必须通过 agent-kind adapter materializer 转换为具体 sandbox 文件、环境变量或命令行参数。架构约束：
 
 - 普通 profile 优先使用 `setup.preset` 和能力 allow/deny，不直接写 `sandbox_setup_command`。
 - `setup.commands` 是高级逃生口，只在 `setup.preset = "custom"` 时允许；doctor 必须标记风险并展示失败归因。
-- `skills`、`tools`、`hooks` 采用相同策略模型：继承默认集合、显式白名单、显式黑名单、或禁用全部。
+- `skills`、`tools`、`hooks` 采用相同策略模型：如果 `allow` 非空，目标集合来自 `allow`；否则 `inherit = true` 使用默认集合；否则目标集合为空；最后应用 `deny`。
 - 如果某个 `kind` 暂不支持某类能力 materialization，doctor 必须对非默认策略报错，不能继续跑出不可比较结果。
-- run snapshot 必须保存原始注册表和展开后的有效能力摘要，报告展示人类可读摘要。
+- run snapshot 必须保存原始注册表、公开 redacted profile、结构化 materialized runtime、version probe snapshot 和展开后的有效能力摘要，报告展示人类可读摘要并链接结构化 artifacts。
 - benchmark adapter 不应解释 skills/tools/hooks 语义，只消费已经 materialize 完成的 agent runtime 配置。
+
+`setup.run_as` 的 materialization 边界也必须显式：
+
+- Docker sandbox 可以 materialize `root`、`harnesslab`、`current`。
+- Host execution, Terminal-Bench import-agent host path, and SWE-bench Pro `gold` host path currently only support `current`.
+- Host-incompatible `run_as` must be blocked before task execution. Silent fallback is not allowed.
 
 ### 5.4 Benchmark Registry
 
@@ -896,6 +904,8 @@ Report model：
 
 - run summary。
 - agent profile summary。
+- materialized runtime summary, including effective skills/tools/hooks and unsupported reasons.
+- version probe status when `version_command` exists.
 - benchmark summary。
 - failure summary。
 - usage summary。
@@ -924,6 +934,11 @@ Doctor 是架构质量门禁，不只是用户提示。
 | split data missing | warning or error by split |
 | smoke task can be planned | error |
 | usage parser valid | warning |
+| setup.required_commands valid/available/provided by setup | error or info |
+| capability policy names and materializer support | error for invalid/non-materializable declarations |
+| version_command probe | warning unless malformed |
+| host-incompatible setup.run_as | error before run |
+| host auth inheritance consistency | error for impossible declarations |
 
 Doctor 输出结构化结果，CLI 渲染为人类可读表格。后续测试可以直接断言结构化 doctor result。
 
