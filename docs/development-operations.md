@@ -4,6 +4,7 @@
 
 ## User Playbooks
 
+- [Agent Registration Guide](agent-registration-guide.md)：面向第一次注册 agent 的用户，覆盖 init、schema、profile 编辑、doctor、最小 smoke run 和注册完成清单。
 - [用 claude-ds 跑一次 Terminal-Bench 实验](playbooks/terminal-bench-claude-ds.md)：面向用户的最小使用路径，覆盖 agent 注册、预检查、run、结果查看、报告、replay/resume。
 - [Agent Profile Reference](agent-profile-reference.md)：注册表字段、取值范围、materialization 支持矩阵和验证清单。
 - [npm 包名和 CLI 命令占位发布](playbooks/npm-package-reservation.md)：记录 `@ceasarxuu/harnesslab`、`harnessrig`、`harnessyard` npm 包名和对应命令占位发布的预检、验证和发布复用步骤。
