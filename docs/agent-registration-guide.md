@@ -160,6 +160,94 @@ parser = "none"
 model = "deepseek"
 ```
 
+### 4.1 完整参数说明
+
+注册流程里的每个参数都应该能回答三件事：它是什么意思、可以填什么、应该怎么填。下面按 TOML 结构列出完整说明。
+
+#### 顶层参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `schema_version` | 是 | 当前固定 `1` | `1` | Agent profile schema 版本。除非 HarnessLab 升级 schema，否则不要改。 |
+| `name` | 是 | `[a-zA-Z0-9][a-zA-Z0-9._-]*` | `"claude-ds"` | profile 唯一名称，也是运行时 `--agent claude-ds` 使用的值。必须以 ASCII 字母或数字开头。 |
+| `kind` | 是 | `codex`、`claude-code`、`opencode`、`pi-coding-agent`、`custom`、`fake` | `"claude-code"` | CLI harness 类型。HarnessLab 用它选择默认 auth、setup 和 materialization 规则。 |
+| `display_name` | 是 | 任意可读字符串 | `"Claude Code via DeepSeek API"` | 报告中展示给用户看的名称。可以比 `name` 更长、更易读。 |
+| `command` | 是 | shell command 字符串 | `"claude-ds -p --bare --output-format text"` | HarnessLab 启动 agent 的命令模板。不要写 API key。`input_mode = "argument"` 时必须包含 `{{instruction}}`；`input_mode = "file"` 时必须包含 `{{instruction_file}}` 或 `{{instruction}}`。 |
+| `input_mode` | 是 | `stdin`、`argument`、`file`、`tty` | `"stdin"` | HarnessLab 如何把任务说明交给 agent。`stdin` 通过标准输入传入；`argument` 放入命令参数；`file` 写入文件后传路径；`tty` 用终端语义运行。 |
+| `working_dir` | 是 | `workspace`、`run_dir` | `"workspace"` | agent 进程的启动目录。`workspace` 表示 benchmark 工作区；`run_dir` 表示 HarnessLab run 目录。 |
+| `timeout_sec` | 是 | 正整数秒数 | `300` | 单个 task 的默认 agent 超时。benchmark 自身可能进一步收紧有效超时。 |
+| `version_command` | 否 | shell command 字符串或省略 | `"claude --version"` | 可选版本探测命令，用于记录/诊断 agent CLI 版本。失败不应被当作解题失败。 |
+
+#### `[auth]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `auth.inherit` | 是 | `true`、`false` | `true` | 是否启用声明式认证继承。设为 `false` 时，不继承 `inherit_env` 和 `include_paths` 中的认证信息。 |
+| `auth.inherit_env` | 是 | 环境变量名数组 | `["ANTHROPIC_AUTH_TOKEN"]` | 允许传入运行环境的环境变量名。这里只写变量名，不写变量值。 |
+| `auth.include_paths` | 是 | 路径数组，或 `host:container:mode` 数组 | `["~/.claude:/root/.claude:ro"]` | 显式挂载到运行环境的认证/配置路径。`mode` 常用 `ro` 或 `rw`。 |
+| `auth.exclude_paths` | 是 | 路径数组 | `["~/.claude/logs"]` | 从继承路径中排除的路径，用于避免挂载不需要或敏感的目录。 |
+| `auth.mount_ssh_socket` | 是 | `true`、`false` | `false` | 是否挂载 SSH agent socket。只在 agent 需要 SSH 认证时开启。 |
+| `auth.mount_docker_socket` | 是 | `true`、`false` | `false` | 是否挂载 Docker socket。权限很高，`doctor` 会提示风险；普通 benchmark agent 不应开启。 |
+
+#### `[setup]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `setup.preset` | 否 | `none`、`builtin`、`custom` | `"builtin"` | setup 策略。`none` 不做额外准备；`builtin` 使用 HarnessLab 内置规则；`custom` 才允许执行 `setup.commands`。 |
+| `setup.required_commands` | 否 | 裸命令名数组；字符可包含字母、数字、`.`、`_`、`+`、`-` | `["claude", "claude-ds"]` | setup 完成后必须能找到的命令。不要写路径、shell 管道或带参数命令。 |
+| `setup.run_as` | 否 | `root`、`harnesslab`、`current` | `"harnesslab"` | agent 命令在 sandbox 内使用哪个用户运行。普通用户优先用 `harnesslab`。 |
+| `setup.commands` | 否 | shell command 数组 | `["npm install -g @anthropic-ai/claude-code"]` | 高级自定义 setup 命令。只有 `setup.preset = "custom"` 时有效。不要在这里写 secret。 |
+
+#### `[skills]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `skills.inherit` | 否 | `true`、`false` | `true` | 是否继承该 agent kind 的默认 skills。首次注册建议保持 `true`。 |
+| `skills.allow` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["code-review"]` | skills 白名单。非空时表示只允许这些 skills。不能和 `skills.deny` 重复。 |
+| `skills.deny` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["web-search"]` | skills 黑名单。不能和 `skills.allow` 重复。 |
+| `skills.include_paths` | 否 | 路径数组 | `["~/.claude/skills"]` | 额外 skills 目录。路径类配置放这里，不要放进 `allow` 或 `deny`。 |
+
+#### `[tools]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `tools.inherit` | 否 | `true`、`false` | `true` | 是否继承默认 tools。首次注册建议保持 `true`。 |
+| `tools.allow` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["bash"]` | tools 白名单。非空时表示只允许这些 tools。不能和 `tools.deny` 重复。 |
+| `tools.deny` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["web_search"]` | tools 黑名单。不能和 `tools.allow` 重复。 |
+
+#### `[hooks]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `hooks.inherit` | 否 | `true`、`false` | `true` | 是否继承默认 hooks。首次注册建议保持 `true`。 |
+| `hooks.allow` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["pre_tool_use"]` | hooks 白名单。非空时表示只允许这些 hooks。不能和 `hooks.deny` 重复。 |
+| `hooks.deny` | 否 | 字符串数组；名称不能为空，不能包含 `/` 或 `\` | `["post_tool_use"]` | hooks 黑名单。不能和 `hooks.allow` 重复。 |
+
+#### `[usage]` 参数
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `usage.parser` | 是 | `none`、`regex`、`json_path` | `"none"` | token/cost 采集方式。`none` 表示不解析用量。 |
+| `usage.source` | 否 | `agent_stdout`、`agent_stderr`、`agent_logs`、`file:<safe-relative-path>` | `"agent_logs"` | usage parser 的输入来源。`file:` 路径不能逃逸 run 目录。 |
+| `usage.input_tokens_key` | 否 | 字符串 | `"input_tokens"` | `json_path` 或结构化解析时表示输入 token 字段名。 |
+| `usage.output_tokens_key` | 否 | 字符串 | `"output_tokens"` | `json_path` 或结构化解析时表示输出 token 字段名。 |
+| `usage.total_tokens_key` | 否 | 字符串 | `"total_tokens"` | `json_path` 或结构化解析时表示总 token 字段名。 |
+| `usage.cost_usd_key` | 否 | 字符串 | `"cost_usd"` | `json_path` 或结构化解析时表示美元成本字段名。 |
+
+#### `[labels]` 参数
+
+`labels` 是开放 key/value map，值都是字符串。它既用于报告展示，也用于部分 benchmark adapter 的提示信息。
+
+| 参数 | 必填 | 取值范围 | 示例 | 解释 |
+| --- | --- | --- | --- | --- |
+| `labels.<key>` | 否 | 字符串 key/value | `model = "deepseek"` | 通用报告标签。适合记录模型、provider、wrapper、策略名等可比较条件。 |
+| `labels.model` | 否 | 字符串 | `"deepseek"` | 常用模型标签。报告中用于展示这个 profile 的模型/配置。 |
+| `labels.terminal_bench_model` | 否 | 字符串 | `"deepseek"` | Terminal-Bench adapter 使用的模型标签；未设置时通常可用 `labels.model` 作为 fallback。 |
+| `labels.terminal_bench_agent` | 否 | Terminal-Bench 内置 agent 名称 | `"codex"` | 让 Terminal-Bench 使用官方内置 agent 名称。和 `terminal_bench_agent_import_path` 二选一。 |
+| `labels.terminal_bench_agent_import_path` | 否 | Python import path | `"harnesslab_tb_agent:HarnessLabCommandAgent"` | 让 Terminal-Bench 通过 import path 加载 HarnessLab bridge agent。 |
+| `labels.terminal_bench_agent_pythonpath` | 否 | 绝对路径或 Python path 字符串 | `"/path/to/HarnessLab/integrations/terminal_bench"` | 传给 Terminal-Bench bridge 的 Python path。使用源码运行时通常需要设置。 |
+| `labels.sandbox_setup_command` | 否 | shell command 字符串 | `"npm install -g @anthropic-ai/claude-code"` | 旧 profile 兼容字段。新注册不要优先使用；应改用 `[setup]`。 |
+
 关键规则：
 
 - 不要把 API key 写进 `command`、`labels` 或 `setup.commands`。
