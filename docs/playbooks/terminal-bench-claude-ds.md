@@ -101,7 +101,7 @@ mount_docker_socket = false
 [setup]
 preset = "builtin"
 required_commands = ["claude", "claude-ds"]
-run_as = "harnesslab"
+run_as = "current"
 commands = []
 
 [skills]
@@ -154,7 +154,7 @@ model = "deepseek"
 | `mount_docker_socket` | `true` / `false` | `false` | 是否挂载 Docker socket；默认禁止。 |
 | `setup.preset` | `none` / `builtin` / `custom` | `builtin` | `builtin` 用 HarnessLab 内置逻辑安装/准备该 kind 的 CLI；`custom` 才允许 `setup.commands`。 |
 | `setup.required_commands` | 命令名数组 | `["claude", "claude-ds"]` | setup 后必须存在的命令。包含 `claude-ds` 时，Claude Code adapter 会在容器内生成 wrapper。 |
-| `setup.run_as` | `root` / `harnesslab` / `current` | `harnesslab` | agent 命令在 sandbox 内的运行用户。 |
+| `setup.run_as` | `root` / `harnesslab` / `current` | `current` | agent 命令使用哪个用户运行。Terminal-Bench import-path bridge 是 host agent 路径，只支持 `current`；Docker sandbox profile 才能使用 `root` 或 `harnesslab`。 |
 | `setup.commands` | shell 命令数组 | `[]` | 高级 escape hatch，仅 `preset = "custom"` 时允许。 |
 | `skills.inherit` | `true` / `false` | `true` | 是否继承该 agent kind 的默认 skills。 |
 | `skills.allow` | 字符串数组 | `[]` | skills 白名单；空数组表示不额外限制。 |
@@ -179,7 +179,7 @@ model = "deepseek"
 | --- | --- | --- | --- |
 | `setup` | `preset` | `none` / `builtin` / `custom` | `builtin` 使用 HarnessLab 内置 setup；`custom` 才允许高级命令。 |
 | `setup` | `required_commands` | 命令名数组 | setup 后必须能找到的命令，预检查失败则阻断 run。 |
-| `setup` | `run_as` | `root` / `harnesslab` / `current` | agent 在 sandbox 内的运行用户。 |
+| `setup` | `run_as` | `root` / `harnesslab` / `current` | agent 命令使用哪个用户运行；host bridge 用 `current`，Docker sandbox 才能使用 `root` 或 `harnesslab`。 |
 | `setup` | `commands` | shell 命令数组 | 仅 `preset = "custom"` 时允许。 |
 | `skills` | `inherit` | `true` / `false` | 是否继承本机/agent 默认 skills。 |
 | `skills` | `allow` | 字符串数组 | skills 白名单；非空时只启用这些 skills。 |
