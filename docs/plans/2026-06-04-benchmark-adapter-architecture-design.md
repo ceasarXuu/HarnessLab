@@ -1,6 +1,6 @@
 # Benchmark Adapter Layer Architecture Design
 
-- Status: Ready for architecture review
+- Status: Reviewed and ready for implementation planning
 - Date: 2026-06-04
 - Scope: benchmark data adapters, runtime adapters, execution/result contracts, observability, testing, and migration plan
 - Source request: create a dedicated architecture design for completing the adapter layer
@@ -163,8 +163,7 @@ The runtime adapter receives a bounded context:
 - run id and attempt id
 - run directory and attempt directory
 - immutable `RunSpec`
-- raw and public-redacted `AgentProfile`
-- raw and public-redacted `MaterializedAgentProfile`
+- private and public `BenchmarkAgentRuntimeConfig`
 - `TaskPlan`
 - `ExternalRunnerSpec`
 - event writer
@@ -173,7 +172,37 @@ The runtime adapter receives a bounded context:
 
 The adapter must not reach into unrelated global state. Any environment variable diagnostic override must be named, documented, and emitted to `events.jsonl`.
 
-### 4.5 Runtime Prepared Attempt
+Raw `AgentProfile` is not part of the normal runtime adapter contract. If a
+temporary compatibility path needs a raw profile field, the adapter must declare
+that field in a compatibility allowlist, redact it in public artifacts, and
+carry a test proving the field is not used to reinterpret raw `skills`, `tools`,
+`hooks`, auth inheritance, or setup policy.
+
+### 4.5 Benchmark-Facing Agent Runtime Config
+
+`BenchmarkAgentRuntimeConfig` is the only agent contract a runtime adapter should
+consume after agent registry materialization.
+
+It should contain:
+
+- rendered agent command template, with private and public-redacted forms
+- input mode and benchmark bridge mode
+- declared environment pass-through, already resolved by the agent materializer
+- setup script/materialized setup refs, not raw setup policy
+- known benchmark labels such as Terminal-Bench import path/model, already
+  normalized into typed fields
+- host-agent execution support flags, including whether non-current `run_as`
+  is enforceable for this benchmark path
+- secret redaction references for adapter-owned snapshots and events
+
+It must not expose:
+
+- raw `skills/tools/hooks` policy
+- raw auth inheritance policy
+- raw setup policy except through explicit compatibility fields
+- ambient parent process environment
+
+### 4.6 Runtime Prepared Attempt
 
 `RuntimePreparedAttempt` is the adapter-owned execution contract for one attempt:
 
@@ -191,8 +220,54 @@ The adapter must not reach into unrelated global state. Any environment variable
 - cleanup tokens
 - expected artifact paths
 - replay materials
+- immutable input identity materials
 
 Terminal-Bench can use a mostly single official-runner command. SWE-bench Pro can represent a multi-phase attempt: metadata extraction, workspace preparation, agent execution, patch capture, evaluator execution, and result projection.
+
+### 4.7 Runtime Registry And Preflight
+
+The runtime registry owns every benchmark-kind-specific runtime decision. The
+orchestrator may look up a runtime adapter by `ExternalRunnerKind`, but it must
+not contain benchmark-specific validation branches outside the registry boundary.
+
+Registry-dispatched `preflight` must own:
+
+- benchmark-specific profile compatibility checks
+- host-agent versus sandbox-agent execution support
+- Terminal-Bench import-path requirements
+- SWE-bench Pro gold-agent host path constraints
+- official runner/evaluator readiness
+- missing data/evaluator/source diagnostics
+- adapter version and snapshot compatibility checks
+
+`validate_profile_for_plan`, `host_agent_execution_reason`, and direct
+benchmark-specific label parsing in CLI runner code must move behind this
+preflight boundary or become generic calls into runtime adapter metadata.
+
+### 4.8 Snapshot Authority
+
+Replay must have a single authority chain. Mutable local paths inside
+`TaskPlan.external_runner` are not sufficient as replay authority.
+
+Target authority order:
+
+1. `benchmark.snapshot.json`: selected benchmark, split, task ids, data snapshot
+   id, and source refs chosen for the run.
+2. `task-runtime.snapshot.json`: task-level immutable workload identity,
+   including upstream task metadata hash, attempt-local dataset manifest when
+   mutated, and evaluator/source refs needed to recreate the attempt.
+3. `external-runtime.private.json`: private runtime policy and command material
+   required for replay.
+4. `external-runtime.public.json`: public redacted runtime policy, command
+   summary, official result refs, cleanup evidence, and final/official verdict
+   provenance for report/debugging.
+
+`TaskPlan.external_runner` remains a launch hint for new runs during the
+migration, not a durable replay authority. Replay must trust the snapshots above
+when present. The existing behavior where replay can silently re-plan from live
+adapter data after `benchmark.snapshot.json` is missing must be retired as part
+of this architecture track and replaced with a readiness blocker or an explicit
+legacy degraded replay mode.
 
 ## 5. Ownership Boundaries
 
@@ -249,29 +324,91 @@ SWE-bench Pro is the reference implementation.
 
 ## 7. Observability Contract
 
-Every runtime adapter must emit a consistent event sequence:
+Adapter extraction must not regress the existing operator contract. Existing
+operator-critical event names stay queryable unless a migration emits both the
+old and new names and updates tests and runbooks in the same change.
 
-1. `external_runner_preflight`
-2. `external_runner_started`
-3. `external_runner_runtime_config`
-4. style-specific setup/workspace events
-5. `external_result_parse_failed` when parsing fails
-6. `external_runner_cleanup`
-7. `task_attempt_finished`
+Required common events:
 
-Runtime config events must include:
+| Phase | Event | Required Fields |
+| --- | --- | --- |
+| preflight | `external_runner_preflight` | adapter id, runner kind, agent bridge mode, readiness status, blocking reason if any |
+| launch | `external_runner_started` | dataset path, runtime dataset path, official run id or evaluator id, output root |
+| runtime policy | `external_runner_configured` | process timeout, no-output timeout, activity grace, progress paths, activity patterns, platform policy, official result path, command snapshot path |
+| activity | `external_runner_activity` | no-output window, observed activity, progress file, last progress timestamp when available |
+| no progress | `external_runner_no_progress` | progress paths, last progress timestamp, last activity, grace exhausted, termination reason |
+| hard timeout | `external_runner_timeout` | hard-timeout value, elapsed duration, kill reason, official run/evaluator id, process termination reason, whether official result existed before timeout |
+| setup failure | `external_runner_setup_failed` | failing phase, evidence source/log path, official run/evaluator id, mapped final failure class/code, whether pending tasks should abort |
+| parse failure | `external_result_parse_failed` | official result path, parser, raw failure summary, final mapped failure |
+| cleanup | style-specific cleanup event plus `external_runner_cleanup` when generic cleanup is introduced | phase, matched resources, removed resources, survivor resources, whether cleanup overrides benchmark verdict |
+| finish | `task_attempt_finished` | final failure class/code, official failure class/code, benchmark score, health impact, warnings |
 
-- official runner name and version when available
-- dataset path and runtime dataset path
-- platform policy
-- hard timeout and no-output timeout
-- progress paths
-- activity patterns
-- cleanup token shape, redacted if needed
-- official result path
-- command snapshot path
+Terminal-Bench compatibility events that must remain queryable:
 
-Secrets must be redacted in public artifacts. Raw logs may exist only where the existing redaction and artifact policy allows them.
+- `external_runner_configured`
+- `terminal_bench_dataset_prepared`
+- `external_runner_activity`
+- `external_runner_no_progress`
+- `external_runner_timeout`
+- `external_runner_setup_failed`
+- `terminal_bench_cleanup`
+
+SWE-bench Pro must use stable phase events instead of only free-form messages:
+
+- `swe_bench_pro_metadata_extraction_started`
+- `swe_bench_pro_workspace_prep_started`
+- `swe_bench_pro_agent_started`
+- `swe_bench_pro_patch_captured`
+- `swe_bench_pro_evaluator_started`
+- `swe_bench_pro_cleanup`
+
+`CleanupReport` must be structured. Minimum fields:
+
+- phase: `pre_task`, `post_task`, or `run`
+- adapter id
+- official run id or evaluator id
+- match tokens, redacted if needed
+- matched projects/resources
+- removed projects/resources
+- survivor projects/resources
+- cleanup exit status or error code
+- whether cleanup changed final failure classification
+- public message and private details path
+
+The final result must preserve verdict provenance:
+
+- official benchmark failure class/code
+- official benchmark score
+- final HarnessLab failure class/code
+- override reason when HarnessLab timeout, no-progress, setup failure, parse failure, or cleanup failure changes the final result
+
+Secrets must be redacted in public artifacts. Raw logs may exist only where the
+existing redaction and artifact policy allows them.
+
+### 7.1 Public And Private Runtime Artifacts
+
+Runtime adapter snapshots must have an explicit public/private boundary:
+
+- `external-runtime.private.json`: private command, env policy, raw cleanup
+  tokens, private paths, redaction basis, and replay materials needed to rerun.
+- `external-runtime.public.json`: redacted command summary, public env names
+  only, redacted cleanup token shape, official result refs, policy summary,
+  official-vs-final verdict provenance, and adapter version.
+
+Forbidden in public adapter artifacts:
+
+- secret values
+- unredacted auth paths when they reveal secret material
+- full command strings containing token-like values
+- raw environment maps
+- private cleanup tokens that can identify secret-bearing processes
+
+Required tests:
+
+- fake secret scan across adapter events, `external-runtime.public.json`, report
+  data, and replay warnings
+- public artifact absence test for raw command/env material
+- private artifact existence test when replay needs private materials
 
 ## 8. Error Semantics
 
@@ -296,16 +433,31 @@ Replay must not depend on mutable local benchmark data silently changing.
 
 Each run snapshot should include:
 
-- `benchmark.snapshot.json`: selected benchmark, split, task ids, data snapshot, warnings.
-- `task-runtime.snapshot.json`: one per task or embedded in attempt metadata, containing upstream source refs and runtime task metadata.
-- `external-runtime.snapshot.json`: one per attempt, containing runtime policy, official command, result paths, cleanup tokens, and adapter version.
+- `benchmark.snapshot.json`: selected benchmark, split, task ids, data snapshot id, warnings, and source refs.
+- `task-runtime.snapshot.json`: one per task or embedded in attempt metadata, containing upstream source refs, upstream task metadata hash, selected task instruction hash, and runtime task metadata.
+- `external-runtime.private.json`: one per attempt, containing private runtime policy, official command, env policy, cleanup tokens, redaction basis, and replay materials.
+- `external-runtime.public.json`: one per attempt, containing redacted runtime policy, official result paths, cleanup evidence summary, adapter version, official runner/evaluator identity, and final/official verdict provenance.
 - `agent-runtime.materialized.json`: already handled by agent registry; runtime adapters consume it.
 
 Replay behavior:
 
+- Replay must trust persisted snapshots over live adapter planning.
+- If `benchmark.snapshot.json` or the required runtime snapshots are missing for an external benchmark, replay must block before task execution unless the user explicitly selects a legacy degraded replay mode.
+- Legacy degraded replay must emit a warning that it may bind to live mutable benchmark data.
 - If upstream data is missing but snapshot contains enough attempt materials, replay may proceed only for supported adapter paths.
 - If required official evaluator data is missing, replay blocks before task execution with a precise readiness error.
 - If runtime adapter version changes, replay records a warning unless a future policy makes it blocking.
+- If official runner/evaluator version, evaluator source hash, attempt-local dataset manifest hash, extracted SWE sample hash, or mutated runtime input hash differs from the source run, replay must warn or block according to adapter policy before execution.
+
+Immutable identity requirements:
+
+- Terminal-Bench must snapshot official runner identity, source dataset dir id,
+  runtime dataset path, and attempt-local dataset manifest/hash when the adapter
+  mutates or copies QEMU tasks.
+- SWE-bench Pro must snapshot parquet file identity, extracted sample hash,
+  evaluator source ref/hash, workspace preparation inputs, and prediction schema
+  version.
+- Adapter-owned mutated inputs must be hashed after mutation and before launch.
 
 ## 10. Testing Strategy
 
@@ -320,7 +472,54 @@ Add or tighten tests around these groups:
 | `INT-*` | real smoke paths through `harnesslab run` |
 | `SEC-*` | redaction and public artifact scans |
 
-Each adapter contract test must assert both the behavior and the failure classification. Selectors in `scripts/test-after-change.sh --select` must guard against zero-test false passes.
+These ID families do not count as proof until they exist in all three places:
+
+1. `tests/REQUIREMENTS.toml`
+2. `tests/TEST_REGISTRY.toml`
+3. `scripts/test-after-change.sh --select`
+
+Each adapter contract test must assert both the behavior and the failure
+classification. Selectors in `scripts/test-after-change.sh --select` must guard
+against zero-test false passes with exact expected test counts for grouped
+selectors.
+
+Concrete initial IDs:
+
+- `ADAPT-DATA-001`: descriptor and inspect-data do not mutate local cache.
+- `ADAPT-DATA-002`: prepare is idempotent and never returns ready for partial or corrupted data.
+- `ADAPT-DATA-003`: list_tasks returns stable task ids and source refs.
+- `ADAPT-DATA-004`: snapshot_task captures replay-sufficient task identity.
+- `ADAPT-RUNTIME-001`: runtime registry dispatches preflight and execute without direct benchmark-specific CLI branches outside the registry boundary.
+- `ADAPT-RUNTIME-002`: runtime preflight owns host/sandbox support checks and benchmark-facing agent bridge compatibility.
+- `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
+- `ADAPT-RUNTIME-004`: cleanup report is structured and can override official benchmark verdict with audit evidence.
+- `ADAPT-RUNTIME-005`: runtime event taxonomy preserves operator-critical Terminal-Bench events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, and stable SWE-bench Pro phase events.
+- `SWEPRO-001`: metadata extraction failure is classified and observable.
+- `SWEPRO-002`: workspace preparation failure is classified and observable.
+- `SWEPRO-003`: invalid patch and empty patch are distinct benchmark failures.
+- `SWEPRO-004`: evaluator parse corruption is classified separately from agent patch failure.
+- `SWEPRO-005`: replay/readiness uses stored runtime materials instead of silent live replanning.
+
+`INT-011` must not remain an umbrella proof for SWE-bench Pro. Split the current
+`int_011_*` cases into separate registry IDs/selectors, or route `INT-011`
+through a counted grouped selector that proves every intended `int_011_*` test
+ran. Required artifacts for external runtime proofs must match
+`docs/test-engineering.md`: run metadata, command snapshot, profile/runtime
+snapshots, `events.jsonl`, per-attempt `result.json`, logs, patch artifacts for
+patch-style tasks, and report artifacts.
+
+Fixture shims remain useful seeded failure tests, but they are not sufficient as
+the only preservation proof for official benchmark behavior. Each benchmark
+family needs at least one explicit official-runner preservation proof:
+
+- Terminal-Bench: real official `tb run` path or verifier script that proves
+  CLI argument shape, result schema, timeout mapping, and non-QEMU
+  `DOCKER_DEFAULT_PLATFORM=linux/amd64`.
+- SWE-bench Pro: real official evaluator path or verifier script that proves
+  parquet extraction, evaluator invocation, prediction schema, and output parse.
+
+Add meta-tests that fail when a claimed adapter ID family appears in this plan
+but is absent from `REQUIREMENTS`, `TEST_REGISTRY`, or selector routing.
 
 ## 11. Migration Plan
 
@@ -328,7 +527,9 @@ Each adapter contract test must assert both the behavior and the failure classif
 
 - Compare `docs/architecture.md`, `docs/mvp-development-spec.md`, and current code contracts.
 - Add a failing test that proves the current `BenchmarkAdapter` cannot expose `prepare/list_tasks/snapshot_task` independently.
-- Register initial `ADAPT-DATA-*` requirements.
+- Register concrete `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, and `SWEPRO-*` requirements, registry entries, and selector routes before using them as proof.
+- Split or count-route `INT-011` so every intended SWE-bench Pro failure/smoke case is actually exercised.
+- Add a test-registry meta-check for claimed-but-unregistered adapter ID families.
 
 ### Slice B: Data Adapter Completion
 
@@ -337,36 +538,56 @@ Each adapter contract test must assert both the behavior and the failure classif
 - Port Terminal-Bench and SWE-bench Pro planning to the same flow.
 - Keep `plan(split)` as a wrapper until callers migrate.
 
-### Slice C: Runtime Adapter Registry
+### Slice C: Snapshot Authority And Replay Contract
+
+- Define what remains in `BenchmarkPlan` and `TaskPlan`, what moves to
+  `task-runtime.snapshot.json`, and what moves to `external-runtime.private.json`
+  / `external-runtime.public.json`.
+- Retire silent replay live replanning for external benchmarks. Replace the
+  current fallback behavior with a readiness blocker or explicit legacy degraded
+  replay mode.
+- Add replay drift checks for dataset/evaluator/source/official runner identity.
+- Update the current `INT-013` contract to reflect the new replay authority.
+
+### Slice D: Runtime Adapter Registry
 
 - Introduce a runtime adapter trait inside `crates/harnesslab-cli/src/runner/external`.
-- Replace direct `match ExternalRunnerKind` branches with a registry dispatch.
+- Replace direct `match ExternalRunnerKind` branches with registry dispatch for
+  preflight, execute, cleanup, and replay compatibility.
+- Move benchmark-specific profile validation, host/sandbox gating, and agent
+  bridge compatibility behind registry-dispatched preflight.
+- Replace raw-profile adapter access with `BenchmarkAgentRuntimeConfig` or mark
+  a temporary compatibility exception with tests.
 - Keep benchmark-specific modules, but hide them behind the trait.
 
-### Slice D: Terminal-Bench Runtime Extraction
+### Slice E: Terminal-Bench Runtime Extraction
 
 - Extract Terminal-Bench preflight, runtime policy, command construction, result parsing, cleanup, and replay materials into a `TerminalBenchRuntimeAdapter`.
 - Preserve existing behavior and selectors.
-- Add runtime snapshot assertions for platform, timeout, progress, and cleanup policy.
+- Preserve existing operator-critical event names or dual-emit migration aliases.
+- Assert `external_runner_timeout` and `external_runner_setup_failed` stay queryable with hard-timeout/setup-failure diagnostic fields.
+- Add runtime snapshot assertions for platform, timeout, progress, official-vs-final verdict provenance, cleanup report, and public/private redaction.
 
-### Slice E: SWE-bench Pro Runtime Extraction
+### Slice F: SWE-bench Pro Runtime Extraction
 
 - Extract SWE-bench Pro metadata, workspace prep, agent run, patch capture, evaluator execution, and result mapping into `SweBenchProRuntimeAdapter`.
 - Add seeded failure tests for missing metadata, invalid patch, evaluator parse failure, and workspace prep failure.
+- Add stable phase events for metadata extraction, workspace prep, agent start, patch capture, evaluator start, and cleanup.
 
-### Slice F: Snapshot And Replay Hardening
+### Slice G: Runtime Snapshot, Redaction, And Replay Hardening
 
 - Persist adapter-provided runtime snapshots.
 - Add replay warnings for runtime adapter version mismatch.
 - Add replay blockers for missing official evaluator materials.
+- Add fake secret scans for adapter events, public runtime snapshots, report data, and replay warnings.
 
-### Slice G: Docs And User-Facing Diagnostics
+### Slice H: Docs And User-Facing Diagnostics
 
 - Update architecture and MVP spec to reflect the implemented trait names.
 - Update development operations with the new adapter event sequence.
 - Update doctor/readiness output to name the failing adapter phase.
 
-### Slice H: Full Gate And Review
+### Slice I: Full Gate And Review
 
 - Register all new requirements in `tests/REQUIREMENTS.toml` and `tests/TEST_REGISTRY.toml`.
 - Add `scripts/test-after-change.sh --select` routes.
@@ -450,14 +671,15 @@ execution behavior, failure mapping, replay, or tests.
 
 | Slice | Review Focus | Required Reviewer Roles |
 | --- | --- | --- |
-| Slice A: Contract Inventory | whether the gap inventory is complete and test ids are meaningful | `architecture-adversary`, `test-validity-adversary` |
+| Slice A: Contract Inventory | whether gap inventory, concrete test ids, selector routing, and current `INT-011` replacement are meaningful | `architecture-adversary`, `test-validity-adversary` |
 | Slice B: Data Adapter Completion | data readiness, prepare idempotency, stable task ids, source refs, compatibility wrapper | `architecture-adversary`, `test-validity-adversary` |
-| Slice C: Runtime Adapter Registry | dispatch ownership, no hidden benchmark branching, dependency direction | `architecture-adversary`, `implementation-adversary` |
-| Slice D: Terminal-Bench Runtime Extraction | behavior preservation, timeout/watchdog, cleanup, QEMU, result mapping | `implementation-adversary`, `test-validity-adversary`, `observability-adversary` |
-| Slice E: SWE-bench Pro Runtime Extraction | workspace prep, patch capture, evaluator mapping, host/sandbox execution boundaries | `implementation-adversary`, `test-validity-adversary` |
-| Slice F: Snapshot And Replay Hardening | replay readiness, mutable data protection, adapter version warnings | `architecture-adversary`, `test-validity-adversary`, `observability-adversary` |
-| Slice G: Docs And Diagnostics | user-facing phase names, doctor/readiness clarity, operational reuse | `documentation-skill-adversary`, `observability-adversary` |
-| Slice H: Full Gate And Review | traceability, selector coverage, full gate evidence, closure state | `test-validity-adversary`, `architecture-adversary` |
+| Slice C: Snapshot Authority And Replay Contract | snapshot authority, replay fallback removal, mutable data protection, adapter version warnings | `architecture-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice D: Runtime Adapter Registry | dispatch ownership, preflight ownership, raw profile access removal, no hidden benchmark branching | `architecture-adversary`, `implementation-adversary` |
+| Slice E: Terminal-Bench Runtime Extraction | behavior preservation, timeout/watchdog, cleanup, QEMU, result mapping, event compatibility | `implementation-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice F: SWE-bench Pro Runtime Extraction | workspace prep, patch capture, evaluator mapping, phase diagnostics, host/sandbox execution boundaries | `implementation-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice G: Runtime Snapshot, Redaction, And Replay Hardening | public/private artifact split, fake secret scans, replay materials, official-vs-final verdict provenance | `security-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice H: Docs And Diagnostics | user-facing phase names, doctor/readiness clarity, operational reuse | `documentation-skill-adversary`, `observability-adversary` |
+| Slice I: Full Gate And Review | traceability, selector coverage, full gate evidence, closure state | `test-validity-adversary`, `architecture-adversary` |
 
 ### 12.4 Blocking Finding Re-Review Rule
 
@@ -537,13 +759,15 @@ Before claiming the adapter architecture track is complete:
 
 | Requirement | Proof |
 | --- | --- |
-| Adapter data contract is explicit | `ADAPT-DATA-*` tests for descriptor, inspect, prepare, list, snapshot |
-| Runtime adapter dispatch is generic | `ADAPT-RUNTIME-*` registry tests and no direct CLI branch outside registry |
-| Terminal-Bench behavior preserved | existing `TB-*`, `INT-021..046`, Python bridge tests |
-| SWE-bench Pro behavior preserved | `SWEPRO-*` and smoke evaluator contract |
-| Runtime config is observable | events and `external-runtime.snapshot.json` assertions |
+| Adapter data contract is explicit | concrete registered `ADAPT-DATA-001..004` tests for descriptor, inspect, prepare, list, source refs, and task snapshot |
+| Runtime adapter dispatch is generic | concrete registered `ADAPT-RUNTIME-001..005` tests for preflight, execute, cleanup, runtime snapshots, event taxonomy, and no direct benchmark-specific CLI branch outside registry |
+| Terminal-Bench behavior preserved | existing `TB-*`, `INT-021..046`, Python bridge tests, and at least one official-runner preservation proof |
+| SWE-bench Pro behavior preserved | concrete registered `SWEPRO-001..005` tests and at least one official evaluator preservation proof |
+| Runtime config is observable | `external_runner_configured`, adapter phase events, cleanup reports, `external-runtime.public.json`, and `external-runtime.private.json` assertions |
 | Failure mapping is stable | seeded failure fixtures per style |
-| Replay does not rely on mutable data silently | replay readiness and adapter version snapshot tests |
+| Replay does not rely on mutable data silently | replay readiness tests for missing snapshot blocker, mutable data drift detection, adapter version warning, and explicit legacy degraded replay if retained |
+| Public artifacts do not leak secrets | `SEC-*` scans for adapter runtime snapshots, events, report data, and replay warnings |
+| Current registry proof is not misleading | meta-test for claimed adapter ID families and split or count-route coverage for current `INT-011` cases |
 | User docs match behavior | architecture, MVP spec, development operations updates |
 | Full system remains healthy | `scripts/test-after-change.sh` |
 
@@ -561,6 +785,7 @@ Before claiming the adapter architecture track is complete:
 2. Should `PreparedBenchmark` become persisted before every run even when no preparation was needed?
 3. Should real external benchmark smoke checks be mandatory in the default full gate or remain explicit verifier scripts until CI resources are stable?
 4. Should `ExternalRunnerKind` remain a closed enum for MVP, or move toward string-based adapter ids before dynamic plugins exist?
+5. Should legacy degraded replay be retained at all, or should external benchmark replay always block when authoritative snapshots are missing?
 
 ## 16. Done Definition
 
@@ -571,6 +796,7 @@ This architecture track is complete when:
 3. Current Terminal-Bench hardening behavior is preserved by tests.
 4. SWE-bench Pro patch-style failures are covered by seeded tests.
 5. Adapter runtime snapshots are persisted and replay-aware.
-6. Test registry entries and selectors cover all new contract surfaces.
-7. Full local gate passes.
-8. Fresh adversarial review closes all accepted blockers.
+6. Public adapter runtime artifacts have secret-scan coverage.
+7. Test registry entries and selectors cover all new contract surfaces, including `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, `SWEPRO-*`, and the former `INT-011` umbrella cases.
+8. Full local gate passes.
+9. Fresh adversarial review closes all accepted blockers.
