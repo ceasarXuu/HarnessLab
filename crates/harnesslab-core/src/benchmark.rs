@@ -59,7 +59,20 @@ pub struct PreparedBenchmark {
     pub prepared_at: String,
     pub task_count: usize,
     pub cache_manifest_path: String,
+    #[serde(default)]
+    pub source_manifest_path: Option<String>,
+    #[serde(default)]
+    pub selected_task_ids: Vec<String>,
+    #[serde(default)]
+    pub data_snapshot_hash: Option<String>,
     pub size_bytes: u64,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BenchmarkDataState {
+    pub descriptor: BenchmarkDescriptor,
+    pub cache_manifest_path: Option<String>,
     pub warnings: Vec<String>,
 }
 
@@ -83,6 +96,19 @@ pub struct SourceRef {
     pub benchmark: String,
     pub upstream_id: String,
     pub checksum: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeTaskSnapshot {
+    pub benchmark: BenchmarkIdentity,
+    pub split: String,
+    pub task_id: String,
+    pub source_ref: SourceRef,
+    pub upstream_metadata_hash: String,
+    pub instruction_hash: String,
+    pub task_plan_hash: String,
+    #[serde(default)]
+    pub external_runner: Option<ExternalRunnerSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

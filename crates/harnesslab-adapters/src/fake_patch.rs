@@ -1,8 +1,8 @@
-use crate::{BenchmarkAdapter, plan_from_tasks};
+use crate::{BenchmarkAdapter, prepared_from_descriptor, stable_checksum};
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDescriptor, BenchmarkPlan, BenchmarkSplit, BenchmarkStyle, DataState,
-    NetworkPolicy, PatchSpec, ResourceHint, SandboxSpec, TaskPlan, VerifierEnvironment,
-    VerifierSpec, WorkspaceSpec, WorkspaceType,
+    ArtifactSpec, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle, DataState, NetworkPolicy,
+    PatchSpec, PreparedBenchmark, ResourceHint, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
+    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 
 pub struct FakePatchAdapter;
@@ -18,26 +18,44 @@ impl BenchmarkAdapter for FakePatchAdapter {
         }
     }
 
-    fn plan(&self, split: &str) -> Result<BenchmarkPlan, String> {
-        let task = match split {
-            "success" => patch_task(
-                "fake-patch-success",
-                "Change app.txt content from old to new.",
-                "grep -q new app.txt",
-            ),
-            "no-diff" => patch_task(
-                "fake-patch-no-diff",
-                "Leave app.txt unchanged.",
-                "grep -q new app.txt",
-            ),
-            "test-fail" => patch_task(
-                "fake-patch-test-fail",
-                "Change app.txt, but verifier expects impossible content.",
-                "grep -q impossible app.txt",
-            ),
-            _ => return Err(format!("unknown fake-patch split {split}")),
-        };
-        Ok(plan_from_tasks(self.descriptor(), split, vec![task]))
+    fn prepare(&self, split: &str) -> Result<PreparedBenchmark, String> {
+        if task_id_for_split(split).is_none() {
+            return Err(format!("unknown fake-patch split {split}"));
+        }
+        Ok(prepared_from_descriptor(
+            self.descriptor(),
+            split,
+            format!("fixture://fake-patch/{split}"),
+            1,
+        ))
+    }
+
+    fn list_tasks(&self, prepared: &PreparedBenchmark) -> Result<Vec<TaskDescriptor>, String> {
+        let task_id = task_id_for_split(&prepared.split)
+            .ok_or_else(|| format!("unknown fake-patch split {}", prepared.split))?;
+        Ok(vec![TaskDescriptor {
+            task_id: task_id.to_string(),
+            split: prepared.split.clone(),
+            estimated_timeout_sec: 5,
+            resource_hint: ResourceHint {
+                cpu_cores: 1,
+                memory_mb: 256,
+            },
+            source_ref: SourceRef {
+                benchmark: "fake-patch".to_string(),
+                upstream_id: task_id.to_string(),
+                checksum: stable_checksum(&format!("fake-patch:{task_id}")),
+            },
+        }])
+    }
+
+    fn create_task_plan(
+        &self,
+        _prepared: &PreparedBenchmark,
+        task: &TaskDescriptor,
+    ) -> Result<TaskPlan, String> {
+        patch_task_for_id(&task.task_id)
+            .ok_or_else(|| format!("unknown fake-patch task {}", task.task_id))
     }
 }
 
@@ -46,6 +64,36 @@ fn split(name: &str) -> BenchmarkSplit {
         name: name.to_string(),
         task_count: 1,
         data_state: DataState::Ready,
+    }
+}
+
+fn task_id_for_split(split: &str) -> Option<&'static str> {
+    match split {
+        "success" => Some("fake-patch-success"),
+        "no-diff" => Some("fake-patch-no-diff"),
+        "test-fail" => Some("fake-patch-test-fail"),
+        _ => None,
+    }
+}
+
+fn patch_task_for_id(id: &str) -> Option<TaskPlan> {
+    match id {
+        "fake-patch-success" => Some(patch_task(
+            id,
+            "Change app.txt content from old to new.",
+            "grep -q new app.txt",
+        )),
+        "fake-patch-no-diff" => Some(patch_task(
+            id,
+            "Leave app.txt unchanged.",
+            "grep -q new app.txt",
+        )),
+        "fake-patch-test-fail" => Some(patch_task(
+            id,
+            "Change app.txt, but verifier expects impossible content.",
+            "grep -q impossible app.txt",
+        )),
+        _ => None,
     }
 }
 

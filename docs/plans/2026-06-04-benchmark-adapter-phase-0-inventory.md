@@ -3,10 +3,10 @@
 - Date: 2026-06-04
 - Related plan: `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md`
 - Phase: Phase 0: Contract Inventory
-- Status: Implemented as proof-surface registration; downstream adapter behavior
-  remains planned until later phases activate the registered IDs.
+- Status: Implemented as proof-surface registration. Superseded for data
+  adapter behavior by Phase 1 active selectors.
 
-## Current Contract Facts
+## Phase 0 Baseline Facts
 
 - `crates/harnesslab-adapters/src/registry.rs` exposes `BenchmarkAdapter` with
   only `descriptor()` and `plan(split)`.
@@ -21,12 +21,11 @@
 
 ## Phase 0 Landed Controls
 
-- `ADAPT-DATA-000` is active as a temporary gap sentinel. It proves the current
-  `BenchmarkAdapter` trait still lacks independent `inspect_data`, `prepare`,
-  `list_tasks`, `create_task_plan`, and `snapshot_task` methods, and it must be
-  replaced when Phase 1 implements the real data adapter contract.
-- `ADAPT-DATA-001..005`, `ADAPT-RUNTIME-001..005`, and `SWEPRO-001..005` are
-  registered in `tests/REQUIREMENTS.toml` with `status = "planned"`.
+- `ADAPT-DATA-000` was active as a temporary gap sentinel during Phase 0. Phase
+  1 retired it back to planned status so it no longer counts as active proof.
+- `ADAPT-DATA-001..005` are active as of Phase 1. `ADAPT-RUNTIME-001..005` and
+  `SWEPRO-001..005` remain registered in `tests/REQUIREMENTS.toml` with
+  `status = "planned"`.
 - Matching planned test entries exist in `tests/TEST_REGISTRY.toml`.
 - `scripts/test-after-change.sh --select <planned-id>` now has explicit routes
   for every planned adapter ID and fails with a planned-proof message instead
@@ -54,8 +53,8 @@
 
 ## Remaining Planned Work
 
-- Phase 1 must activate `ADAPT-DATA-001..005` with real data adapter contract
-  tests.
+- Phase 1 must complete focused adversarial review and close any accepted
+  blocking findings.
 - Phase 3 must replace the planned `ADAPT-RUNTIME-001..002` routes with real
   runtime registry and preflight tests.
 - Phase 5 must replace the planned `SWEPRO-001..004` routes with real

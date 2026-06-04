@@ -1,9 +1,9 @@
-use crate::BenchmarkAdapter;
+use crate::{BenchmarkAdapter, prepared_with_identity, stable_file_checksum};
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDescriptor, BenchmarkIdentity, BenchmarkPlan, BenchmarkSplit,
-    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, ResourceHint,
-    RunConfigOverrides, SandboxSpec, TaskPlan, VerifierEnvironment, VerifierSpec, WorkspaceSpec,
-    WorkspaceType,
+    ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle,
+    DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PreparedBenchmark,
+    ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
+    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
 
@@ -67,7 +67,16 @@ impl BenchmarkAdapter for TerminalBenchAdapter {
         }
     }
 
-    fn plan(&self, split: &str) -> Result<BenchmarkPlan, String> {
+    fn inspect_data(&self) -> BenchmarkDataState {
+        let dataset = self.data_root.as_deref().map(discover_terminal_bench);
+        BenchmarkDataState {
+            descriptor: self.descriptor(),
+            cache_manifest_path: dataset.map(|dataset| dataset.dataset_dir.display().to_string()),
+            warnings: Vec::new(),
+        }
+    }
+
+    fn prepare(&self, split: &str) -> Result<PreparedBenchmark, String> {
         let dataset = self
             .data_root
             .as_deref()
@@ -79,27 +88,58 @@ impl BenchmarkAdapter for TerminalBenchAdapter {
                 dataset.data_state
             ));
         }
-        match split {
-            "smoke" => {
-                if !dataset.task_ids.iter().any(|id| id == "hello-world") {
-                    return Err(
-                        "terminal-bench smoke requires official hello-world task".to_string()
-                    );
-                }
-                Ok(plan_from_dataset(
-                    self.descriptor(),
-                    split,
-                    &dataset,
-                    vec!["hello-world".to_string()],
-                ))
-            }
-            "full" => Ok(plan_from_dataset(
-                self.descriptor(),
-                split,
-                &dataset,
-                dataset.task_ids.clone(),
-            )),
-            other => Err(format!("unknown terminal-bench split {other}")),
+        let task_ids = task_ids_for_split(split, &dataset)?;
+        Ok(prepared_with_identity(
+            self.descriptor(),
+            split,
+            dataset.dataset_dir.display().to_string(),
+            task_ids.len(),
+            None,
+            task_ids,
+            None,
+        ))
+    }
+
+    fn list_tasks(&self, prepared: &PreparedBenchmark) -> Result<Vec<TaskDescriptor>, String> {
+        let dataset_dir = PathBuf::from(&prepared.cache_manifest_path);
+        let task_ids = if prepared.selected_task_ids.is_empty() {
+            collect_task_ids(&dataset_dir)
+        } else {
+            prepared.selected_task_ids.clone()
+        };
+        let dataset = TerminalBenchDataset {
+            task_count: task_ids.len(),
+            data_state: prepared.data_state,
+            task_ids,
+            dataset_dir,
+        };
+        task_ids_for_split(&prepared.split, &dataset)?
+            .into_iter()
+            .map(|task_id| {
+                terminal_bench_task_descriptor(&prepared.split, &task_id, &dataset.dataset_dir)
+            })
+            .collect()
+    }
+
+    fn create_task_plan(
+        &self,
+        prepared: &PreparedBenchmark,
+        task: &TaskDescriptor,
+    ) -> Result<TaskPlan, String> {
+        let dataset_dir = PathBuf::from(&prepared.cache_manifest_path);
+        if !dataset_dir.join(&task.task_id).join("task.yaml").is_file() {
+            return Err(format!(
+                "terminal-bench task {} is missing task.yaml",
+                task.task_id
+            ));
+        }
+        Ok(terminal_bench_task(&task.task_id, &dataset_dir))
+    }
+
+    fn run_config_overrides(&self, _prepared: &PreparedBenchmark) -> RunConfigOverrides {
+        RunConfigOverrides {
+            timeout_sec: Some(3600),
+            network: Some(NetworkPolicy::Full),
         }
     }
 }
@@ -114,6 +154,14 @@ struct TerminalBenchDataset {
 
 fn discover_terminal_bench(root: &Path) -> TerminalBenchDataset {
     let base = root.join("terminal-bench");
+    if base.join(".partial").is_file() {
+        return TerminalBenchDataset {
+            task_count: 0,
+            data_state: DataState::Partial,
+            dataset_dir: base,
+            task_ids: Vec::new(),
+        };
+    }
     let Ok(entries) = std::fs::read_dir(base) else {
         return TerminalBenchDataset {
             task_count: 0,
@@ -168,30 +216,45 @@ fn collect_task_ids(dataset_dir: &Path) -> Vec<String> {
     ids
 }
 
-fn plan_from_dataset(
-    descriptor: BenchmarkDescriptor,
-    split: &str,
-    dataset: &TerminalBenchDataset,
-    task_ids: Vec<String>,
-) -> BenchmarkPlan {
-    let tasks = task_ids
-        .into_iter()
-        .map(|task_id| terminal_bench_task(&task_id, &dataset.dataset_dir))
-        .collect::<Vec<_>>();
-    BenchmarkPlan {
-        benchmark: BenchmarkIdentity {
-            name: descriptor.name,
-            version: descriptor.version,
-        },
-        split: split.to_string(),
-        prepared_benchmark_ref: dataset.dataset_dir.display().to_string(),
-        tasks,
-        run_config_overrides: RunConfigOverrides {
-            timeout_sec: Some(3600),
-            network: Some(NetworkPolicy::Full),
-        },
-        warnings: Vec::new(),
+fn task_ids_for_split(split: &str, dataset: &TerminalBenchDataset) -> Result<Vec<String>, String> {
+    match split {
+        "smoke" => {
+            if !dataset.task_ids.iter().any(|id| id == "hello-world") {
+                return Err("terminal-bench smoke requires official hello-world task".to_string());
+            }
+            Ok(vec!["hello-world".to_string()])
+        }
+        "full" => Ok(dataset.task_ids.clone()),
+        other => Err(format!("unknown terminal-bench split {other}")),
     }
+}
+
+fn terminal_bench_task_descriptor(
+    split: &str,
+    task_id: &str,
+    dataset_dir: &Path,
+) -> Result<TaskDescriptor, String> {
+    let task_dir = dataset_dir.join(task_id);
+    if !task_dir.join("task.yaml").is_file() {
+        return Err(format!(
+            "terminal-bench task {task_id} is missing task.yaml"
+        ));
+    }
+    let metadata = read_task_metadata(&task_dir);
+    Ok(TaskDescriptor {
+        task_id: task_id.to_string(),
+        split: split.to_string(),
+        estimated_timeout_sec: metadata.max_test_timeout_sec.unwrap_or(3600),
+        resource_hint: ResourceHint {
+            cpu_cores: 2,
+            memory_mb: 4096,
+        },
+        source_ref: SourceRef {
+            benchmark: "terminal-bench".to_string(),
+            upstream_id: task_id.to_string(),
+            checksum: stable_file_checksum(&task_dir.join("task.yaml")),
+        },
+    })
 }
 
 fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
@@ -277,178 +340,5 @@ fn parse_timeout_seconds(value: &str) -> Option<u64> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn c_bench_005_terminal_bench_full_reports_local_data_as_ready() {
-        let root = tempfile::tempdir().unwrap();
-        let task_dir = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
-        std::fs::create_dir_all(&task_dir).unwrap();
-        std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
-
-        let descriptor = TerminalBenchAdapter::with_data_root(Some(root.path())).descriptor();
-        let full = descriptor
-            .splits
-            .iter()
-            .find(|split| split.name == "full")
-            .unwrap();
-
-        assert_eq!(full.task_count, 1);
-        assert_eq!(full.data_state, DataState::Ready);
-    }
-
-    #[test]
-    fn c_bench_005_terminal_bench_full_reports_missing_data() {
-        let root = tempfile::tempdir().unwrap();
-
-        let descriptor = TerminalBenchAdapter::with_data_root(Some(root.path())).descriptor();
-        let full = descriptor
-            .splits
-            .iter()
-            .find(|split| split.name == "full")
-            .unwrap();
-
-        assert_eq!(full.task_count, 0);
-        assert_eq!(full.data_state, DataState::NotDownloaded);
-    }
-
-    #[test]
-    fn c_bench_005_terminal_bench_full_reports_malformed_data_as_corrupted() {
-        let root = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(
-            root.path()
-                .join("terminal-bench/terminal-bench-core-0.1.1/broken-task"),
-        )
-        .unwrap();
-
-        let descriptor = TerminalBenchAdapter::with_data_root(Some(root.path())).descriptor();
-        let full = descriptor
-            .splits
-            .iter()
-            .find(|split| split.name == "full")
-            .unwrap();
-
-        assert_eq!(full.task_count, 0);
-        assert_eq!(full.data_state, DataState::Corrupted);
-    }
-
-    #[test]
-    fn c_bench_005_terminal_bench_chooses_core_dataset_deterministically() {
-        let root = tempfile::tempdir().unwrap();
-        let old_task = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/old-task");
-        let new_task = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.2.0/hello-world");
-        std::fs::create_dir_all(&old_task).unwrap();
-        std::fs::create_dir_all(&new_task).unwrap();
-        std::fs::write(old_task.join("task.yaml"), "instruction: old").unwrap();
-        std::fs::write(new_task.join("task.yaml"), "instruction: hi").unwrap();
-
-        let plan = TerminalBenchAdapter::with_data_root(Some(root.path()))
-            .plan("smoke")
-            .unwrap();
-
-        assert!(
-            plan.prepared_benchmark_ref
-                .contains("terminal-bench-core-0.2.0")
-        );
-    }
-
-    #[test]
-    fn c_bench_005_terminal_bench_smoke_requires_hello_world() {
-        let root = tempfile::tempdir().unwrap();
-        let task_dir = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/other-task");
-        std::fs::create_dir_all(&task_dir).unwrap();
-        std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
-
-        let descriptor = TerminalBenchAdapter::with_data_root(Some(root.path())).descriptor();
-        let smoke = descriptor
-            .splits
-            .iter()
-            .find(|split| split.name == "smoke")
-            .unwrap();
-
-        assert_eq!(smoke.data_state, DataState::Corrupted);
-    }
-
-    #[test]
-    fn c_bench_005_terminal_bench_full_plan_errors_match_data_state() {
-        let missing = tempfile::tempdir().unwrap();
-        let missing_error = TerminalBenchAdapter::with_data_root(Some(missing.path()))
-            .plan("full")
-            .unwrap_err();
-        assert!(missing_error.contains("data_state=not_downloaded"));
-
-        let present = tempfile::tempdir().unwrap();
-        let task_dir = present
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
-        std::fs::create_dir_all(&task_dir).unwrap();
-        std::fs::write(task_dir.join("task.yaml"), "instruction: hi").unwrap();
-        let present_plan = TerminalBenchAdapter::with_data_root(Some(present.path()))
-            .plan("full")
-            .unwrap();
-        assert_eq!(present_plan.tasks[0].task_id, "hello-world");
-        assert!(present_plan.tasks[0].external_runner.is_some());
-    }
-
-    #[test]
-    fn c_bench_006_terminal_bench_maps_task_test_timeout() {
-        let root = tempfile::tempdir().unwrap();
-        let task_dir = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/hello-world");
-        std::fs::create_dir_all(&task_dir).unwrap();
-        std::fs::write(
-            task_dir.join("task.yaml"),
-            "instruction: hi\nmax_agent_timeout_sec: 360.0\nmax_test_timeout_sec: 60.0\n",
-        )
-        .unwrap();
-
-        let plan = TerminalBenchAdapter::with_data_root(Some(root.path()))
-            .plan("full")
-            .unwrap();
-
-        assert_eq!(plan.tasks[0].verifier_spec.timeout_sec, 60);
-        assert_eq!(
-            plan.tasks[0]
-                .external_runner
-                .as_ref()
-                .unwrap()
-                .agent_timeout_sec,
-            Some(360)
-        );
-    }
-
-    #[test]
-    fn c_bench_006_terminal_bench_ignores_timeout_text_inside_block_scalars() {
-        let root = tempfile::tempdir().unwrap();
-        let task_dir = root
-            .path()
-            .join("terminal-bench/terminal-bench-core-0.1.1/timeout-task");
-        std::fs::create_dir_all(&task_dir).unwrap();
-        std::fs::write(
-            task_dir.join("task.yaml"),
-            "instruction: |\n  max_test_timeout_sec: 3\nmax_agent_timeout_sec: 12.2\n",
-        )
-        .unwrap();
-
-        let plan = TerminalBenchAdapter::with_data_root(Some(root.path()))
-            .plan("full")
-            .unwrap();
-        let task = plan.tasks.first().unwrap();
-
-        assert_eq!(task.verifier_spec.timeout_sec, 3600);
-        assert_eq!(
-            task.external_runner.as_ref().unwrap().agent_timeout_sec,
-            Some(13)
-        );
-    }
-}
+#[path = "terminal_bench_tests.rs"]
+mod tests;

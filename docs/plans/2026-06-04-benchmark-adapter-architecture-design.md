@@ -3,9 +3,11 @@
 ## Plan Metadata
 
 - Created: 2026-06-04
-- Updated: 2026-06-04
-- Version: 0.3
-- Status: Reviewing
+- Updated: 2026-06-05
+- Version: 0.7
+- Status: Implementing overall adapter architecture; Phase 1 data adapter
+  lifecycle is implemented, verified, and adversarially reviewed with no
+  remaining blockers.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -27,7 +29,9 @@
 - Key decision: benchmark adapters consume already materialized agent runtime configuration; they must not reinterpret raw agent profile policy.
 - Key decision: Terminal-Bench remains the hardening reference; SWE-bench Pro becomes the patch-style reference.
 - Must confirm before implementation: whether to add a new `harnesslab-runtime-adapters` crate now, or first extract runtime traits inside `harnesslab-cli/src/runner/external`.
-- Status reason: existing docs already define much of the target contract, but current code only exposes `descriptor()` and `plan(split)` at the adapter crate boundary; runtime behavior still lives in benchmark-specific CLI branches.
+- Status reason: Phase 1 has landed the data adapter lifecycle, while runtime
+  behavior still lives in benchmark-specific CLI branches and remains Phase 3+
+  scope.
 
 ### Plan Optimization Findings
 
@@ -50,6 +54,12 @@ Findings from the plan review:
 - Current implementation evidence must stay separate from target architecture
   claims. Planned IDs count as planning inventory only until they have active
   tests, selector routes, and validation evidence.
+- Phase 1 boundary claims now have a dedicated review artifact:
+  `docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md`.
+- Phase 1 closure passed fresh Round 7 adversarial review and Round 8 delta
+  review after the Round 6 fixes for module path attributes,
+  multiline/aliased runtime paths, `std::fs` read allowlisting, and
+  `ADAPT-DATA-004` coverage wording.
 
 ## Plan Classification And Risk Assessment
 
@@ -837,6 +847,52 @@ Terminal-Bench and SWE-bench Pro planning onto the same flow.
 - Port Terminal-Bench and SWE-bench Pro planning to the same flow.
 - Keep `plan(split)` as a wrapper until all callers migrate.
 
+#### Implementation Evidence
+
+Status as of 2026-06-04:
+
+- `harnesslab-core` now owns `BenchmarkDataState` and
+  `RuntimeTaskSnapshot` as serializable adapter-neutral contracts.
+- `BenchmarkAdapter` now exposes `inspect_data`, `prepare`, `list_tasks`,
+  `create_task_plan`, `snapshot_task`, and a default `plan(split)` wrapper.
+- fake-terminal, fake-patch, Terminal-Bench, and SWE-bench Pro all implement
+  the lifecycle behind the compatibility wrapper.
+- SWE-bench Pro data planning no longer executes `uv`, Python, pandas, or
+  pyarrow from the adapter crate. Task ids come from stable evaluator
+  `run_scripts/<instance_id>` directories; runtime metadata extraction remains
+  in the runtime adapter path.
+- Terminal-Bench and SWE-bench Pro tests were split into dedicated test files
+  so production adapter files stay below the 500-line code-file constraint.
+- `ADAPT-DATA-000` is now a planned retired sentinel; `ADAPT-DATA-001..005`
+  are active selector-backed proofs.
+- Focused adversarial review found Phase 1 proof gaps around partial data,
+  SWE prepared-state authority, snapshot breadth, and data/runtime boundary
+  checks. The implementation now stores selected task ids, source manifest
+  path, and prepared data snapshot hash in `PreparedBenchmark`; SWE later
+  lifecycle steps use prepared identity and fail explicitly on post-prepare
+  drift. The coverage matrix is tracked in
+  `docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md`.
+
+Status update as of 2026-06-05:
+
+- The `ADAPT-DATA-001` boundary proof was upgraded from substring scanning to a
+  structured contract check over production dependencies, parsed `use` imports,
+  forbidden runtime symbols, and forbidden runtime calls after comments and
+  string literals are stripped.
+- Round 3 review found that the initial structured contract still allowed
+  unscanned helper modules, renamed runtime packages, ambient environment
+  inspection, and generic attempt-directory ownership. The boundary proof now
+  discovers production source files from the non-test module graph rooted at
+  `crates/harnesslab-adapters/src/lib.rs`, validates dependency alias/package
+  pairs, rejects `std::env`, rejects write-oriented filesystem calls, and scans
+  production string literals for runtime path tokens.
+- The boundary contract is documented in
+  `docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md` and registered
+  in the `ADAPT-DATA-001` file-pattern surface.
+- `ADAPT-DATA-004` now proves FakePatch snapshot identity is
+  mutation-sensitive by comparing `success` and `no-diff` patch-style tasks and
+  requiring both `instruction_hash` and `task_plan_hash` to differ.
+
 #### Deliverables
 
 - Data adapter trait extension.
@@ -856,12 +912,38 @@ Terminal-Bench and SWE-bench Pro planning onto the same flow.
 | Task plans are reproducible | `ADAPT-DATA-005` | `create_task_plan` returns stable executable `TaskPlan` values from prepared data and task descriptors |
 | Compatibility remains intact | Existing adapter tests | `plan(split)` callers continue to pass |
 
+Current validation evidence:
+
+- `cargo test -p harnesslab-adapters -- --nocapture`: 28 passed.
+- `cargo test -p harnesslab-core -- --nocapture`: 48 passed.
+- `cargo test -p xtask -- --nocapture`: 19 passed.
+- `scripts/test-after-change.sh --select ADAPT-DATA-001`: 1 passed.
+- `scripts/test-after-change.sh --select ADAPT-DATA-002`: 1 passed.
+- `scripts/test-after-change.sh --select ADAPT-DATA-003`: 1 passed.
+- `scripts/test-after-change.sh --select ADAPT-DATA-004`: 1 passed.
+- `scripts/test-after-change.sh --select ADAPT-DATA-005`: 1 passed.
+- `scripts/test-after-change.sh --select META-002`: registry and
+  traceability passed with 42 requirements, 168 tests, and 16 adapter claims.
+- `scripts/test-after-change.sh --select META-008`: adapter selectors passed
+  with active=5 and planned=11.
+- `cargo test -p harnesslab-cli --test benchmark_contract -- --nocapture`:
+  6 passed.
+- `cargo test -p harnesslab-cli --test external_smoke_contract
+  int_011_swe_bench_pro_smoke_runs_external_evaluator_contract --
+  --nocapture`: 1 passed.
+- `git diff --check`: passed.
+- Code file line counts checked; touched code files are below the 500-line
+  repository constraint, including `data_boundary_contract.rs` at 380 lines,
+  `data_boundary_scan.rs` at 229 lines, and `data_contract_tests.rs` at 404
+  lines.
+
 #### Exit Criteria
 
 - `ADAPT-DATA-001..005` pass.
 - Existing adapter crate tests pass.
 - No runtime process execution dependency is introduced into the data adapter
   contract.
+- Focused Phase 1 adversarial review has no accepted blocking findings.
 
 #### Review Plan
 
@@ -1755,6 +1837,10 @@ This architecture track is complete when:
 | 0.1 | 2026-06-04 | Initial adapter architecture design and adversarial review closure. |
 | 0.2 | 2026-06-04 | Reworked plan using `se-good-plan`: added metadata, risk classification, assumptions, dependencies, alternatives, phase gates, rollback/fallback, security, observability, decision log, and quality checklist. |
 | 0.3 | 2026-06-04 | Strengthened the plan as an executable phase-gated document: added optimization findings, cross-phase invariants, phase execution contract, evidence ledger, hard completion thresholds, and open-question resolution gates. |
+| 0.4 | 2026-06-05 | Added Phase 1 data adapter lifecycle implementation evidence and selector coverage artifacts. |
+| 0.5 | 2026-06-05 | Hardened Phase 1 boundary proof around module graph discovery, dependency purity, runtime imports, and filesystem ownership. |
+| 0.6 | 2026-06-05 | Recorded Round 6 accepted blocker fixes for module path attributes, multiline/aliased runtime paths, filesystem allowlisting, and `ADAPT-DATA-004` wording. |
+| 0.7 | 2026-06-05 | Closed Phase 1 with passing Round 7 adversarial review and Round 8 delta review. |
 
 ## 25. Plan Quality Checklist
 

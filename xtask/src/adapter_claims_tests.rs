@@ -2,6 +2,10 @@ use super::*;
 use crate::{RegistryDoc, TestEntry, Verifies};
 use std::collections::BTreeSet;
 
+const ACTIVE_DATA_ID: &str = "ADAPT-DATA-001";
+const ACTIVE_DATA_TEST: &str =
+    "data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache";
+
 #[test]
 fn registry_001_claim_parser_expands_ranges_across_sources() {
     let sources = vec![
@@ -84,11 +88,11 @@ fn registry_005_planned_status_is_limited_to_claimed_adapter_ids() {
 
 #[test]
 fn registry_006_claimed_active_id_must_not_route_to_planned_handler() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) planned_adapter_proof \"$id\" \"phase\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) planned_adapter_proof \"$id\" \"phase\" ;;";
 
     let error = ensure_claimed_adapter_ids_are_registered(
         &claimed,
@@ -105,11 +109,11 @@ fn registry_006_claimed_active_id_must_not_route_to_planned_handler() {
 
 #[test]
 fn registry_007_claimed_active_id_rejects_marker_spoofed_wrong_test() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"adapt_data_000_unrelated_passing_test\"; test_target=\"lib\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"adapt_data_001_unrelated_passing_test\"; test_target=\"lib\" ;;";
 
     let error = ensure_claimed_adapter_ids_are_registered(
         &claimed,
@@ -121,17 +125,17 @@ fn registry_007_claimed_active_id_rejects_marker_spoofed_wrong_test() {
     .unwrap_err()
     .to_string();
 
-    assert!(error.contains("adapt_data_000_unrelated_passing_test"));
-    assert!(error.contains("adapt_data_000_current_benchmark_adapter_gap_is_explicit"));
+    assert!(error.contains("adapt_data_001_unrelated_passing_test"));
+    assert!(error.contains(ACTIVE_DATA_TEST));
 }
 
 #[test]
 fn registry_008_claimed_active_id_accepts_exact_route_spec() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_target=\"lib\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_target=\"lib\" ;;";
 
     ensure_claimed_adapter_ids_are_registered(&claimed, &requirements, &tests, &registry, script)
         .unwrap();
@@ -139,11 +143,11 @@ fn registry_008_claimed_active_id_accepts_exact_route_spec() {
 
 #[test]
 fn registry_009_claimed_active_id_rejects_duplicate_assignment_override() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_name=\"some_other_passing_test\"; test_target=\"lib\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_name=\"some_other_passing_test\"; test_target=\"lib\" ;;";
 
     let error = ensure_claimed_adapter_ids_are_registered(
         &claimed,
@@ -161,11 +165,11 @@ fn registry_009_claimed_active_id_rejects_duplicate_assignment_override() {
 
 #[test]
 fn registry_010_claimed_active_id_rejects_single_quoted_duplicate_assignment_override() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_name='some_other_passing_test'; test_target=\"lib\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_name='some_other_passing_test'; test_target=\"lib\" ;;";
 
     let error = ensure_claimed_adapter_ids_are_registered(
         &claimed,
@@ -183,11 +187,11 @@ fn registry_010_claimed_active_id_rejects_single_quoted_duplicate_assignment_ove
 
 #[test]
 fn registry_011_claimed_active_id_rejects_unquoted_duplicate_assignment_override() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let script = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_name=some_other_passing_test; test_target=\"lib\" ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_name=some_other_passing_test; test_target=\"lib\" ;;";
 
     let error = ensure_claimed_adapter_ids_are_registered(
         &claimed,
@@ -205,12 +209,12 @@ fn registry_011_claimed_active_id_rejects_unquoted_duplicate_assignment_override
 
 #[test]
 fn registry_012_claimed_active_id_rejects_duplicate_package_and_target_overrides() {
-    let claimed = BTreeSet::from(["ADAPT-DATA-000".to_string()]);
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
     let tests = claimed.clone();
-    let registry = registry_doc("ADAPT-DATA-000", "active");
-    let duplicate_package = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; package='harnesslab-cli'; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_target=\"lib\" ;;";
-    let duplicate_target = "ADAPT-DATA-000) package=\"harnesslab-adapters\"; test_name=\"registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit\"; test_target=\"lib\"; test_target=integration ;;";
+    let registry = registry_doc(ACTIVE_DATA_ID, "active");
+    let duplicate_package = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; package='harnesslab-cli'; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_target=\"lib\" ;;";
+    let duplicate_target = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_target=\"lib\"; test_target=integration ;;";
 
     let package_error = ensure_claimed_adapter_ids_are_registered(
         &claimed,

@@ -288,9 +288,10 @@ section = "8"
 
 [[requirements]]
 id = "ADAPT-DATA-000"
-title = "Current BenchmarkAdapter gap is explicit before data contract implementation"
+title = "Phase 0 BenchmarkAdapter gap sentinel is retired after data contract implementation"
 area = "adapter"
 risk = "critical"
+status = "planned"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -302,7 +303,7 @@ id = "ADAPT-DATA-001"
 title = "Descriptor and inspect-data do not mutate local cache"
 area = "adapter"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -314,7 +315,7 @@ id = "ADAPT-DATA-002"
 title = "Prepare is idempotent and rejects partial or corrupted data"
 area = "adapter"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -326,7 +327,7 @@ id = "ADAPT-DATA-003"
 title = "Task listing returns stable task ids and source refs"
 area = "adapter"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -338,7 +339,7 @@ id = "ADAPT-DATA-004"
 title = "Task snapshots capture replay-sufficient task identity"
 area = "adapter"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -350,7 +351,7 @@ id = "ADAPT-DATA-005"
 title = "Task plan creation is stable from prepared data and task descriptors"
 area = "adapter"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]

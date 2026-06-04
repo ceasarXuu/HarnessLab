@@ -1,8 +1,8 @@
-use crate::{BenchmarkAdapter, plan_from_tasks};
+use crate::{BenchmarkAdapter, prepared_from_descriptor, stable_checksum};
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDescriptor, BenchmarkPlan, BenchmarkSplit, BenchmarkStyle, DataState,
-    NetworkPolicy, ResourceHint, SandboxSpec, TaskPlan, VerifierEnvironment, VerifierSpec,
-    WorkspaceSpec, WorkspaceType,
+    ArtifactSpec, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle, DataState, NetworkPolicy,
+    PreparedBenchmark, ResourceHint, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
+    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 
 pub struct FakeTerminalAdapter;
@@ -23,39 +23,44 @@ impl BenchmarkAdapter for FakeTerminalAdapter {
         }
     }
 
-    fn plan(&self, split: &str) -> Result<BenchmarkPlan, String> {
-        let task = match split {
-            "success" => terminal_task(
-                "fake-terminal-success",
-                "Create result.txt with exactly: ok",
-                "test \"$(cat result.txt 2>/dev/null)\" = ok",
-                vec![0],
-                5,
-            ),
-            "test-fail" => terminal_task(
-                "fake-terminal-test-fail",
-                "Create result.txt with exactly: expected-fail",
-                "printf 'normal benchmark failure\\n'",
-                vec![99],
-                5,
-            ),
-            "agent-timeout" => terminal_task(
-                "fake-terminal-agent-timeout",
-                "Sleep longer than the timeout.",
-                "true",
-                vec![0],
-                1,
-            ),
-            "agent-crash" => terminal_task(
-                "fake-terminal-agent-crash",
-                "Exit non-zero.",
-                "true",
-                vec![0],
-                5,
-            ),
-            _ => return Err(format!("unknown fake-terminal split {split}")),
-        };
-        Ok(plan_from_tasks(self.descriptor(), split, vec![task]))
+    fn prepare(&self, split: &str) -> Result<PreparedBenchmark, String> {
+        if task_id_for_split(split).is_none() {
+            return Err(format!("unknown fake-terminal split {split}"));
+        }
+        Ok(prepared_from_descriptor(
+            self.descriptor(),
+            split,
+            format!("fixture://fake-terminal/{split}"),
+            1,
+        ))
+    }
+
+    fn list_tasks(&self, prepared: &PreparedBenchmark) -> Result<Vec<TaskDescriptor>, String> {
+        let task_id = task_id_for_split(&prepared.split)
+            .ok_or_else(|| format!("unknown fake-terminal split {}", prepared.split))?;
+        Ok(vec![TaskDescriptor {
+            task_id: task_id.to_string(),
+            split: prepared.split.clone(),
+            estimated_timeout_sec: 5,
+            resource_hint: ResourceHint {
+                cpu_cores: 1,
+                memory_mb: 256,
+            },
+            source_ref: SourceRef {
+                benchmark: "fake-terminal".to_string(),
+                upstream_id: task_id.to_string(),
+                checksum: stable_checksum(&format!("fake-terminal:{task_id}")),
+            },
+        }])
+    }
+
+    fn create_task_plan(
+        &self,
+        _prepared: &PreparedBenchmark,
+        task: &TaskDescriptor,
+    ) -> Result<TaskPlan, String> {
+        terminal_task_for_id(&task.task_id)
+            .ok_or_else(|| format!("unknown fake-terminal task {}", task.task_id))
     }
 }
 
@@ -64,6 +69,46 @@ fn split(name: &str) -> BenchmarkSplit {
         name: name.to_string(),
         task_count: 1,
         data_state: DataState::Ready,
+    }
+}
+
+fn task_id_for_split(split: &str) -> Option<&'static str> {
+    match split {
+        "success" => Some("fake-terminal-success"),
+        "test-fail" => Some("fake-terminal-test-fail"),
+        "agent-timeout" => Some("fake-terminal-agent-timeout"),
+        "agent-crash" => Some("fake-terminal-agent-crash"),
+        _ => None,
+    }
+}
+
+fn terminal_task_for_id(id: &str) -> Option<TaskPlan> {
+    match id {
+        "fake-terminal-success" => Some(terminal_task(
+            id,
+            "Create result.txt with exactly: ok",
+            "test \"$(cat result.txt 2>/dev/null)\" = ok",
+            vec![0],
+            5,
+        )),
+        "fake-terminal-test-fail" => Some(terminal_task(
+            id,
+            "Create result.txt with exactly: expected-fail",
+            "printf 'normal benchmark failure\\n'",
+            vec![99],
+            5,
+        )),
+        "fake-terminal-agent-timeout" => Some(terminal_task(
+            id,
+            "Sleep longer than the timeout.",
+            "true",
+            vec![0],
+            1,
+        )),
+        "fake-terminal-agent-crash" => {
+            Some(terminal_task(id, "Exit non-zero.", "true", vec![0], 5))
+        }
+        _ => None,
     }
 }
 

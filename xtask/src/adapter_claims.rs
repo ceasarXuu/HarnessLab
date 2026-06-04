@@ -6,6 +6,7 @@ use std::fs;
 const ADAPTER_CLAIM_SOURCES: &[&str] = &[
     "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md",
     "docs/plans/2026-06-04-benchmark-adapter-phase-0-inventory.md",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-inventory.md",
 ];
 
 pub(super) fn load_adapter_claim_sources() -> Result<Vec<(String, String)>> {
@@ -201,9 +202,29 @@ struct ActiveRouteSpec {
 
 fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
     match id {
-        "ADAPT-DATA-000" => Some(ActiveRouteSpec {
+        "ADAPT-DATA-001" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
-            test_name: "registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit",
+            test_name: "data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache",
+            test_target: Some("lib"),
+        }),
+        "ADAPT-DATA-002" => Some(ActiveRouteSpec {
+            package: "harnesslab-adapters",
+            test_name: "data_contract_tests::adapt_data_002_prepare_is_idempotent_and_rejects_unready_data",
+            test_target: Some("lib"),
+        }),
+        "ADAPT-DATA-003" => Some(ActiveRouteSpec {
+            package: "harnesslab-adapters",
+            test_name: "data_contract_tests::adapt_data_003_list_tasks_returns_stable_task_ids_and_source_refs",
+            test_target: Some("lib"),
+        }),
+        "ADAPT-DATA-004" => Some(ActiveRouteSpec {
+            package: "harnesslab-adapters",
+            test_name: "data_contract_tests::adapt_data_004_snapshot_task_captures_replay_sufficient_identity",
+            test_target: Some("lib"),
+        }),
+        "ADAPT-DATA-005" => Some(ActiveRouteSpec {
+            package: "harnesslab-adapters",
+            test_name: "data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper",
             test_target: Some("lib"),
         }),
         _ => None,
