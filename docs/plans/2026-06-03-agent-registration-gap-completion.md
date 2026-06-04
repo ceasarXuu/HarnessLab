@@ -3,7 +3,7 @@
 > **For implementation agents:** this is a follow-up implementation plan for the gaps found after the first agent registration registry pass. Do not treat documentation-only presence as completion. Each slice must prove runtime behavior, doctor behavior, schema visibility, and traceability registration.
 
 - Date: 2026-06-03
-- Status: planned
+- Status: completed and verified on 2026-06-04
 - Scope: agent registration capability policies, schema completeness, version probing, required command checks, auth/run-user runtime behavior, docs, tests, adversarial review
 - Source: engineering audit of the current `d1408e6`/`20a7972` agent registration implementation
 
@@ -589,3 +589,11 @@ This plan is complete only when:
 4. `agent schema --json` and docs agree.
 5. Full local gate passes.
 6. Fresh adversarial review is closed with all accepted blockers fixed.
+
+## 10. Completion Evidence
+
+- Implementation commits through `4e2a5cb test: wire agent registration gap gates` are pushed to `origin/main`.
+- `AGT-REG-007` through `AGT-REG-012` are registered and routed through `scripts/test-after-change.sh --select`.
+- The full `scripts/test-after-change.sh` gate passed after the final helper split, including Rust tests, Python bridge tests, real Terminal-Bench verifier smoke checks, test registry validation, secret scan, and coverage checks.
+- `agent schema --json` exposes active/legacy status, allowed values, examples, and defaults for profile fields; docs/schema consistency is covered by `AGT-REG-007`.
+- Fresh adversarial review is closed in `vs_review/2026-06-04-agent-registration-gap-completion-review.md` with accepted blockers fixed and re-reviewed.
