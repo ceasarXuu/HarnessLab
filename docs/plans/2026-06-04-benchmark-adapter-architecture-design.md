@@ -4,7 +4,7 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-04
-- Version: 0.2
+- Version: 0.3
 - Status: Reviewing
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
@@ -28,6 +28,28 @@
 - Key decision: Terminal-Bench remains the hardening reference; SWE-bench Pro becomes the patch-style reference.
 - Must confirm before implementation: whether to add a new `harnesslab-runtime-adapters` crate now, or first extract runtime traits inside `harnesslab-cli/src/runner/external`.
 - Status reason: existing docs already define much of the target contract, but current code only exposes `descriptor()` and `plan(split)` at the adapter crate boundary; runtime behavior still lives in benchmark-specific CLI branches.
+
+### Plan Optimization Findings
+
+This plan is being treated as a Full software engineering plan because it
+changes architecture, execution behavior, replay authority, artifact contracts,
+and user-facing diagnostics. The optimized plan must therefore be executable and
+reviewable, not only descriptive.
+
+Findings from the plan review:
+
+- Phase decomposition exists and covers discovery, data contracts, snapshot
+  authority, runtime registry, benchmark-specific extraction, redaction,
+  documentation, and final closure.
+- Phase gates need to be interpreted as hard constraints: a phase is not
+  complete when code lands; it is complete only when the required evidence,
+  tests, review closure, docs, and fallback readiness are recorded.
+- Owner, release window, CI resource guarantees, and some adapter-id design
+  choices remain unknown. They are not invented in this plan; they are bound to
+  explicit phase gates or open questions.
+- Current implementation evidence must stay separate from target architecture
+  claims. Planned IDs count as planning inventory only until they have active
+  tests, selector routes, and validation evidence.
 
 ## Plan Classification And Risk Assessment
 
@@ -105,6 +127,21 @@ The architectural gap is that adapter runtime behavior is not yet a first-class 
 - No benchmark adapter may own global run state, report rendering, or scheduler policy.
 - No adapter may silently downgrade execution failures into benchmark failures.
 - No adapter may interpret raw `skills/tools/hooks` profile policy. It receives `MaterializedAgentProfile`.
+
+### Cross-Phase Invariants
+
+These invariants apply to every phase and override lower-level implementation
+convenience:
+
+| Invariant | Enforcement Point | Failure Handling |
+| --- | --- | --- |
+| No proof claim without a requirement row, test registry row, and selector route. | Phase 0 meta-tests and every later selector update. | Block phase closure and update the registry before accepting the proof. |
+| Planned proof IDs do not prove behavior. | Test registry status, selector routing, and review reports. | Treat as inventory only until active tests and validation evidence exist. |
+| Data adapters do not execute processes, inspect ambient env, or own attempt directories. | Phase 1 review and data adapter tests. | Move the concern to runtime adapter context or block the trait change. |
+| Runtime adapters consume materialized agent runtime config, not raw profile policy. | Phase 3 preflight tests and compatibility allowlist checks. | Add a named compatibility exception with redaction and tests, or block cutover. |
+| Replay must not silently rebind to mutable live benchmark data. | Phase 2 replay tests and Phase 6 replay hardening. | Block replay or require explicit legacy degraded mode with warning. |
+| Public artifacts must not contain private command/env material. | Phase 6 fake secret scans and public/private artifact tests. | Block public artifact/report publication for the affected adapter path. |
+| Accepted blocking review findings require fresh closure re-review. | `/vs_review/` report and final closure checklist. | Keep the phase open unless the user explicitly accepts residual risk. |
 
 ## Constraints, Assumptions, And Dependencies
 
@@ -589,6 +626,7 @@ Concrete initial IDs:
 - `ADAPT-DATA-002`: prepare is idempotent and never returns ready for partial or corrupted data.
 - `ADAPT-DATA-003`: list_tasks returns stable task ids and source refs.
 - `ADAPT-DATA-004`: snapshot_task captures replay-sufficient task identity.
+- `ADAPT-DATA-005`: create_task_plan returns stable executable task plans from prepared data and task descriptors.
 - `ADAPT-RUNTIME-001`: runtime registry dispatches preflight and execute without direct benchmark-specific CLI branches outside the registry boundary.
 - `ADAPT-RUNTIME-002`: runtime preflight owns host/sandbox support checks and benchmark-facing agent bridge compatibility.
 - `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
@@ -623,12 +661,63 @@ but is absent from `REQUIREMENTS`, `TEST_REGISTRY`, or selector routing.
 
 ## 11. Phased Execution Plan
 
+### Phase Execution Contract
+
+Each phase is an independently closable engineering slice. A phase can close
+only when all of these are true:
+
+1. Entry criteria were checked and the evidence is recorded.
+2. Implementation tasks landed only within the intended ownership boundary.
+3. Deliverables are present in code, tests, docs, artifacts, or review reports.
+4. Validation commands ran with passing standards recorded, including zero-test
+   and under-count protections where selectors are grouped.
+5. Risks with active trigger signals were mitigated or the fallback path was
+   exercised/documented.
+6. Required adversarial review completed, every finding was triaged, and every
+   accepted blocking finding received a fresh closure re-review.
+7. The next phase gate is explicitly satisfied; otherwise the work returns to
+   the owning phase.
+
+### Phase Evidence Ledger
+
+Every phase must leave a reviewer-visible evidence trail. The exact evidence
+can be expanded during implementation, but the minimum ledger is fixed here.
+
+| Phase | Required Evidence Location | Minimum Evidence | Closure Constraint |
+| --- | --- | --- | --- |
+| Phase 0 | `vs_review/2026-06-04-benchmark-adapter-phase-0-review.md`, `artifacts/test-traceability.json`, `artifacts/adapter-proof-inventory.json` | Registry/meta-test output, selector-count evidence, current gap sentinel, `INT-011` proof shape | No claimed adapter proof ID can be absent from requirements, registry, or selector routing. |
+| Phase 1 | Phase 1 review section or slice report, adapter crate tests | `ADAPT-DATA-001..005`, compatibility wrapper proof, stable source-ref/task-plan evidence | New data trait cannot depend on process execution, event writers, or attempt directories. |
+| Phase 2 | Replay slice report, replay artifacts | Snapshot schema evidence, replay blocker/warning tests, drift tests, `INT-013` update | External replay cannot silently replan from live mutable data by default. |
+| Phase 3 | Runtime registry slice report | `ADAPT-RUNTIME-001..002`, branch inventory before/after, preflight report evidence | Orchestrator cannot keep hidden benchmark-specific runtime execution branches outside registry dispatch. |
+| Phase 4 | Terminal-Bench extraction report | Existing `TB-*`, `INT-021..046`, Python bridge, event assertions, official-runner proof | Terminal-Bench timeout, setup, cleanup, QEMU, and platform semantics must match the pre-extraction path. |
+| Phase 5 | SWE-bench Pro extraction report | `SWEPRO-001..004`, official evaluator proof, phase event evidence | Metadata, workspace, patch, evaluator, and parse failures must be distinguishable. |
+| Phase 6 | Snapshot/redaction report | `ADAPT-RUNTIME-003..005`, `SWEPRO-005`, `SEC-*`, fake secret scans | Public runtime artifacts, events, reports, and replay warnings cannot expose private runtime material. |
+| Phase 7 | Docs/diagnostics report or review section | Architecture/MVP/operations/user docs diff, doctor/readiness output checks | User-facing docs and diagnostics cannot describe planned-only behavior as implemented. |
+| Phase 8 | Final `/vs_review/` closure report | Full targeted selector set, full gate, final review closure, rollback/fallback notes | No untriaged finding, unresolved blocker, or missing required evidence may remain. |
+
+### Phase Completion Threshold Constraints
+
+These are the hard phase-level thresholds. If a threshold fails, the phase is
+not complete even if the implementation appears to work manually.
+
+| Phase | Completion Threshold |
+| --- | --- |
+| Phase 0 | Proof registration is mechanically enforced, `INT-011` cannot over-claim, and planned adapter IDs are visibly planned rather than silently passing as behavior. |
+| Phase 1 | The data adapter lifecycle is independently testable from inspect through task snapshot, with `plan(split)` preserved only as a compatibility wrapper. |
+| Phase 2 | Replay authority is snapshot-backed, drift-aware, and fails closed unless explicit legacy degraded replay is chosen. |
+| Phase 3 | Runtime preflight and execution dispatch are registry-owned, with raw profile access removed or explicitly allowlisted and tested. |
+| Phase 4 | Terminal-Bench behavior is equivalent before and after extraction according to existing selectors and official-runner proof. |
+| Phase 5 | SWE-bench Pro runtime phases are first-class and evaluator behavior is proven beyond fixture-only shims. |
+| Phase 6 | Public/private runtime snapshot boundaries are test-enforced and replay hardening handles missing or changed evaluator materials. |
+| Phase 7 | Docs, doctor/readiness diagnostics, event names, and artifact names match implemented code. |
+| Phase 8 | Acceptance matrix, full gate, rollback/fallback readiness, and fresh adversarial closure all pass. |
+
 ### Phase Gate Overview
 
 | Phase | Primary Outcome | Exit Gate | Cannot Proceed If |
 | --- | --- | --- | --- |
 | Phase 0: Contract Inventory | Proof surfaces and gaps are explicit before implementation. | Claimed ID families are registered or meta-tests fail them; `INT-011` is split or count-routed. | Any planned proof ID can still pass without a registered requirement, registry row, and selector. |
-| Phase 1: Data Adapter Completion | Data adapter contract exposes inspect, prepare, list, plan, and snapshot steps. | `ADAPT-DATA-001..004` pass and `plan(split)` compatibility remains green. | `prepare` can report ready for partial/corrupted data or task ids/source refs are unstable. |
+| Phase 1: Data Adapter Completion | Data adapter contract exposes inspect, prepare, list, plan, and snapshot steps. | `ADAPT-DATA-001..005` pass and `plan(split)` compatibility remains green. | `prepare` can report ready for partial/corrupted data, task ids/source refs are unstable, or task plans are not reproducible. |
 | Phase 2: Snapshot Authority And Replay | Replay authority no longer depends on mutable live planning. | Replay blocks or warns according to persisted snapshot authority; `INT-013` reflects the new contract. | Silent live replanning remains the default for external benchmarks. |
 | Phase 3: Runtime Adapter Registry | Runtime preflight/execute/cleanup dispatch is registry-owned. | `ADAPT-RUNTIME-001..002` prove generic dispatch and preflight ownership. | CLI runner still contains benchmark-specific runtime branches outside registry lookup. |
 | Phase 4: Terminal-Bench Runtime Extraction | Terminal-Bench behavior runs through `TerminalBenchRuntimeAdapter`. | Existing `TB-*`, `INT-021..046`, Python bridge tests, event assertions, and official-runner proof pass. | Timeout, setup-failure, cleanup, QEMU, or platform behavior changes without explicit proof. |
@@ -666,8 +755,11 @@ umbrella selectors, or zero-test passes as evidence.
 
 - Compare `docs/architecture.md`, `docs/mvp-development-spec.md`, and current
   code contracts.
-- Add a failing test that proves the current `BenchmarkAdapter` cannot expose
-  `prepare/list_tasks/snapshot_task` independently.
+- Add an active gap sentinel that proves the current `BenchmarkAdapter` does
+  not expose `inspect_data/prepare/list_tasks/create_task_plan/snapshot_task`
+  independently. The sentinel must fail once Phase 1 starts adding those
+  methods, so it is a temporary Phase 0 proof and not positive contract
+  coverage.
 - Register concrete `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, and `SWEPRO-*`
   requirements, registry entries, and selector routes before using them as
   proof.
@@ -689,7 +781,7 @@ umbrella selectors, or zero-test passes as evidence.
 | --- | --- | --- |
 | Claimed proof IDs cannot be missing | Run the new registry meta-test | Missing IDs fail the test instead of passing silently |
 | `INT-011` is not misleading | Run split selectors or counted grouped selector | Every intended `int_011_*` case is executed and counted |
-| Current contract gap is visible | Run the failing contract test before implementation | Test fails for the expected missing data-adapter contract reason |
+| Current contract gap is visible | Run the active gap sentinel before implementation | Sentinel passes only while the current trait lacks the independent data-adapter methods and fails once Phase 1 starts adding them |
 
 #### Exit Criteria
 
@@ -761,11 +853,12 @@ Terminal-Bench and SWE-bench Pro planning onto the same flow.
 | Prepare is idempotent | `ADAPT-DATA-002` | Repeated prepare returns stable readiness and rejects partial/corrupted data |
 | Tasks are stable | `ADAPT-DATA-003` | Task ids and source refs are deterministic |
 | Task snapshot is replay-sufficient | `ADAPT-DATA-004` | Snapshot contains immutable workload identity |
+| Task plans are reproducible | `ADAPT-DATA-005` | `create_task_plan` returns stable executable `TaskPlan` values from prepared data and task descriptors |
 | Compatibility remains intact | Existing adapter tests | `plan(split)` callers continue to pass |
 
 #### Exit Criteria
 
-- `ADAPT-DATA-001..004` pass.
+- `ADAPT-DATA-001..005` pass.
 - Existing adapter crate tests pass.
 - No runtime process execution dependency is introduced into the data adapter
   contract.
@@ -1469,7 +1562,7 @@ Before claiming the adapter architecture track is complete:
 
 | Requirement | Proof |
 | --- | --- |
-| Adapter data contract is explicit | concrete registered `ADAPT-DATA-001..004` tests for descriptor, inspect, prepare, list, source refs, and task snapshot |
+| Adapter data contract is explicit | concrete registered `ADAPT-DATA-001..005` tests for descriptor, inspect, prepare, list, source refs, task-plan creation, and task snapshot |
 | Runtime adapter dispatch is generic | concrete registered `ADAPT-RUNTIME-001..005` tests for preflight, execute, cleanup, runtime snapshots, event taxonomy, and no direct benchmark-specific CLI branch outside registry |
 | Terminal-Bench behavior preserved | existing `TB-*`, `INT-021..046`, Python bridge tests, and at least one official-runner preservation proof |
 | SWE-bench Pro behavior preserved | concrete registered `SWEPRO-001..005` tests and at least one official evaluator preservation proof |
@@ -1620,6 +1713,17 @@ still apply.
 5. Should legacy degraded replay be retained at all, or should external benchmark replay always block when authoritative snapshots are missing?
 6. Who owns implementation and final release approval for this track?
 
+### Open Question Resolution Gates
+
+| Open Question | Blocks Phase | Required Resolution Evidence |
+| --- | --- | --- |
+| Runtime trait location: CLI first or new crate now | Phase 3 | Decision log update plus dependency-direction check from Phase 0/3 inventory. |
+| Whether `PreparedBenchmark` is persisted for every run | Phase 2 | Snapshot schema decision and replay test expectation. |
+| Whether official benchmark smoke checks are mandatory in default full gate | Phase 8 | CI capability decision or manual-evidence requirement in the final review report. |
+| Whether `ExternalRunnerKind` remains the MVP registry key | Phase 3 | Runtime registry API decision and compatibility test coverage. |
+| Whether legacy degraded replay is retained | Phase 2 | User/product decision reflected in replay CLI/tests and user-facing docs. |
+| Implementation and release approval owner | Phase 0 | Owner field updated or phase closure explicitly blocked. |
+
 ## 22. Done Definition
 
 This architecture track is complete when:
@@ -1650,6 +1754,7 @@ This architecture track is complete when:
 | --- | --- | --- |
 | 0.1 | 2026-06-04 | Initial adapter architecture design and adversarial review closure. |
 | 0.2 | 2026-06-04 | Reworked plan using `se-good-plan`: added metadata, risk classification, assumptions, dependencies, alternatives, phase gates, rollback/fallback, security, observability, decision log, and quality checklist. |
+| 0.3 | 2026-06-04 | Strengthened the plan as an executable phase-gated document: added optimization findings, cross-phase invariants, phase execution contract, evidence ledger, hard completion thresholds, and open-question resolution gates. |
 
 ## 25. Plan Quality Checklist
 
@@ -1661,6 +1766,7 @@ This architecture track is complete when:
 - [x] Work is divided into progressive phases.
 - [x] Each phase has entry criteria, checks, tasks, deliverables, validation,
       exit criteria, review plan, risks, fallback, and next gate.
+- [x] Each phase has hard completion thresholds and a required evidence ledger.
 - [x] High-risk unknowns are investigated in Phase 0 and Phase 2 before runtime
       extraction.
 - [x] Risks include trigger signals, mitigations, and fallback paths.

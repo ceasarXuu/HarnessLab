@@ -2,11 +2,15 @@ mod support;
 
 use assert_cmd::Command;
 use std::fs;
+use std::path::Path;
 use support::swe::{
     fake_swe_tools, init_home, path_with, run_swe_json, run_swe_json_with_output,
     set_network_default_none, swe_bench_root, write_agent, write_agent_with_mode,
     write_codex_agent, write_swe_gold_agent, write_swe_gold_agent_with_run_as,
 };
+
+const INT_011_RUNTIME_ARTIFACTS: &str =
+    include_str!("../../../tests/artifact_contracts/int_011_swe_bench_pro_runtime_artifacts.txt");
 
 #[test]
 fn int_011_swe_bench_pro_smoke_runs_external_evaluator_contract() {
@@ -16,11 +20,12 @@ fn int_011_swe_bench_pro_smoke_runs_external_evaluator_contract() {
     let root = swe_bench_root();
     let bin = fake_swe_tools();
 
-    let (results, run_dir) = run_swe_json(home.path(), root.path(), bin.path(), "swe-gold", &[], 0);
+    let (results, run_dir, json) =
+        run_swe_json_with_output(home.path(), root.path(), bin.path(), "swe-gold", &[], 0);
     assert_eq!(results["tasks"][0]["state"], "success");
     assert_eq!(results["tasks"][0]["benchmark_score"], 1.0);
     assert_eq!(results["tasks"][0]["patch"]["status"], "captured");
-    assert!(run_dir.join("report.html").is_file());
+    assert_swe_runtime_artifacts(&results, &run_dir, &json);
 }
 
 #[test]
@@ -346,4 +351,66 @@ fn int_011_swe_bench_pro_missing_eval_results_is_evaluator_error() {
             .unwrap()
             .contains("external_result_parse_failed")
     );
+}
+
+fn assert_swe_runtime_artifacts(
+    results: &serde_json::Value,
+    run_dir: &Path,
+    json: &serde_json::Value,
+) {
+    assert_eq!(json["exit_code"], 0);
+    assert_eq!(json["verdict"], "success");
+    assert_eq!(json["summary"]["success"], 1);
+    assert_eq!(
+        json["results_path"],
+        run_dir.join("results.json").display().to_string()
+    );
+    assert_eq!(
+        json["report_path"],
+        run_dir.join("report.html").display().to_string()
+    );
+    assert_eq!(
+        results["report_path"],
+        run_dir.join("report.html").display().to_string()
+    );
+
+    let command = fs::read_to_string(run_dir.join("command.txt")).unwrap();
+    assert!(command.contains("agent_runtime_snapshot=agent-profile.runtime.json"));
+    assert!(command.contains("agent_report_snapshot=agent-profile.snapshot.json"));
+    assert!(command.contains("agent_materialized_snapshot=agent-runtime.materialized.json"));
+
+    let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
+    assert!(events.contains("run_finished"));
+    assert!(events.contains("exit_code=0"));
+    assert!(events.contains("success=1"));
+    assert!(events.contains("report_path="));
+
+    let task_id = results["tasks"][0]["task_id"].as_str().unwrap();
+    let attempt_dir = run_dir.join("tasks").join(task_id).join("attempts/1");
+    for relative in int_011_runtime_artifact_contract() {
+        let resolved = relative.replace("<task-id>", task_id);
+        assert!(run_dir.join(&resolved).is_file(), "missing {resolved}");
+    }
+
+    let attempt_result: serde_json::Value =
+        serde_json::from_slice(&fs::read(attempt_dir.join("result.json")).unwrap()).unwrap();
+    assert_eq!(attempt_result["task_id"], task_id);
+    assert_eq!(attempt_result["patch"]["diff_path"], "patch.diff");
+    assert_eq!(
+        attempt_result["patch"]["prediction_path"],
+        "prediction.jsonl"
+    );
+    assert!(
+        fs::read_to_string(attempt_dir.join("prediction.jsonl"))
+            .unwrap()
+            .contains(task_id)
+    );
+}
+
+fn int_011_runtime_artifact_contract() -> Vec<&'static str> {
+    INT_011_RUNTIME_ARTIFACTS
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect()
 }

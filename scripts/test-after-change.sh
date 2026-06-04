@@ -33,6 +33,13 @@ run_filtered_tests() {
   fi
 }
 
+planned_adapter_proof() {
+  local selected_id="$1"
+  local phase="$2"
+  echo "planned adapter proof is registered but not implemented yet: ${selected_id} (${phase})" >&2
+  exit 64
+}
+
 if [[ "${1:-}" == "--select" ]]; then
   id="${2:?missing test id}"
   test_target="${HARNESSLAB_TEST_TARGET:-}"
@@ -134,7 +141,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-005) package="harnesslab-cli"; test_name="int_005_fake_terminal_timeout_exits_1" ;;
     INT-006) package="harnesslab-cli"; test_name="int_006_fake_patch_success_saves_diff" ;;
     INT-009) package="harnesslab-cli"; test_name="int_009_replay_success_creates_new_run" ;;
-    INT-011) package="harnesslab-cli"; test_name="int_011_swe_bench_pro_smoke_runs_external_evaluator_contract" ;;
+    INT-011) run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "int_011_swe_bench_pro" 10; exit 0 ;;
     INT-012) package="harnesslab-cli"; test_name="int_012_replay_text_output_succeeds" ;;
     INT-013) package="harnesslab-cli"; test_name="int_013_replay_falls_back_when_benchmark_snapshot_is_missing" ;;
     INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;
@@ -188,7 +195,24 @@ if [[ "${1:-}" == "--select" ]]; then
     AGT-REG-011) run_filtered_tests "$id" "harnesslab-cli" "test:host_auth_contract" "agt_reg_011" 3; exit 0 ;;
     AGT-REG-012) run_filtered_tests "$id" "harnesslab-cli" "test:agent_registry_contract" "agt_reg_012" 2; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_run_as_contract" "agt_reg_012" 4; run_filtered_tests "$id" "harnesslab-cli" "test:terminal_bench_run_as_contract" "agt_reg_012" 1; run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "agt_reg_012" 1; exit 0 ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
+    ADAPT-DATA-000) package="harnesslab-adapters"; test_name="registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit"; test_target="lib" ;;
+    ADAPT-DATA-001) planned_adapter_proof "$id" "Phase 1: data inspect contract" ;;
+    ADAPT-DATA-002) planned_adapter_proof "$id" "Phase 1: prepare idempotency contract" ;;
+    ADAPT-DATA-003) planned_adapter_proof "$id" "Phase 1: stable task listing contract" ;;
+    ADAPT-DATA-004) planned_adapter_proof "$id" "Phase 1: task snapshot contract" ;;
+    ADAPT-DATA-005) planned_adapter_proof "$id" "Phase 1: task plan creation contract" ;;
+    ADAPT-RUNTIME-001) planned_adapter_proof "$id" "Phase 3: runtime registry dispatch" ;;
+    ADAPT-RUNTIME-002) planned_adapter_proof "$id" "Phase 3: runtime preflight ownership" ;;
+    ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;
+    ADAPT-RUNTIME-004) planned_adapter_proof "$id" "Phase 6: cleanup report" ;;
+    ADAPT-RUNTIME-005) planned_adapter_proof "$id" "Phase 6: runtime event taxonomy" ;;
+    SWEPRO-001) planned_adapter_proof "$id" "Phase 5: metadata failure classification" ;;
+    SWEPRO-002) planned_adapter_proof "$id" "Phase 5: workspace failure classification" ;;
+    SWEPRO-003) planned_adapter_proof "$id" "Phase 5: patch failure classification" ;;
+    SWEPRO-004) planned_adapter_proof "$id" "Phase 5: evaluator parse classification" ;;
+    SWEPRO-005) planned_adapter_proof "$id" "Phase 6: replay runtime materials" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
+    META-008) exec scripts/verify-planned-adapter-selectors.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
     COV-003) package="xtask"; test_name="coverage::tests::coverage_002_branch_threshold_requires_branch_data" ;;
     COV-007) package="xtask"; test_name="coverage::tests::coverage_003_new_files_must_appear_in_lcov" ;;
