@@ -1303,13 +1303,13 @@ contracts = ["BenchmarkAdapter", "RunOrchestrator"]
 
 [[tests]]
 id = "ADAPT-DATA-000"
-title = "Current BenchmarkAdapter gap is explicit"
+title = "Phase 0 BenchmarkAdapter gap sentinel is retired"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-000"
 file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
 required_artifacts = []
-status = "active"
+status = "planned"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "11"
@@ -1323,9 +1323,22 @@ title = "Descriptor and inspect-data do not mutate local cache"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-001"
-file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+file_patterns = [
+  "crates/harnesslab-adapters/Cargo.toml",
+  "crates/harnesslab-adapters/src/data_boundary_contract.rs",
+  "crates/harnesslab-adapters/src/data_boundary_scan.rs",
+  "crates/harnesslab-adapters/src/data_contract_tests.rs",
+  "crates/harnesslab-adapters/src/fake_patch.rs",
+  "crates/harnesslab-adapters/src/fake_terminal.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1339,9 +1352,15 @@ title = "Prepare is idempotent and rejects partial or corrupted data"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-002"
-file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/data_contract_tests.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1355,9 +1374,15 @@ title = "Task listing returns stable task ids and source refs"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-003"
-file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/data_contract_tests.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1371,9 +1396,17 @@ title = "Task snapshots capture replay-sufficient task identity"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-004"
-file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/data_contract_tests.rs",
+  "crates/harnesslab-core/src/benchmark.rs",
+  "crates/harnesslab-adapters/src/fake_patch.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1387,9 +1420,17 @@ title = "Task plan creation is stable from prepared data and task descriptors"
 layer = "contract"
 owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-DATA-005"
-file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/data_contract_tests.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/fake_terminal.rs",
+  "crates/harnesslab-adapters/src/fake_patch.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"

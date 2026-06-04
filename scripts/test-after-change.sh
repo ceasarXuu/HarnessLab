@@ -195,12 +195,12 @@ if [[ "${1:-}" == "--select" ]]; then
     AGT-REG-011) run_filtered_tests "$id" "harnesslab-cli" "test:host_auth_contract" "agt_reg_011" 3; exit 0 ;;
     AGT-REG-012) run_filtered_tests "$id" "harnesslab-cli" "test:agent_registry_contract" "agt_reg_012" 2; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_run_as_contract" "agt_reg_012" 4; run_filtered_tests "$id" "harnesslab-cli" "test:terminal_bench_run_as_contract" "agt_reg_012" 1; run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "agt_reg_012" 1; exit 0 ;;
     PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;
-    ADAPT-DATA-000) package="harnesslab-adapters"; test_name="registry::tests::adapt_data_000_current_benchmark_adapter_gap_is_explicit"; test_target="lib" ;;
-    ADAPT-DATA-001) planned_adapter_proof "$id" "Phase 1: data inspect contract" ;;
-    ADAPT-DATA-002) planned_adapter_proof "$id" "Phase 1: prepare idempotency contract" ;;
-    ADAPT-DATA-003) planned_adapter_proof "$id" "Phase 1: stable task listing contract" ;;
-    ADAPT-DATA-004) planned_adapter_proof "$id" "Phase 1: task snapshot contract" ;;
-    ADAPT-DATA-005) planned_adapter_proof "$id" "Phase 1: task plan creation contract" ;;
+    ADAPT-DATA-000) planned_adapter_proof "$id" "Phase 0: retired gap sentinel" ;;
+    ADAPT-DATA-001) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache"; test_target="lib" ;;
+    ADAPT-DATA-002) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_002_prepare_is_idempotent_and_rejects_unready_data"; test_target="lib" ;;
+    ADAPT-DATA-003) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_003_list_tasks_returns_stable_task_ids_and_source_refs"; test_target="lib" ;;
+    ADAPT-DATA-004) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_004_snapshot_task_captures_replay_sufficient_identity"; test_target="lib" ;;
+    ADAPT-DATA-005) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper"; test_target="lib" ;;
     ADAPT-RUNTIME-001) planned_adapter_proof "$id" "Phase 3: runtime registry dispatch" ;;
     ADAPT-RUNTIME-002) planned_adapter_proof "$id" "Phase 3: runtime preflight ownership" ;;
     ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;

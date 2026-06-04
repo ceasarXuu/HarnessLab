@@ -9,3 +9,10 @@ pub use fake_terminal::*;
 pub use registry::*;
 pub use swe_bench_pro::*;
 pub use terminal_bench::*;
+
+#[cfg(test)]
+mod data_boundary_contract;
+#[cfg(test)]
+mod data_boundary_scan;
+#[cfg(test)]
+mod data_contract_tests;

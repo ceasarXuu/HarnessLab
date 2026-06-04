@@ -43,7 +43,7 @@ fn bench_002_swe_bench_pro_info_uses_local_data_root() {
     std::fs::write(
         root.path()
             .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/README.md"),
-        "splits:\n- name: test\n  num_examples: 731\n",
+        "splits:\n- name: test\n  num_examples: 1\n",
     )
     .unwrap();
     create_swe_source(root.path());
@@ -64,7 +64,7 @@ fn bench_002_swe_bench_pro_info_uses_local_data_root() {
         .iter()
         .find(|split| split["name"] == "full")
         .unwrap();
-    assert_eq!(full["task_count"], 731);
+    assert_eq!(full["task_count"], 1);
     assert_eq!(full["data_state"], "ready");
 }
 
@@ -240,7 +240,7 @@ parser = "none"
 
 fn create_swe_source(root: &Path) {
     let source = root.join("_src/SWE-bench_Pro-os");
-    std::fs::create_dir_all(source.join("run_scripts")).unwrap();
+    std::fs::create_dir_all(source.join("run_scripts/instance_demo")).unwrap();
     std::fs::write(source.join("swe_bench_pro_eval.py"), "").unwrap();
 }
 
