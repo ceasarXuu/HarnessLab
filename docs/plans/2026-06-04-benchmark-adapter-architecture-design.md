@@ -1,9 +1,24 @@
 # Benchmark Adapter Layer Architecture Design
 
-- Status: Reviewed and ready for implementation planning
-- Date: 2026-06-04
-- Scope: benchmark data adapters, runtime adapters, execution/result contracts, observability, testing, and migration plan
-- Source request: create a dedicated architecture design for completing the adapter layer
+## Plan Metadata
+
+- Created: 2026-06-04
+- Updated: 2026-06-04
+- Version: 0.2
+- Status: Reviewing
+- Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
+- Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
+  test registry, replay artifacts, doctor/readiness diagnostics, development
+  operations docs.
+- Related Links: `vs_review/2026-06-04-benchmark-adapter-architecture-review.md`,
+  `docs/architecture.md`, `docs/mvp-development-spec.md`,
+  `docs/development-operations.md`, `docs/test-engineering.md`.
+- Risk Level: High
+- Plan Type: Full
+- Scope: benchmark data adapters, runtime adapters, execution/result contracts,
+  observability, testing, release gates, rollback/fallback, and migration plan.
+- Source request: create a dedicated architecture design for completing the
+  adapter layer, then optimize it into an executable software engineering plan.
 
 ## Requester Review Summary
 
@@ -13,6 +28,52 @@
 - Key decision: Terminal-Bench remains the hardening reference; SWE-bench Pro becomes the patch-style reference.
 - Must confirm before implementation: whether to add a new `harnesslab-runtime-adapters` crate now, or first extract runtime traits inside `harnesslab-cli/src/runner/external`.
 - Status reason: existing docs already define much of the target contract, but current code only exposes `descriptor()` and `plan(split)` at the adapter crate boundary; runtime behavior still lives in benchmark-specific CLI branches.
+
+## Plan Classification And Risk Assessment
+
+- Task classification: architecture change, refactor, and migration.
+- Complexity: High.
+- Required plan depth: Full plan with explicit phase gates.
+- Risk rationale: the change touches core benchmark execution, replay authority,
+  result classification, public/private runtime artifacts, and user-facing
+  diagnostics. Regressions can make benchmark results incorrect even when CLI
+  execution appears successful.
+
+| Risk Driver | Why It Matters | Plan Response |
+| --- | --- | --- |
+| Runtime dispatch migration | Direct benchmark branches can survive unnoticed and make new adapters expensive to add. | Phase 3 requires registry dispatch proof and no hidden benchmark branch outside the registry boundary. |
+| Replay authority change | Mutable benchmark data can corrupt replay or bind replay to a different task. | Phase 2 moves replay validation before runtime extraction and blocks silent live replanning. |
+| Official runner behavior | Wrapper tests alone cannot prove Terminal-Bench or SWE-bench Pro compatibility. | Phases 4 and 5 require official runner/evaluator preservation proof. |
+| Public/private artifacts | Runtime commands and env policy can leak secrets if snapshots are not split and scanned. | Phase 6 requires public/private artifacts plus fake secret scans before full gate. |
+| Review gap | Architecture changes can pass local tests while violating ownership boundaries. | Every implementation phase has a focused adversarial review gate. |
+
+## Problem Definition
+
+Current behavior:
+
+- Data planning adapters exist, but the adapter crate boundary only exposes
+  `descriptor()` and `plan(split)`.
+- Terminal-Bench and SWE-bench Pro runtime behavior is implemented in
+  benchmark-specific CLI runner branches.
+- Replay and runtime artifact authority are not yet expressed as first-class
+  adapter contracts.
+
+Expected behavior:
+
+- Data discovery, task planning, runtime execution, result projection, cleanup,
+  replay snapshots, redaction, and diagnostics are explicit adapter contracts.
+- Core orchestration dispatches benchmark runtime behavior through a registry,
+  without direct benchmark-specific execution branches.
+- Each contract surface has registry-backed requirements, selectors, failure
+  fixtures, and at least one real official runner/evaluator preservation proof
+  per external benchmark family.
+
+Gap:
+
+- The current implementation is functional for MVP smoke paths, but it is not
+  yet a scalable adapter architecture. Adding a benchmark would still require
+  modifying orchestration logic, and some proof claims would be misleading
+  until the registry and selector surfaces are explicit.
 
 ## 1. Background
 
@@ -44,6 +105,45 @@ The architectural gap is that adapter runtime behavior is not yet a first-class 
 - No benchmark adapter may own global run state, report rendering, or scheduler policy.
 - No adapter may silently downgrade execution failures into benchmark failures.
 - No adapter may interpret raw `skills/tools/hooks` profile policy. It receives `MaterializedAgentProfile`.
+
+## Constraints, Assumptions, And Dependencies
+
+### Facts
+
+- Current data adapters are in `crates/harnesslab-adapters`.
+- Current real external runtime logic is in `crates/harnesslab-cli/src/runner/external`.
+- Terminal-Bench has the strongest current runtime hardening surface.
+- SWE-bench Pro is the patch-style benchmark reference path.
+- Current proof surfaces must be treated as incomplete until planned IDs are
+  registered in requirements, test registry, and selector routing.
+
+### Assumptions
+
+| Assumption | Verification Method | If Assumption Fails |
+| --- | --- | --- |
+| Runtime extraction can start inside `harnesslab-cli` before a new runtime crate exists. | Phase 0 compares current dependency direction and confirms no new crate is needed for the first two runtime adapters. | Record the crate decision in the decision log and add a foundation phase before Phase 3. |
+| Current Terminal-Bench behavior can be preserved while moving dispatch behind a trait. | Phase 4 runs existing `TB-*`, `INT-021..046`, Python bridge tests, and official-runner preservation proof. | Keep legacy Terminal-Bench path behind a temporary compatibility gate and do not proceed to Phase 8. |
+| SWE-bench Pro can expose stable phase diagnostics without changing the user CLI. | Phase 5 verifies seeded failure cases and stable phase events. | Treat SWE-bench Pro extraction as blocked and keep it outside the registry cutover. |
+| CI/local environments can run the required external benchmark verifier scripts. | Phase 0 records which selectors are local-only versus full-gate candidates. | Keep verifier scripts explicit and require manual evidence in the review report. |
+
+### Dependencies
+
+| Dependency | Type | Current Status | Blocking Risk | Handling Plan |
+| --- | --- | --- | --- | --- |
+| Terminal-Bench official runner and fixture data | third-party / data | Ready for existing smoke paths | Official behavior can regress while wrapper tests pass. | Preserve existing verifier script and require official-runner proof in Phase 4. |
+| SWE-bench Pro parquet data and evaluator source | third-party / data | Ready for existing smoke paths | Missing evaluator/source materials can make replay or scoring invalid. | Snapshot evaluator/source identity and add blockers in Phases 2, 5, and 6. |
+| Test registry and selector routing | system | Partial | Claimed IDs can pass without executing tests. | Phase 0 adds meta-tests and counted selectors before any ID family counts as proof. |
+| Event/log storage and attempt artifacts | system | Ready but incomplete for adapter runtime snapshots | Operators may not be able to diagnose adapter phase failures. | Phases 4-7 require event compatibility, cleanup reports, and public/private snapshots. |
+| Security/redaction review | review | Unknown | Public artifacts can leak command or env secrets. | Phase 6 requires fake secret scans and security-adversary review focus. |
+
+## Alternatives And Tradeoffs
+
+| Alternative | Benefit | Cost / Risk | Decision |
+| --- | --- | --- | --- |
+| Extract runtime adapters into a new crate immediately. | Cleaner package boundary from the start. | Risk of dragging process, filesystem, and CLI dependencies into the wrong layer before the shape is proven. | Defer; extract inside CLI first unless Phase 0 proves a crate is required. |
+| Keep all runtime matching in the CLI runner. | Lowest short-term implementation movement. | New benchmarks require core runner edits and adapter behavior remains untestable as a contract. | Reject for this architecture track. |
+| Move all adapter behavior into `harnesslab-adapters`. | Single adapter crate owns everything. | Data adapters would absorb process execution, filesystem, official CLI, and logging responsibilities. | Reject for MVP; keep data/runtime contracts separate. |
+| Allow silent live-data replanning during replay. | More replays may continue when snapshots are missing. | Replay can bind to changed data and produce false evidence. | Reject by default; only explicit legacy degraded replay may remain. |
 
 ## 4. Target Architecture
 
@@ -521,78 +621,688 @@ family needs at least one explicit official-runner preservation proof:
 Add meta-tests that fail when a claimed adapter ID family appears in this plan
 but is absent from `REQUIREMENTS`, `TEST_REGISTRY`, or selector routing.
 
-## 11. Migration Plan
+## 11. Phased Execution Plan
 
-### Slice A: Contract Inventory
+### Phase Gate Overview
 
-- Compare `docs/architecture.md`, `docs/mvp-development-spec.md`, and current code contracts.
-- Add a failing test that proves the current `BenchmarkAdapter` cannot expose `prepare/list_tasks/snapshot_task` independently.
-- Register concrete `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, and `SWEPRO-*` requirements, registry entries, and selector routes before using them as proof.
-- Split or count-route `INT-011` so every intended SWE-bench Pro failure/smoke case is actually exercised.
-- Add a test-registry meta-check for claimed-but-unregistered adapter ID families.
+| Phase | Primary Outcome | Exit Gate | Cannot Proceed If |
+| --- | --- | --- | --- |
+| Phase 0: Contract Inventory | Proof surfaces and gaps are explicit before implementation. | Claimed ID families are registered or meta-tests fail them; `INT-011` is split or count-routed. | Any planned proof ID can still pass without a registered requirement, registry row, and selector. |
+| Phase 1: Data Adapter Completion | Data adapter contract exposes inspect, prepare, list, plan, and snapshot steps. | `ADAPT-DATA-001..004` pass and `plan(split)` compatibility remains green. | `prepare` can report ready for partial/corrupted data or task ids/source refs are unstable. |
+| Phase 2: Snapshot Authority And Replay | Replay authority no longer depends on mutable live planning. | Replay blocks or warns according to persisted snapshot authority; `INT-013` reflects the new contract. | Silent live replanning remains the default for external benchmarks. |
+| Phase 3: Runtime Adapter Registry | Runtime preflight/execute/cleanup dispatch is registry-owned. | `ADAPT-RUNTIME-001..002` prove generic dispatch and preflight ownership. | CLI runner still contains benchmark-specific runtime branches outside registry lookup. |
+| Phase 4: Terminal-Bench Runtime Extraction | Terminal-Bench behavior runs through `TerminalBenchRuntimeAdapter`. | Existing `TB-*`, `INT-021..046`, Python bridge tests, event assertions, and official-runner proof pass. | Timeout, setup-failure, cleanup, QEMU, or platform behavior changes without explicit proof. |
+| Phase 5: SWE-bench Pro Runtime Extraction | SWE-bench Pro patch-style runtime runs through `SweBenchProRuntimeAdapter`. | `SWEPRO-001..004` plus official evaluator proof pass. | Patch, workspace, evaluator, or phase diagnostics are ambiguous or unclassified. |
+| Phase 6: Runtime Snapshot, Redaction, And Replay Hardening | Adapter runtime snapshots are persisted and safe to expose. | `ADAPT-RUNTIME-003..005`, `SWEPRO-005`, and `SEC-*` scans pass. | Public artifacts can contain private command/env material or replay uses missing evaluator materials. |
+| Phase 7: Docs And Diagnostics | User docs and doctor/readiness output match implemented behavior. | Docs are updated and diagnostics name adapter phase, readiness blocker, and remediation. | Docs describe planned trait names or diagnostics not present in code. |
+| Phase 8: Full Gate And Review | Architecture track is ready to close. | Targeted selectors, Python bridge tests, full gate, and fresh adversarial closure pass. | Any blocker is untriaged, accepted blockers lack closure review, or full gate is not green. |
 
-### Slice B: Data Adapter Completion
+### Phase 0: Contract Inventory (Slice A)
+
+#### Objective
+
+Make every planned adapter proof surface explicit before implementation changes
+can claim coverage.
+
+#### Entry Criteria
+
+- The current architecture plan and review report are committed.
+- The implementer has inspected current adapter, runner, test registry, and
+  selector surfaces.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Current baseline is known | `git status --branch --short` and review report existence check | Clean worktree or documented pending doc-only changes; report path present | Implementation owner |
+| Current proof surfaces are known | Inspect `tests/REQUIREMENTS.toml`, `tests/TEST_REGISTRY.toml`, and `scripts/test-after-change.sh` | Inventory of missing `ADAPT-*`, `SWEPRO-*`, and `INT-011` coverage | Implementation owner |
+
+#### Design Approach
+
+Front-load proof registration so no later phase can count unregistered IDs,
+umbrella selectors, or zero-test passes as evidence.
+
+#### Implementation Tasks
+
+- Compare `docs/architecture.md`, `docs/mvp-development-spec.md`, and current
+  code contracts.
+- Add a failing test that proves the current `BenchmarkAdapter` cannot expose
+  `prepare/list_tasks/snapshot_task` independently.
+- Register concrete `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, and `SWEPRO-*`
+  requirements, registry entries, and selector routes before using them as
+  proof.
+- Split or count-route `INT-011` so every intended SWE-bench Pro failure/smoke
+  case is actually exercised.
+- Add a test-registry meta-check for claimed-but-unregistered adapter ID
+  families.
+
+#### Deliverables
+
+- Gap inventory.
+- Registered requirement rows and test registry rows.
+- Selector routes with exact expected counts.
+- Meta-test for claimed-but-unregistered adapter ID families.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Claimed proof IDs cannot be missing | Run the new registry meta-test | Missing IDs fail the test instead of passing silently |
+| `INT-011` is not misleading | Run split selectors or counted grouped selector | Every intended `int_011_*` case is executed and counted |
+| Current contract gap is visible | Run the failing contract test before implementation | Test fails for the expected missing data-adapter contract reason |
+
+#### Exit Criteria
+
+- All planned ID families are registered or explicitly rejected from the plan.
+- Selectors fail on zero-test or under-count execution.
+- `INT-011` no longer acts as an umbrella proof without per-case evidence.
+
+#### Review Plan
+
+Run a focused implementation slice review with `architecture-adversary` and
+`test-validity-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Meta-tests are too broad | Valid local tests become hard to run | Selector runtime grows unexpectedly or unrelated tests fail | Keep meta-tests scoped to claimed adapter IDs and selector count checks | Keep the old selector names, but require explicit count assertions before Phase 1 |
+
+#### Gate To Next Phase
+
+Proceed to Phase 1 only after the focused review has no unresolved blocking
+findings and the proof registry cannot silently over-claim coverage.
+
+### Phase 1: Data Adapter Completion (Slice B)
+
+#### Objective
+
+Make benchmark data discovery and planning independently testable contracts
+without breaking existing `plan(split)` callers.
+
+#### Entry Criteria
+
+- Phase 0 exit criteria are met.
+- Compatibility wrapper behavior for existing adapters is captured by tests.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Proof registry is ready | Run Phase 0 meta-test selector | Nonzero expected count and green result | Implementation owner |
+| Existing adapter behavior is baselined | Run current adapter crate tests | Passing baseline or documented known failures | Implementation owner |
+
+#### Design Approach
+
+Implement `prepare`, `list_tasks`, `create_task_plan`, and `snapshot_task`
+behind compatibility wrappers. Use fake adapters first, then move
+Terminal-Bench and SWE-bench Pro planning onto the same flow.
+
+#### Implementation Tasks
 
 - Extend the data adapter trait behind compatibility wrappers.
-- Implement `prepare`, `list_tasks`, and `snapshot_task` for fake-terminal and fake-patch first.
+- Implement the new flow for fake-terminal and fake-patch.
 - Port Terminal-Bench and SWE-bench Pro planning to the same flow.
-- Keep `plan(split)` as a wrapper until callers migrate.
+- Keep `plan(split)` as a wrapper until all callers migrate.
 
-### Slice C: Snapshot Authority And Replay Contract
+#### Deliverables
 
-- Define what remains in `BenchmarkPlan` and `TaskPlan`, what moves to
-  `task-runtime.snapshot.json`, and what moves to `external-runtime.private.json`
-  / `external-runtime.public.json`.
-- Retire silent replay live replanning for external benchmarks. Replace the
-  current fallback behavior with a readiness blocker or explicit legacy degraded
-  replay mode.
-- Add replay drift checks for dataset/evaluator/source/official runner identity.
-- Update the current `INT-013` contract to reflect the new replay authority.
+- Data adapter trait extension.
+- Implementations for fake-terminal, fake-patch, Terminal-Bench, and
+  SWE-bench Pro.
+- Stable task descriptors and source refs.
+- Task-level runtime snapshots sufficient for replay identity.
 
-### Slice D: Runtime Adapter Registry
+#### Testing And Validation
 
-- Introduce a runtime adapter trait inside `crates/harnesslab-cli/src/runner/external`.
-- Replace direct `match ExternalRunnerKind` branches with registry dispatch for
-  preflight, execute, cleanup, and replay compatibility.
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Data inspect does not mutate cache | `ADAPT-DATA-001` | Descriptor and inspect-data leave cache unchanged |
+| Prepare is idempotent | `ADAPT-DATA-002` | Repeated prepare returns stable readiness and rejects partial/corrupted data |
+| Tasks are stable | `ADAPT-DATA-003` | Task ids and source refs are deterministic |
+| Task snapshot is replay-sufficient | `ADAPT-DATA-004` | Snapshot contains immutable workload identity |
+| Compatibility remains intact | Existing adapter tests | `plan(split)` callers continue to pass |
+
+#### Exit Criteria
+
+- `ADAPT-DATA-001..004` pass.
+- Existing adapter crate tests pass.
+- No runtime process execution dependency is introduced into the data adapter
+  contract.
+
+#### Review Plan
+
+Run a focused slice review with `architecture-adversary` and
+`test-validity-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Data trait absorbs runtime concerns | Adapter crate becomes harder to maintain | New data adapter methods need process, env, or attempt-dir state | Keep runtime-only fields in `TaskPlan` hints or runtime snapshots | Revert the specific method shape and keep `plan(split)` until Phase 2 clarifies snapshot ownership |
+
+#### Gate To Next Phase
+
+Proceed to Phase 2 only after data snapshot identity is stable enough to serve
+as replay input.
+
+### Phase 2: Snapshot Authority And Replay Contract (Slice C)
+
+#### Objective
+
+Make replay deterministic by using persisted snapshots as authority instead of
+silently replanning from mutable local benchmark data.
+
+#### Entry Criteria
+
+- Phase 1 exits with stable task descriptors and task runtime snapshots.
+- Current replay behavior and `INT-013` expectations are documented.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Task identity is available | Inspect `ADAPT-DATA-004` artifacts | Snapshot contains source refs and task metadata hash | Implementation owner |
+| Current replay fallback is known | Inspect replay path and `INT-013` | Documented current fallback behavior | Implementation owner |
+
+#### Design Approach
+
+Split replay authority across benchmark, task-runtime, and external-runtime
+snapshots. Retire silent live replanning or make it an explicit legacy degraded
+mode selected by the user.
+
+#### Implementation Tasks
+
+- Define what remains in `BenchmarkPlan` and `TaskPlan`.
+- Define what moves to `task-runtime.snapshot.json`.
+- Define what moves to `external-runtime.private.json` and
+  `external-runtime.public.json`.
+- Retire silent replay live replanning for external benchmarks.
+- Add replay drift checks for dataset, evaluator, source, and official runner
+  identity.
+- Update `INT-013` to reflect the new replay authority.
+
+#### Deliverables
+
+- Snapshot schema definitions and artifact paths.
+- Replay blocker/warning policy.
+- Updated replay tests and `INT-013` contract.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Missing authoritative snapshot blocks replay | Replay readiness test | External benchmark replay blocks before task execution |
+| Mutable data drift is detected | Replay drift fixture | Dataset/evaluator/source mismatch warns or blocks by adapter policy |
+| Legacy degraded replay is explicit if retained | CLI/replay test | Degraded mode emits warning and cannot run silently |
+| SWE replay avoids live replanning | `SWEPRO-005` | Stored runtime materials are used as authority |
+
+#### Exit Criteria
+
+- Replay no longer silently binds external benchmark attempts to live mutable
+  data.
+- `INT-013` asserts the new authority chain.
+- Missing evaluator/source materials produce precise readiness blockers.
+
+#### Review Plan
+
+Run focused review with `architecture-adversary`, `test-validity-adversary`,
+and `observability-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Replay compatibility breaks old runs | Users cannot inspect prior attempts | Replay fails because older artifacts lack required snapshots | Add explicit legacy degraded replay with warning and limited support | Keep old replay path only behind explicit legacy flag and exclude it from normal proof |
+
+#### Gate To Next Phase
+
+Proceed to Phase 3 only after snapshot authority is stable enough for runtime
+adapters to write and consume.
+
+### Phase 3: Runtime Adapter Registry (Slice D)
+
+#### Objective
+
+Move benchmark-specific runtime decisions behind a registry-dispatched runtime
+adapter contract.
+
+#### Entry Criteria
+
+- Phase 2 snapshot authority is defined.
+- The current external runner branch points and profile validation paths are
+  inventoried.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Snapshot inputs are ready | Inspect Phase 2 schemas and tests | Runtime adapter input contract is documented | Implementation owner |
+| Benchmark-specific branches are known | `rg` current external runner dispatch and validation points | List of branches to move behind registry | Implementation owner |
+
+#### Design Approach
+
+Introduce `BenchmarkRuntimeAdapter` inside the CLI external runner boundary
+first. The orchestrator may look up an adapter by `ExternalRunnerKind`, but
+benchmark-specific preflight, execute, cleanup, and replay compatibility belong
+inside adapter implementations.
+
+#### Implementation Tasks
+
+- Introduce the runtime adapter trait in
+  `crates/harnesslab-cli/src/runner/external`.
+- Replace direct `match ExternalRunnerKind` runtime branches with registry
+  dispatch.
 - Move benchmark-specific profile validation, host/sandbox gating, and agent
-  bridge compatibility behind registry-dispatched preflight.
-- Replace raw-profile adapter access with `BenchmarkAgentRuntimeConfig` or mark
-  a temporary compatibility exception with tests.
-- Keep benchmark-specific modules, but hide them behind the trait.
+  bridge compatibility behind preflight.
+- Replace raw-profile adapter access with `BenchmarkAgentRuntimeConfig`, or
+  mark a temporary compatibility exception with tests.
 
-### Slice E: Terminal-Bench Runtime Extraction
+#### Deliverables
 
-- Extract Terminal-Bench preflight, runtime policy, command construction, result parsing, cleanup, and replay materials into a `TerminalBenchRuntimeAdapter`.
-- Preserve existing behavior and selectors.
+- Runtime adapter trait and registry.
+- Preflight context and report contract.
+- Generic orchestrator dispatch.
+- Compatibility allowlist tests if any raw-profile access remains.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Runtime dispatch is generic | `ADAPT-RUNTIME-001` | Preflight and execute route through registry without direct benchmark runtime branches |
+| Preflight owns compatibility | `ADAPT-RUNTIME-002` | Host/sandbox and bridge checks are adapter preflight outputs |
+| Raw profile is not reinterpreted | Compatibility test if exception exists | Raw `skills/tools/hooks`, auth inheritance, and setup policy are not consumed by adapters |
+
+#### Exit Criteria
+
+- CLI runner has no benchmark-specific runtime execution branch outside the
+  registry boundary.
+- Runtime preflight diagnostics are emitted as adapter-owned events or reports.
+- Any temporary compatibility exception is named, redacted, and tested.
+
+#### Review Plan
+
+Run focused review with `architecture-adversary` and `implementation-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Registry adds abstraction without removing branches | Maintenance cost rises without architectural benefit | `rg` still finds direct benchmark execution branches in orchestrator code | Add branch-boundary tests and review checks | Keep the registry behind a feature path until branches are removed, and do not enter Phase 4 |
+
+#### Gate To Next Phase
+
+Proceed to Phase 4 only after the runtime registry is the single dispatch point
+for external benchmark execution.
+
+### Phase 4: Terminal-Bench Runtime Extraction (Slice E)
+
+#### Objective
+
+Extract Terminal-Bench runtime behavior into `TerminalBenchRuntimeAdapter` while
+preserving the currently hardened official runner path.
+
+#### Entry Criteria
+
+- Phase 3 runtime registry exits cleanly.
+- Existing Terminal-Bench tests and verifier scripts are green or have
+  documented known failures unrelated to this migration.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Runtime registry works | Run `ADAPT-RUNTIME-001..002` | Passing dispatch and preflight tests | Implementation owner |
+| Terminal-Bench baseline is known | Run current `TB-*`, `INT-021..046`, and Python bridge verifier | Baseline results archived in review report | Implementation owner |
+
+#### Design Approach
+
+Move Terminal-Bench preflight, command construction, runtime policy, result
+parsing, timeout/watchdog handling, cleanup, and replay materials into the
+runtime adapter without changing the user CLI.
+
+#### Implementation Tasks
+
+- Extract Terminal-Bench preflight and runtime policy.
+- Extract official `tb run` command construction.
+- Extract result parsing, failure mapping, timeout mapping, and cleanup report.
 - Preserve existing operator-critical event names or dual-emit migration aliases.
-- Assert `external_runner_timeout` and `external_runner_setup_failed` stay queryable with hard-timeout/setup-failure diagnostic fields.
-- Add runtime snapshot assertions for platform, timeout, progress, official-vs-final verdict provenance, cleanup report, and public/private redaction.
+- Assert `external_runner_timeout` and `external_runner_setup_failed` stay
+  queryable with diagnostic fields.
+- Add runtime snapshot assertions for platform, timeout, progress,
+  official-vs-final verdict provenance, cleanup report, and redaction.
 
-### Slice F: SWE-bench Pro Runtime Extraction
+#### Deliverables
 
-- Extract SWE-bench Pro metadata, workspace prep, agent run, patch capture, evaluator execution, and result mapping into `SweBenchProRuntimeAdapter`.
-- Add seeded failure tests for missing metadata, invalid patch, evaluator parse failure, and workspace prep failure.
-- Add stable phase events for metadata extraction, workspace prep, agent start, patch capture, evaluator start, and cleanup.
+- `TerminalBenchRuntimeAdapter`.
+- Preserved Terminal-Bench event taxonomy.
+- Runtime snapshot and cleanup report coverage.
+- Official-runner preservation proof.
 
-### Slice G: Runtime Snapshot, Redaction, And Replay Hardening
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Existing behavior is preserved | Run `TB-*`, `INT-021..046`, and Python bridge tests | All previously passing Terminal-Bench selectors pass |
+| Official runner path is preserved | Real official `tb run` verifier or equivalent script | CLI args, result schema, timeout mapping, and non-QEMU platform policy are proven |
+| Operator events remain queryable | `ADAPT-RUNTIME-005` event assertions | Required event names and fields are present |
+| Cleanup is auditable | Cleanup report test | Cleanup report can override official verdict with evidence when needed |
+
+#### Exit Criteria
+
+- Terminal-Bench runs through the runtime registry.
+- Existing hardened behavior is preserved by tests and official-runner proof.
+- Timeout, setup failure, no-progress, QEMU, cleanup, and platform policy have
+  explicit assertions.
+
+#### Review Plan
+
+Run focused review with `implementation-adversary`, `test-validity-adversary`,
+and `observability-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Behavior changes during extraction | Benchmark results or diagnostics regress | Existing `TB-*` or official-runner proof fails | Extract in small commits and compare before/after artifacts | Keep the pre-extraction Terminal-Bench path available behind the registry until parity is proven |
+
+#### Gate To Next Phase
+
+Proceed to Phase 5 only after Terminal-Bench registry execution is behaviorally
+equivalent to the old path.
+
+### Phase 5: SWE-bench Pro Runtime Extraction (Slice F)
+
+#### Objective
+
+Extract SWE-bench Pro patch-style runtime behavior into
+`SweBenchProRuntimeAdapter` with stable phase diagnostics and evaluator proof.
+
+#### Entry Criteria
+
+- Phase 4 exits with registry execution proven for Terminal-Bench.
+- SWE-bench Pro metadata, workspace, patch, and evaluator baseline behavior is
+  documented.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Registry path is stable | Run Phase 4 Terminal-Bench selectors | Passing evidence in review report | Implementation owner |
+| SWE baseline is known | Run current SWE-bench Pro smoke/fixture tests | Baseline output and known gaps documented | Implementation owner |
+
+#### Design Approach
+
+Represent SWE-bench Pro as a multi-phase runtime attempt: metadata extraction,
+workspace preparation, agent execution, patch capture, evaluator execution, and
+result projection.
+
+#### Implementation Tasks
+
+- Extract metadata extraction and workspace preparation.
+- Extract agent run, patch capture, and evaluator invocation.
+- Extract result mapping and official-vs-final verdict provenance.
+- Add seeded failure tests for missing metadata, invalid patch, evaluator parse
+  failure, and workspace preparation failure.
+- Add stable phase events for metadata extraction, workspace prep, agent start,
+  patch capture, evaluator start, and cleanup.
+
+#### Deliverables
+
+- `SweBenchProRuntimeAdapter`.
+- Stable SWE-bench Pro phase events.
+- Seeded failure fixtures.
+- Official evaluator preservation proof.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Metadata failures are classified | `SWEPRO-001` | Metadata failure is observable and not confused with agent failure |
+| Workspace failures are classified | `SWEPRO-002` | Workspace prep failure is observable and separately classified |
+| Patch failures are distinct | `SWEPRO-003` | Invalid patch and empty patch are distinct benchmark failures |
+| Evaluator parse failures are distinct | `SWEPRO-004` | Evaluator corruption is not mapped as agent patch failure |
+| Official evaluator path is preserved | Real evaluator verifier or equivalent script | Parquet extraction, evaluator invocation, prediction schema, and parse are proven |
+
+#### Exit Criteria
+
+- SWE-bench Pro runs through the runtime registry.
+- Patch-style phases are observable and separately classified.
+- Official evaluator proof exists beyond fixture shims.
+
+#### Review Plan
+
+Run focused review with `implementation-adversary`, `test-validity-adversary`,
+and `observability-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Multi-phase execution is forced into a single-command shape | SWE diagnostics and replay become brittle | Phase events or artifacts cannot identify where failure occurred | Keep `RuntimePreparedAttempt` flexible for multi-step execution | Block SWE-bench Pro registry cutover until phase artifacts are first-class |
+
+#### Gate To Next Phase
+
+Proceed to Phase 6 only after SWE-bench Pro runtime phases, failure classes, and
+official evaluator proof are stable.
+
+### Phase 6: Runtime Snapshot, Redaction, And Replay Hardening (Slice G)
+
+#### Objective
+
+Persist adapter runtime snapshots and prove that public artifacts are safe,
+replay-aware, and diagnostically useful.
+
+#### Entry Criteria
+
+- Phases 4 and 5 both dispatch through runtime adapters.
+- Snapshot authority from Phase 2 is available to runtime adapters.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Runtime adapters are active | Run Terminal-Bench and SWE registry selectors | Both families dispatch through runtime registry | Implementation owner |
+| Snapshot schemas are ready | Inspect Phase 2 schemas | Public/private runtime fields are defined | Implementation owner |
+
+#### Design Approach
+
+Write private runtime material only to private snapshots, expose bounded redacted
+runtime summaries publicly, and scan all public adapter-owned artifacts for fake
+secret leaks.
+
+#### Implementation Tasks
 
 - Persist adapter-provided runtime snapshots.
 - Add replay warnings for runtime adapter version mismatch.
 - Add replay blockers for missing official evaluator materials.
-- Add fake secret scans for adapter events, public runtime snapshots, report data, and replay warnings.
+- Add fake secret scans for adapter events, public runtime snapshots, report
+  data, and replay warnings.
+- Assert public/private forbidden field boundaries.
 
-### Slice H: Docs And User-Facing Diagnostics
+#### Deliverables
 
-- Update architecture and MVP spec to reflect the implemented trait names.
+- `external-runtime.private.json`.
+- `external-runtime.public.json`.
+- Runtime snapshot tests.
+- Fake secret scan tests.
+- Replay hardening tests.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Runtime snapshots are written | `ADAPT-RUNTIME-003` | Required public/private fields exist in correct artifacts |
+| Cleanup report is structured | `ADAPT-RUNTIME-004` | Cleanup report carries phase, success, evidence, and final verdict effect |
+| Event taxonomy is preserved | `ADAPT-RUNTIME-005` | Terminal-Bench and SWE phase events stay queryable |
+| Replay uses stored materials | `SWEPRO-005` | Missing live data does not trigger silent replanning |
+| Public artifacts do not leak secrets | `SEC-*` fake secret scans | Fake secrets are absent from public snapshots, events, reports, and warnings |
+
+#### Exit Criteria
+
+- Public/private artifact split is enforced by tests.
+- Missing evaluator/source materials block replay before task execution.
+- Runtime adapter version drift is recorded as warning or blocker by policy.
+
+#### Review Plan
+
+Run focused review with `security-adversary`, `test-validity-adversary`, and
+`observability-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Redaction misses private runtime material | Secret leakage in public artifacts | Fake secret appears in public scan | Use typed public/private artifact writers and forbidden-field tests | Block public artifact/report publication for affected adapter path |
+
+#### Gate To Next Phase
+
+Proceed to Phase 7 only after public artifacts are safe and replay hardening
+tests pass.
+
+### Phase 7: Docs And User-Facing Diagnostics (Slice H)
+
+#### Objective
+
+Make user-facing docs and readiness diagnostics match the implemented adapter
+architecture.
+
+#### Entry Criteria
+
+- Phase 6 exits with stable artifact names, event names, and replay policy.
+- Implemented trait and diagnostic names are final for this track.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| Runtime vocabulary is stable | Inspect implemented traits, events, and artifacts | Final names list | Implementation owner |
+| Docs needing updates are known | Inspect architecture, MVP spec, operations, and user docs | Docs update checklist | Implementation owner |
+
+#### Design Approach
+
+Update docs after implementation vocabulary stabilizes so user-facing
+diagnostics do not describe planned names that the code does not emit.
+
+#### Implementation Tasks
+
+- Update architecture and MVP spec to reflect implemented trait names.
 - Update development operations with the new adapter event sequence.
 - Update doctor/readiness output to name the failing adapter phase.
+- Update user-facing docs to explain replay blockers, degraded replay if
+  retained, and adapter phase diagnostics.
 
-### Slice I: Full Gate And Review
+#### Deliverables
 
-- Register all new requirements in `tests/REQUIREMENTS.toml` and `tests/TEST_REGISTRY.toml`.
-- Add `scripts/test-after-change.sh --select` routes.
-- Run targeted adapter selectors, Python bridge tests, and full gate.
-- Run adversarial review because implementation will touch code.
+- Updated architecture and MVP docs.
+- Updated development operations guide.
+- Updated doctor/readiness diagnostics.
+- User-facing adapter/replay diagnostics documentation.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Docs match implementation | Search docs for obsolete trait/artifact names | No stale planned names remain without a legacy note |
+| Doctor names failing phase | Readiness/doctor test or smoke check | Output names adapter, phase, missing dependency, and remediation |
+| Operations can query events | Event query example or scripted check | Required adapter events are queryable by name |
+
+#### Exit Criteria
+
+- User-facing docs and operator docs match implemented behavior.
+- Doctor/readiness output identifies failing adapter phase and remediation.
+- No doc claims an unimplemented adapter contract as complete.
+
+#### Review Plan
+
+Run focused review with `documentation-skill-adversary` and
+`observability-adversary`.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Docs overstate implementation state | Users trust features that are not active | Search finds planned-only names in user-facing docs | Tie docs to implemented artifact/event names and Done Definition | Mark the relevant doc section as planned and block Phase 8 closure |
+
+#### Gate To Next Phase
+
+Proceed to Phase 8 only after docs and diagnostics are aligned with code and
+test evidence.
+
+### Phase 8: Full Gate And Review (Slice I)
+
+#### Objective
+
+Close the adapter architecture track with complete tests, evidence, review
+closure, and rollback/fallback readiness.
+
+#### Entry Criteria
+
+- Phases 0-7 exit criteria are met.
+- No unresolved blocking review findings remain from earlier phases.
+
+#### Entry Criteria Checks
+
+| Entry Criterion | Check Method | Evidence / Output | Owner |
+| --- | --- | --- | --- |
+| All phase gates are closed | Review phase evidence and `/vs_review/` report | Phase checklist with no unresolved blockers | Implementation owner |
+| Full selector set is registered | Inspect requirements, registry, and selector routing | All planned IDs present and routable | Implementation owner |
+
+#### Design Approach
+
+Treat the final gate as evidence consolidation, not discovery. If final review
+finds a structural blocker, return to the affected phase and re-run its focused
+validation.
+
+#### Implementation Tasks
+
+- Register all new requirements in `tests/REQUIREMENTS.toml` and
+  `tests/TEST_REGISTRY.toml`.
+- Add or confirm `scripts/test-after-change.sh --select` routes.
+- Run targeted adapter selectors, Python bridge tests, official verifier
+  scripts, and full gate.
+- Run adversarial review because implementation touches code.
+- Archive evidence in the review report.
+
+#### Deliverables
+
+- Full gate evidence.
+- Closed adversarial review report.
+- Final adapter architecture implementation summary.
+- Rollback/fallback readiness notes.
+
+#### Testing And Validation
+
+| Validation Item | Method | Passing Standard |
+| --- | --- | --- |
+| Targeted adapter selectors pass | Run `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, `TB-*`, `SWEPRO-*`, `INT-*`, and `SEC-*` selectors | All selected tests pass with nonzero expected counts |
+| Python bridge remains healthy | Run Terminal-Bench Python bridge verifier | Existing bridge checks pass |
+| Full system remains healthy | Run `scripts/test-after-change.sh` | Full local gate passes |
+| Review is closed | Fresh adversarial review and closure rounds | No untriaged or unresolved blocking findings |
+
+#### Exit Criteria
+
+- Acceptance matrix is satisfied.
+- Full local gate passes after the final code change.
+- `/vs_review/` report contains fresh-session launch evidence, triage,
+  validation evidence, and closure state.
+
+#### Review Plan
+
+Run final review with `test-validity-adversary` and `architecture-adversary`.
+Add `observability-adversary` or `security-adversary` if the final delta
+changes events, snapshots, redaction, or runtime execution boundaries.
+
+#### Risks And Fallback
+
+| Risk | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- |
+| Final gate uncovers a cross-phase regression | Track cannot close | Full gate or final review fails | Map failure to owning phase and rerun focused validation | Revert or disable the affected registry path while preserving data adapter changes that already passed |
+
+#### Gate To Next Phase
+
+There is no next implementation phase. The track can close only when the Done
+Definition, Acceptance Matrix, and review closure checklist all pass.
 
 ## 12. Adversarial Review And Re-Review Plan
 
@@ -771,23 +1481,146 @@ Before claiming the adapter architecture track is complete:
 | User docs match behavior | architecture, MVP spec, development operations updates |
 | Full system remains healthy | `scripts/test-after-change.sh` |
 
-## 14. Risks
+## 14. Risks, Dependencies, And Mitigations
 
-- Over-abstracting too early could hide benchmark-specific reality. Mitigation: extract from Terminal-Bench and SWE-bench Pro behavior that already exists, not from imagined future adapters.
-- A single command-based runtime plan may not fit patch-style evaluation. Mitigation: let runtime adapters execute multi-step attempts through a shared context instead of forcing one command shape.
-- Moving runtime logic into `harnesslab-adapters` too early would drag process/filesystem dependencies into the data adapter crate. Mitigation: keep runtime extraction in CLI first.
-- Replay snapshots can become large. Mitigation: snapshot references, policy, hashes, and bounded metadata; keep raw logs in attempt artifacts.
-- Official benchmark changes can break parsing. Mitigation: keep upstream raw result artifacts and adapter version warnings.
+| Risk | Probability | Impact | Trigger Signal | Mitigation | Fallback |
+| --- | --- | --- | --- | --- | --- |
+| Over-abstracting too early | Medium | High | Runtime trait needs imagined fields not used by Terminal-Bench or SWE-bench Pro | Extract from existing behavior only and keep runtime extraction inside CLI first | Revert or narrow the trait shape before Phase 4 |
+| Single-command runtime model does not fit patch-style evaluation | Medium | High | SWE-bench Pro cannot expose metadata/workspace/patch/evaluator phase failures | Allow multi-step `RuntimePreparedAttempt` and stable phase events | Block SWE-bench Pro registry cutover until the contract supports multi-phase execution |
+| Runtime logic moves into data adapter crate | Low | High | Data adapter methods need process, env, filesystem attempt dirs, or event writer | Keep runtime adapters at CLI boundary | Move runtime-specific fields back behind runtime adapter context |
+| Replay snapshots grow too large | Medium | Medium | Attempt snapshots include raw logs or unbounded upstream data | Snapshot refs, hashes, policy, and bounded metadata only | Store bulky data as attempt artifacts and reference it |
+| Official benchmark changes break parsing | Medium | High | Official runner/evaluator verifier fails after upstream change | Preserve raw upstream outputs and adapter version warnings | Block affected adapter path until parser and proof are updated |
+| Public runtime artifacts leak sensitive data | Low | High | Fake secret scan finds private command/env material in public artifacts | Typed public/private writers and forbidden-field tests | Block public artifact/report publication for the affected path |
 
-## 15. Open Questions
+The dependency table in `Constraints, Assumptions, And Dependencies` remains the
+source of record for dependency status. Any dependency marked `Unknown` must be
+resolved by its owning phase gate before the affected implementation can close.
+
+## 15. Release, Rollback, And Fallback Strategy
+
+### Release Strategy
+
+- Release method: merge after Phase 8 evidence is complete; no production
+  deployment window is assumed by this plan.
+- Canary scope: local and CI selector gates first; external official
+  runner/evaluator verifiers remain explicit if CI resources cannot run them by
+  default.
+- Expansion criteria: all registered selectors pass with nonzero expected
+  counts, official preservation proofs pass, and review closure has no
+  unresolved blockers.
+- Pause criteria: any P0/P1 test failure, result classification regression,
+  public artifact secret leak, replay authority blocker, or unresolved
+  adversarial blocking finding.
+- Owner: Unknown; assign before Phase 0 starts.
+- Release window: Unknown; do not invent one in this plan.
+
+### Rollback Strategy
+
+- Rollbackable changes: trait extraction, registry routing, docs, tests, event
+  additions, and snapshot writers can be reverted or disabled by restoring the
+  previous module path.
+- Non-directly rollbackable changes: persisted snapshot schema changes require
+  compatibility handling for already-written attempts.
+- Rollback triggers: full gate failure after merge, official runner proof
+  regression, public artifact secret leak, replay corruption, or user-facing
+  diagnostic misclassification.
+- Rollback steps: revert the affected implementation commit, restore legacy
+  runtime dispatch for the affected benchmark path, rerun targeted selectors,
+  and record rollback evidence in the review report.
+- Rollback validation: old path selectors pass and public artifacts no longer
+  contain the offending fields.
+
+### Fallback / Degradation Strategy
+
+- Terminal-Bench and SWE-bench Pro runtime extraction must keep the pre-extraction
+  path available until parity is proven.
+- Legacy degraded replay, if retained, must require explicit user selection and
+  emit a warning that replay may bind to mutable live data.
+- If redaction fails, block public artifact/report publication for the affected
+  adapter path while keeping private attempt artifacts for debugging.
+- If official verifier scripts are unavailable in default CI, require manual
+  verifier evidence in the review report before Phase 8 closure.
+
+## 16. Data Migration Strategy
+
+This track does not migrate production user data. It does introduce local run
+artifact schema changes and replay authority changes, so artifact migration rules
+still apply.
+
+| Data / Artifact | Change | Idempotency / Retry | Validation | Rollback / Compensation |
+| --- | --- | --- | --- | --- |
+| `benchmark.snapshot.json` | Adds selected benchmark, split, task ids, data snapshot id, warnings, and source refs | Safe to rewrite for a run before attempts start | Replay readiness tests and drift checks | Preserve old run artifacts; legacy degraded replay only by explicit selection |
+| `task-runtime.snapshot.json` | Adds immutable task identity and runtime task metadata | Safe to regenerate only from prepared immutable data before attempt execution | `ADAPT-DATA-004` and replay tests | Block replay when missing unless legacy degraded mode is selected |
+| `external-runtime.private.json` | Stores private runtime command and env policy | Written once per attempt; retry writes must replace atomically | `ADAPT-RUNTIME-003` private field assertions | Delete/regenerate attempt artifacts before rerun |
+| `external-runtime.public.json` | Stores redacted runtime summary and provenance | Written once per attempt; retry writes must replace atomically | `SEC-*` fake secret scans and public field assertions | Block report publication if scan fails |
+
+## 17. API / Compatibility Strategy
+
+- User CLI remains stable: `harnesslab run --agent <profile> --benchmark <name>
+  --split <split>`.
+- `plan(split)` remains as a compatibility wrapper until callers migrate to
+  `prepare -> list_tasks -> create_task_plan`.
+- `ExternalRunnerKind` remains the MVP registry key unless Phase 0 resolves the
+  open question in favor of string-based adapter ids.
+- Raw `AgentProfile` access is not part of the normal runtime adapter contract.
+  Any temporary compatibility exception must be allowlisted, redacted, and
+  tested.
+- Event names with current operator value must be preserved or dual-emitted
+  during migration.
+- Snapshot schema changes must support old attempts through explicit legacy
+  degraded replay or readiness blockers; silent fallback is not allowed.
+
+## 18. Security And Permission Review
+
+- Permission boundary: data adapters must not execute processes, inspect ambient
+  parent environment, or interpret raw agent policy.
+- Sensitive data boundary: private command, env policy, cleanup tokens, and
+  redaction basis belong only in `external-runtime.private.json`.
+- Public artifact boundary: `external-runtime.public.json`, report data,
+  events, and replay warnings must not contain private env values, secret-like
+  tokens, raw auth inheritance policy, or raw setup policy.
+- Abuse cases to review: malicious benchmark metadata injecting command args,
+  public artifact leakage of agent secrets, replay binding to changed data, and
+  host-agent execution paths bypassing adapter preflight.
+- Audit logging: adapter phase events, cleanup reports, official-vs-final
+  verdict provenance, replay warnings, and readiness blockers must be queryable.
+- Security review gate: Phase 6 requires `security-adversary` focus when
+  redaction, host execution, Docker socket handling, or private runtime material
+  changes.
+
+## 19. Observability And Success Metrics
+
+| Metric / Signal | Source | Success Standard |
+| --- | --- | --- |
+| Adapter dispatch path | Events and tests | Every external benchmark attempt names the runtime adapter kind and phase |
+| Phase failure classification | `events.jsonl`, result artifacts, seeded fixtures | Metadata, workspace, agent, patch, evaluator, timeout, setup, cleanup, and replay failures are distinguishable |
+| Runtime snapshot completeness | `external-runtime.*.json` tests | Required public/private fields exist and forbidden public fields are absent |
+| Replay readiness | Replay tests and warnings | Missing required snapshots/evaluator materials block before execution unless explicit degraded replay is selected |
+| Official behavior preservation | Verifier scripts and existing selectors | Terminal-Bench and SWE-bench Pro official paths pass preservation proof |
+| Secret exposure prevention | `SEC-*` scans | Fake secrets are absent from public events, snapshots, reports, and warnings |
+
+## 20. Post-Release Verification And Cleanup
+
+- Verify all full-gate evidence after merge or release.
+- Review first successful Terminal-Bench and SWE-bench Pro runs through the
+  runtime registry and confirm event/query examples work.
+- Confirm old direct runtime branches are removed or explicitly marked as
+  temporary compatibility code with an owner and removal condition.
+- Remove compatibility wrappers only after callers have migrated and tests prove
+  no remaining dependency on the old path.
+- Update the review report with final evidence, unresolved risks, and any
+  deferred follow-up plan.
+
+## 21. Open Questions
 
 1. Should runtime adapter extraction stay inside `harnesslab-cli` for the first implementation, or should a new crate be introduced immediately?
 2. Should `PreparedBenchmark` become persisted before every run even when no preparation was needed?
 3. Should real external benchmark smoke checks be mandatory in the default full gate or remain explicit verifier scripts until CI resources are stable?
 4. Should `ExternalRunnerKind` remain a closed enum for MVP, or move toward string-based adapter ids before dynamic plugins exist?
 5. Should legacy degraded replay be retained at all, or should external benchmark replay always block when authoritative snapshots are missing?
+6. Who owns implementation and final release approval for this track?
 
-## 16. Done Definition
+## 22. Done Definition
 
 This architecture track is complete when:
 
@@ -800,3 +1633,43 @@ This architecture track is complete when:
 7. Test registry entries and selectors cover all new contract surfaces, including `ADAPT-DATA-*`, `ADAPT-RUNTIME-*`, `SWEPRO-*`, and the former `INT-011` umbrella cases.
 8. Full local gate passes.
 9. Fresh adversarial review closes all accepted blockers.
+10. Release, rollback, fallback, observability, and post-release cleanup evidence are recorded.
+
+## 23. Decision Log
+
+| Decision | Status | Rationale | Revisit Trigger |
+| --- | --- | --- | --- |
+| Keep MVP adapter support in-process and Rust-first. | Accepted | Dynamic plugins are not required for MVP and would add runtime surface area. | New benchmark adapters require out-of-tree contribution before MVP scope closes. |
+| Split data/planning adapters from runtime/execution adapters. | Accepted | Data adapters should not own process, filesystem, event writer, or cleanup concerns. | Runtime contract cannot remain stable across Terminal-Bench and SWE-bench Pro. |
+| Extract runtime traits inside CLI first. | Proposed | Current runtime dependencies live at the application boundary. | Phase 0 proves a new crate is cleaner without pulling CLI dependencies into adapter data code. |
+| Retire silent replay live replanning by default. | Accepted | Silent replanning can corrupt replay authority. | User explicitly accepts legacy degraded replay as a product behavior. |
+
+## 24. Change Log
+
+| Version | Date | Change |
+| --- | --- | --- |
+| 0.1 | 2026-06-04 | Initial adapter architecture design and adversarial review closure. |
+| 0.2 | 2026-06-04 | Reworked plan using `se-good-plan`: added metadata, risk classification, assumptions, dependencies, alternatives, phase gates, rollback/fallback, security, observability, decision log, and quality checklist. |
+
+## 25. Plan Quality Checklist
+
+- [x] Background and problem definition are clear.
+- [x] Goals are measurable through the Acceptance Matrix and test ID families.
+- [x] Facts, assumptions, constraints, dependencies, risks, and open questions
+      are separated.
+- [x] Complexity and plan depth are justified as High / Full.
+- [x] Work is divided into progressive phases.
+- [x] Each phase has entry criteria, checks, tasks, deliverables, validation,
+      exit criteria, review plan, risks, fallback, and next gate.
+- [x] High-risk unknowns are investigated in Phase 0 and Phase 2 before runtime
+      extraction.
+- [x] Risks include trigger signals, mitigations, and fallback paths.
+- [x] Tests and validation have passing standards.
+- [x] Release, rollback, fallback, observability, and post-release validation are
+      included.
+- [x] Local artifact schema changes include idempotency, validation, and
+      compensation rules.
+- [x] Security-sensitive public/private artifact boundaries, abuse cases, audit
+      logging, and review gates are included.
+- [x] The plan does not invent owner, deadline, staffing, release date, or
+      deployment window values.
