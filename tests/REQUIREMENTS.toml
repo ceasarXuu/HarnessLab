@@ -285,3 +285,194 @@ required_runtime_proof = false
 [requirements.source]
 doc = "docs/mvp-development-spec.md"
 section = "8"
+
+[[requirements]]
+id = "ADAPT-DATA-000"
+title = "Current BenchmarkAdapter gap is explicit before data contract implementation"
+area = "adapter"
+risk = "critical"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "11"
+
+[[requirements]]
+id = "ADAPT-DATA-001"
+title = "Descriptor and inspect-data do not mutate local cache"
+area = "adapter"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-DATA-002"
+title = "Prepare is idempotent and rejects partial or corrupted data"
+area = "adapter"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-DATA-003"
+title = "Task listing returns stable task ids and source refs"
+area = "adapter"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-DATA-004"
+title = "Task snapshots capture replay-sufficient task identity"
+area = "adapter"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-DATA-005"
+title = "Task plan creation is stable from prepared data and task descriptors"
+area = "adapter"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-RUNTIME-001"
+title = "Runtime registry dispatches preflight and execute without direct benchmark branches"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-RUNTIME-002"
+title = "Runtime preflight owns benchmark compatibility checks"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-RUNTIME-003"
+title = "External runtime public and private snapshots are written"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-RUNTIME-004"
+title = "Cleanup report is structured and can affect final verdict"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "ADAPT-RUNTIME-005"
+title = "Runtime event taxonomy preserves operator-critical adapter events"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "SWEPRO-001"
+title = "SWE-bench Pro metadata extraction failure is classified and observable"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "SWEPRO-002"
+title = "SWE-bench Pro workspace preparation failure is classified and observable"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "SWEPRO-003"
+title = "SWE-bench Pro invalid patch and empty patch are distinct benchmark failures"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "SWEPRO-004"
+title = "SWE-bench Pro evaluator parse corruption is distinct from agent patch failure"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+
+[[requirements]]
+id = "SWEPRO-005"
+title = "SWE-bench Pro replay and readiness use stored runtime materials"
+area = "adapter-runtime"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"

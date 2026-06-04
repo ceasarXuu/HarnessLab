@@ -6,13 +6,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+mod adapter_claims;
 mod coverage;
+mod runtime_artifacts;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::VerifyTestRegistry => verify_test_registry(),
         Command::GenerateTestTraceability => generate_traceability(),
+        Command::ListAdapterProofSelectors => list_adapter_proof_selectors(),
         Command::ScanSecrets { secret, paths } => scan_secrets(&secret, &paths),
         Command::CheckNewFileCoverage {
             lcov,
@@ -64,6 +67,7 @@ struct Cli {
 enum Command {
     VerifyTestRegistry,
     GenerateTestTraceability,
+    ListAdapterProofSelectors,
     ScanSecrets {
         #[arg(long)]
         secret: String,
@@ -102,6 +106,7 @@ struct Requirement {
     title: String,
     source: Source,
     risk: String,
+    status: Option<String>,
     required_runtime_proof: bool,
 }
 
@@ -115,6 +120,7 @@ struct RegistryDoc {
 struct TestEntry {
     id: String,
     title: String,
+    command: String,
     file_patterns: Vec<String>,
     required_artifacts: Option<Vec<String>>,
     status: String,
@@ -156,11 +162,30 @@ fn verify_test_registry() -> Result<()> {
     let registry = load_registry()?;
     ensure_schema(requirements.schema_version, "tests/REQUIREMENTS.toml")?;
     ensure_schema(registry.schema_version, "tests/TEST_REGISTRY.toml")?;
+    let claim_sources = adapter_claims::load_adapter_claim_sources()?;
+    let claimed_adapter_ids =
+        adapter_claims::claimed_adapter_test_ids_from_sources(&claim_sources)?;
 
     let mut requirement_ids = BTreeSet::new();
+    let mut active_requirement_ids = BTreeSet::new();
     for requirement in &requirements.requirements {
         if !requirement_ids.insert(requirement.id.clone()) {
             bail!("duplicate requirement id: {}", requirement.id);
+        }
+        match requirement_status(requirement) {
+            "active" => {
+                active_requirement_ids.insert(requirement.id.clone());
+            }
+            "planned"
+                if adapter_claims::planned_status_allowed(
+                    &requirement.id,
+                    &claimed_adapter_ids,
+                ) => {}
+            "planned" => bail!(
+                "planned requirement status is only allowed for claimed adapter proof ids: {}",
+                requirement.id
+            ),
+            status => bail!("requirement {} has unknown status {status}", requirement.id),
         }
     }
 
@@ -170,7 +195,21 @@ fn verify_test_registry() -> Result<()> {
         if !test_ids.insert(test.id.clone()) {
             bail!("duplicate test id: {}", test.id);
         }
-        if test.status == "active" {
+        if !matches!(test.status.as_str(), "active" | "planned" | "deprecated") {
+            bail!("test {} has unknown status {}", test.id, test.status);
+        }
+        if test.status == "planned"
+            && !adapter_claims::planned_status_allowed(&test.id, &claimed_adapter_ids)
+        {
+            bail!(
+                "planned test status is only allowed for claimed adapter proof ids: {}",
+                test.id
+            );
+        }
+        if test.command.trim().is_empty() {
+            bail!("test {} has an empty command", test.id);
+        }
+        if test.status == "active" || test.status == "planned" {
             ensure_patterns_match(&test.file_patterns)
                 .with_context(|| format!("test {} has missing file pattern", test.id))?;
         }
@@ -198,6 +237,9 @@ fn verify_test_registry() -> Result<()> {
     }
 
     for requirement in &requirements.requirements {
+        if !active_requirement_ids.contains(&requirement.id) {
+            continue;
+        }
         if !covered_requirements.contains(&requirement.id) {
             bail!("requirement has no active test: {}", requirement.id);
         }
@@ -218,12 +260,54 @@ fn verify_test_registry() -> Result<()> {
             }
         }
     }
+    let selector_script =
+        fs::read_to_string("scripts/test-after-change.sh").context("read test selector script")?;
+    adapter_claims::ensure_claimed_adapter_ids_are_registered(
+        &claimed_adapter_ids,
+        &requirement_ids,
+        &test_ids,
+        &registry,
+        &selector_script,
+    )?;
+    runtime_artifacts::ensure_runtime_artifact_contracts(&registry)?;
+    adapter_claims::write_adapter_proof_inventory(
+        &claimed_adapter_ids,
+        &claim_sources,
+        &registry,
+        &selector_script,
+    )?;
 
     println!(
         "registry ok: {} requirements, {} tests",
         requirement_ids.len(),
         test_ids.len()
     );
+    println!(
+        "adapter proof claims ok: {} ids from {} sources",
+        claimed_adapter_ids.len(),
+        claim_sources.len()
+    );
+    Ok(())
+}
+
+fn requirement_status(requirement: &Requirement) -> &str {
+    requirement.status.as_deref().unwrap_or("active")
+}
+
+fn list_adapter_proof_selectors() -> Result<()> {
+    let registry = load_registry()?;
+    ensure_schema(registry.schema_version, "tests/TEST_REGISTRY.toml")?;
+    let claim_sources = adapter_claims::load_adapter_claim_sources()?;
+    let claimed_adapter_ids =
+        adapter_claims::claimed_adapter_test_ids_from_sources(&claim_sources)?;
+    for id in claimed_adapter_ids {
+        let test = registry
+            .tests
+            .iter()
+            .find(|test| test.id == id)
+            .with_context(|| format!("{id} is missing from tests/TEST_REGISTRY.toml"))?;
+        println!("{}\t{}", test.status, id);
+    }
     Ok(())
 }
 
@@ -232,7 +316,7 @@ fn generate_traceability() -> Result<()> {
     let registry = load_registry()?;
     let mut by_requirement: BTreeMap<String, Vec<&TestEntry>> = BTreeMap::new();
     for test in &registry.tests {
-        if test.status != "active" {
+        if test.status == "deprecated" {
             continue;
         }
         for requirement in &test.verifies.requirements {
@@ -245,6 +329,14 @@ fn generate_traceability() -> Result<()> {
 
     let mut rows = Vec::new();
     for requirement in requirements.requirements {
+        let status = if requirement_status(&requirement) == "planned" {
+            "planned"
+        } else if by_requirement.contains_key(&requirement.id) {
+            "covered"
+        } else {
+            "missing"
+        }
+        .to_string();
         let tests = by_requirement.remove(&requirement.id).unwrap_or_default();
         let mut test_ids: Vec<String> = tests.iter().map(|test| test.id.clone()).collect();
         test_ids.sort();
@@ -258,12 +350,7 @@ fn generate_traceability() -> Result<()> {
             title: requirement.title,
             source: format!("{}#{}", requirement.source.doc, requirement.source.section),
             risk: requirement.risk,
-            status: if test_ids.is_empty() {
-                "missing"
-            } else {
-                "covered"
-            }
-            .to_string(),
+            status,
             test_ids,
             runtime_proof,
         });

@@ -125,4 +125,32 @@ mod tests {
         assert!(terminal.tasks[0].patch_spec.is_none());
         assert_eq!(swe.name, "swe-bench-pro");
     }
+
+    #[test]
+    fn adapt_data_000_current_benchmark_adapter_gap_is_explicit() {
+        let source = include_str!("registry.rs");
+        let trait_source = source.split("pub fn built_in_descriptors").next().unwrap();
+
+        assert!(trait_source.contains("pub trait BenchmarkAdapter"));
+        assert!(
+            !trait_source.contains("fn inspect_data("),
+            "Phase 1 must replace this gap sentinel with ADAPT-DATA-001"
+        );
+        assert!(
+            !trait_source.contains("fn prepare("),
+            "Phase 1 must replace this gap sentinel with ADAPT-DATA-002"
+        );
+        assert!(
+            !trait_source.contains("fn list_tasks("),
+            "Phase 1 must replace this gap sentinel with ADAPT-DATA-003"
+        );
+        assert!(
+            !trait_source.contains("fn create_task_plan("),
+            "Phase 1 must replace this gap sentinel with ADAPT-DATA-005"
+        );
+        assert!(
+            !trait_source.contains("fn snapshot_task("),
+            "Phase 1 must replace this gap sentinel with ADAPT-DATA-004"
+        );
+    }
 }

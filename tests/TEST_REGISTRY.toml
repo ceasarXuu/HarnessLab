@@ -1263,12 +1263,36 @@ contracts = ["Replay"]
 
 [[tests]]
 id = "INT-011"
-title = "External benchmark smoke contracts"
+title = "SWE-bench Pro external smoke and failure contracts"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-011"
-file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
-required_artifacts = ["results.json", "report.html"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/external_smoke_contract.rs",
+  "tests/artifact_contracts/int_011_swe_bench_pro_runtime_artifacts.txt",
+]
+required_artifacts = [
+  "run.json",
+  "command.txt",
+  "results.json",
+  "events.jsonl",
+  "report.html",
+  "agent-profile.runtime.json",
+  "agent-profile.snapshot.json",
+  "agent-runtime.materialized.json",
+  "benchmark.snapshot.json",
+  "tasks/<task-id>/attempts/1/result.json",
+  "tasks/<task-id>/attempts/1/agent/stdout.log",
+  "tasks/<task-id>/attempts/1/agent/stderr.log",
+  "tasks/<task-id>/attempts/1/verifier/stdout.log",
+  "tasks/<task-id>/attempts/1/verifier/stderr.log",
+  "tasks/<task-id>/attempts/1/git-diff.status.json",
+  "tasks/<task-id>/attempts/1/git-diff.stderr.log",
+  "tasks/<task-id>/attempts/1/patch.diff",
+  "tasks/<task-id>/attempts/1/prediction.jsonl",
+  "tasks/<task-id>/attempts/1/prediction.eval.json",
+  "tasks/<task-id>/attempts/1/swe-bench-pro/eval/eval_results.json",
+]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"
@@ -1276,6 +1300,262 @@ section = "18"
 [tests.verifies]
 requirements = ["benchmark_adapter_contract", "external_benchmark_runtime"]
 contracts = ["BenchmarkAdapter", "RunOrchestrator"]
+
+[[tests]]
+id = "ADAPT-DATA-000"
+title = "Current BenchmarkAdapter gap is explicit"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-000"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "active"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "11"
+[tests.verifies]
+requirements = ["ADAPT-DATA-000"]
+contracts = ["BenchmarkAdapter"]
+
+[[tests]]
+id = "ADAPT-DATA-001"
+title = "Descriptor and inspect-data do not mutate local cache"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-001"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-DATA-001"]
+contracts = ["BenchmarkDataAdapter"]
+
+[[tests]]
+id = "ADAPT-DATA-002"
+title = "Prepare is idempotent and rejects partial or corrupted data"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-002"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-DATA-002"]
+contracts = ["BenchmarkDataAdapter"]
+
+[[tests]]
+id = "ADAPT-DATA-003"
+title = "Task listing returns stable task ids and source refs"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-003"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-DATA-003"]
+contracts = ["BenchmarkDataAdapter"]
+
+[[tests]]
+id = "ADAPT-DATA-004"
+title = "Task snapshots capture replay-sufficient task identity"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-004"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-DATA-004"]
+contracts = ["BenchmarkDataAdapter"]
+
+[[tests]]
+id = "ADAPT-DATA-005"
+title = "Task plan creation is stable from prepared data and task descriptors"
+layer = "contract"
+owner_module = "harnesslab-adapters"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-005"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-DATA-005"]
+contracts = ["BenchmarkDataAdapter"]
+
+[[tests]]
+id = "ADAPT-RUNTIME-001"
+title = "Runtime registry dispatches preflight and execute without direct benchmark branches"
+layer = "contract"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-001"
+file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-001"]
+contracts = ["BenchmarkRuntimeAdapter"]
+
+[[tests]]
+id = "ADAPT-RUNTIME-002"
+title = "Runtime preflight owns benchmark compatibility checks"
+layer = "contract"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-002"
+file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+required_artifacts = []
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-002"]
+contracts = ["RuntimePreflight"]
+
+[[tests]]
+id = "ADAPT-RUNTIME-003"
+title = "External runtime public and private snapshots are written"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-003"
+file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+required_artifacts = ["external-runtime.private.json", "external-runtime.public.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-003"]
+contracts = ["RuntimeSnapshot"]
+
+[[tests]]
+id = "ADAPT-RUNTIME-004"
+title = "Cleanup report is structured and can affect final verdict"
+layer = "contract"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-004"
+file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+required_artifacts = ["cleanup-report.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-004"]
+contracts = ["CleanupReport"]
+
+[[tests]]
+id = "ADAPT-RUNTIME-005"
+title = "Runtime event taxonomy preserves operator-critical adapter events"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-005"
+file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+required_artifacts = ["events.jsonl"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-005"]
+contracts = ["RuntimeEvents"]
+
+[[tests]]
+id = "SWEPRO-001"
+title = "Metadata extraction failure is classified and observable"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select SWEPRO-001"
+file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+required_artifacts = ["events.jsonl", "results.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["SWEPRO-001"]
+contracts = ["SweBenchProRuntimeAdapter"]
+
+[[tests]]
+id = "SWEPRO-002"
+title = "Workspace preparation failure is classified and observable"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select SWEPRO-002"
+file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+required_artifacts = ["events.jsonl", "results.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["SWEPRO-002"]
+contracts = ["SweBenchProRuntimeAdapter"]
+
+[[tests]]
+id = "SWEPRO-003"
+title = "Invalid patch and empty patch are distinct benchmark failures"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select SWEPRO-003"
+file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+required_artifacts = ["results.json", "git-diff.status.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["SWEPRO-003"]
+contracts = ["SweBenchProRuntimeAdapter"]
+
+[[tests]]
+id = "SWEPRO-004"
+title = "Evaluator parse corruption is distinct from agent patch failure"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select SWEPRO-004"
+file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+required_artifacts = ["events.jsonl", "verifier/stderr.log"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["SWEPRO-004"]
+contracts = ["SweBenchProRuntimeAdapter"]
+
+[[tests]]
+id = "SWEPRO-005"
+title = "Replay and readiness use stored runtime materials"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select SWEPRO-005"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["external-runtime.private.json", "external-runtime.public.json"]
+status = "planned"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["SWEPRO-005"]
+contracts = ["Replay", "SweBenchProRuntimeAdapter"]
 
 [[tests]]
 id = "INT-012"
@@ -2473,7 +2753,10 @@ layer = "gate"
 owner_module = "xtask"
 command = "scripts/verify-test-registry.sh"
 file_patterns = ["scripts/verify-test-registry.sh"]
-required_artifacts = ["artifacts/test-traceability.json"]
+required_artifacts = [
+  "artifacts/test-traceability.json",
+  "artifacts/adapter-proof-inventory.json",
+]
 status = "active"
 labels = ["infrastructure"]
 [tests.source]
@@ -2482,6 +2765,26 @@ section = "5"
 [tests.verifies]
 requirements = ["test_registry_gate"]
 contracts = ["TestRegistry"]
+
+[[tests]]
+id = "META-008"
+title = "Adapter proof selectors execute active proofs and planned-proof guards"
+layer = "gate"
+owner_module = "scripts"
+command = "scripts/test-after-change.sh --select META-008"
+file_patterns = [
+  "scripts/test-after-change.sh",
+  "scripts/verify-planned-adapter-selectors.sh",
+]
+required_artifacts = []
+status = "active"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/test-engineering.md"
+section = "5.2"
+[tests.verifies]
+requirements = ["test_registry_gate"]
+contracts = ["LocalTestGate", "TestRegistry"]
 
 [[tests]]
 id = "COV-005"

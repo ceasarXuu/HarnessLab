@@ -189,6 +189,10 @@ expected = "test fails"
 - Every requirement in `tests/REQUIREMENTS.toml` must be verified by at least one active registry entry.
 - Every registry entry must point back to a doc section.
 - Every registry entry must point to at least one test file pattern.
+- `status = "planned"` is allowed only for Benchmark Adapter Phase 0 proof IDs
+  that are explicitly claimed in the adapter architecture/inventory documents
+  and routed through `scripts/test-after-change.sh --select` as planned proof.
+  It must not be used to suppress active coverage for ordinary requirements.
 - Every runtime-sensitive test must declare required artifacts.
 - Every critical module test must declare a negative control or mutation target.
 - Deleted tests require a registry change in the same PR.
@@ -313,9 +317,15 @@ message with `exit_code`, summary buckets, and `report_path`.
 Patch-style tests must additionally assert:
 
 ```text
-diff.patch
+patch.diff
 prediction.jsonl
 ```
+
+Grouped runtime proofs that declare many artifacts, such as `INT-011`, must
+keep the asserted artifact set in a shared contract file that is consumed by the
+runtime smoke test and the registry verifier. Duplicating the list in test code
+and registry-verifier code is not sufficient because it lets the two proof
+surfaces drift independently.
 
 ## 8. Seeded Failure System
 
@@ -538,7 +548,8 @@ Required meta-tests:
 | META-005 | coverage gate fails when new production file is missing from report. |
 | META-006 | traceability check fails when a requirement has no test. |
 | META-007 | golden report diff is produced when HTML changes. |
-| META-008 | each fake-benchmark seeded split returns identical exit code and failure code across repeated runs. |
+| META-008 | adapter proof selectors execute active proofs and planned-proof guards. |
+| Future | each fake-benchmark seeded split returns identical exit code and failure code across repeated runs. |
 
 M0 also registers the coverage-specific gate tests `COV-003`, `COV-005` and `COV-007`; these exercise branch-data presence, critical module thresholds and new-file coverage accounting before external benchmark adapters exist.
 
