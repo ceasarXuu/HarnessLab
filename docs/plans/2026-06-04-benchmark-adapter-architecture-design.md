@@ -373,7 +373,167 @@ Each adapter contract test must assert both the behavior and the failure classif
 - Run targeted adapter selectors, Python bridge tests, and full gate.
 - Run adversarial review because implementation will touch code.
 
-## 12. Acceptance Matrix
+## 12. Adversarial Review And Re-Review Plan
+
+This architecture work must use adversarial review as a gate, not as a final
+rubber stamp. Reviewers must be fresh internal subagent sessions and must
+receive only a neutral navigation packet. Do not pass the full main-agent chat,
+hidden reasoning, or persuasive summaries.
+
+### 12.1 Review Reports
+
+Use these project-root reports:
+
+- Design review: `vs_review/YYYY-MM-DD-benchmark-adapter-architecture-review.md`
+- Implementation review: append to the same report while the target remains the
+  same architecture track.
+- If a slice materially changes scope, create
+  `vs_review/YYYY-MM-DD-benchmark-adapter-<slice>-review.md` and link it from
+  the main report.
+
+Every report must include:
+
+- review target and target files
+- exact navigation packet sent to reviewers
+- reviewer launch records with fresh-session evidence
+- reviewer outputs
+- main-agent triage for every finding: `accept`, `reject`, or `defer`
+- validation evidence for accepted findings
+- closure status
+
+### 12.2 Round 0: Design Review Before Implementation
+
+Run this before treating this architecture plan as implementation-ready.
+
+Reviewer roles:
+
+- `architecture-adversary`: challenge contract boundaries, dependency direction,
+  abstraction level, migration sequence, and whether runtime extraction belongs
+  in CLI first.
+- `test-validity-adversary`: challenge whether `ADAPT-DATA-*`,
+  `ADAPT-RUNTIME-*`, `TB-*`, and `SWEPRO-*` can actually prove behavior instead
+  of only testing wrappers.
+- `observability-adversary`: challenge whether event logs, runtime snapshots,
+  cleanup reports, and replay diagnostics are enough to debug failures after a
+  real benchmark run.
+
+Optional fourth reviewer:
+
+- `security-adversary`, only if the implementation slice changes auth env,
+  host process execution, Docker socket handling, command redaction, or secret
+  artifacts.
+
+Design review navigation packet must point reviewers to:
+
+- `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md`
+- `docs/architecture.md`, section 6
+- `docs/mvp-development-spec.md`, section 7
+- `crates/harnesslab-adapters/src/registry.rs`
+- `crates/harnesslab-cli/src/runner/external.rs`
+- `crates/harnesslab-cli/src/runner/external/terminal_bench.rs`
+- `crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs`
+- `tests/TEST_REGISTRY.toml`
+- `scripts/test-after-change.sh`
+
+Design review closure criteria:
+
+- no untriaged findings
+- no unresolved blocking findings
+- accepted blocking findings have been fixed in the plan
+- the fixed plan has received a focused fresh closure review
+
+### 12.3 Implementation Slice Reviews
+
+Each implementation slice must receive a focused review after local validation.
+Do not batch all slices into one final review if the slice changed architecture,
+execution behavior, failure mapping, replay, or tests.
+
+| Slice | Review Focus | Required Reviewer Roles |
+| --- | --- | --- |
+| Slice A: Contract Inventory | whether the gap inventory is complete and test ids are meaningful | `architecture-adversary`, `test-validity-adversary` |
+| Slice B: Data Adapter Completion | data readiness, prepare idempotency, stable task ids, source refs, compatibility wrapper | `architecture-adversary`, `test-validity-adversary` |
+| Slice C: Runtime Adapter Registry | dispatch ownership, no hidden benchmark branching, dependency direction | `architecture-adversary`, `implementation-adversary` |
+| Slice D: Terminal-Bench Runtime Extraction | behavior preservation, timeout/watchdog, cleanup, QEMU, result mapping | `implementation-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice E: SWE-bench Pro Runtime Extraction | workspace prep, patch capture, evaluator mapping, host/sandbox execution boundaries | `implementation-adversary`, `test-validity-adversary` |
+| Slice F: Snapshot And Replay Hardening | replay readiness, mutable data protection, adapter version warnings | `architecture-adversary`, `test-validity-adversary`, `observability-adversary` |
+| Slice G: Docs And Diagnostics | user-facing phase names, doctor/readiness clarity, operational reuse | `documentation-skill-adversary`, `observability-adversary` |
+| Slice H: Full Gate And Review | traceability, selector coverage, full gate evidence, closure state | `test-validity-adversary`, `architecture-adversary` |
+
+### 12.4 Blocking Finding Re-Review Rule
+
+Any accepted blocking finding triggers a mandatory fresh re-review after the
+fix. The task cannot be closed until that focused closure round passes, unless
+the user explicitly accepts the remaining risk.
+
+Closure re-review packet must include:
+
+- original finding id and reviewer role
+- broken assumption and failure scenario
+- accepted fix or plan change
+- files changed
+- exact validation run
+- residual risk
+- request to falsify only the closure claim, not to restart broad review unless
+  the fix changes scope
+
+Closure reviewer selection:
+
+- Use the same role family as the original blocking finding when possible.
+- Add `test-validity-adversary` when the fix relies on new tests.
+- Add `observability-adversary` when the fix relies on logs, events, snapshots,
+  or diagnostics.
+- Use a fresh internal subagent session even if the reviewer role name is the
+  same as an earlier round.
+
+### 12.5 Severity And Triage Rules
+
+Use these review decisions:
+
+- `accept`: valid finding; change design, code, tests, logs, docs, or
+  operations flow and record evidence.
+- `reject`: invalid for this task; cite concrete evidence that defeats the
+  failure scenario.
+- `defer`: valid but out of current scope; identify where it will be tracked.
+  Blocking findings must not be deferred unless the user explicitly accepts the
+  risk.
+
+Severity thresholds:
+
+- Blocking: invalid architecture boundary, silent failure mapping, unproven
+  runtime behavior, replay corruption risk, secret leakage risk, missing
+  high-impact tests, or user-facing diagnostics that would misclassify real
+  benchmark results.
+- Major: likely regression, maintenance trap, incomplete observability, weak
+  but non-critical validation, or unclear migration ownership.
+- Minor: wording, local cleanup, or low-risk clarity improvements.
+
+### 12.6 Timeout And Degraded Review Handling
+
+Reviewer timeout is not a pass.
+
+- Use `complex` timeout for design and runtime extraction reviews.
+- Use `high-risk` timeout for accepted blocking closure reviews.
+- Each reviewer role gets one primary fresh attempt and one replacement fresh
+  attempt if the primary is lost or times out.
+- If both attempts fail, record the role as degraded and do not close the
+  review. Ask the user whether to retry, narrow scope, change reviewer role, or
+  explicitly accept the review gap.
+
+### 12.7 Final Review Closure Checklist
+
+Before claiming the adapter architecture track is complete:
+
+- `/vs_review/` report exists and is committed.
+- Every review round has launch records proving fresh context.
+- Every finding has `accept`, `reject`, or `defer`.
+- Every accepted blocking finding has a linked fresh closure review.
+- Deferred major findings are tracked in a concrete future plan or issue.
+- Targeted selectors passed.
+- Full `scripts/test-after-change.sh` passed after the final code change.
+- Final response names report path, reviewer roles, closure status, and
+  unresolved risks.
+
+## 13. Acceptance Matrix
 
 | Requirement | Proof |
 | --- | --- |
@@ -387,7 +547,7 @@ Each adapter contract test must assert both the behavior and the failure classif
 | User docs match behavior | architecture, MVP spec, development operations updates |
 | Full system remains healthy | `scripts/test-after-change.sh` |
 
-## 13. Risks
+## 14. Risks
 
 - Over-abstracting too early could hide benchmark-specific reality. Mitigation: extract from Terminal-Bench and SWE-bench Pro behavior that already exists, not from imagined future adapters.
 - A single command-based runtime plan may not fit patch-style evaluation. Mitigation: let runtime adapters execute multi-step attempts through a shared context instead of forcing one command shape.
@@ -395,14 +555,14 @@ Each adapter contract test must assert both the behavior and the failure classif
 - Replay snapshots can become large. Mitigation: snapshot references, policy, hashes, and bounded metadata; keep raw logs in attempt artifacts.
 - Official benchmark changes can break parsing. Mitigation: keep upstream raw result artifacts and adapter version warnings.
 
-## 14. Open Questions
+## 15. Open Questions
 
 1. Should runtime adapter extraction stay inside `harnesslab-cli` for the first implementation, or should a new crate be introduced immediately?
 2. Should `PreparedBenchmark` become persisted before every run even when no preparation was needed?
 3. Should real external benchmark smoke checks be mandatory in the default full gate or remain explicit verifier scripts until CI resources are stable?
 4. Should `ExternalRunnerKind` remain a closed enum for MVP, or move toward string-based adapter ids before dynamic plugins exist?
 
-## 15. Done Definition
+## 16. Done Definition
 
 This architecture track is complete when:
 
