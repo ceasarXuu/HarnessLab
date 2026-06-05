@@ -60,6 +60,7 @@ fn monitor_writes_interrupted_results_for_unscheduled_work() {
             tmp.path(),
             &[AttemptWork {
                 task: task("task-b"),
+                task_runtime_snapshot: None,
                 attempt: 1,
                 provenance: AttemptProvenance::Original,
             }],

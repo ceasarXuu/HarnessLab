@@ -134,6 +134,7 @@ if [[ "${1:-}" == "--select" ]]; then
     REPLAY-004) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_failed_completed_attempt_schedules_recovery_attempt" ;;
     REPLAY-005) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_does_not_create_unbounded_recovery_attempts" ;;
     REPLAY-006) package="harnesslab-cli"; test_name="runner::tests::replay_002_resume_uses_encoded_task_dir_for_slash_bearing_task_ids" ;;
+    REPLAY-007) package="harnesslab-cli"; test_name="replay_007_run_writes_task_runtime_snapshot"; test_target="test:task_snapshot_contract" ;;
     REPLAY-003) package="harnesslab-cli"; test_name="runner::tests::replay_003_replay_spec_preserves_execution_config_and_links_source" ;;
     INT-001) package="harnesslab-cli"; test_name="int_001_init_empty_home_creates_config_and_profiles" ;;
     INT-003) package="harnesslab-cli"; test_name="int_003_fake_terminal_success_creates_report_and_results" ;;

@@ -32,27 +32,19 @@ pub trait BenchmarkAdapter {
         task: &TaskDescriptor,
     ) -> Result<RuntimeTaskSnapshot, String> {
         let task_plan = self.create_task_plan(prepared, task)?;
-        Ok(RuntimeTaskSnapshot {
-            benchmark: BenchmarkIdentity {
-                name: prepared.descriptor.name.clone(),
-                version: prepared.descriptor.version.clone(),
-            },
-            split: prepared.split.clone(),
-            task_id: task.task_id.clone(),
-            source_ref: task.source_ref.clone(),
-            upstream_metadata_hash: task.source_ref.checksum.clone(),
-            instruction_hash: stable_checksum(&task_plan.instruction),
-            task_plan_hash: stable_task_plan_hash(&task_plan)?,
-            external_runner: task_plan.external_runner.clone(),
-        })
+        snapshot_from_task_plan(prepared, task, &task_plan)
     }
     fn plan(&self, split: &str) -> Result<BenchmarkPlan, String> {
         let prepared = self.prepare(split)?;
         let task_descriptors = self.list_tasks(&prepared)?;
-        let tasks = task_descriptors
-            .iter()
-            .map(|task| self.create_task_plan(&prepared, task))
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut tasks = Vec::with_capacity(task_descriptors.len());
+        let mut task_runtime_snapshots = Vec::with_capacity(task_descriptors.len());
+        for task in &task_descriptors {
+            let task_plan = self.create_task_plan(&prepared, task)?;
+            let task_snapshot = snapshot_from_task_plan(&prepared, task, &task_plan)?;
+            tasks.push(task_plan);
+            task_runtime_snapshots.push(task_snapshot);
+        }
         Ok(BenchmarkPlan {
             benchmark: BenchmarkIdentity {
                 name: prepared.descriptor.name.clone(),
@@ -61,10 +53,31 @@ pub trait BenchmarkAdapter {
             split: prepared.split.clone(),
             prepared_benchmark_ref: prepared.cache_manifest_path.clone(),
             tasks,
+            task_runtime_snapshots,
             run_config_overrides: self.run_config_overrides(&prepared),
             warnings: prepared.warnings.clone(),
         })
     }
+}
+
+fn snapshot_from_task_plan(
+    prepared: &PreparedBenchmark,
+    task: &TaskDescriptor,
+    task_plan: &TaskPlan,
+) -> Result<RuntimeTaskSnapshot, String> {
+    Ok(RuntimeTaskSnapshot {
+        benchmark: BenchmarkIdentity {
+            name: prepared.descriptor.name.clone(),
+            version: prepared.descriptor.version.clone(),
+        },
+        split: prepared.split.clone(),
+        task_id: task.task_id.clone(),
+        source_ref: task.source_ref.clone(),
+        upstream_metadata_hash: task.source_ref.checksum.clone(),
+        instruction_hash: stable_checksum(&task_plan.instruction),
+        task_plan_hash: stable_task_plan_hash(task_plan)?,
+        external_runner: task_plan.external_runner.clone(),
+    })
 }
 
 pub fn built_in_descriptors() -> Vec<BenchmarkDescriptor> {
@@ -109,6 +122,7 @@ pub fn plan_from_tasks(
         split: split.to_string(),
         prepared_benchmark_ref: "built-in-fixture".to_string(),
         tasks,
+        task_runtime_snapshots: Vec::new(),
         run_config_overrides: RunConfigOverrides {
             timeout_sec: None,
             network: None,

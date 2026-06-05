@@ -459,6 +459,7 @@ fn test_plan(tasks: Vec<TaskPlan>) -> harnesslab_core::BenchmarkPlan {
         split: "success".to_string(),
         prepared_benchmark_ref: "fixture".to_string(),
         tasks,
+        task_runtime_snapshots: Vec::new(),
         run_config_overrides: harnesslab_core::RunConfigOverrides {
             timeout_sec: None,
             network: None,

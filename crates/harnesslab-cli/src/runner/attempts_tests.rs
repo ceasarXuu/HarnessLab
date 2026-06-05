@@ -14,6 +14,7 @@ fn run_004_attempt_scheduler_refills_slot_before_slow_task_finishes() {
         .into_iter()
         .map(|task_id| AttemptWork {
             task: task_with_id(task_id),
+            task_runtime_snapshot: None,
             attempt: 1,
             provenance: AttemptProvenance::Original,
         })
@@ -61,6 +62,7 @@ fn run_004_attempt_scheduler_stops_refill_after_run_health_abort() {
     .into_iter()
     .map(|task_id| AttemptWork {
         task: task_with_id(task_id),
+        task_runtime_snapshot: None,
         attempt: 1,
         provenance: AttemptProvenance::Original,
     })
@@ -124,6 +126,7 @@ fn run_004_attempt_scheduler_stops_refill_after_worker_error() {
         .into_iter()
         .map(|task_id| AttemptWork {
             task: task_with_id(task_id),
+            task_runtime_snapshot: None,
             attempt: 1,
             provenance: AttemptProvenance::Original,
         })
@@ -191,6 +194,7 @@ fn run_004_attempt_scheduler_stops_refill_after_worker_panic() {
         .into_iter()
         .map(|task_id| AttemptWork {
             task: task_with_id(task_id),
+            task_runtime_snapshot: None,
             attempt: 1,
             provenance: AttemptProvenance::Original,
         })

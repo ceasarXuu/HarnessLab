@@ -117,6 +117,8 @@ pub struct BenchmarkPlan {
     pub split: String,
     pub prepared_benchmark_ref: String,
     pub tasks: Vec<TaskPlan>,
+    #[serde(default)]
+    pub task_runtime_snapshots: Vec<RuntimeTaskSnapshot>,
     pub run_config_overrides: RunConfigOverrides,
     pub warnings: Vec<String>,
 }

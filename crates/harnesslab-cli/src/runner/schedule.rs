@@ -1,6 +1,7 @@
 use anyhow::Result;
 use harnesslab_core::{
-    AttemptProvenance, FailureCode, Outcome, TaskAttemptResult, TaskPlan, TaskState, task_dir_name,
+    AttemptProvenance, FailureCode, Outcome, RuntimeTaskSnapshot, TaskAttemptResult, TaskPlan,
+    TaskState, task_dir_name,
 };
 use harnesslab_infra::read_json;
 use std::fs;
@@ -9,6 +10,7 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 pub(super) struct AttemptWork {
     pub(super) task: TaskPlan,
+    pub(super) task_runtime_snapshot: Option<RuntimeTaskSnapshot>,
     pub(super) attempt: u32,
     pub(super) provenance: AttemptProvenance,
 }
@@ -21,17 +23,22 @@ pub(super) fn partition_attempts(
     let mut completed = Vec::new();
     let mut pending = Vec::new();
     for task in &plan.tasks {
+        let task_runtime_snapshot = plan
+            .task_runtime_snapshots
+            .iter()
+            .find(|snapshot| snapshot.task_id == task.task_id);
         let existing = existing_attempts(run_dir, &task.task_id)?
             .into_iter()
             .filter(|result| result.failure_code != Some(FailureCode::RunHealthAborted))
             .collect::<Vec<_>>();
-        let next_planned = planned_attempts_for_task(task, attempts)
+        let next_planned = planned_attempts_for_task(task, task_runtime_snapshot, attempts)
             .into_iter()
             .filter(|work| !existing.iter().any(|result| result.attempt == work.attempt))
             .collect::<Vec<_>>();
         if next_planned.is_empty() && should_schedule_recovery_attempt(&existing, attempts) {
             pending.push(AttemptWork {
                 task: task.clone(),
+                task_runtime_snapshot: task_runtime_snapshot.cloned(),
                 attempt: existing
                     .iter()
                     .map(|result| result.attempt)
@@ -55,7 +62,15 @@ pub(super) fn planned_attempts(
 ) -> Vec<AttemptWork> {
     plan.tasks
         .iter()
-        .flat_map(|task| planned_attempts_for_task(task, attempts))
+        .flat_map(|task| {
+            planned_attempts_for_task(
+                task,
+                plan.task_runtime_snapshots
+                    .iter()
+                    .find(|snapshot| snapshot.task_id == task.task_id),
+                attempts,
+            )
+        })
         .collect()
 }
 
@@ -74,10 +89,16 @@ pub(super) fn attempt_result_path(
         .join("result.json")
 }
 
-fn planned_attempts_for_task(task: &TaskPlan, attempts: u32) -> Vec<AttemptWork> {
+fn planned_attempts_for_task(
+    task: &TaskPlan,
+    task_runtime_snapshot: Option<&RuntimeTaskSnapshot>,
+    attempts: u32,
+) -> Vec<AttemptWork> {
+    let task_runtime_snapshot = task_runtime_snapshot.cloned();
     (1..=attempts.max(1))
         .map(|attempt| AttemptWork {
             task: task.clone(),
+            task_runtime_snapshot: task_runtime_snapshot.clone(),
             attempt,
             provenance: AttemptProvenance::Original,
         })

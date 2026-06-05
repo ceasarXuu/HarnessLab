@@ -1776,6 +1776,33 @@ requirements = ["replay_runtime", "artifact_event_store"]
 contracts = ["Resume", "RunOrchestrator", "PathSafety"]
 
 [[tests]]
+id = "REPLAY-007"
+title = "Run writes task runtime snapshot beside task snapshot"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-007"
+file_patterns = [
+  "crates/harnesslab-core/src/benchmark.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-cli/src/runner.rs",
+  "crates/harnesslab-cli/src/runner/schedule.rs",
+  "crates/harnesslab-cli/src/runner/task_snapshot.rs",
+  "crates/harnesslab-cli/tests/task_snapshot_contract.rs",
+]
+required_artifacts = [
+  "benchmark.snapshot.json",
+  "tasks/<task-id>/task.snapshot.json",
+  "tasks/<task-id>/task-runtime.snapshot.json",
+]
+status = "active"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "Phase 2"
+[tests.verifies]
+requirements = ["replay_runtime", "artifact_event_store"]
+contracts = ["SnapshotAuthority", "RunOrchestrator", "AdapterDataContract"]
+
+[[tests]]
 id = "ORCH-013"
 title = "Run sandbox cleanup is enabled only for container tasks"
 layer = "unit"
