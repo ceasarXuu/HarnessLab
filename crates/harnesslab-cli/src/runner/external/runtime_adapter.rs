@@ -1,11 +1,10 @@
-use super::{ExternalTaskExecution, swe_bench_pro, terminal_bench, terminal_bench_cleanup};
+use super::{ExternalTaskExecution, swe_bench_pro, terminal_bench_adapter};
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result};
 use harnesslab_core::{
     AgentProfile, BenchmarkPlan, ExternalRunnerKind, RunSpec, RuntimePreflightReport,
     TaskAttemptResult, TaskPlan,
 };
-use std::fs;
 use std::path::{Path, PathBuf};
 
 pub(super) trait BenchmarkRuntimeAdapter: Sync {
@@ -66,7 +65,9 @@ pub(super) fn runtime_adapter_for(
     kind: ExternalRunnerKind,
 ) -> &'static dyn BenchmarkRuntimeAdapter {
     match kind {
-        ExternalRunnerKind::TerminalBench => &TERMINAL_BENCH_RUNTIME_ADAPTER,
+        ExternalRunnerKind::TerminalBench => {
+            &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER
+        }
         ExternalRunnerKind::SweBenchPro => &SWE_BENCH_PRO_RUNTIME_ADAPTER,
     }
 }
@@ -115,57 +116,9 @@ pub(super) fn cleanup_runtime_target(
     runtime_adapter_for(target.runner_kind).cleanup_target_resources(target)
 }
 
-struct TerminalBenchRuntimeAdapter;
 struct SweBenchProRuntimeAdapter;
 
-static TERMINAL_BENCH_RUNTIME_ADAPTER: TerminalBenchRuntimeAdapter = TerminalBenchRuntimeAdapter;
 static SWE_BENCH_PRO_RUNTIME_ADAPTER: SweBenchProRuntimeAdapter = SweBenchProRuntimeAdapter;
-
-impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
-    fn adapter_id(&self) -> &'static str {
-        "terminal-bench-runtime"
-    }
-
-    fn kind(&self) -> ExternalRunnerKind {
-        ExternalRunnerKind::TerminalBench
-    }
-
-    fn preflight(&self, ctx: RuntimePreflightContext<'_>) -> RuntimePreflightReport {
-        match terminal_bench::validate_profile(ctx.profile, &ctx.compatibility) {
-            Ok(()) => preflight_report(self, ctx, None),
-            Err(error) => preflight_report(self, ctx, Some(error.to_string())),
-        }
-    }
-
-    fn execute(&self, ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
-        let runner = ctx
-            .task
-            .external_runner
-            .as_ref()
-            .context("terminal-bench task missing runner spec")?;
-        let compatibility = BenchmarkRuntimeCompatibility::from_profile(ctx.profile);
-        terminal_bench::execute(&ctx, Path::new(&runner.dataset_path), &compatibility)
-    }
-
-    fn cleanup_targets(&self, ctx: RuntimeCleanupContext<'_>) -> Vec<RuntimeCleanupTarget> {
-        terminal_bench_cleanup_targets(ctx)
-    }
-
-    fn cleanup_target_resources(
-        &self,
-        target: &RuntimeCleanupTarget,
-    ) -> Result<RuntimeCleanupReport, String> {
-        terminal_bench_cleanup::cleanup_run_resources(&target.run_dir, &target.scan_run_id)
-            .map(|result| RuntimeCleanupReport {
-                removed: result.removed,
-                tokens: result.tokens,
-                projects: result.projects,
-                snapshot_projects: result.snapshot_projects,
-                matched_projects: result.matched_projects,
-            })
-            .map_err(|error| error.to_string())
-    }
-}
 
 impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
     fn adapter_id(&self) -> &'static str {
@@ -203,7 +156,7 @@ impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
     }
 }
 
-fn preflight_report(
+pub(super) fn preflight_report(
     adapter: &dyn BenchmarkRuntimeAdapter,
     ctx: RuntimePreflightContext<'_>,
     blocking_reason: Option<String>,
@@ -237,86 +190,6 @@ fn preflight_report(
         host_execution_reason,
         blocking_reason,
     }
-}
-
-fn terminal_bench_cleanup_targets(ctx: RuntimeCleanupContext<'_>) -> Vec<RuntimeCleanupTarget> {
-    let mut targets = Vec::new();
-    if ctx.phase == RuntimeCleanupPhase::PreRun
-        && let Some(runs_dir) = ctx.run_dir.parent()
-        && let Ok(entries) = fs::read_dir(runs_dir)
-    {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path == ctx.run_dir {
-                continue;
-            }
-            if let Some(target) = terminal_bench_cleanup_target(&path) {
-                targets.push(target);
-            }
-        }
-    }
-    targets.push(terminal_bench_runtime_cleanup_target(
-        ctx.run_dir.to_path_buf(),
-        ctx.spec.run_id.clone(),
-    ));
-    targets
-}
-
-fn terminal_bench_cleanup_target(run_dir: &Path) -> Option<RuntimeCleanupTarget> {
-    let file_name = run_dir.file_name()?.to_str()?.to_string();
-    let snapshot_exists = run_dir
-        .join("terminal-bench-compose-projects.json")
-        .is_file();
-    if let Some(run_id) = terminal_bench_run_id_from_spec(run_dir) {
-        return Some(terminal_bench_runtime_cleanup_target(
-            run_dir.to_path_buf(),
-            run_id,
-        ));
-    }
-    if snapshot_exists || looks_like_terminal_bench_run_dir(&file_name) {
-        return Some(terminal_bench_runtime_cleanup_target(
-            run_dir.to_path_buf(),
-            file_name,
-        ));
-    }
-    None
-}
-
-fn terminal_bench_runtime_cleanup_target(
-    run_dir: PathBuf,
-    scan_run_id: String,
-) -> RuntimeCleanupTarget {
-    RuntimeCleanupTarget {
-        runner_kind: ExternalRunnerKind::TerminalBench,
-        adapter_id: "terminal-bench-runtime",
-        event_name: "terminal_bench_docker_cleanup",
-        message_prefix: "terminal-bench docker cleanup",
-        run_dir,
-        scan_run_id,
-    }
-}
-
-fn terminal_bench_run_id_from_spec(run_dir: &Path) -> Option<String> {
-    let bytes = fs::read(run_dir.join("run.json")).ok()?;
-    let spec = serde_json::from_slice::<RunSpec>(&bytes).ok()?;
-    (spec.benchmark.name == "terminal-bench").then_some(spec.run_id)
-}
-
-fn looks_like_terminal_bench_run_dir(name: &str) -> bool {
-    let Some(timestamp) = name.rsplit('-').next() else {
-        return false;
-    };
-    let timestamp_bytes = timestamp.as_bytes();
-    name.contains("-terminal-bench-")
-        && timestamp.len() >= 10
-        && timestamp.ends_with('Z')
-        && timestamp_bytes
-            .get(0..8)
-            .is_some_and(|date| date.iter().all(u8::is_ascii_digit))
-        && timestamp_bytes.get(8).is_some_and(|ch| *ch == b'T')
-        && timestamp_bytes
-            .get(9..timestamp.len().saturating_sub(1))
-            .is_some_and(|tail| !tail.is_empty() && tail.iter().all(u8::is_ascii_digit))
 }
 
 #[cfg(test)]

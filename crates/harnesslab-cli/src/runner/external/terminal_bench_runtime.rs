@@ -4,6 +4,20 @@ use harnesslab_infra::{append_event, event};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone)]
+pub(super) struct TerminalBenchRuntimeAttempt {
+    pub(super) source_dataset_path: PathBuf,
+    pub(super) runtime_dataset_path: PathBuf,
+    pub(super) output_root: PathBuf,
+    pub(super) official_run_id: String,
+    pub(super) result_path: PathBuf,
+    pub(super) command: String,
+    pub(super) process_timeout_sec: u64,
+    pub(super) no_output_timeout_sec: Option<u64>,
+    pub(super) no_output_progress_paths: Vec<PathBuf>,
+    pub(super) no_output_activity_patterns: Vec<String>,
+}
+
 const DEFAULT_DOCKER_PLATFORM: &str = "linux/amd64";
 const NATIVE_ARM64_PLATFORM: &str = "linux/arm64";
 
@@ -60,6 +74,8 @@ pub(super) fn append_runner_config_event(
     process_timeout_sec: u64,
     no_output_timeout_sec: Option<u64>,
     docker_platform: &str,
+    official_result_path: &Path,
+    command_snapshot_path: &Path,
 ) -> Result<()> {
     let no_output_timeout = no_output_timeout_sec
         .map(|timeout| timeout.to_string())
@@ -74,7 +90,9 @@ pub(super) fn append_runner_config_event(
             Some(&ctx.task.task_id),
             "external_runner_configured",
             &format!(
-                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} docker_platform={docker_platform} progress_paths={progress_paths} activity_patterns={activity_patterns}"
+                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} docker_platform={docker_platform} progress_paths={progress_paths} activity_patterns={activity_patterns} official_result_path={} command_snapshot_path={}",
+                official_result_path.display(),
+                command_snapshot_path.display()
             ),
         ),
         &[],
@@ -327,10 +345,10 @@ mod tests {
             started: Instant::now(),
         };
 
-        let compatibility =
-            crate::runtime_compatibility::BenchmarkRuntimeCompatibility::from_profile(&profile);
         let result =
-            super::super::terminal_bench::execute(&ctx, source.path(), &compatibility).unwrap();
+            super::super::runtime_adapter::runtime_adapter_for(ExternalRunnerKind::TerminalBench)
+                .execute(ctx)
+                .unwrap();
 
         assert_eq!(result.state, TaskState::Failure);
         assert_eq!(result.outcome, Outcome::Failure);

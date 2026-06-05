@@ -179,10 +179,10 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-044) package="harnesslab-cli"; test_name="int_044_terminal_bench_runtime_exports_amd64_platform_by_default"; test_target="test:terminal_bench_runtime_contract" ;;
     INT-045) package="harnesslab-cli"; test_name="int_011_terminal_bench_run_timeout_override_does_not_inflate_test_timeout"; test_target="test:terminal_bench_contract" ;;
     INT-046) package="harnesslab-cli"; test_name="int_046_terminal_bench_bridge_setup_failure_drops_stale_benchmark_warning"; test_target="test:terminal_bench_setup_failure_contract" ;;
-    TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score" ;;
-    TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure" ;;
-    TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure" ;;
-    TB-004) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_hard_timeout_maps_to_external_runner_timeout" ;;
+    TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score"; test_target="lib" ;;
+    TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure"; test_target="lib" ;;
+    TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure"; test_target="lib" ;;
+    TB-004) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_hard_timeout_maps_to_external_runner_timeout"; test_target="lib" ;;
     TB-005) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_maps_parse_error_to_agent_output_parse_error"; test_target="lib" ;;
     TB-006) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_no_output_timeout_defaults_to_setup_watchdog"; test_target="lib" ;;
     TB-007) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::detects_terminal_bench_compose_setup_failure"; test_target="lib" ;;
@@ -208,7 +208,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-RUNTIME-002) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_002_preflight_reports_and_enforces_current_compatibility"; test_target="lib" ;;
     ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;
     ADAPT-RUNTIME-004) planned_adapter_proof "$id" "Phase 6: cleanup report" ;;
-    ADAPT-RUNTIME-005) planned_adapter_proof "$id" "Phase 6: runtime event taxonomy" ;;
+    ADAPT-RUNTIME-005) package="harnesslab-cli"; test_name="adapt_runtime_005_terminal_bench_event_taxonomy_is_stable"; test_target="test:terminal_bench_runtime_event_contract" ;;
     SWEPRO-001) planned_adapter_proof "$id" "Phase 5: metadata failure classification" ;;
     SWEPRO-002) planned_adapter_proof "$id" "Phase 5: workspace failure classification" ;;
     SWEPRO-003) planned_adapter_proof "$id" "Phase 5: patch failure classification" ;;

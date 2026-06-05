@@ -3,8 +3,8 @@
 ## Plan Metadata
 
 - Created: 2026-06-04
-- Updated: 2026-06-05
-- Version: 0.19
+- Updated: 2026-06-06
+- Version: 0.20
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
@@ -21,9 +21,11 @@
   `ready|blocked` preflight reports, persisted `external_runner_preflight`
   diagnostics on executed run paths, active `ADAPT-RUNTIME-001/002`
   exact-route proofs, an `INT-011` real execution-path event assertion, and
-  meta-gated active selector specs. Terminal-Bench runtime extraction, runtime
-  snapshots, official runner identity drift, security scans, and legacy
-  degraded replay policy remain open for later phases.
+  meta-gated active selector specs. Phase 4 Terminal-Bench runtime extraction is
+  in closure with adapter-owned runtime attempt policy, real Terminal-Bench
+  emitted-event proof, and official command preservation evidence. Runtime
+  snapshots, official runner identity drift, security scans, and legacy degraded
+  replay policy remain open for later phases.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -668,7 +670,7 @@ Concrete initial IDs:
 - `ADAPT-RUNTIME-002`: runtime preflight reports and enforces current benchmark compatibility checks, including host-execution reasons and Terminal-Bench profile validation.
 - `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
 - `ADAPT-RUNTIME-004`: cleanup report is structured and can override official benchmark verdict with audit evidence.
-- `ADAPT-RUNTIME-005`: runtime event taxonomy preserves operator-critical Terminal-Bench events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, and stable SWE-bench Pro phase events.
+- `ADAPT-RUNTIME-005`: active Phase 4 proof that Terminal-Bench runtime event taxonomy preserves operator-critical events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, task warnings, and result parse failures. Stable SWE-bench Pro phase event proof remains Phase 5 scope under `SWEPRO-001..004` before Phase 6 re-validates the full runtime taxonomy.
 - `SWEPRO-001`: metadata extraction failure is classified and observable.
 - `SWEPRO-002`: workspace preparation failure is classified and observable.
 - `SWEPRO-003`: invalid patch and empty patch are distinct benchmark failures.
@@ -1352,14 +1354,17 @@ runtime adapter without changing the user CLI.
 - Preserve existing operator-critical event names or dual-emit migration aliases.
 - Assert `external_runner_timeout` and `external_runner_setup_failed` stay
   queryable with diagnostic fields.
-- Add runtime snapshot assertions for platform, timeout, progress,
-  official-vs-final verdict provenance, cleanup report, and redaction.
+- Add runtime event assertions for platform, timeout, progress,
+  official-vs-final verdict provenance, cleanup behavior, and setup/result
+  diagnostics. Public/private runtime snapshots and structured cleanup report
+  artifacts remain Phase 6 scope under `ADAPT-RUNTIME-003..004`.
 
 #### Deliverables
 
 - `TerminalBenchRuntimeAdapter`.
 - Preserved Terminal-Bench event taxonomy.
-- Runtime snapshot and cleanup report coverage.
+- Runtime command, event taxonomy, timeout, setup-failure, QEMU, and cleanup
+  behavior coverage.
 - Official-runner preservation proof.
 
 #### Testing And Validation
@@ -1368,8 +1373,8 @@ runtime adapter without changing the user CLI.
 | --- | --- | --- |
 | Existing behavior is preserved | Run `TB-*`, `INT-021..046`, and Python bridge tests | All previously passing Terminal-Bench selectors pass |
 | Official runner path is preserved | Real official `tb run` verifier or equivalent script | CLI args, result schema, timeout mapping, and non-QEMU platform policy are proven |
-| Operator events remain queryable | `ADAPT-RUNTIME-005` event assertions | Required event names and fields are present |
-| Cleanup is auditable | Cleanup report test | Cleanup report can override official verdict with evidence when needed |
+| Operator events remain queryable | `ADAPT-RUNTIME-005` runtime event assertions | Required Terminal-Bench event names and fields are emitted in `events.jsonl` |
+| Cleanup behavior is preserved | Cleanup failure and cleanup event tests | Cleanup can override official verdict with evidence when needed |
 
 #### Exit Criteria
 
@@ -1391,8 +1396,24 @@ and `observability-adversary`.
 
 #### Gate To Next Phase
 
-Proceed to Phase 5 only after Terminal-Bench registry execution is behaviorally
-equivalent to the old path.
+Status: closure in progress on 2026-06-06. Terminal-Bench registry execution is
+owned by `TerminalBenchRuntimeAdapter` for preflight, official command
+construction, runtime attempt policy, cleanup targets, and event-taxonomy proof
+while the hardened official runner behavior remains covered by existing
+Terminal-Bench selectors.
+
+Completion evidence:
+
+- `ADAPT-RUNTIME-001` and `ADAPT-RUNTIME-002` passed after extraction.
+- `ADAPT-RUNTIME-005` is active and covers real emitted Terminal-Bench
+  `events.jsonl` records and command preservation.
+- `for id in TB-001 TB-002 TB-003 TB-004 TB-005 TB-006 TB-007 TB-008 TB-009 TB-010 TB-011; do scripts/test-after-change.sh --select "$id"; done` passed.
+- `PY-TB-001` passed with 32 Python tests and 7 subtests.
+- `cargo test -p harnesslab-cli --all-features --lib runner::external::`
+  passed 45 related tests.
+
+Proceed to Phase 5 after the Phase 4 adversarial review record has no accepted
+blocking findings.
 
 ### Phase 5: SWE-bench Pro Runtime Extraction (Slice F)
 
@@ -1517,7 +1538,7 @@ secret leaks.
 | --- | --- | --- |
 | Runtime snapshots are written | `ADAPT-RUNTIME-003` | Required public/private fields exist in correct artifacts |
 | Cleanup report is structured | `ADAPT-RUNTIME-004` | Cleanup report carries phase, success, evidence, and final verdict effect |
-| Event taxonomy is preserved | `ADAPT-RUNTIME-005` | Terminal-Bench and SWE phase events stay queryable |
+| Event taxonomy is preserved | `ADAPT-RUNTIME-005` plus Phase 5 `SWEPRO-001..004` | Terminal-Bench emitted events stay queryable and SWE phase events are proven by their dedicated Phase 5 selectors |
 | Replay uses stored materials | `SWEPRO-005` | Missing, removed, or divergent stored runtime materials block replay before task execution |
 | Public artifacts do not leak secrets | `SEC-*` fake secret scans | Fake secrets are absent from public snapshots, events, reports, and warnings |
 
@@ -2061,6 +2082,7 @@ This architecture track is complete when:
 | 0.17 | 2026-06-05 | Responded to Phase 3 adversarial review by narrowing `ADAPT-RUNTIME-001/002` proof wording, replacing counted grouped selector proof with exact active routes, and strengthening preflight compatibility tests. |
 | 0.18 | 2026-06-05 | Completed Phase 3 by moving cleanup ownership behind runtime adapter metadata, centralizing benchmark-runtime label compatibility, persisting `external_runner_preflight` diagnostics, and updating Phase 3 gate evidence. |
 | 0.19 | 2026-06-05 | Closed Phase 3 adversarial review blockers by replacing cleanup metadata flags with adapter-owned cleanup targets/reports, adding blocked preflight report semantics, tightening Phase 3 proof metadata, and adding real execution-path event assertions. |
+| 0.20 | 2026-06-06 | Completed Phase 4 Terminal-Bench runtime extraction by moving Terminal-Bench adapter ownership into a dedicated module, activating `ADAPT-RUNTIME-005`, fixing `TB-001..004` selector routing, and recording Terminal-Bench/Python bridge preservation evidence. |
 
 ## 25. Plan Quality Checklist
 

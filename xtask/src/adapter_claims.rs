@@ -260,6 +260,19 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             test_target: Some("lib"),
             file_patterns: &["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs"],
         }),
+        "ADAPT-RUNTIME-005" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "adapt_runtime_005_terminal_bench_event_taxonomy_is_stable",
+            test_target: Some("test:terminal_bench_runtime_event_contract"),
+            file_patterns: &[
+                "crates/harnesslab-cli/tests/terminal_bench_runtime_event_contract.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+            ],
+        }),
         "SWEPRO-005" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "swepro_005_replay_requires_stored_swe_runtime_materials",

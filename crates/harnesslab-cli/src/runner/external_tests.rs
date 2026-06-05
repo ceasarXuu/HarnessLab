@@ -151,11 +151,11 @@ fn agt_reg_005_terminal_bench_env_uses_materialized_setup_not_raw_profile() {
 #[test]
 fn terminal_bench_import_agent_official_timeout_adds_cleanup_grace() {
     assert_eq!(
-        super::terminal_bench::terminal_bench_official_agent_timeout(300, true),
+        super::terminal_bench_adapter::terminal_bench_official_agent_timeout(300, true),
         330
     );
     assert_eq!(
-        super::terminal_bench::terminal_bench_official_agent_timeout(300, false),
+        super::terminal_bench_adapter::terminal_bench_official_agent_timeout(300, false),
         300
     );
 }
