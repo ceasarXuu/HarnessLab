@@ -88,8 +88,13 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     .unwrap_err()
     .to_string();
     assert!(terminal_blocked_error.contains("runtime preflight blocked"));
+    assert!(terminal_blocked_error.contains("terminal-bench-runtime"));
+    assert!(terminal_blocked_error.contains("task=tb-task"));
+    assert!(terminal_blocked_error.contains("adapter_phase=preflight"));
     assert!(terminal_blocked_error.contains("readiness_status=blocked"));
+    assert!(terminal_blocked_error.contains("blocking_reason="));
     assert!(terminal_blocked_error.contains("terminal_bench_agent"));
+    assert!(terminal_blocked_error.contains("remediation="));
 
     let mut swe_profile = default_agent_profile("swe", AgentKind::Custom, "agent");
     swe_profile
@@ -151,6 +156,7 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
     assert!(events.contains("\"event\":\"external_runner_preflight\""));
     assert!(events.contains("adapter_id=terminal-bench-runtime"));
+    assert!(events.contains("adapter_phase=preflight"));
     assert!(events.contains("runner_kind=TerminalBench"));
     assert!(events.contains("agent_bridge_mode=terminal-bench-official-agent"));
     assert!(events.contains("readiness_status=ready"));

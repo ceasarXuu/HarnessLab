@@ -48,7 +48,7 @@ pub(super) fn emit_runtime_preflight_reports(
 ) -> Result<()> {
     for (task, report) in collect_runtime_preflight_reports(profile, tasks)? {
         let message = format!(
-            "adapter_id={} runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
+            "adapter_id={} adapter_phase=preflight runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
             report.adapter_id,
             report.runner_kind,
             report.agent_bridge_mode,
@@ -115,17 +115,7 @@ fn validate_run_as_for_plan(
             .iter()
             .find(|(_, report)| report.blocking_reason.is_some())
         {
-            let reason = report
-                .blocking_reason
-                .as_deref()
-                .unwrap_or("runtime preflight blocked");
-            bail!(
-                "runtime preflight blocked for {}; task={}; readiness_status={}; blocking_reason={}",
-                report.adapter_id,
-                task.task_id,
-                report.readiness_status,
-                reason
-            );
+            bail!("{}", runtime_preflight_blocked_message(task, report));
         }
         return Ok(());
     }
@@ -133,17 +123,7 @@ fn validate_run_as_for_plan(
         .iter()
         .find(|(_, report)| report.blocking_reason.is_some())
     {
-        let reason = report
-            .blocking_reason
-            .as_deref()
-            .unwrap_or("runtime preflight blocked");
-        bail!(
-            "runtime preflight blocked for {}; task={}; readiness_status={}; blocking_reason={}",
-            report.adapter_id,
-            task.task_id,
-            report.readiness_status,
-            reason
-        );
+        bail!("{}", runtime_preflight_blocked_message(task, report));
     }
     if let Some((task, reason)) = tasks.iter().find_map(host_task_execution_reason) {
         bail!(
@@ -169,6 +149,17 @@ fn validate_run_as_for_plan(
         );
     }
     Ok(())
+}
+
+fn runtime_preflight_blocked_message(task: &TaskPlan, report: &RuntimePreflightReport) -> String {
+    let reason = report
+        .blocking_reason
+        .as_deref()
+        .unwrap_or("runtime preflight blocked");
+    format!(
+        "runtime preflight blocked for {}; adapter_phase=preflight; task={}; readiness_status={}; blocking_reason={}; remediation=fix the adapter-specific profile labels or benchmark source material before running",
+        report.adapter_id, task.task_id, report.readiness_status, reason
+    )
 }
 
 fn host_task_execution_reason(task: &TaskPlan) -> Option<(&TaskPlan, &'static str)> {
