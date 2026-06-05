@@ -1448,6 +1448,8 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-001"
 file_patterns = [
   "crates/harnesslab-core/src/runtime.rs",
+  "crates/harnesslab-cli/src/runtime_compatibility.rs",
+  "crates/harnesslab-cli/src/runner/cleanup.rs",
   "crates/harnesslab-cli/src/runner/external.rs",
   "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
@@ -1469,10 +1471,12 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-002"
 file_patterns = [
   "crates/harnesslab-core/src/runtime.rs",
+  "crates/harnesslab-cli/src/runtime_compatibility.rs",
+  "crates/harnesslab-cli/src/runner/external.rs",
   "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
 ]
-required_artifacts = []
+required_artifacts = ["events.jsonl"]
 status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"

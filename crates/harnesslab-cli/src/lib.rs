@@ -7,6 +7,7 @@ mod doctor_run_as;
 mod doctor_setup;
 mod output;
 mod runner;
+mod runtime_compatibility;
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};

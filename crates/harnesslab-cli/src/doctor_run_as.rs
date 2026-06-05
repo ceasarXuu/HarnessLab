@@ -1,6 +1,7 @@
 use crate::agent_registry::run_as_requires_sandbox;
 use crate::doctor::check_with_details;
 use crate::output::DoctorCheck;
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use harnesslab_core::AgentProfile;
 
 pub(crate) fn append_run_as_check(profile: &AgentProfile, checks: &mut Vec<DoctorCheck>) {
@@ -38,20 +39,17 @@ pub(crate) fn append_run_as_check(profile: &AgentProfile, checks: &mut Vec<Docto
 }
 
 fn host_agent_paths(profile: &AgentProfile) -> Vec<&'static str> {
+    let compatibility = BenchmarkRuntimeCompatibility::from_profile(profile);
     let mut paths = Vec::new();
-    if profile
-        .labels
-        .contains_key("terminal_bench_agent_import_path")
+    if let Some(reason) =
+        compatibility.host_execution_reason(harnesslab_core::ExternalRunnerKind::TerminalBench)
     {
-        paths.push("terminal-bench import agent host path");
+        paths.push(reason);
     }
-    if profile
-        .labels
-        .get("swe_bench_pro_agent")
-        .map(String::as_str)
-        == Some("gold")
+    if let Some(reason) =
+        compatibility.host_execution_reason(harnesslab_core::ExternalRunnerKind::SweBenchPro)
     {
-        paths.push("swe-bench-pro gold host path");
+        paths.push(reason);
     }
     paths
 }

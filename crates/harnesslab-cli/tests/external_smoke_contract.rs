@@ -380,6 +380,15 @@ fn assert_swe_runtime_artifacts(
     assert!(command.contains("agent_materialized_snapshot=agent-runtime.materialized.json"));
 
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
+    assert!(events.contains("\"event\":\"external_runner_preflight\""));
+    assert!(events.contains("adapter_id=swe-bench-pro-runtime"));
+    assert!(events.contains("runner_kind=SweBenchPro"));
+    assert!(events.contains("agent_bridge_mode=swe-bench-pro-gold"));
+    assert!(events.contains("readiness_status=ready"));
+    assert!(events.contains("host_execution_reason=swe-bench-pro gold host path"));
+    assert!(events.contains("blocking_reason=none"));
+    assert!(events.contains("compatibility_exception=host-agent-run-as-current-only"));
+    assert!(events.contains("compatibility_label_keys=swe_bench_pro_agent"));
     assert!(events.contains("run_finished"));
     assert!(events.contains("exit_code=0"));
     assert!(events.contains("success=1"));

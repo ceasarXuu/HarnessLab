@@ -1,11 +1,15 @@
 use crate::agent_registry::{MaterializedAgentProfile, run_as_requires_sandbox};
-use crate::runner::external::runtime_adapter::{preflight_external_task, runtime_adapter_for};
+use crate::runner::external::runtime_adapter::{
+    RuntimeCleanupContext, cleanup_runtime_target, preflight_external_task, runtime_adapter_for,
+    runtime_cleanup_targets,
+};
 use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentProfile, AttemptProvenance, RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan,
     redact_public_value,
 };
+use harnesslab_infra::{append_event, event};
 use std::fs;
 use std::path::Path;
 
@@ -21,19 +25,81 @@ mod terminal_bench_result;
 mod terminal_bench_runtime;
 mod terminal_bench_timeout;
 
+pub(super) use runtime_adapter::{RuntimeCleanupPhase, RuntimeCleanupReport, RuntimeCleanupTarget};
+
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {
     task.external_runner.is_some()
 }
 
 pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
-    let mut external_reports = Vec::new();
-    for task in tasks {
-        if task.external_runner.is_some() {
-            external_reports.push((task, preflight_external_task(profile, task)?));
-        }
-    }
+    let external_reports = collect_runtime_preflight_reports(profile, tasks)?;
     validate_run_as_for_plan(profile, tasks, &external_reports)?;
     Ok(())
+}
+
+pub(super) fn emit_runtime_preflight_reports(
+    run_dir: &Path,
+    spec: &RunSpec,
+    profile: &AgentProfile,
+    tasks: &[TaskPlan],
+) -> Result<()> {
+    for (task, report) in collect_runtime_preflight_reports(profile, tasks)? {
+        let message = format!(
+            "adapter_id={} runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
+            report.adapter_id,
+            report.runner_kind,
+            report.agent_bridge_mode,
+            report.readiness_status,
+            report.host_execution_reason.as_deref().unwrap_or("none"),
+            report.blocking_reason.as_deref().unwrap_or("none"),
+            report.compatibility_exception.as_deref().unwrap_or("none"),
+            report.compatibility_label_keys.join(",")
+        );
+        append_event(
+            &run_dir.join("events.jsonl"),
+            &event(
+                &spec.run_id,
+                Some(&task.task_id),
+                "external_runner_preflight",
+                &message,
+            ),
+            &[],
+        )?;
+    }
+    Ok(())
+}
+
+pub(super) fn runtime_cleanup_targets_for_phase(
+    run_dir: &Path,
+    spec: &RunSpec,
+    plan: &harnesslab_core::BenchmarkPlan,
+    phase: RuntimeCleanupPhase,
+) -> Vec<RuntimeCleanupTarget> {
+    runtime_cleanup_targets(RuntimeCleanupContext {
+        run_dir,
+        spec,
+        plan,
+        phase,
+    })
+}
+
+pub(super) fn cleanup_runtime_resources(
+    target: &RuntimeCleanupTarget,
+) -> Result<RuntimeCleanupReport, String> {
+    cleanup_runtime_target(target)
+}
+
+fn collect_runtime_preflight_reports<'a>(
+    profile: &AgentProfile,
+    tasks: &'a [TaskPlan],
+) -> Result<Vec<(&'a TaskPlan, RuntimePreflightReport)>> {
+    let mut reports = Vec::new();
+    for task in tasks {
+        if task.external_runner.is_some() {
+            reports.push((task, preflight_external_task(profile, task)?));
+        }
+    }
+    Ok(reports)
 }
 
 fn validate_run_as_for_plan(
@@ -42,7 +108,39 @@ fn validate_run_as_for_plan(
     external_reports: &[(&TaskPlan, RuntimePreflightReport)],
 ) -> Result<()> {
     if !run_as_requires_sandbox(profile.setup.run_as) {
+        if let Some((task, report)) = external_reports
+            .iter()
+            .find(|(_, report)| report.blocking_reason.is_some())
+        {
+            let reason = report
+                .blocking_reason
+                .as_deref()
+                .unwrap_or("runtime preflight blocked");
+            bail!(
+                "runtime preflight blocked for {}; task={}; readiness_status={}; blocking_reason={}",
+                report.adapter_id,
+                task.task_id,
+                report.readiness_status,
+                reason
+            );
+        }
         return Ok(());
+    }
+    if let Some((task, report)) = external_reports
+        .iter()
+        .find(|(_, report)| report.blocking_reason.is_some())
+    {
+        let reason = report
+            .blocking_reason
+            .as_deref()
+            .unwrap_or("runtime preflight blocked");
+        bail!(
+            "runtime preflight blocked for {}; task={}; readiness_status={}; blocking_reason={}",
+            report.adapter_id,
+            task.task_id,
+            report.readiness_status,
+            reason
+        );
     }
     if let Some((task, reason)) = tasks.iter().find_map(host_task_execution_reason) {
         bail!(

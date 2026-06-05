@@ -1,10 +1,12 @@
 use crate::agent_registry::MaterializedAgentProfile;
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use harnesslab_core::{AgentProfile, InputMode};
 
 pub(super) fn terminal_bench_agent_env(
     profile: &AgentProfile,
     materialized: &MaterializedAgentProfile,
     agent_timeout: u64,
+    compatibility: &BenchmarkRuntimeCompatibility,
 ) -> String {
     let input_mode = terminal_bench_input_mode(profile);
     let working_dir = format!("{:?}", profile.working_dir).to_ascii_lowercase();
@@ -39,9 +41,7 @@ pub(super) fn terminal_bench_agent_env(
     .into_iter()
     .map(|(name, value)| format!("export {name}={}", shell_quote(value)))
     .collect::<Vec<_>>();
-    if let Some(path) = profile.labels.get("terminal_bench_agent_pythonpath")
-        && !path.trim().is_empty()
-    {
+    if let Some(path) = &compatibility.terminal_bench_agent_pythonpath {
         exports.push(format!(
             "export PYTHONPATH={}${{PYTHONPATH:+:$PYTHONPATH}}",
             shell_quote(path)

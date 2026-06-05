@@ -1,4 +1,5 @@
 use super::ExternalTaskExecution;
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result, bail};
 use harnesslab_core::{
     EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
@@ -18,6 +19,7 @@ pub(super) fn execute(
     ctx: &ExternalTaskExecution<'_>,
     dataset_path: &Path,
     source_path: Option<&Path>,
+    compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Result<TaskAttemptResult> {
     let source_path = source_path.context("swe-bench-pro external runner missing source_path")?;
     let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
@@ -45,7 +47,7 @@ pub(super) fn execute(
         return setup_failure_result(ctx, &format!("workspace preparation failed: {error}"));
     }
     let agent_task = task_with_real_instruction(ctx.task, &instance);
-    let agent_run = agent::run_agent(ctx, &agent_task, &workspace, &instance)?;
+    let agent_run = agent::run_agent(ctx, &agent_task, &workspace, &instance, compatibility)?;
     let agent = agent_run.process;
     let agent_failure = agent_run
         .sandbox_failure
