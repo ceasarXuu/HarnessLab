@@ -37,7 +37,9 @@ use harnesslab_infra::{
 };
 use mode::ExecutionMode;
 use patch::{capture_patch, patch_failure};
-use replay::{replay_plan_from_source, replay_spec_from_source};
+use replay::{
+    replay_plan_from_source, replay_spec_from_source, validate_replay_task_runtime_snapshots,
+};
 use sandbox::{AgentRunRequest, run_agent};
 use schedule::{AttemptWork, partition_attempts};
 use shell::run_shell;
@@ -186,6 +188,7 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     let report_profile = store::load_report_profile(source)?;
     let plan = replay_plan_from_source(source, &source_spec)?;
     validate_benchmark_plan(&plan)?;
+    validate_replay_task_runtime_snapshots(source, &plan)?;
     profile.validate()?;
     let materialized = materialize_profile(&profile).map_err(materialization_error_to_anyhow)?;
     external::validate_profile_for_plan(&profile, &plan.tasks)?;

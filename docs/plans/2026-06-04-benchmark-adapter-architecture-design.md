@@ -4,13 +4,15 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-05
-- Version: 0.9
+- Version: 0.10
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
   authoritative benchmark snapshots now block replay by default, and new runs
-  now write task runtime snapshots. Drift checks, external runtime snapshot
-  schemas, and legacy degraded replay policy remain open.
+  now write task runtime snapshots. External-task replay now blocks empty,
+  missing, or divergent task runtime snapshot authority. Drift checks,
+  external runtime snapshot schemas, and legacy degraded replay policy remain
+  open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -1023,10 +1025,12 @@ Status as of 2026-06-05:
 - `REPLAY-007` proves the new run path writes both the benchmark-level runtime
   snapshot list and the per-task runtime snapshot artifact, including the
   binding between `task.snapshot.json` and `task_plan_hash`.
-- Phase 2 remains open for drift detection, replay enforcement when
-  `task-runtime.snapshot.json` is missing, `external-runtime.public.json`,
-  `external-runtime.private.json`, explicit legacy degraded replay policy, and
-  `SWEPRO-005`.
+- `REPLAY-008` proves external-task replay blocks before creating a new replay
+  run when task runtime snapshot authority is empty, missing, or divergent.
+- Phase 2 remains open for drift detection, `external-runtime.public.json`,
+  `external-runtime.private.json`, explicit legacy degraded replay policy,
+  `SWEPRO-005`, and the decision whether per-task runtime snapshots should be
+  projected during run setup instead of attempt execution.
 
 #### Deliverables
 
@@ -1040,6 +1044,7 @@ Status as of 2026-06-05:
 | --- | --- | --- |
 | Missing authoritative snapshot blocks replay | Replay readiness test | External benchmark replay blocks before task execution |
 | Task runtime snapshot is persisted | `REPLAY-007` | New runs write matching `BenchmarkPlan.task_runtime_snapshots` and per-task `task-runtime.snapshot.json` |
+| External-task runtime snapshot authority is required | `REPLAY-008` | Replay blocks empty, missing, or divergent task runtime authority before creating a replay run |
 | Mutable data drift is detected | Replay drift fixture | Dataset/evaluator/source mismatch warns or blocks by adapter policy |
 | Legacy degraded replay is explicit if retained | CLI/replay test | Degraded mode emits warning and cannot run silently |
 | SWE replay avoids live replanning | `SWEPRO-005` | Stored runtime materials are used as authority |
@@ -1877,6 +1882,7 @@ This architecture track is complete when:
 | 0.7 | 2026-06-05 | Closed Phase 1 with passing Round 7 adversarial review and Round 8 delta review. |
 | 0.8 | 2026-06-05 | Started Phase 2 snapshot authority by removing silent replay live replanning when `benchmark.snapshot.json` is missing and updating `INT-013` to the fail-closed contract. |
 | 0.9 | 2026-06-05 | Added `task-runtime.snapshot.json` persistence and `REPLAY-007` proof while keeping Phase 2 open for drift checks, external runtime snapshots, legacy replay policy, and `SWEPRO-005`. |
+| 0.10 | 2026-06-05 | Added `REPLAY-008` fail-closed external-task replay checks for empty, missing, and divergent task runtime snapshot authority. |
 
 ## 25. Plan Quality Checklist
 
