@@ -161,7 +161,7 @@ HARNESSLAB_BENCHMARKS_DIR=.benchmarks/_terminal-bench-subset-20260601T031542 \
 scripts/test-after-change.sh --select AGT-REG-005
 ```
 
-该脚本会执行 `harnesslab init`、写入临时注册 profile、运行 `doctor --json`，再通过 `harnesslab run --agent registered-setup --benchmark terminal-bench --split smoke --json` 启动真实 Terminal-Bench import-agent 流程。验收证据必须包括 run 根目录的 `agent-runtime.materialized.json`、`command.txt`，以及官方 task log 目录里的 `agent_setup_command.sha256`、`agent_setup_stdout.log` 和 `agent_setup_stderr.log`；其中 `agent_setup_command.sha256` 要与 `agent-runtime.materialized.json.setup_script` 的 sha256 一致，`agent_setup_stdout.log` 要能证明 setup 在 registered agent 命令前运行。
+该脚本会执行 `harnesslab init`、写入临时注册 profile、运行 `doctor --json`，再通过 `harnesslab run --agent registered-setup --benchmark terminal-bench --split smoke --json` 启动真实 Terminal-Bench import-agent 流程。验收证据必须包括 run 根目录的 `agent-runtime.materialized.json`、`command.txt`，以及官方 task log 目录里的 `agent_setup_command.sha256`、`agent_setup_stdout.log` 和 `agent_setup_stderr.log`；其中 `agent_setup_command.sha256` 要与 `agent-runtime.materialized.json.setup_script` 的 sha256 一致，`agent_setup_stdout.log` 要能证明 setup 在 registered agent 命令前运行。Terminal-Bench attempt 内的 raw `tasks/**/agent/command.txt` 和 runner stdout/stderr 属于 private/replay 材料，不能当作公开 report 链接或可分享 artifact。
 
 Agent 注册相关变更的运维检查要同时覆盖这些 artifacts：
 
@@ -170,7 +170,11 @@ Agent 注册相关变更的运维检查要同时覆盖这些 artifacts：
 - `agent-runtime.materialized.json`：公开 materialized runtime snapshot；必须包含结构化 `capabilities.*`，报告中的 effective capability 摘要应来自这里。
 - `agent-version.snapshot.json`：存在 `version_command` 时生成；doctor/run/replay 都必须使用 bounded probe，stdout/stderr 只保留 redacted tail。
 - `report.html`：必须链接 profile/runtime/version snapshots，并展示 effective capability sets 和 version probe status。
-- `tasks/**/agent/command.txt`：公开 command snapshot；host、Docker、Terminal-Bench、SWE-bench Pro 路径都必须使用同一 public redaction 语义。
+- `tasks/**/external-runtime.private.json`：private runtime snapshot，保存 raw command、runner log material、cleanup token/project 细节和 replay material，不作为可分享 artifact。
+- `tasks/**/external-runtime.public.json`：公开 redacted runtime snapshot；不得包含真实 run id、import path、host path、raw command/log artifact path 或 secret。Terminal-Bench public command 中 `--run-id` 和 `--agent-import-path` 只能显示占位符。
+- `tasks/**/cleanup-report.json`：Terminal-Bench 公开 cleanup 证据，只能包含 phase、required、success、counts、`has_error` 和 `final_verdict_effect`，不能包含 Docker project/resource id 或 stderr。
+
+`doctor --json` 覆盖全局配置、Docker、benchmark 数据、agent profile、能力策略和 setup/版本探测。具体 runtime adapter readiness 会在 run preflight 中暴露：`events.jsonl` 的 `external_runner_preflight` 必须包含 `adapter_id`、`adapter_phase=preflight`、`runner_kind`、`agent_bridge_mode`、`readiness_status`、`blocking_reason`、`host_execution_reason` 和 `compatibility_exception`。如果 run 在 preflight 阶段阻断，CLI 错误必须同时包含 adapter、task、`adapter_phase=preflight`、`readiness_status`、`blocking_reason` 和 remediation。
 
 Replay 排查时不要只看当前 shell 环境。Replay 会从 source run 的 runtime profile 与 redacted report profile 差异中恢复 source-known redaction basis，用于继续 redact version probe、materialized setup、events 和 report。如果 replay 在当前环境变量缺失时泄漏 source run 已知 secret，优先检查 `runner/redaction.rs` 的 substring recovery 和 `runner/version.rs` 的 replay warning redaction。
 

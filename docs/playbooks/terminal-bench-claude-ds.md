@@ -314,8 +314,9 @@ HTML 报告包含：
 - agent 配置摘要。
 - run health 状态。
 - 每个 task 的 state、outcome、failure class/code、score、duration 和 warnings。
-- agent stdout/stderr、verifier stdout/stderr 链接。
-- `command.txt`、`agent-profile.snapshot.json`、`benchmark.snapshot.json` 等复现材料。
+- `agent-profile.snapshot.json`、`agent-runtime.materialized.json`、`agent-version.snapshot.json`、`benchmark.snapshot.json` 等公开 redacted 复现材料。
+
+HTML 报告不会链接 Terminal-Bench attempt 的 raw `agent/command.txt`、runner stdout/stderr 或 verifier stdout/stderr。需要排查 runtime 细节时，查看对应 attempt 下的 `external-runtime.public.json`、`cleanup-report.json` 和 private/replay-only `external-runtime.private.json`；不要把 private snapshot 或 raw logs 当作可分享 artifact。
 
 ## 7. 查看结构化结果
 
@@ -385,8 +386,10 @@ Replay 会读取：
 - `agent-profile.runtime.json`
 - `benchmark.snapshot.json`
 - `command.txt`
+- external benchmark task 的 `task-runtime.snapshot.json`
+- external benchmark attempt 的 `external-runtime.private.json` 和 `external-runtime.public.json`
 
-如果缺少 runtime profile snapshot，HarnessLab 会拒绝 replay，避免用已经被脱敏的 public snapshot 假装复现。
+如果缺少 runtime profile snapshot、task runtime authority 或 attempt-level external runtime snapshot，HarnessLab 会拒绝 replay，避免用已经被脱敏的 public snapshot 或当前本地数据假装复现。
 
 ## 9. 示例真实结果
 
