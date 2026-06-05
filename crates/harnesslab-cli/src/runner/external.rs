@@ -1,14 +1,16 @@
 use crate::agent_registry::{MaterializedAgentProfile, run_as_requires_sandbox};
+use crate::runner::external::runtime_adapter::{preflight_external_task, runtime_adapter_for};
 use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentProfile, AttemptProvenance, ExternalRunnerKind, RunSpec, TaskAttemptResult, TaskPlan,
+    AgentProfile, AttemptProvenance, RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan,
     redact_public_value,
 };
 use std::fs;
 use std::path::Path;
 
 mod log_scan;
+mod runtime_adapter;
 mod runtime_anchor;
 mod runtime_snapshot;
 mod swe_bench_pro;
@@ -24,29 +26,40 @@ pub(super) fn is_external_task(task: &TaskPlan) -> bool {
 }
 
 pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
-    validate_run_as_for_plan(profile, tasks)?;
+    let mut external_reports = Vec::new();
     for task in tasks {
-        let Some(runner) = &task.external_runner else {
-            continue;
-        };
-        match runner.kind {
-            ExternalRunnerKind::TerminalBench => {
-                terminal_bench::validate_profile(profile)?;
-            }
-            ExternalRunnerKind::SweBenchPro => {}
+        if task.external_runner.is_some() {
+            external_reports.push((task, preflight_external_task(profile, task)?));
         }
     }
+    validate_run_as_for_plan(profile, tasks, &external_reports)?;
     Ok(())
 }
 
-fn validate_run_as_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
+fn validate_run_as_for_plan(
+    profile: &AgentProfile,
+    tasks: &[TaskPlan],
+    external_reports: &[(&TaskPlan, RuntimePreflightReport)],
+) -> Result<()> {
     if !run_as_requires_sandbox(profile.setup.run_as) {
         return Ok(());
     }
-    if let Some((task, reason)) = tasks
+    if let Some((task, reason)) = tasks.iter().find_map(host_task_execution_reason) {
+        bail!(
+            "setup.run_as={:?} is not enforceable for {}; task={}; host execution only supports setup.run_as=\"current\"; use a sandboxed agent path or set setup.run_as=\"current\"",
+            profile.setup.run_as,
+            reason,
+            task.task_id
+        );
+    }
+    if let Some((task, report)) = external_reports
         .iter()
-        .find_map(|task| host_agent_execution_reason(profile, task).map(|reason| (task, reason)))
+        .find(|(_, report)| report.host_execution_reason.is_some())
     {
+        let reason = report
+            .host_execution_reason
+            .as_deref()
+            .unwrap_or("external host path");
         bail!(
             "setup.run_as={:?} is not enforceable for {}; task={}; host execution only supports setup.run_as=\"current\"; use a sandboxed agent path or set setup.run_as=\"current\"",
             profile.setup.run_as,
@@ -57,22 +70,9 @@ fn validate_run_as_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Resul
     Ok(())
 }
 
-fn host_agent_execution_reason(profile: &AgentProfile, task: &TaskPlan) -> Option<&'static str> {
-    let Some(runner) = &task.external_runner else {
-        return (!super::sandbox::task_requires_docker(task)).then_some("host task");
-    };
-    match runner.kind {
-        ExternalRunnerKind::TerminalBench => profile
-            .labels
-            .contains_key("terminal_bench_agent_import_path")
-            .then_some("terminal-bench import agent host path"),
-        ExternalRunnerKind::SweBenchPro => (profile
-            .labels
-            .get("swe_bench_pro_agent")
-            .map(String::as_str)
-            == Some("gold"))
-        .then_some("swe-bench-pro gold host path"),
-    }
+fn host_task_execution_reason(task: &TaskPlan) -> Option<(&TaskPlan, &'static str)> {
+    (task.external_runner.is_none() && !super::sandbox::task_requires_docker(task))
+        .then_some((task, "host task"))
 }
 
 pub(super) struct ExternalTaskExecution<'a> {
@@ -93,16 +93,7 @@ pub(super) fn execute_external_task(ctx: ExternalTaskExecution<'_>) -> Result<Ta
     let Some(runner) = &ctx.task.external_runner else {
         bail!("external task missing runner spec");
     };
-    match runner.kind {
-        ExternalRunnerKind::TerminalBench => {
-            terminal_bench::execute(&ctx, Path::new(&runner.dataset_path))
-        }
-        ExternalRunnerKind::SweBenchPro => swe_bench_pro::execute(
-            &ctx,
-            Path::new(&runner.dataset_path),
-            runner.source_path.as_deref().map(Path::new),
-        ),
-    }
+    runtime_adapter_for(runner.kind).execute(ctx)
 }
 
 pub(super) fn write_external_command_snapshot(

@@ -4,7 +4,7 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-05
-- Version: 0.14
+- Version: 0.17
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
@@ -15,6 +15,11 @@
   checksums mirrored into task-runtime snapshots, fingerprint-backed replay
   validation, run-scoped serialized anchor projection, and replay-time live
   material drift blockers for parquet, evaluator, and run-script inputs.
+  Phase 3 runtime registry has started with a CLI-local
+  `BenchmarkRuntimeAdapter` trait, registry-dispatched preflight/execute entry
+  points, active `ADAPT-RUNTIME-001/002` exact-route proofs, and meta-gated
+  active selector specs. Cleanup/replay compatibility ownership, typed
+  materialized-runtime compatibility, persisted preflight diagnostics,
   Terminal-Bench runtime snapshots, official runner identity drift, security
   scans, and legacy degraded replay policy remain open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
@@ -657,8 +662,8 @@ Concrete initial IDs:
 - `ADAPT-DATA-003`: list_tasks returns stable task ids and source refs.
 - `ADAPT-DATA-004`: snapshot_task captures replay-sufficient task identity.
 - `ADAPT-DATA-005`: create_task_plan returns stable executable task plans from prepared data and task descriptors.
-- `ADAPT-RUNTIME-001`: runtime registry dispatches preflight and execute without direct benchmark-specific CLI branches outside the registry boundary.
-- `ADAPT-RUNTIME-002`: runtime preflight owns host/sandbox support checks and benchmark-facing agent bridge compatibility.
+- `ADAPT-RUNTIME-001`: external runtime execute entrypoint delegates through the runtime registry without direct benchmark-specific execute branches in the external runner entrypoint.
+- `ADAPT-RUNTIME-002`: runtime preflight reports and enforces current benchmark compatibility checks, including host-execution reasons and Terminal-Bench profile validation.
 - `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
 - `ADAPT-RUNTIME-004`: cleanup report is structured and can override official benchmark verdict with audit evidence.
 - `ADAPT-RUNTIME-005`: runtime event taxonomy preserves operator-critical Terminal-Bench events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, and stable SWE-bench Pro phase events.
@@ -1175,6 +1180,39 @@ inside adapter implementations.
 - Replace raw-profile adapter access with `BenchmarkAgentRuntimeConfig`, or
   mark a temporary compatibility exception with tests.
 
+#### Implementation Evidence
+
+Status as of 2026-06-05:
+
+- `crates/harnesslab-cli/src/runner/external/runtime_adapter.rs` now owns the
+  CLI-local `BenchmarkRuntimeAdapter` trait and runtime registry keyed by
+  `ExternalRunnerKind`.
+- `execute_external_task` now dispatches through `runtime_adapter_for(kind)`
+  instead of matching benchmark kinds in the external runner entrypoint.
+- `validate_profile_for_plan` now gathers runtime adapter preflight reports and
+  uses those reports for benchmark-specific host-execution compatibility.
+- `harnesslab-core` now owns serializable `RuntimePreflightReport`, including
+  `task_id`, `runner_kind`, and `host_execution_reason`.
+- `ADAPT-RUNTIME-001` is active and proves the external execution entrypoint
+  delegates to the runtime registry without direct Terminal-Bench or
+  SWE-bench Pro execute calls in `external.rs`.
+- `ADAPT-RUNTIME-002` is active and proves current preflight compatibility
+  behavior: Terminal-Bench invalid profiles fail in adapter preflight,
+  Terminal-Bench import-agent and SWE-bench Pro gold-agent host execution
+  reasons are reported, non-host profiles report no host reason, and
+  `validate_profile_for_plan` consumes adapter preflight reports for `run_as`
+  blocking.
+- Test-engineering metadata now treats `ADAPT-RUNTIME-001` as a contract proof
+  rather than a runtime-artifact proof. `ADAPT-RUNTIME-003` remains the planned
+  runtime artifact proof for public/private snapshot persistence.
+- `xtask` adapter-claim validation uses exact selector routes for active
+  adapter proofs, so `ADAPT-RUNTIME-001/002` cannot be replaced by weaker
+  same-prefix tests without failing `META-002`.
+- Phase 3 remains open for cleanup ownership, replay compatibility checks,
+  structured preflight event/report persistence, typed materialized-runtime
+  compatibility, and replacing or explicitly allowlisting raw-profile
+  compatibility fields.
+
 #### Deliverables
 
 - Runtime adapter trait and registry.
@@ -1186,9 +1224,27 @@ inside adapter implementations.
 
 | Validation Item | Method | Passing Standard |
 | --- | --- | --- |
-| Runtime dispatch is generic | `ADAPT-RUNTIME-001` | Preflight and execute route through registry without direct benchmark runtime branches |
-| Preflight owns compatibility | `ADAPT-RUNTIME-002` | Host/sandbox and bridge checks are adapter preflight outputs |
+| Execute entrypoint dispatch is registry-owned | `ADAPT-RUNTIME-001` | The external execution entrypoint delegates through the runtime registry and does not directly call benchmark execute functions |
+| Preflight owns current compatibility checks | `ADAPT-RUNTIME-002` | Current Terminal-Bench/SWE host checks and Terminal-Bench profile validation are adapter preflight outputs |
 | Raw profile is not reinterpreted | Compatibility test if exception exists | Raw `skills/tools/hooks`, auth inheritance, and setup policy are not consumed by adapters |
+
+Current validation evidence:
+
+- `scripts/test-after-change.sh --select ADAPT-RUNTIME-001`: 1 passed.
+- `scripts/test-after-change.sh --select ADAPT-RUNTIME-002`: 1 passed.
+- `scripts/test-after-change.sh --select META-002`: registry and traceability
+  passed with 43 requirements, 171 tests, and 16 adapter claims.
+- `scripts/test-after-change.sh --select META-008`: adapter proof selectors
+  passed with active=8 and planned=8.
+- `cargo test -p xtask --all-features adapter_claims`: 15 passed.
+- `cargo test -p harnesslab-cli --all-features --lib`: 123 passed.
+- `cargo test -p harnesslab-core --all-features`: 50 passed plus doctests.
+- `scripts/test-after-change.sh --select INT-011`: 10 passed.
+- `cargo check -p harnesslab-cli --tests`: passed.
+- `cargo check -p harnesslab-core --tests`: passed.
+- `cargo check --all-targets`: passed.
+- `cargo fmt --check`: passed.
+- `git diff --check`: passed.
 
 #### Exit Criteria
 
@@ -1950,6 +2006,9 @@ This architecture track is complete when:
 | 0.12 | 2026-06-05 | Added SWE-bench Pro replay-time live material drift blockers for external parquet, evaluator, and run-script inputs. |
 | 0.13 | 2026-06-05 | Anchored SWE-bench Pro attempt runtime snapshots from `benchmark.snapshot.json` and `task-runtime.snapshot.json`, added explicit live/archived material scopes, and expanded `SWEPRO-005` for parquet drift, child-plus-task rewrite, and scope fail-closed blockers. |
 | 0.14 | 2026-06-05 | Added run-scoped serialized external runtime anchor projection, projection event evidence, and active `REPLAY-009` coverage for concurrent same-task and multi-task authority updates. |
+| 0.15 | 2026-06-05 | Started Phase 3 runtime registry with CLI-local `BenchmarkRuntimeAdapter`, registry-dispatched preflight/execute entrypoints, serializable `RuntimePreflightReport`, and active `ADAPT-RUNTIME-001/002` coverage. |
+| 0.16 | 2026-06-05 | Closed Phase 3 proof-registration gaps by correcting `ADAPT-RUNTIME-001` artifact semantics, tightening adapter-claim meta validation for active selectors, and recording `META-002/META-008` evidence. |
+| 0.17 | 2026-06-05 | Responded to Phase 3 adversarial review by narrowing `ADAPT-RUNTIME-001/002` proof wording, replacing counted grouped selector proof with exact active routes, and strengthening preflight compatibility tests. |
 
 ## 25. Plan Quality Checklist
 

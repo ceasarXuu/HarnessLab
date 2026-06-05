@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 const ACTIVE_DATA_ID: &str = "ADAPT-DATA-001";
 const ACTIVE_DATA_TEST: &str =
     "data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache";
+const ACTIVE_RUNTIME_ID: &str = "ADAPT-RUNTIME-001";
 
 #[test]
 fn registry_001_claim_parser_expands_ranges_across_sources() {
@@ -139,6 +140,40 @@ fn registry_008_claimed_active_id_accepts_exact_route_spec() {
 
     ensure_claimed_adapter_ids_are_registered(&claimed, &requirements, &tests, &registry, script)
         .unwrap();
+}
+
+#[test]
+fn registry_014_claimed_runtime_id_accepts_exact_route_spec() {
+    let claimed = BTreeSet::from([ACTIVE_RUNTIME_ID.to_string()]);
+    let requirements = claimed.clone();
+    let tests = claimed.clone();
+    let registry = registry_doc(ACTIVE_RUNTIME_ID, "active");
+    let script = "ADAPT-RUNTIME-001) package=\"harnesslab-cli\"; test_name=\"runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry\"; test_target=\"lib\" ;;";
+
+    ensure_claimed_adapter_ids_are_registered(&claimed, &requirements, &tests, &registry, script)
+        .unwrap();
+}
+
+#[test]
+fn registry_015_claimed_runtime_id_rejects_wrong_test_name() {
+    let claimed = BTreeSet::from([ACTIVE_RUNTIME_ID.to_string()]);
+    let requirements = claimed.clone();
+    let tests = claimed.clone();
+    let registry = registry_doc(ACTIVE_RUNTIME_ID, "active");
+    let script = "ADAPT-RUNTIME-001) package=\"harnesslab-cli\"; test_name=\"runner::external::runtime_adapter::tests::adapt_runtime_001_weaker_replacement\"; test_target=\"lib\" ;;";
+
+    let error = ensure_claimed_adapter_ids_are_registered(
+        &claimed,
+        &requirements,
+        &tests,
+        &registry,
+        script,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("adapt_runtime_001_weaker_replacement"));
+    assert!(error.contains("adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry"));
 }
 
 #[test]
@@ -285,6 +320,9 @@ fn registry_doc(id: &str, status: &str) -> RegistryDoc {
 fn file_patterns_for(id: &str) -> Vec<String> {
     match id {
         ACTIVE_DATA_ID => vec!["crates/harnesslab-adapters/src/data_contract_tests.rs".to_string()],
+        ACTIVE_RUNTIME_ID | "ADAPT-RUNTIME-002" => {
+            vec!["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs".to_string()]
+        }
         "SWEPRO-005" => {
             vec!["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs".to_string()]
         }
