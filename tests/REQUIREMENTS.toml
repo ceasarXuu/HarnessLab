@@ -123,7 +123,7 @@ section = "16"
 
 [[requirements]]
 id = "replay_runtime"
-title = "Replay creates a new run from stored snapshots"
+title = "Replay uses stored authoritative snapshots and fails closed when they are missing"
 area = "replay"
 risk = "critical"
 expected_layers = ["integration"]

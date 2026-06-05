@@ -143,7 +143,7 @@ if [[ "${1:-}" == "--select" ]]; then
     INT-009) package="harnesslab-cli"; test_name="int_009_replay_success_creates_new_run" ;;
     INT-011) run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "int_011_swe_bench_pro" 10; exit 0 ;;
     INT-012) package="harnesslab-cli"; test_name="int_012_replay_text_output_succeeds" ;;
-    INT-013) package="harnesslab-cli"; test_name="int_013_replay_falls_back_when_benchmark_snapshot_is_missing" ;;
+    INT-013) package="harnesslab-cli"; test_name="int_013_replay_blocks_when_benchmark_snapshot_is_missing" ;;
     INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;
     INT-015) package="harnesslab-cli"; test_name="int_008_resume_failed_run_recovers_once_and_reports_latest_attempt" ;;
     INT-016) package="harnesslab-cli"; test_name="int_016_resume_interrupted_attempt_schedules_recovery_attempt" ;;

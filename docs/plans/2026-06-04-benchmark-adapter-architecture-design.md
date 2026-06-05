@@ -4,10 +4,12 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-05
-- Version: 0.7
+- Version: 0.8
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
-  remaining blockers.
+  remaining blockers. Phase 2 snapshot authority has started; missing
+  authoritative benchmark snapshots now block replay by default, while drift
+  checks and runtime snapshot schemas remain open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -60,6 +62,8 @@ Findings from the plan review:
   review after the Round 6 fixes for module path attributes,
   multiline/aliased runtime paths, `std::fs` read allowlisting, and
   `ADAPT-DATA-004` coverage wording.
+- Phase 2 now has a live inventory artifact:
+  `docs/plans/2026-06-05-benchmark-adapter-phase-2-inventory.md`.
 
 ## Plan Classification And Risk Assessment
 
@@ -997,6 +1001,20 @@ mode selected by the user.
   identity.
 - Update `INT-013` to reflect the new replay authority.
 
+#### Implementation Evidence
+
+Status as of 2026-06-05:
+
+- `runner::replay_plan_from_source` no longer falls back to live adapter
+  planning when `benchmark.snapshot.json` is missing.
+- Missing `benchmark.snapshot.json` now returns a replay blocker before a new
+  replay run is created or any task can execute.
+- `INT-013` has been updated from fallback success to missing authoritative
+  snapshot blocking.
+- Phase 2 remains open for drift detection, `task-runtime.snapshot.json`,
+  `external-runtime.public.json`, `external-runtime.private.json`, explicit
+  legacy degraded replay policy, and `SWEPRO-005`.
+
 #### Deliverables
 
 - Snapshot schema definitions and artifact paths.
@@ -1841,6 +1859,7 @@ This architecture track is complete when:
 | 0.5 | 2026-06-05 | Hardened Phase 1 boundary proof around module graph discovery, dependency purity, runtime imports, and filesystem ownership. |
 | 0.6 | 2026-06-05 | Recorded Round 6 accepted blocker fixes for module path attributes, multiline/aliased runtime paths, filesystem allowlisting, and `ADAPT-DATA-004` wording. |
 | 0.7 | 2026-06-05 | Closed Phase 1 with passing Round 7 adversarial review and Round 8 delta review. |
+| 0.8 | 2026-06-05 | Started Phase 2 snapshot authority by removing silent replay live replanning when `benchmark.snapshot.json` is missing and updating `INT-013` to the fail-closed contract. |
 
 ## 25. Plan Quality Checklist
 

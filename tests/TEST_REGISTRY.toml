@@ -1664,19 +1664,22 @@ contracts = ["Resume", "Report"]
 
 [[tests]]
 id = "INT-013"
-title = "Replay falls back when benchmark snapshot is missing"
+title = "Replay blocks when benchmark snapshot is missing"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select INT-013"
-file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
-required_artifacts = ["report.html", "results.json"]
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/replay.rs",
+  "crates/harnesslab-cli/tests/replay_contract.rs",
+]
+required_artifacts = ["stderr", "runs-dir-count"]
 status = "active"
 [tests.source]
 doc = "docs/mvp-development-spec.md"
 section = "10.2"
 [tests.verifies]
 requirements = ["replay_runtime"]
-contracts = ["Replay", "BenchmarkAdapter"]
+contracts = ["Replay", "SnapshotAuthority"]
 
 [[tests]]
 id = "REPLAY-002"

@@ -1,5 +1,4 @@
-use anyhow::{Context, Result};
-use harnesslab_adapters::adapter_for;
+use anyhow::{Result, bail};
 use harnesslab_core::RunSpec;
 use harnesslab_infra::read_json;
 use std::path::Path;
@@ -26,9 +25,9 @@ pub(super) fn replay_plan_from_source(
     if snapshot.exists() {
         return read_json(&snapshot);
     }
-    let adapter = adapter_for(&spec.benchmark.name)
-        .with_context(|| format!("unknown benchmark {}", spec.benchmark.name))?;
-    adapter
-        .plan(&spec.benchmark.split)
-        .map_err(anyhow::Error::msg)
+    bail!(
+        "replay blocker: benchmark.snapshot.json missing for {}/{}; cannot safely replay without authoritative benchmark snapshot",
+        spec.benchmark.name,
+        spec.benchmark.split
+    )
 }

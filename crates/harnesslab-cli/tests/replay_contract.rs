@@ -188,7 +188,7 @@ fn int_019_resume_report_marks_missing_original_command() {
 }
 
 #[test]
-fn int_013_replay_falls_back_when_benchmark_snapshot_is_missing() {
+fn int_013_replay_blocks_when_benchmark_snapshot_is_missing() {
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
     write_agent(home.path(), "printf ok > result.txt");
@@ -207,8 +207,9 @@ fn int_013_replay_falls_back_when_benchmark_snapshot_is_missing() {
             "--json",
         ])
         .assert()
-        .success()
-        .stdout(predicate::str::contains("\"replay_source_run_id\""));
+        .failure()
+        .stderr(predicate::str::contains("benchmark.snapshot.json missing"));
+    assert_eq!(fs::read_dir(home.path().join("runs")).unwrap().count(), 1);
 }
 
 #[test]
