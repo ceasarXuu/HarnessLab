@@ -3,7 +3,7 @@
 This playbook records the steps used to reserve the public
 `@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names.
 It also records the additional brand-name reservations `harnessrig` and
-`harnessyard`.
+`harnessyard`, plus the later `ornnlab` reservation.
 
 ## Goal And Current Outcome
 
@@ -17,9 +17,9 @@ Current outcome:
 - npm package name achieved: scoped fallback `@ceasarxuu/harnesslab`
 - CLI command name achieved after install: `harnesslab`
 - npm package name not achieved: unscoped `harnesslab`
-- additional package names achieved: `harnessrig`, `harnessyard`
+- additional package names achieved: `harnessrig`, `harnessyard`, `ornnlab`
 - additional CLI command names achieved after install: `harnessrig`,
-  `harnessyard`
+  `harnessyard`, `ornnlab`
 
 The reservation package is intentionally small. It publishes package metadata,
 the license, README, and a command shim that reports the current distribution
@@ -34,6 +34,9 @@ when installed from the scoped package.
 reservation packages at version `0.1.0`. Each package owns its same-named CLI
 command and points users back to the HarnessLab repository while the native CLI
 distribution strategy is prepared.
+
+`ornnlab` was later published with the same reservation-package pattern at
+version `0.1.0`, owning the `ornnlab` command.
 
 ## Preflight
 
@@ -165,18 +168,20 @@ credential material in repository artifacts.
 
 ## Additional Brand Reservations
 
-On 2026-06-03, the following unscoped npm reservation packages were published:
+The following unscoped npm reservation packages were published:
 
 | Package | Version | CLI command | Registry status |
 |---|---:|---|---|
 | `harnessrig` | `0.1.0` | `harnessrig` | `200` |
 | `harnessyard` | `0.1.0` | `harnessyard` | `200` |
+| `ornnlab` | `0.1.0` | `ornnlab` | `200` |
 
-Preflight exact-name checks returned `404` for both names before publishing:
+Preflight exact-name checks returned `404` for each name before publishing:
 
 ```bash
 npm view harnessrig name version bin --json
 npm view harnessyard name version bin --json
+npm view ornnlab name version bin --json
 ```
 
 Each reservation package should stay small:
@@ -194,14 +199,18 @@ path:
 ```bash
 npm view harnessrig name version bin --json
 npm view harnessyard name version bin --json
+npm view ornnlab name version bin --json
 curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnessrig
 curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnessyard
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/ornnlab
 tmpdir=$(mktemp -d)
 cd "$tmpdir"
 npx --yes harnessrig --version
 npx --yes harnessrig --help
 npx --yes harnessyard --version
 npx --yes harnessyard --help
+npx --yes ornnlab --version
+npx --yes ornnlab --help
 ```
 
 Observed publish behavior:
@@ -214,6 +223,10 @@ Observed publish behavior:
   `npm view` briefly returned `404` immediately after publish while clean `npx`
   could already execute the command. Waiting a few seconds and rerunning
   `npm view` plus registry HTTP checks confirmed `harnessyard` was live.
+- `ornnlab` publish required a fresh `npm login --auth-type=web` because the
+  local npm session and ignored token were not authorized. After login, the
+  write-action web auth flow published `ornnlab@0.1.0`; `npm view`, registry
+  HTTP `200`, and clean `npx ornnlab` confirmed the reservation.
 - Treat `npm publish` success, clean `npx`, and registry metadata as separate
   signals. Do not assume any one signal alone proves the final package state.
 
