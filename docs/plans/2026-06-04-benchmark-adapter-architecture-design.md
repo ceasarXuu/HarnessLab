@@ -4,12 +4,13 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-05
-- Version: 0.8
+- Version: 0.9
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
-  authoritative benchmark snapshots now block replay by default, while drift
-  checks and runtime snapshot schemas remain open.
+  authoritative benchmark snapshots now block replay by default, and new runs
+  now write task runtime snapshots. Drift checks, external runtime snapshot
+  schemas, and legacy degraded replay policy remain open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -996,6 +997,8 @@ mode selected by the user.
 - Define what moves to `task-runtime.snapshot.json`.
 - Define what moves to `external-runtime.private.json` and
   `external-runtime.public.json`.
+- Persist task runtime snapshots from the adapter data lifecycle into
+  `benchmark.snapshot.json` and per-task artifacts.
 - Retire silent replay live replanning for external benchmarks.
 - Add replay drift checks for dataset, evaluator, source, and official runner
   identity.
@@ -1011,9 +1014,19 @@ Status as of 2026-06-05:
   replay run is created or any task can execute.
 - `INT-013` has been updated from fallback success to missing authoritative
   snapshot blocking.
-- Phase 2 remains open for drift detection, `task-runtime.snapshot.json`,
-  `external-runtime.public.json`, `external-runtime.private.json`, explicit
-  legacy degraded replay policy, and `SWEPRO-005`.
+- `BenchmarkPlan.task_runtime_snapshots` now stores adapter-generated
+  `RuntimeTaskSnapshot` entries for new runs, and each task directory writes a
+  matching `task-runtime.snapshot.json` beside `task.snapshot.json`.
+- Model validation now rejects non-empty runtime snapshot lists that are
+  missing task ids, duplicate task ids, or bound to a different benchmark/split,
+  while preserving old snapshot compatibility when the field is absent.
+- `REPLAY-007` proves the new run path writes both the benchmark-level runtime
+  snapshot list and the per-task runtime snapshot artifact, including the
+  binding between `task.snapshot.json` and `task_plan_hash`.
+- Phase 2 remains open for drift detection, replay enforcement when
+  `task-runtime.snapshot.json` is missing, `external-runtime.public.json`,
+  `external-runtime.private.json`, explicit legacy degraded replay policy, and
+  `SWEPRO-005`.
 
 #### Deliverables
 
@@ -1026,6 +1039,7 @@ Status as of 2026-06-05:
 | Validation Item | Method | Passing Standard |
 | --- | --- | --- |
 | Missing authoritative snapshot blocks replay | Replay readiness test | External benchmark replay blocks before task execution |
+| Task runtime snapshot is persisted | `REPLAY-007` | New runs write matching `BenchmarkPlan.task_runtime_snapshots` and per-task `task-runtime.snapshot.json` |
 | Mutable data drift is detected | Replay drift fixture | Dataset/evaluator/source mismatch warns or blocks by adapter policy |
 | Legacy degraded replay is explicit if retained | CLI/replay test | Degraded mode emits warning and cannot run silently |
 | SWE replay avoids live replanning | `SWEPRO-005` | Stored runtime materials are used as authority |
@@ -1035,6 +1049,8 @@ Status as of 2026-06-05:
 - Replay no longer silently binds external benchmark attempts to live mutable
   data.
 - `INT-013` asserts the new authority chain.
+- New runs persist task runtime snapshots at the benchmark and task artifact
+  levels.
 - Missing evaluator/source materials produce precise readiness blockers.
 
 #### Review Plan
@@ -1743,7 +1759,7 @@ still apply.
 | Data / Artifact | Change | Idempotency / Retry | Validation | Rollback / Compensation |
 | --- | --- | --- | --- | --- |
 | `benchmark.snapshot.json` | Adds selected benchmark, split, task ids, data snapshot id, warnings, and source refs | Safe to rewrite for a run before attempts start | Replay readiness tests and drift checks | Preserve old run artifacts; legacy degraded replay only by explicit selection |
-| `task-runtime.snapshot.json` | Adds immutable task identity and runtime task metadata | Safe to regenerate only from prepared immutable data before attempt execution | `ADAPT-DATA-004` and replay tests | Block replay when missing unless legacy degraded mode is selected |
+| `task-runtime.snapshot.json` | Adds immutable task identity, source refs, upstream metadata hash, instruction hash, task plan hash, and external runner binding | Safe to regenerate only from prepared immutable data before attempt execution | `ADAPT-DATA-004`, `REPLAY-007`, and future drift replay tests | Block replay when missing unless legacy degraded mode is selected |
 | `external-runtime.private.json` | Stores private runtime command and env policy | Written once per attempt; retry writes must replace atomically | `ADAPT-RUNTIME-003` private field assertions | Delete/regenerate attempt artifacts before rerun |
 | `external-runtime.public.json` | Stores redacted runtime summary and provenance | Written once per attempt; retry writes must replace atomically | `SEC-*` fake secret scans and public field assertions | Block report publication if scan fails |
 
@@ -1860,6 +1876,7 @@ This architecture track is complete when:
 | 0.6 | 2026-06-05 | Recorded Round 6 accepted blocker fixes for module path attributes, multiline/aliased runtime paths, filesystem allowlisting, and `ADAPT-DATA-004` wording. |
 | 0.7 | 2026-06-05 | Closed Phase 1 with passing Round 7 adversarial review and Round 8 delta review. |
 | 0.8 | 2026-06-05 | Started Phase 2 snapshot authority by removing silent replay live replanning when `benchmark.snapshot.json` is missing and updating `INT-013` to the fail-closed contract. |
+| 0.9 | 2026-06-05 | Added `task-runtime.snapshot.json` persistence and `REPLAY-007` proof while keeping Phase 2 open for drift checks, external runtime snapshots, legacy replay policy, and `SWEPRO-005`. |
 
 ## 25. Plan Quality Checklist
 

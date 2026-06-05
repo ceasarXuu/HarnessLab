@@ -13,6 +13,7 @@ mod sandbox_setup;
 mod schedule;
 mod shell;
 mod store;
+mod task_snapshot;
 mod usage;
 mod verifier;
 mod version;
@@ -370,13 +371,7 @@ fn execute_task(ctx: &TaskExecutionContext, work: AttemptWork) -> Result<TaskAtt
     let workspace = attempt_dir.join("workspace");
     fs::create_dir_all(&workspace)?;
     prepare_workspace(&workspace, task)?;
-    atomic_write_json(
-        &run_dir
-            .join("tasks")
-            .join(&task_dir)
-            .join("task.snapshot.json"),
-        task,
-    )?;
+    task_snapshot::write_task_snapshots(run_dir, task, work.task_runtime_snapshot.as_ref())?;
     if external::is_external_task(task) {
         return external::execute_external_task(external::ExternalTaskExecution {
             run_dir,

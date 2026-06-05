@@ -256,6 +256,11 @@ fn adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper() {
     assert_eq!(wrapped.tasks, first);
     assert_eq!(wrapped.prepared_benchmark_ref, prepared.cache_manifest_path);
     assert_eq!(wrapped.run_config_overrides.timeout_sec, Some(3600));
+    let snapshots = descriptors
+        .iter()
+        .map(|task| adapter.snapshot_task(&prepared, task).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(wrapped.task_runtime_snapshots, snapshots);
 
     let fake_plan = FakePatchAdapter.plan("success").unwrap();
     let fake_prepared = FakePatchAdapter.prepare("success").unwrap();

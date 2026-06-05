@@ -278,6 +278,59 @@ fn core_001_benchmark_plan_validation_rejects_empty_task_and_escape_paths() {
     ));
 }
 
+#[test]
+fn core_001_benchmark_plan_validation_checks_runtime_snapshot_pairing() {
+    let mut plan = valid_plan();
+    plan.task_runtime_snapshots = vec![runtime_snapshot_for(&plan, "task-1")];
+    assert_eq!(validate_benchmark_plan(&plan), Ok(()));
+
+    let mut duplicate_task = valid_plan();
+    duplicate_task.tasks.push(duplicate_task.tasks[0].clone());
+    assert!(matches!(
+        validate_benchmark_plan(&duplicate_task),
+        Err(ModelError::InvalidTaskRuntimeSnapshot(_))
+    ));
+
+    let mut missing = valid_plan();
+    missing.tasks.push(missing.tasks[0].clone());
+    missing.tasks[1].task_id = "task-2".to_string();
+    missing.task_runtime_snapshots = vec![runtime_snapshot_for(&missing, "task-1")];
+    assert!(matches!(
+        validate_benchmark_plan(&missing),
+        Err(ModelError::InvalidTaskRuntimeSnapshot(_))
+    ));
+
+    let mut duplicate = valid_plan();
+    duplicate.task_runtime_snapshots = vec![
+        runtime_snapshot_for(&duplicate, "task-1"),
+        runtime_snapshot_for(&duplicate, "task-1"),
+    ];
+    assert!(matches!(
+        validate_benchmark_plan(&duplicate),
+        Err(ModelError::InvalidTaskRuntimeSnapshot(_))
+    ));
+
+    let mut mismatch = valid_plan();
+    mismatch.task_runtime_snapshots = vec![runtime_snapshot_for(&mismatch, "task-1")];
+    mismatch.task_runtime_snapshots[0].split = "other".to_string();
+    assert!(matches!(
+        validate_benchmark_plan(&mismatch),
+        Err(ModelError::InvalidTaskRuntimeSnapshot(_))
+    ));
+}
+
+#[test]
+fn core_001_old_benchmark_plan_snapshot_defaults_runtime_snapshots() {
+    let mut plan_json = serde_json::to_value(valid_plan()).unwrap();
+    plan_json
+        .as_object_mut()
+        .unwrap()
+        .remove("task_runtime_snapshots");
+    let plan: crate::BenchmarkPlan = serde_json::from_value(plan_json).unwrap();
+    assert!(plan.task_runtime_snapshots.is_empty());
+    assert_eq!(validate_benchmark_plan(&plan), Ok(()));
+}
+
 fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult {
     TaskAttemptResult {
         schema_version: 1,
@@ -304,6 +357,23 @@ fn attempt(class: FailureClass, code: Option<FailureCode>) -> TaskAttemptResult 
         patch: None,
         usage: UsageRecord::unknown(),
         warnings: Vec::new(),
+    }
+}
+
+fn runtime_snapshot_for(plan: &crate::BenchmarkPlan, task_id: &str) -> crate::RuntimeTaskSnapshot {
+    crate::RuntimeTaskSnapshot {
+        benchmark: plan.benchmark.clone(),
+        split: plan.split.clone(),
+        task_id: task_id.to_string(),
+        source_ref: crate::SourceRef {
+            benchmark: plan.benchmark.name.clone(),
+            upstream_id: task_id.to_string(),
+            checksum: "fnv64:test".to_string(),
+        },
+        upstream_metadata_hash: "fnv64:test".to_string(),
+        instruction_hash: "fnv64:instruction".to_string(),
+        task_plan_hash: "fnv64:task-plan".to_string(),
+        external_runner: None,
     }
 }
 
@@ -375,6 +445,7 @@ fn valid_plan() -> crate::BenchmarkPlan {
             patch_spec: None,
             external_runner: None,
         }],
+        task_runtime_snapshots: Vec::new(),
         run_config_overrides: crate::RunConfigOverrides {
             timeout_sec: None,
             network: None,

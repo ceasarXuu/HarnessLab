@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -244,6 +244,8 @@ pub enum ModelError {
     UnsafeTaskId(String),
     #[error("unsafe artifact path {0}")]
     UnsafeArtifactPath(String),
+    #[error("invalid task runtime snapshot {0}")]
+    InvalidTaskRuntimeSnapshot(String),
     #[error("attempts and concurrency must be >= 1")]
     InvalidExecution,
     #[error("invalid transition {from:?} -> {to:?}")]
@@ -270,9 +272,16 @@ pub fn validate_run_spec(spec: &RunSpec) -> Result<(), ModelError> {
 }
 
 pub fn validate_benchmark_plan(plan: &crate::BenchmarkPlan) -> Result<(), ModelError> {
+    let mut task_ids = BTreeSet::new();
     for task in &plan.tasks {
         if crate::task_dir_name(&task.task_id).is_err() {
             return Err(ModelError::UnsafeTaskId(task.task_id.clone()));
+        }
+        if !task_ids.insert(task.task_id.as_str()) {
+            return Err(ModelError::InvalidTaskRuntimeSnapshot(format!(
+                "duplicate task_id {}",
+                task.task_id
+            )));
         }
         for path in &task.artifact_spec.required_paths {
             if crate::report_artifact_path(path).is_err() {
@@ -284,6 +293,36 @@ pub fn validate_benchmark_plan(plan: &crate::BenchmarkPlan) -> Result<(), ModelE
                 if crate::report_artifact_path(path).is_err() {
                     return Err(ModelError::UnsafeArtifactPath(path.clone()));
                 }
+            }
+        }
+    }
+    if !plan.task_runtime_snapshots.is_empty() {
+        let mut snapshot_ids = BTreeSet::new();
+        for snapshot in &plan.task_runtime_snapshots {
+            if !snapshot_ids.insert(snapshot.task_id.as_str()) {
+                return Err(ModelError::InvalidTaskRuntimeSnapshot(format!(
+                    "duplicate task_id {}",
+                    snapshot.task_id
+                )));
+            }
+            if !task_ids.contains(snapshot.task_id.as_str()) {
+                return Err(ModelError::InvalidTaskRuntimeSnapshot(format!(
+                    "unknown task_id {}",
+                    snapshot.task_id
+                )));
+            }
+            if snapshot.benchmark != plan.benchmark || snapshot.split != plan.split {
+                return Err(ModelError::InvalidTaskRuntimeSnapshot(format!(
+                    "benchmark/split mismatch for task_id {}",
+                    snapshot.task_id
+                )));
+            }
+        }
+        for task_id in task_ids {
+            if !snapshot_ids.contains(task_id) {
+                return Err(ModelError::InvalidTaskRuntimeSnapshot(format!(
+                    "missing task_id {task_id}"
+                )));
             }
         }
     }
