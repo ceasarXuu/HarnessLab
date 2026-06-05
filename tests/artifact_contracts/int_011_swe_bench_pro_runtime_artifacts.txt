@@ -8,6 +8,8 @@ agent-profile.snapshot.json
 agent-runtime.materialized.json
 benchmark.snapshot.json
 tasks/<task-id>/attempts/1/result.json
+tasks/<task-id>/attempts/1/external-runtime.private.json
+tasks/<task-id>/attempts/1/external-runtime.public.json
 tasks/<task-id>/attempts/1/agent/stdout.log
 tasks/<task-id>/attempts/1/agent/stderr.log
 tasks/<task-id>/attempts/1/verifier/stdout.log

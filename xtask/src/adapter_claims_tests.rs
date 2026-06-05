@@ -142,6 +142,30 @@ fn registry_008_claimed_active_id_accepts_exact_route_spec() {
 }
 
 #[test]
+fn registry_013_claimed_active_id_requires_registry_file_pattern_for_selector_target() {
+    let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
+    let requirements = claimed.clone();
+    let tests = claimed.clone();
+    let mut registry = registry_doc(ACTIVE_DATA_ID, "active");
+    registry.tests[0].file_patterns =
+        vec!["crates/harnesslab-adapters/src/registry.rs".to_string()];
+    let script = "ADAPT-DATA-001) package=\"harnesslab-adapters\"; test_name=\"data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache\"; test_target=\"lib\" ;;";
+
+    let error = ensure_claimed_adapter_ids_are_registered(
+        &claimed,
+        &requirements,
+        &tests,
+        &registry,
+        script,
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("file_patterns missing expected selector file"));
+    assert!(error.contains("crates/harnesslab-adapters/src/data_contract_tests.rs"));
+}
+
+#[test]
 fn registry_009_claimed_active_id_rejects_duplicate_assignment_override() {
     let claimed = BTreeSet::from([ACTIVE_DATA_ID.to_string()]);
     let requirements = claimed.clone();
@@ -246,7 +270,7 @@ fn registry_doc(id: &str, status: &str) -> RegistryDoc {
             id: id.to_string(),
             title: "planned".to_string(),
             command: format!("scripts/test-after-change.sh --select {id}"),
-            file_patterns: vec![],
+            file_patterns: file_patterns_for(id),
             required_artifacts: Some(vec![]),
             status: status.to_string(),
             labels: None,
@@ -255,5 +279,15 @@ fn registry_doc(id: &str, status: &str) -> RegistryDoc {
                 contracts: vec!["BenchmarkDataAdapter".to_string()],
             },
         }],
+    }
+}
+
+fn file_patterns_for(id: &str) -> Vec<String> {
+    match id {
+        ACTIVE_DATA_ID => vec!["crates/harnesslab-adapters/src/data_contract_tests.rs".to_string()],
+        "SWEPRO-005" => {
+            vec!["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs".to_string()]
+        }
+        _ => Vec::new(),
     }
 }
