@@ -23,6 +23,7 @@ pub fn append_event(path: &Path, event: &Event, secrets: &[&str]) -> Result<()> 
         fs::create_dir_all(parent)?;
     }
     let mut redacted = event.clone();
+    redacted.run_id = "[PRIVATE_RUN_ID]".to_string();
     redacted.message = redact_known_secret(&redacted.message, secrets);
     let mut file = OpenOptions::new().create(true).append(true).open(path)?;
     let _guard = FileLockGuard::lock(&file)?;
@@ -129,6 +130,8 @@ mod tests {
         let content = std::fs::read_to_string(path).unwrap();
 
         assert!(content.contains("[REDACTED]"));
+        assert!(content.contains("[PRIVATE_RUN_ID]"));
+        assert!(!content.contains("\"run_id\":\"run\""));
         assert!(!content.contains("sk-secret"));
     }
 

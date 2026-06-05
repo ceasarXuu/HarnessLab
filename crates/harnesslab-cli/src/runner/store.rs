@@ -13,6 +13,7 @@ pub(super) const RUNTIME_PROFILE_SNAPSHOT: &str = "agent-profile.runtime.json";
 pub(super) const REPORT_PROFILE_SNAPSHOT: &str = "agent-profile.snapshot.json";
 pub(super) const MATERIALIZED_PROFILE_SNAPSHOT: &str = "agent-runtime.materialized.json";
 pub(super) const AGENT_VERSION_SNAPSHOT: &str = "agent-version.snapshot.json";
+#[cfg(test)]
 const ORIGINAL_COMMAND_UNAVAILABLE: &str = "[ORIGINAL_COMMAND_UNAVAILABLE]";
 
 #[derive(Debug)]
@@ -257,6 +258,7 @@ pub(super) fn replay_command(spec: &RunSpec) -> String {
     format!("harnesslab run replay {}", shell_quote(&spec.paths.run_dir))
 }
 
+#[cfg(test)]
 pub(super) fn original_command_from_snapshot(run_dir: &Path) -> String {
     fs::read_to_string(run_dir.join("command.txt"))
         .ok()

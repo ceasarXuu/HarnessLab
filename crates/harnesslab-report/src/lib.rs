@@ -45,10 +45,6 @@ pub struct TaskRow {
     pub usage: String,
     pub patch_href: String,
     pub has_patch: bool,
-    pub stdout_link: String,
-    pub stderr_link: String,
-    pub verifier_stdout_link: String,
-    pub verifier_stderr_link: String,
     pub warnings: String,
     pub has_warnings: bool,
 }
@@ -98,7 +94,7 @@ pub struct ReportContext {
   <p>Report: <code>{{ model.report_path }}</code></p>
   <p>Resume: {% if model.resumed %}yes{% else %}no{% endif %}</p>
   <p>Run health: <strong>{{ model.run_health_status }}</strong>{% if model.has_run_health_reason %}: {{ model.run_health_reason }}{% endif %}. <a href="run-health.json">run-health.json</a></p>
-  <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, materialized runtime: <a href="agent-runtime.materialized.json">agent-runtime.materialized.json</a>, command: <a href="command.txt">command.txt</a>.</p>
+  <p>Agent config: {{ model.agent_config_summary }}. Snapshot: <a href="agent-profile.snapshot.json">agent-profile.snapshot.json</a>, materialized runtime: <a href="agent-runtime.materialized.json">agent-runtime.materialized.json</a>.</p>
   <p>Setup: {{ model.setup_summary }}.</p>
   <p>Skills: {{ model.skills_summary }}. Tools: {{ model.tools_summary }}. Hooks: {{ model.hooks_summary }}.</p>
   <p>Effective capabilities: skills {{ model.skills_effective_summary }}; tools {{ model.tools_effective_summary }}; hooks {{ model.hooks_effective_summary }}.</p>
@@ -109,7 +105,7 @@ pub struct ReportContext {
   <p>Score uses the latest attempt per task. Usage sums all recorded attempts. Usage marked unknown is cost not comparable.</p>
   <h2>Tasks</h2>
   <table>
-    <thead><tr><th>Task</th><th>Attempt</th><th>Resume</th><th>Outcome</th><th>Failure</th><th>Warnings</th><th>Score</th><th>Duration</th><th>Usage</th><th>Patch</th><th>Logs</th></tr></thead>
+    <thead><tr><th>Task</th><th>Attempt</th><th>Resume</th><th>Outcome</th><th>Failure</th><th>Warnings</th><th>Score</th><th>Duration</th><th>Usage</th><th>Patch</th></tr></thead>
     <tbody>
     {% for row in model.rows %}
       <tr>
@@ -123,7 +119,6 @@ pub struct ReportContext {
         <td>{{ row.duration_ms }} ms</td>
         <td>{{ row.usage }}</td>
         <td>{% if row.has_patch %}<a href="{{ row.patch_href }}">diff</a>{% else %}n/a{% endif %}</td>
-        <td><a href="{{ row.stdout_link }}">agent stdout</a> <a href="{{ row.stderr_link }}">agent stderr</a> <a href="{{ row.verifier_stdout_link }}">verifier stdout</a> <a href="{{ row.verifier_stderr_link }}">verifier stderr</a></td>
       </tr>
     {% endfor %}
     </tbody>
@@ -167,26 +162,6 @@ pub fn build_report_model(context: ReportContext, results: RunResults) -> Report
                 usage: usage_text(&task.usage),
                 has_patch: patch_href != "n/a",
                 patch_href,
-                stdout_link: format!(
-                    "tasks/{}/attempts/{}/agent/stdout.log",
-                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
-                    task.attempt
-                ),
-                stderr_link: format!(
-                    "tasks/{}/attempts/{}/agent/stderr.log",
-                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
-                    task.attempt
-                ),
-                verifier_stdout_link: format!(
-                    "tasks/{}/attempts/{}/verifier/stdout.log",
-                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
-                    task.attempt
-                ),
-                verifier_stderr_link: format!(
-                    "tasks/{}/attempts/{}/verifier/stderr.log",
-                    task_dir_name(&task.task_id).unwrap_or_else(|_| "_invalid-task-id".to_string()),
-                    task.attempt
-                ),
                 has_warnings: !warnings.is_empty(),
                 warnings,
             }
@@ -345,9 +320,9 @@ mod tests {
         assert!(html.contains("agent-profile.snapshot.json"));
         assert!(html.contains("agent-runtime.materialized.json"));
         assert!(html.contains("agent-version.snapshot.json"));
-        assert!(html.contains("command.txt"));
-        assert!(html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
-        assert!(html.contains("tasks/task-1/attempts/1/verifier/stdout.log"));
+        assert!(!html.contains("command.txt"));
+        assert!(!html.contains("tasks/task-1/attempts/1/agent/stdout.log"));
+        assert!(!html.contains("tasks/task-1/attempts/1/verifier/stdout.log"));
     }
 
     #[test]
@@ -369,7 +344,7 @@ mod tests {
         assert!(html.contains("task/slash"));
         assert!(html.contains("<td>recovery</td>"));
         assert!(html.contains("<td>agent_timeout</td>"));
-        assert!(html.contains("tasks/task%2Fslash/attempts/1/agent/stdout.log"));
+        assert!(!html.contains("tasks/task%2Fslash/attempts/1/agent/stdout.log"));
         assert!(html.contains("<td>n/a</td>"));
         assert!(!html.contains("../patch.diff"));
     }
@@ -397,7 +372,7 @@ mod tests {
 
     fn context(resumed: bool) -> ReportContext {
         ReportContext {
-            run_id: "run-1".to_string(),
+            run_id: "[PRIVATE_RUN_ID]".to_string(),
             agent: "fake".to_string(),
             agent_config_summary:
                 "kind=fake; input_mode=stdin; timeout_sec=3600; concurrency=4; attempts=1; network=full"

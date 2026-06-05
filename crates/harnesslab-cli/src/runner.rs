@@ -329,7 +329,6 @@ fn execute_plan(
         report_profile,
         report_materialized: report_materialized_profile,
         version_snapshot,
-        report_path: report_path.clone(),
         run_health: monitor::report_health(run_dir),
         resumed: matches!(mode, ExecutionMode::Resume),
         results: &results,
@@ -337,7 +336,7 @@ fn execute_plan(
     let exit_code = derive_exit_code(&results.tasks, false);
     let summary = &results.summary;
     let message = format!(
-        "run finished exit_code={exit_code} total_tasks={} success={} partial_success={} benchmark_failure={} execution_failure={} interrupted={} total_score={} report_path={}",
+        "run finished exit_code={exit_code} total_tasks={} success={} partial_success={} benchmark_failure={} execution_failure={} interrupted={} total_score={} report_path=report.html",
         summary.total_tasks,
         summary.success,
         summary.partial_success,
@@ -345,7 +344,6 @@ fn execute_plan(
         summary.execution_failure,
         summary.interrupted,
         summary.total_score,
-        report_path
     );
     append_event(
         &events,

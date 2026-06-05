@@ -1,6 +1,6 @@
-use anyhow::{Context, Result};
-use harnesslab_core::RunSpec;
-use harnesslab_infra::{CleanupResult, DockerCliProvider, append_event, event};
+use anyhow::{Result, anyhow};
+use harnesslab_core::{FailureClass, FailureCode, RunSpec, redact_public_value};
+use harnesslab_infra::{CleanupResult, DockerCliProvider, append_event, atomic_write_json, event};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fs;
@@ -23,6 +23,19 @@ pub(in crate::runner) struct RunCleanupResult {
     pub(in crate::runner) matched_projects: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct TaskCleanupOutcome {
+    pub(super) phase: String,
+    pub(super) required: bool,
+    pub(super) token: String,
+    pub(super) success: bool,
+    pub(super) projects: Vec<String>,
+    pub(super) removed: Vec<String>,
+    pub(super) containers_removed: usize,
+    pub(super) networks_removed: usize,
+    pub(super) error: Option<String>,
+}
+
 pub(super) fn cleanup_task_resources(
     run_dir: &Path,
     spec: &RunSpec,
@@ -30,41 +43,159 @@ pub(super) fn cleanup_task_resources(
     phase: &str,
     official_run_id: &str,
     required: bool,
-) -> Result<Option<String>> {
-    match DockerCliProvider::compose_projects_matching(official_run_id).and_then(|projects| {
-        if !projects.is_empty() {
-            record_projects(run_dir, &projects)?;
-        }
-        DockerCliProvider::cleanup_compose_projects(&projects).map(|result| (projects, result))
-    }) {
-        Ok((projects, result)) => {
-            append_cleanup_event(
-                run_dir,
-                spec,
-                task_id,
-                &cleanup_success_message(phase, official_run_id, &projects, &result),
-            )?;
-            Ok(None)
-        }
+    redaction_refs: &[String],
+) -> Result<TaskCleanupOutcome> {
+    let projects = match DockerCliProvider::compose_projects_matching(official_run_id) {
+        Ok(projects) => projects,
         Err(error) => {
-            let message = error.to_string();
+            let outcome = cleanup_error_outcome(
+                phase,
+                official_run_id,
+                required,
+                &[],
+                error.to_string(),
+                redaction_refs,
+            );
             append_cleanup_event(
                 run_dir,
                 spec,
                 task_id,
                 &format!(
-                    "terminal-bench cleanup {phase} warning: token={} error={}",
-                    official_run_id, message
+                    "terminal-bench cleanup {phase} warning: projects_count=0 removed_count=0 containers_removed=0 networks_removed=0 has_error=true"
+                ),
+            )?;
+            return if required {
+                Err(anyhow!(
+                    "terminal-bench cleanup {phase} failed before project discovery"
+                ))
+            } else {
+                Ok(outcome)
+            };
+        }
+    };
+    if !projects.is_empty() {
+        record_projects(run_dir, &projects)?;
+    }
+    match DockerCliProvider::cleanup_compose_projects(&projects)
+        .map(|result| (projects.clone(), result))
+    {
+        Ok((projects, result)) => {
+            let outcome = cleanup_success_outcome(
+                phase,
+                official_run_id,
+                required,
+                &projects,
+                &result,
+                redaction_refs,
+            );
+            append_cleanup_event(
+                run_dir,
+                spec,
+                task_id,
+                &cleanup_success_message(phase, &outcome),
+            )?;
+            Ok(outcome)
+        }
+        Err(error) => {
+            let message = error.to_string();
+            let outcome = cleanup_error_outcome(
+                phase,
+                official_run_id,
+                required,
+                &projects,
+                message.clone(),
+                redaction_refs,
+            );
+            append_cleanup_event(
+                run_dir,
+                spec,
+                task_id,
+                &format!(
+                    "terminal-bench cleanup {phase} warning: projects_count={} removed_count=0 containers_removed=0 networks_removed=0 has_error=true",
+                    outcome.projects.len()
                 ),
             )?;
             if required {
-                Err(error).with_context(|| {
-                    format!("terminal-bench cleanup {phase} failed for token {official_run_id}")
-                })
+                Err(anyhow!("terminal-bench cleanup {phase} failed"))
             } else {
-                Ok(Some(message))
+                Ok(outcome)
             }
         }
+    }
+}
+
+pub(super) fn write_task_cleanup_report(
+    attempt_dir: &Path,
+    task_id: &str,
+    attempt: u32,
+    _official_run_id: &str,
+    pre_task: &TaskCleanupOutcome,
+    post_task: &TaskCleanupOutcome,
+    official_failure_class: FailureClass,
+    official_failure_code: Option<FailureCode>,
+    final_failure_class: FailureClass,
+    final_failure_code: Option<FailureCode>,
+    cleanup_overrides_result: bool,
+) -> Result<()> {
+    let report = TaskCleanupReport {
+        schema_version: 1,
+        benchmark: "terminal-bench",
+        task_id: task_id.to_string(),
+        attempt,
+        phases: vec![public_outcome(pre_task), public_outcome(post_task)],
+        official_failure: CleanupFailureSnapshot {
+            class: official_failure_class,
+            code: official_failure_code,
+        },
+        final_failure: CleanupFailureSnapshot {
+            class: final_failure_class,
+            code: final_failure_code,
+        },
+        final_verdict_effect: final_verdict_effect(post_task, cleanup_overrides_result),
+    };
+    atomic_write_json(&attempt_dir.join("cleanup-report.json"), &report)
+}
+
+#[derive(Serialize)]
+struct TaskCleanupReport {
+    schema_version: u32,
+    benchmark: &'static str,
+    task_id: String,
+    attempt: u32,
+    phases: Vec<PublicTaskCleanupOutcome>,
+    official_failure: CleanupFailureSnapshot,
+    final_failure: CleanupFailureSnapshot,
+    final_verdict_effect: &'static str,
+}
+
+#[derive(Serialize)]
+struct PublicTaskCleanupOutcome {
+    phase: String,
+    required: bool,
+    success: bool,
+    projects_count: usize,
+    removed_count: usize,
+    containers_removed: usize,
+    networks_removed: usize,
+    has_error: bool,
+}
+
+#[derive(Serialize)]
+struct CleanupFailureSnapshot {
+    class: FailureClass,
+    code: Option<FailureCode>,
+}
+
+fn public_outcome(outcome: &TaskCleanupOutcome) -> PublicTaskCleanupOutcome {
+    PublicTaskCleanupOutcome {
+        phase: outcome.phase.clone(),
+        required: outcome.required,
+        success: outcome.success,
+        projects_count: outcome.projects.len(),
+        removed_count: outcome.removed.len(),
+        containers_removed: outcome.containers_removed,
+        networks_removed: outcome.networks_removed,
+        has_error: outcome.error.is_some(),
     }
 }
 
@@ -92,6 +223,90 @@ pub(in crate::runner) fn cleanup_run_resources(
         snapshot_projects: snapshot_projects.len(),
         matched_projects: matched_projects.len(),
     })
+}
+
+fn cleanup_success_outcome(
+    phase: &str,
+    token: &str,
+    required: bool,
+    projects: &[String],
+    result: &CleanupResult,
+    redaction_refs: &[String],
+) -> TaskCleanupOutcome {
+    let secret_refs = secret_refs(redaction_refs);
+    let removed = result
+        .removed
+        .iter()
+        .map(|item| redact_public_value(item, &secret_refs))
+        .collect::<Vec<_>>();
+    TaskCleanupOutcome {
+        phase: phase.to_string(),
+        required,
+        token: token.to_string(),
+        success: true,
+        projects: projects
+            .iter()
+            .map(|item| redact_public_value(item, &secret_refs))
+            .collect(),
+        removed,
+        containers_removed: removed_with_prefix(result, "container:"),
+        networks_removed: removed_with_prefix(result, "network:"),
+        error: None,
+    }
+}
+
+fn cleanup_error_outcome(
+    phase: &str,
+    token: &str,
+    required: bool,
+    projects: &[String],
+    error: String,
+    redaction_refs: &[String],
+) -> TaskCleanupOutcome {
+    let secret_refs = secret_refs(redaction_refs);
+    TaskCleanupOutcome {
+        phase: phase.to_string(),
+        required,
+        token: token.to_string(),
+        success: false,
+        projects: projects
+            .iter()
+            .map(|item| redact_public_value(item, &secret_refs))
+            .collect(),
+        removed: Vec::new(),
+        containers_removed: 0,
+        networks_removed: 0,
+        error: Some(redact_public_value(&error, &secret_refs)),
+    }
+}
+
+fn secret_refs(redaction_refs: &[String]) -> Vec<&str> {
+    redaction_refs
+        .iter()
+        .map(String::as_str)
+        .filter(|value| !value.is_empty())
+        .collect()
+}
+
+fn final_verdict_effect(
+    post_task: &TaskCleanupOutcome,
+    cleanup_overrides_result: bool,
+) -> &'static str {
+    if cleanup_overrides_result {
+        "cleanup_overrode_result"
+    } else if post_task.error.is_some() {
+        "cleanup_warning_only"
+    } else {
+        "none"
+    }
+}
+
+fn removed_with_prefix(result: &CleanupResult, prefix: &str) -> usize {
+    result
+        .removed
+        .iter()
+        .filter(|item| item.starts_with(prefix))
+        .count()
 }
 
 fn cleanup_match_tokens(run_id: &str) -> Vec<String> {
@@ -137,34 +352,14 @@ fn append_cleanup_event(
     )
 }
 
-fn cleanup_success_message(
-    phase: &str,
-    token: &str,
-    projects: &[String],
-    result: &CleanupResult,
-) -> String {
-    let containers = result
-        .removed
-        .iter()
-        .filter(|item| item.starts_with("container:"))
-        .count();
-    let networks = result
-        .removed
-        .iter()
-        .filter(|item| item.starts_with("network:"))
-        .count();
-    let details = if result.removed.is_empty() {
-        "none".to_string()
-    } else {
-        result.removed.join(",")
-    };
+fn cleanup_success_message(phase: &str, outcome: &TaskCleanupOutcome) -> String {
     format!(
-        "terminal-bench cleanup {phase}: token={token} projects={} removed containers={containers} networks={networks} resources={details}",
-        if projects.is_empty() {
-            "none".to_string()
-        } else {
-            projects.join(",")
-        }
+        "terminal-bench cleanup {phase}: projects_count={} removed_count={} containers_removed={} networks_removed={} has_error={}",
+        outcome.projects.len(),
+        outcome.removed.len(),
+        outcome.containers_removed,
+        outcome.networks_removed,
+        outcome.error.is_some()
     )
 }
 
@@ -205,8 +400,11 @@ mod tests {
         };
 
         assert_eq!(
-            cleanup_success_message("post_task", "run-task-1", &[], &result),
-            "terminal-bench cleanup post_task: token=run-task-1 projects=none removed containers=1 networks=2 resources=container:c1,network:n1,network:n2"
+            cleanup_success_message(
+                "post_task",
+                &cleanup_success_outcome("post_task", "run-task-1", false, &[], &result, &[])
+            ),
+            "terminal-bench cleanup post_task: projects_count=0 removed_count=3 containers_removed=1 networks_removed=2 has_error=false"
         );
     }
 
@@ -215,13 +413,18 @@ mod tests {
         assert_eq!(
             cleanup_success_message(
                 "pre_task",
-                "run-task-1",
-                &["project-1".to_string()],
-                &CleanupResult {
-                    removed: Vec::new()
-                },
+                &cleanup_success_outcome(
+                    "pre_task",
+                    "run-task-1",
+                    true,
+                    &["project-1".to_string()],
+                    &CleanupResult {
+                        removed: Vec::new()
+                    },
+                    &[]
+                ),
             ),
-            "terminal-bench cleanup pre_task: token=run-task-1 projects=project-1 removed containers=0 networks=0 resources=none"
+            "terminal-bench cleanup pre_task: projects_count=1 removed_count=0 containers_removed=0 networks_removed=0 has_error=false"
         );
     }
 

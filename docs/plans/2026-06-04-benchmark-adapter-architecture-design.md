@@ -4,7 +4,7 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-06
-- Version: 0.21
+- Version: 0.22
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
@@ -24,9 +24,13 @@
   meta-gated active selector specs. Phase 4 Terminal-Bench runtime extraction is
   closed. Phase 5 SWE-bench Pro runtime extraction is implemented with a
   dedicated runtime adapter boundary and active `SWEPRO-001..004` phase
-  diagnostics for metadata, workspace, patch, and evaluator failures. Runtime
-  snapshots, official runner identity drift, security scans, and legacy degraded
-  replay policy remain open for later phases.
+  diagnostics for metadata, workspace, patch, and evaluator failures. Phase 6
+  now persists Terminal-Bench public/private external runtime snapshots,
+  writes structured cleanup reports, blocks replay on runtime adapter version
+  drift, removes raw command/log files from the Terminal-Bench public artifact
+  list, activates `ADAPT-RUNTIME-003/004`, and verifies the local
+  snapshot/redaction/cleanup gate. Phase 7 docs/diagnostics alignment and
+  Phase 8 full-gate closure remain open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -1591,8 +1595,16 @@ Run focused review with `security-adversary`, `test-validity-adversary`, and
 
 #### Gate To Next Phase
 
-Proceed to Phase 7 only after public artifacts are safe and replay hardening
-tests pass.
+Status: implemented for the current local Phase 6 gate on 2026-06-06.
+Terminal-Bench now writes `external-runtime.private.json`,
+`external-runtime.public.json`, and `cleanup-report.json`; public artifacts and
+events redact local path/import material; replay blocks external runtime
+adapter version drift; `ADAPT-RUNTIME-003` and `ADAPT-RUNTIME-004` are active
+selectors. Evidence is recorded in
+`docs/plans/2026-06-06-benchmark-adapter-phase-6-runtime-snapshot-cleanup.md`.
+
+Proceed to Phase 7 after the Phase 6 adversarial review record has no accepted
+blockers.
 
 ### Phase 7: Docs And User-Facing Diagnostics (Slice H)
 
@@ -2114,6 +2126,7 @@ This architecture track is complete when:
 | 0.19 | 2026-06-05 | Closed Phase 3 adversarial review blockers by replacing cleanup metadata flags with adapter-owned cleanup targets/reports, adding blocked preflight report semantics, tightening Phase 3 proof metadata, and adding real execution-path event assertions. |
 | 0.20 | 2026-06-06 | Completed Phase 4 Terminal-Bench runtime extraction by moving Terminal-Bench adapter ownership into a dedicated module, activating `ADAPT-RUNTIME-005`, fixing `TB-001..004` selector routing, and recording Terminal-Bench/Python bridge preservation evidence. |
 | 0.21 | 2026-06-06 | Completed Phase 5 SWE-bench Pro runtime extraction by moving SWE adapter ownership into a dedicated module, activating `SWEPRO-001..004`, and recording metadata/workspace/patch/evaluator phase diagnostics evidence. |
+| 0.22 | 2026-06-06 | Completed the current Phase 6 local gate by adding Terminal-Bench `external-runtime.public/private.json` snapshots, structured `cleanup-report.json`, active `ADAPT-RUNTIME-003/004` routes, public artifact/path redaction, replay adapter-version drift blocking, and snapshot/redaction/cleanup evidence. |
 
 ## 25. Plan Quality Checklist
 

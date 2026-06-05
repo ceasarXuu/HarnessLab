@@ -37,12 +37,12 @@ fn cleanup_002_docker_plan_writes_pre_and_post_cleanup_events() {
     assert_eq!(records[0]["event"], "docker_cleanup");
     assert_eq!(
         records[0]["message"],
-        "docker cleanup pre_run: removed 1 sandbox container(s)"
+        "docker cleanup pre_run: removed_count=1 has_error=false"
     );
     assert_eq!(records[1]["event"], "docker_cleanup");
     assert_eq!(
         records[1]["message"],
-        "docker cleanup post_run: removed 1 sandbox container(s)"
+        "docker cleanup post_run: removed_count=1 has_error=false"
     );
 }
 
@@ -82,8 +82,9 @@ fn cleanup_004_cleanup_warning_is_recorded() {
     }
 
     let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
-    assert!(events.contains("docker cleanup pre_run warning: cleanup unavailable"));
-    assert!(events.contains("docker cleanup post_run warning: cleanup unavailable"));
+    assert!(events.contains("docker cleanup pre_run: removed_count=0 has_error=true"));
+    assert!(events.contains("docker cleanup post_run: removed_count=0 has_error=true"));
+    assert!(!events.contains("cleanup unavailable"));
 }
 
 #[test]
@@ -112,8 +113,9 @@ fn cleanup_005_terminal_bench_pre_run_cleans_completed_sibling_runs() {
     }
 
     let events = std::fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
-    assert!(events.contains("run=Old-Terminal-Run"));
-    assert!(events.contains("run=current-run"));
+    assert!(!events.contains("Old-Terminal-Run"));
+    assert!(!events.contains("current-run"));
+    assert!(events.contains("projects_count=1"));
     assert_eq!(events.matches("terminal_bench_docker_cleanup").count(), 3);
 }
 
@@ -166,8 +168,9 @@ fn cleanup_007_terminal_bench_pre_run_considers_stale_run_without_snapshot() {
     }
 
     let events = std::fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
-    assert!(events.contains("run=old-agent-terminal-bench-full-20260601T000000Z"));
-    assert!(events.contains("scan_run_id=old-agent-terminal-bench-full-20260601T000000Z"));
+    assert!(!events.contains("old-agent-terminal-bench-full-20260601T000000Z"));
+    assert!(events.contains("tokens_count=1"));
+    assert!(events.contains("projects_count=1"));
     assert_eq!(events.matches("terminal_bench_docker_cleanup").count(), 3);
 }
 
@@ -196,8 +199,10 @@ fn cleanup_008_terminal_bench_pre_run_uses_stale_run_json_id() {
     }
 
     let events = std::fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
-    assert!(events.contains("run=renamed-stale-dir"));
-    assert!(events.contains("scan_run_id=Agent.Terminal_Bench-20260602T010203Z"));
+    assert!(!events.contains("renamed-stale-dir"));
+    assert!(!events.contains("Agent.Terminal_Bench-20260602T010203Z"));
+    assert!(events.contains("terminal-bench docker cleanup pre_run"));
+    assert!(events.contains("tokens_count=1"));
 }
 
 #[test]

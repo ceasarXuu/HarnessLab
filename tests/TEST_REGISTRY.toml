@@ -1491,9 +1491,15 @@ title = "External runtime public and private snapshots are written"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-003"
-file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+]
 required_artifacts = ["external-runtime.private.json", "external-runtime.public.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1507,9 +1513,14 @@ title = "Cleanup report is structured and can affect final verdict"
 layer = "contract"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-004"
-file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+]
 required_artifacts = ["cleanup-report.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1626,7 +1637,11 @@ title = "Replay and readiness use stored runtime materials"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-005"
-file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/replay.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+  "crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs",
+]
 required_artifacts = [
   "benchmark.snapshot.json",
   "tasks/<task-id>/task-runtime.snapshot.json",

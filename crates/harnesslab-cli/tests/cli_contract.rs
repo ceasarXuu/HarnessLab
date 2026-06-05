@@ -125,10 +125,13 @@ fn int_003_fake_terminal_success_creates_report_and_results() {
     let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
     assert!(report.contains("Agent config:"));
     assert!(report.contains("agent-profile.snapshot.json"));
-    assert!(report.contains("command.txt"));
+    assert!(!report.contains("command.txt"));
     assert!(report.contains("harnesslab run replay"));
-    assert!(report.contains(&run_dir.display().to_string()));
-    assert!(report.contains("--home"));
+    assert!(report.contains("[RUN_DIR]"));
+    assert!(report.contains("[PRIVATE_COMMAND]"));
+    assert!(report.contains("[PRIVATE_RUN_ID]"));
+    assert!(!report.contains(&run_dir.display().to_string()));
+    assert!(!report.contains("--home"));
     let command = fs::read_to_string(run_dir.join("command.txt")).unwrap();
     assert!(command.contains("original_command=harnesslab --home"));
     assert!(command.contains("replay_command=harnesslab run replay"));

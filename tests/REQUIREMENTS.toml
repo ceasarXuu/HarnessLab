@@ -399,7 +399,7 @@ id = "ADAPT-RUNTIME-003"
 title = "External runtime public and private snapshots are written"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract", "integration"]
 required_runtime_proof = true
 [requirements.source]
@@ -411,7 +411,7 @@ id = "ADAPT-RUNTIME-004"
 title = "Cleanup report is structured and can affect final verdict"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]

@@ -4,7 +4,9 @@ use super::{
         missing_evaluation, terminal_bench_result_warnings, write_task_result,
     },
     terminal_bench_runtime::TerminalBenchRuntimeAttempt,
+    terminal_bench_runtime_snapshot::write_terminal_bench_runtime_snapshots,
 };
+use crate::runner::store;
 use anyhow::Result;
 use harnesslab_core::{
     Failure, FailureClass, FailureCode, Outcome, ProcessRecord, TaskAttemptResult, TaskState,
@@ -18,13 +20,14 @@ pub(super) fn execute_prepared(
     ctx: &ExternalTaskExecution<'_>,
     prepared: TerminalBenchRuntimeAttempt,
 ) -> Result<TaskAttemptResult> {
-    terminal_bench_cleanup::cleanup_task_resources(
+    let pre_cleanup = terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
         &ctx.task.task_id,
         "pre_task",
         &prepared.official_run_id,
         true,
+        &cleanup_redaction_refs(ctx, &prepared),
     )?;
     append_event(
         &ctx.run_dir.join("events.jsonl"),
@@ -33,23 +36,20 @@ pub(super) fn execute_prepared(
             Some(&ctx.task.task_id),
             "external_runner_started",
             &format!(
-                "terminal-bench dataset={} runtime_dataset={} official_run_id={} output={}",
-                prepared.source_dataset_path.display(),
-                prepared.runtime_dataset_path.display(),
-                prepared.official_run_id,
-                prepared.output_root.display()
+                "terminal-bench dataset=[PRIVATE_PATH] runtime_dataset={} official_run_id=<run-id> output=official/terminal-bench",
+                public_runtime_dataset_path(ctx, &prepared),
             ),
         ),
         &[],
     )?;
     let process = normalize_agent_paths(HostProcessExecutor::exec(&ExecSpec {
-        command: prepared.command,
+        command: prepared.command.clone(),
         stdin: None,
         working_dir: ctx.attempt_dir.to_path_buf(),
         timeout_sec: prepared.process_timeout_sec,
         no_output_timeout_sec: prepared.no_output_timeout_sec,
-        no_output_progress_paths: prepared.no_output_progress_paths,
-        no_output_activity_patterns: prepared.no_output_activity_patterns,
+        no_output_progress_paths: prepared.no_output_progress_paths.clone(),
+        no_output_activity_patterns: prepared.no_output_activity_patterns.clone(),
         no_output_activity_event: Some(NoOutputActivityEvent {
             path: ctx.run_dir.join("events.jsonl"),
             run_id: ctx.spec.run_id.clone(),
@@ -63,14 +63,16 @@ pub(super) fn execute_prepared(
         stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
     })?);
     append_process_termination_event(ctx, &process, prepared.process_timeout_sec)?;
-    let post_cleanup_error = terminal_bench_cleanup::cleanup_task_resources(
+    let post_cleanup = terminal_bench_cleanup::cleanup_task_resources(
         ctx.run_dir,
         ctx.spec,
         &ctx.task.task_id,
         "post_task",
         &prepared.official_run_id,
         false,
+        &cleanup_redaction_refs(ctx, &prepared),
     )?;
+    let post_cleanup_error = post_cleanup.error.clone();
     let parsed_result =
         parse_terminal_bench_result(ctx.attempt_dir, &prepared.result_path, &ctx.task.task_id);
     let agent_failure = terminal_bench_process_failure(&process);
@@ -176,8 +178,61 @@ pub(super) fn execute_prepared(
         usage,
         warnings,
     };
+    terminal_bench_cleanup::write_task_cleanup_report(
+        ctx.attempt_dir,
+        &ctx.task.task_id,
+        ctx.attempt,
+        &prepared.official_run_id,
+        &pre_cleanup,
+        &post_cleanup,
+        official_failure_class,
+        official_failure_code,
+        failure_class,
+        failure_code,
+        cleanup_overrides_result,
+    )?;
+    write_terminal_bench_runtime_snapshots(
+        ctx,
+        &prepared,
+        super::terminal_bench_runtime_snapshot::TerminalBenchSnapshotDiagnostics::post_execution(
+            &pre_cleanup,
+            &post_cleanup,
+            official_failure_class,
+            official_failure_code,
+            failure_class,
+            failure_code,
+            cleanup_overrides_result,
+        ),
+    )?;
     write_task_result(ctx, &result)?;
     Ok(result)
+}
+
+fn public_runtime_dataset_path(
+    ctx: &ExternalTaskExecution<'_>,
+    prepared: &TerminalBenchRuntimeAttempt,
+) -> String {
+    prepared
+        .runtime_dataset_path
+        .strip_prefix(ctx.attempt_dir)
+        .ok()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "[PRIVATE_PATH]".to_string())
+}
+
+fn cleanup_redaction_refs(
+    ctx: &ExternalTaskExecution<'_>,
+    prepared: &TerminalBenchRuntimeAttempt,
+) -> Vec<String> {
+    let mut refs = store::secret_values(ctx.profile);
+    refs.extend([
+        ctx.run_dir.display().to_string(),
+        ctx.attempt_dir.display().to_string(),
+        prepared.source_dataset_path.display().to_string(),
+        prepared.runtime_dataset_path.display().to_string(),
+        prepared.output_root.display().to_string(),
+    ]);
+    refs
 }
 
 fn append_process_termination_event(

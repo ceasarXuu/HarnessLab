@@ -163,7 +163,11 @@ swe_bench_pro_agent = "gold"
 }
 
 pub fn swe_bench_root() -> tempfile::TempDir {
-    let root = tempfile::tempdir().unwrap();
+    swe_bench_root_with_prefix("swe-bench-pro")
+}
+
+pub fn swe_bench_root_with_prefix(prefix: &str) -> tempfile::TempDir {
+    let root = tempfile::Builder::new().prefix(prefix).tempdir().unwrap();
     let data_dir = root
         .path()
         .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/data");
