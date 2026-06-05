@@ -420,10 +420,10 @@ section = "10"
 
 [[requirements]]
 id = "ADAPT-RUNTIME-005"
-title = "Runtime event taxonomy preserves operator-critical adapter events"
+title = "Terminal-Bench runtime event taxonomy preserves operator-critical adapter events"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract", "integration"]
 required_runtime_proof = true
 [requirements.source]

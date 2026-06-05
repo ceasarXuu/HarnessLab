@@ -1519,13 +1519,20 @@ contracts = ["CleanupReport"]
 
 [[tests]]
 id = "ADAPT-RUNTIME-005"
-title = "Runtime event taxonomy preserves operator-critical adapter events"
+title = "Terminal-Bench runtime event taxonomy preserves operator-critical adapter events"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-005"
-file_patterns = ["crates/harnesslab-cli/src/runner/external.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/terminal_bench_runtime_event_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
 required_artifacts = ["events.jsonl"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"

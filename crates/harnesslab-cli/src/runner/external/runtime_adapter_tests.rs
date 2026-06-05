@@ -195,6 +195,7 @@ fn assert_blocked_preflight(
 fn assert_runtime_label_access_is_allowlisted() {
     let sources = [
         include_str!("runtime_adapter.rs"),
+        include_str!("terminal_bench_adapter.rs"),
         include_str!("terminal_bench.rs"),
         include_str!("terminal_bench_env.rs"),
         include_str!("swe_bench_pro/agent.rs"),
