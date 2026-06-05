@@ -1,8 +1,8 @@
 use super::{SweInstance, docker_host_prefix, docker_image, shell_quote};
 use crate::runner::external::ExternalTaskExecution;
 use crate::runner::external::runtime_snapshot::{
-    ExternalRuntimeSnapshotRequest, RuntimeMaterial, RuntimePhaseCommand,
-    write_external_runtime_snapshots,
+    ExternalRuntimeSnapshotRequest, RuntimeMaterial, RuntimeMaterialValidationScope,
+    RuntimePhaseCommand, write_external_runtime_snapshots,
 };
 use anyhow::Result;
 use harnesslab_core::ExternalRunnerKind;
@@ -20,6 +20,7 @@ pub(super) fn write_swe_runtime_snapshots(
 ) -> Result<()> {
     let attempt_root = std::fs::canonicalize(ctx.attempt_dir)?;
     write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
+        run_id: &ctx.spec.run_id,
         attempt_dir: ctx.attempt_dir,
         benchmark: "swe-bench-pro",
         task_id: &ctx.task.task_id,
@@ -151,11 +152,13 @@ fn swe_runtime_materials(
             name: "parquet",
             path: instance.parquet_path.clone(),
             public_path: None,
+            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
         },
         RuntimeMaterial {
             name: "evaluator",
             path: source_path.join("swe_bench_pro_eval.py"),
             public_path: None,
+            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
         },
         RuntimeMaterial {
             name: "run_script",
@@ -164,21 +167,25 @@ fn swe_runtime_materials(
                 .join(&ctx.task.task_id)
                 .join("run_script.sh"),
             public_path: None,
+            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
         },
         RuntimeMaterial {
             name: "raw_sample",
             path: swe_dir.join("raw_sample.jsonl"),
             public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
         RuntimeMaterial {
             name: "instance",
             path: swe_dir.join("instance.json"),
             public_path: Some("swe-bench-pro/instance.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
         RuntimeMaterial {
             name: "workspace_manifest",
             path: swe_dir.join("workspace-manifest.json"),
             public_path: Some("swe-bench-pro/workspace-manifest.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
     ];
     let _ = instance;
@@ -187,21 +194,25 @@ fn swe_runtime_materials(
             name: "prediction_jsonl",
             path: ctx.attempt_dir.join("prediction.jsonl"),
             public_path: Some("prediction.jsonl".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
         RuntimeMaterial {
             name: "prediction_eval_json",
             path: ctx.attempt_dir.join("prediction.eval.json"),
             public_path: Some("prediction.eval.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
         RuntimeMaterial {
             name: "patch_diff",
             path: ctx.attempt_dir.join("patch.diff"),
             public_path: Some("patch.diff".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
         RuntimeMaterial {
             name: "eval_results",
             path: swe_dir.join("eval/eval_results.json"),
             public_path: Some("swe-bench-pro/eval/eval_results.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
         },
     ]);
     materials

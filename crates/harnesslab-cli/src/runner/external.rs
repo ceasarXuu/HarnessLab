@@ -9,6 +9,7 @@ use std::fs;
 use std::path::Path;
 
 mod log_scan;
+mod runtime_anchor;
 mod runtime_snapshot;
 mod swe_bench_pro;
 mod terminal_bench;

@@ -4,15 +4,19 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-05
-- Version: 0.10
+- Version: 0.14
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
   authoritative benchmark snapshots now block replay by default, and new runs
   now write task runtime snapshots. External-task replay now blocks empty,
-  missing, or divergent task runtime snapshot authority. Drift checks,
-  external runtime snapshot schemas, and legacy degraded replay policy remain
-  open.
+  missing, or divergent task runtime snapshot authority. SWE-bench Pro now has
+  public/private external runtime snapshots, benchmark-anchored attempt
+  checksums mirrored into task-runtime snapshots, fingerprint-backed replay
+  validation, run-scoped serialized anchor projection, and replay-time live
+  material drift blockers for parquet, evaluator, and run-script inputs.
+  Terminal-Bench runtime snapshots, official runner identity drift, security
+  scans, and legacy degraded replay policy remain open.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
@@ -423,6 +427,14 @@ adapter data after `benchmark.snapshot.json` is missing must be retired as part
 of this architecture track and replaced with a readiness blocker or an explicit
 legacy degraded replay mode.
 
+When an external attempt completes, its public/private external runtime
+snapshot checksums and fingerprints must be projected into both
+`task-runtime.snapshot.json` and the root `benchmark.snapshot.json` while
+holding a run-scoped projection lock. The lock must cover the full
+read/modify/write critical section for both authority files so parallel attempt
+completion cannot lose anchors. Replay treats `benchmark.snapshot.json` as the
+root authority and requires the task-runtime artifact to match it exactly.
+
 ## 5. Ownership Boundaries
 
 | Concern | Owner |
@@ -494,6 +506,7 @@ Required common events:
 | hard timeout | `external_runner_timeout` | hard-timeout value, elapsed duration, kill reason, official run/evaluator id, process termination reason, whether official result existed before timeout |
 | setup failure | `external_runner_setup_failed` | failing phase, evidence source/log path, official run/evaluator id, mapped final failure class/code, whether pending tasks should abort |
 | parse failure | `external_result_parse_failed` | official result path, parser, raw failure summary, final mapped failure |
+| snapshot authority | `external_runtime_anchor_projected` | task id, attempt number, attempt-relative public/private snapshot paths |
 | cleanup | style-specific cleanup event plus `external_runner_cleanup` when generic cleanup is introduced | phase, matched resources, removed resources, survivor resources, whether cleanup overrides benchmark verdict |
 | finish | `task_attempt_finished` | final failure class/code, official failure class/code, benchmark score, health impact, warnings |
 
@@ -704,7 +717,7 @@ can be expanded during implementation, but the minimum ledger is fixed here.
 | --- | --- | --- | --- |
 | Phase 0 | `vs_review/2026-06-04-benchmark-adapter-phase-0-review.md`, `artifacts/test-traceability.json`, `artifacts/adapter-proof-inventory.json` | Registry/meta-test output, selector-count evidence, current gap sentinel, `INT-011` proof shape | No claimed adapter proof ID can be absent from requirements, registry, or selector routing. |
 | Phase 1 | Phase 1 review section or slice report, adapter crate tests | `ADAPT-DATA-001..005`, compatibility wrapper proof, stable source-ref/task-plan evidence | New data trait cannot depend on process execution, event writers, or attempt directories. |
-| Phase 2 | Replay slice report, replay artifacts | Snapshot schema evidence, replay blocker/warning tests, drift tests, `INT-013` update | External replay cannot silently replan from live mutable data by default. |
+| Phase 2 | Replay slice report, replay artifacts | Snapshot schema evidence, replay blocker/warning tests, drift tests, concurrent anchor projection tests, `INT-013` update | External replay cannot silently replan from live mutable data by default, and concurrent external attempts cannot lose authority anchors. |
 | Phase 3 | Runtime registry slice report | `ADAPT-RUNTIME-001..002`, branch inventory before/after, preflight report evidence | Orchestrator cannot keep hidden benchmark-specific runtime execution branches outside registry dispatch. |
 | Phase 4 | Terminal-Bench extraction report | Existing `TB-*`, `INT-021..046`, Python bridge, event assertions, official-runner proof | Terminal-Bench timeout, setup, cleanup, QEMU, and platform semantics must match the pre-extraction path. |
 | Phase 5 | SWE-bench Pro extraction report | `SWEPRO-001..004`, official evaluator proof, phase event evidence | Metadata, workspace, patch, evaluator, and parse failures must be distinguishable. |
@@ -721,7 +734,7 @@ not complete even if the implementation appears to work manually.
 | --- | --- |
 | Phase 0 | Proof registration is mechanically enforced, `INT-011` cannot over-claim, and planned adapter IDs are visibly planned rather than silently passing as behavior. |
 | Phase 1 | The data adapter lifecycle is independently testable from inspect through task snapshot, with `plan(split)` preserved only as a compatibility wrapper. |
-| Phase 2 | Replay authority is snapshot-backed, drift-aware, and fails closed unless explicit legacy degraded replay is chosen. |
+| Phase 2 | Replay authority is snapshot-backed, drift-aware, concurrency-safe for attempt anchor projection, and fails closed unless explicit legacy degraded replay is chosen. |
 | Phase 3 | Runtime preflight and execution dispatch are registry-owned, with raw profile access removed or explicitly allowlisted and tested. |
 | Phase 4 | Terminal-Bench behavior is equivalent before and after extraction according to existing selectors and official-runner proof. |
 | Phase 5 | SWE-bench Pro runtime phases are first-class and evaluator behavior is proven beyond fixture-only shims. |
@@ -1001,6 +1014,9 @@ mode selected by the user.
   `external-runtime.public.json`.
 - Persist task runtime snapshots from the adapter data lifecycle into
   `benchmark.snapshot.json` and per-task artifacts.
+- Serialize external attempt anchor projection into `benchmark.snapshot.json`
+  and `task-runtime.snapshot.json` under a run-scoped lock, and emit a
+  projection event after the authority files are updated.
 - Retire silent replay live replanning for external benchmarks.
 - Add replay drift checks for dataset, evaluator, source, and official runner
   identity.
@@ -1035,15 +1051,26 @@ Status as of 2026-06-05:
   fingerprints.
 - Replay now treats attempt-level external runtime snapshots as readiness
   authority for external tasks and blocks before creating a new replay run if
-  those snapshots are missing, incomplete, or diverge from the authoritative
-  plan and fingerprint chain.
+  those snapshots are missing, incomplete, not anchored from
+  `benchmark.snapshot.json` and `task-runtime.snapshot.json`, or diverge from
+  the authoritative plan and fingerprint chain.
+- External attempt anchor projection is run-scoped and serialized by
+  `.harnesslab-locks/external-runtime-anchor.lock`, covering both
+  `task-runtime.snapshot.json` and `benchmark.snapshot.json` updates. New unit
+  coverage proves same-task multi-attempt overlap and multi-task parallel
+  completion preserve all projected anchors.
+- Successful projection emits `external_runtime_anchor_projected` into the run
+  event log with attempt-relative public/private snapshot paths.
 - `SWEPRO-005` proves SWE-bench Pro replay uses stored runtime materials and
   fails closed when public/private runtime material authority is missing or
-  divergent.
-- Phase 2 remains open for drift detection, explicit legacy degraded replay
-  policy, broader `external-runtime.*.json` generalization/redaction scans, and
-  the decision whether per-task runtime snapshots should be projected during
-  run setup instead of attempt execution.
+  divergent, when coordinated public/private snapshot rewrites break benchmark
+  or task-runtime attempt anchors, or when live external parquet/evaluator/run
+  script materials drift before replay.
+- Phase 2 remains open for Terminal-Bench/general runtime drift detection,
+  official runner identity drift, explicit legacy degraded replay policy,
+  broader `external-runtime.*.json` generalization/redaction scans, and the
+  decision whether per-task runtime snapshots should be projected during run
+  setup instead of attempt execution.
 
 #### Deliverables
 
@@ -1058,10 +1085,30 @@ Status as of 2026-06-05:
 | Missing authoritative snapshot blocks replay | Replay readiness test | External benchmark replay blocks before task execution |
 | Task runtime snapshot is persisted | `REPLAY-007` | New runs write matching `BenchmarkPlan.task_runtime_snapshots` and per-task `task-runtime.snapshot.json` |
 | External-task runtime snapshot authority is required | `REPLAY-008` | Replay blocks empty, missing, or divergent task runtime authority before creating a replay run |
-| SWE external runtime materials are required | `SWEPRO-005` | SWE-bench Pro writes public/private attempt runtime snapshots and replay blocks missing or divergent runtime material authority before creating a replay run |
-| Mutable data drift is detected | Replay drift fixture | Dataset/evaluator/source mismatch warns or blocks by adapter policy |
+| SWE external runtime materials are required | `SWEPRO-005` | SWE-bench Pro writes public/private attempt runtime snapshots, anchors them from benchmark and task runtime authority, and replay blocks missing, unanchored, or divergent runtime material authority before creating a replay run |
+| Concurrent attempt anchor projection is lossless | `REPLAY-009` | Same-task multi-attempt overlap and multi-task parallel completion preserve all authority anchors and emit projection events |
+| Mutable data drift is detected | `SWEPRO-005` plus future adapter-specific drift fixtures | SWE parquet/evaluator/run-script drift blocks replay; child and child-plus-task snapshot rewrites are rejected by benchmark/task-runtime anchors; remaining adapter families warn or block by policy |
 | Legacy degraded replay is explicit if retained | CLI/replay test | Degraded mode emits warning and cannot run silently |
 | SWE replay avoids live replanning | `SWEPRO-005` | Stored runtime materials are used as authority |
+
+Current validation evidence for the active Phase 2 slice:
+
+- `scripts/test-after-change.sh --select SWEPRO-005`: 1 passed.
+- `scripts/test-after-change.sh --select REPLAY-007`: 1 passed.
+- `scripts/test-after-change.sh --select REPLAY-008`: 1 passed.
+- `scripts/test-after-change.sh --select REPLAY-009`: 3 passed across
+  `harnesslab-cli` and `harnesslab-infra`.
+- `scripts/test-after-change.sh --select INT-011`: 10 passed.
+- `scripts/test-after-change.sh --select INT-013`: 1 passed.
+- `scripts/test-after-change.sh --select META-002`: registry and traceability
+  passed with 43 requirements, 171 tests, and 16 adapter claims.
+- `scripts/test-after-change.sh --select META-008`: adapter proof selectors
+  passed with active=6 and planned=10.
+- `cargo test -p harnesslab-cli --lib runtime_anchor::tests`: 2 passed.
+- `cargo test -p harnesslab-infra --lib lock_001_serializes_file_mutation`: 1
+  passed.
+- `cargo check --all-targets`, `cargo fmt --check`, and `git diff --check`:
+  passed.
 
 #### Exit Criteria
 
@@ -1070,6 +1117,8 @@ Status as of 2026-06-05:
 - `INT-013` asserts the new authority chain.
 - New runs persist task runtime snapshots at the benchmark and task artifact
   levels.
+- Concurrent external attempt completion cannot lose projected attempt anchors
+  in either benchmark or task-runtime authority.
 - Missing evaluator/source materials produce precise readiness blockers.
 
 #### Review Plan
@@ -1898,6 +1947,9 @@ This architecture track is complete when:
 | 0.9 | 2026-06-05 | Added `task-runtime.snapshot.json` persistence and `REPLAY-007` proof while keeping Phase 2 open for drift checks, external runtime snapshots, legacy replay policy, and `SWEPRO-005`. |
 | 0.10 | 2026-06-05 | Added `REPLAY-008` fail-closed external-task replay checks for empty, missing, and divergent task runtime snapshot authority. |
 | 0.11 | 2026-06-05 | Added SWE-bench Pro `external-runtime.public/private.json` snapshots and `SWEPRO-005` replay readiness proof for stored runtime materials. |
+| 0.12 | 2026-06-05 | Added SWE-bench Pro replay-time live material drift blockers for external parquet, evaluator, and run-script inputs. |
+| 0.13 | 2026-06-05 | Anchored SWE-bench Pro attempt runtime snapshots from `benchmark.snapshot.json` and `task-runtime.snapshot.json`, added explicit live/archived material scopes, and expanded `SWEPRO-005` for parquet drift, child-plus-task rewrite, and scope fail-closed blockers. |
+| 0.14 | 2026-06-05 | Added run-scoped serialized external runtime anchor projection, projection event evidence, and active `REPLAY-009` coverage for concurrent same-task and multi-task authority updates. |
 
 ## 25. Plan Quality Checklist
 

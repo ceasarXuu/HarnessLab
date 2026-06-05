@@ -109,6 +109,19 @@ pub struct RuntimeTaskSnapshot {
     pub task_plan_hash: String,
     #[serde(default)]
     pub external_runner: Option<ExternalRunnerSpec>,
+    #[serde(default)]
+    pub external_runtime_attempts: Vec<ExternalRuntimeAttemptSnapshot>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExternalRuntimeAttemptSnapshot {
+    pub attempt: u32,
+    pub private_path: String,
+    pub public_path: String,
+    pub private_checksum: String,
+    pub public_checksum: String,
+    pub runtime_fingerprint: String,
+    pub public_fingerprint: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

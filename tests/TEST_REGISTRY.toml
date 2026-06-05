@@ -1591,7 +1591,12 @@ layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-005"
 file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
-required_artifacts = ["external-runtime.private.json", "external-runtime.public.json"]
+required_artifacts = [
+  "benchmark.snapshot.json",
+  "tasks/<task-id>/task-runtime.snapshot.json",
+  "external-runtime.private.json",
+  "external-runtime.public.json",
+]
 status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
@@ -1826,6 +1831,31 @@ section = "Phase 2"
 [tests.verifies]
 requirements = ["replay_runtime", "artifact_event_store"]
 contracts = ["SnapshotAuthority", "Replay", "AdapterDataContract"]
+
+[[tests]]
+id = "REPLAY-009"
+title = "External runtime anchor projection is concurrency-safe"
+layer = "unit"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select REPLAY-009"
+file_patterns = [
+  "crates/harnesslab-infra/src/file_lock.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_anchor.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+]
+required_artifacts = [
+  ".harnesslab-locks/external-runtime-anchor.lock",
+  "benchmark.snapshot.json",
+  "events.jsonl",
+  "tasks/<task-id>/task-runtime.snapshot.json",
+]
+status = "active"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "Phase 2"
+[tests.verifies]
+requirements = ["external_runtime_anchor_projection", "artifact_event_store"]
+contracts = ["SnapshotAuthority", "Replay", "EventLog"]
 
 [[tests]]
 id = "ORCH-013"
