@@ -327,7 +327,10 @@ mod tests {
             started: Instant::now(),
         };
 
-        let result = super::super::terminal_bench::execute(&ctx, source.path()).unwrap();
+        let compatibility =
+            crate::runtime_compatibility::BenchmarkRuntimeCompatibility::from_profile(&profile);
+        let result =
+            super::super::terminal_bench::execute(&ctx, source.path(), &compatibility).unwrap();
 
         assert_eq!(result.state, TaskState::Failure);
         assert_eq!(result.outcome, Outcome::Failure);

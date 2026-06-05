@@ -279,6 +279,7 @@ fn execute_plan(
         &event(&spec.run_id, None, "run_started", "run started"),
         &[],
     )?;
+    external::emit_runtime_preflight_reports(run_dir, spec, &context.profile, &plan.tasks)?;
     let _sandbox_cleanup = RunSandboxCleanup::start(run_dir, spec, plan);
     let (mut attempts, pending) = partition_attempts(run_dir, plan, spec.execution.attempts)?;
     let pending = pending

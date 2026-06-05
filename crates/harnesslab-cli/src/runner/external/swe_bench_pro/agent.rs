@@ -1,4 +1,5 @@
 use super::SweInstance;
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::Result;
 use harnesslab_core::{AgentProfile, FailureCode, ProcessRecord, TaskPlan, TerminationReason};
 use std::fs;
@@ -15,14 +16,9 @@ pub(super) fn run_agent(
     task: &TaskPlan,
     workspace: &Path,
     instance: &SweInstance,
+    compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Result<SweAgentRun> {
-    if ctx
-        .profile
-        .labels
-        .get("swe_bench_pro_agent")
-        .map(String::as_str)
-        == Some("gold")
-    {
+    if compatibility.swe_bench_pro_uses_gold_agent() {
         return Ok(SweAgentRun {
             process: apply_gold_patch(
                 ctx.attempt_dir,

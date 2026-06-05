@@ -14,6 +14,7 @@ use super::{
     },
     write_external_command_snapshot,
 };
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentKind, AgentProfile, Failure, FailureClass, FailureCode, Outcome, ProcessRecord, RunSpec,
@@ -28,19 +29,23 @@ pub(super) use super::terminal_bench_result::parse_terminal_bench_result;
 
 const IMPORT_AGENT_CLEANUP_GRACE_SEC: u64 = 30;
 
-pub(super) fn validate_profile(profile: &AgentProfile) -> Result<()> {
-    let _ = terminal_bench_agent(profile)?;
+pub(super) fn validate_profile(
+    profile: &AgentProfile,
+    compatibility: &BenchmarkRuntimeCompatibility,
+) -> Result<()> {
+    let _ = terminal_bench_agent(profile, compatibility)?;
     Ok(())
 }
 
 pub(super) fn execute(
     ctx: &ExternalTaskExecution<'_>,
     dataset_path: &Path,
+    compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Result<TaskAttemptResult> {
     let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
     let output_root = attempt_root.join("official/terminal-bench");
     let official_run_id = official_run_id(ctx.spec, ctx.task, ctx.attempt);
-    let agent = terminal_bench_agent(ctx.profile)?;
+    let agent = terminal_bench_agent(ctx.profile, compatibility)?;
     let docker_platform = terminal_bench_docker_platform(
         &ctx.task.task_id,
         std::env::var("HARNESSLAB_TERMINAL_BENCH_DOCKER_PLATFORM")
@@ -88,6 +93,7 @@ pub(super) fn execute(
         ctx.profile,
         ctx,
         &docker_platform,
+        compatibility,
     );
     let report_command = terminal_bench_command(
         &runtime_dataset_path,
@@ -97,6 +103,7 @@ pub(super) fn execute(
         ctx.report_profile,
         ctx,
         &docker_platform,
+        compatibility,
     );
     write_external_command_snapshot(
         ctx.attempt_dir,
@@ -311,6 +318,7 @@ fn terminal_bench_command(
     profile: &AgentProfile,
     ctx: &ExternalTaskExecution<'_>,
     docker_platform: &str,
+    compatibility: &BenchmarkRuntimeCompatibility,
 ) -> String {
     let (agent_timeout, test_timeout, _) = terminal_bench_timeout_values(
         ctx.spec.execution.timeout_sec,
@@ -323,7 +331,12 @@ fn terminal_bench_command(
         matches!(agent, TerminalBenchAgent::ImportPath(_)),
     );
     let mut command = vec![
-        terminal_bench_agent_env(profile, ctx.materialized_profile, agent_timeout),
+        terminal_bench_agent_env(
+            profile,
+            ctx.materialized_profile,
+            agent_timeout,
+            compatibility,
+        ),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
         format!(
             "export DOCKER_DEFAULT_PLATFORM={}; export BUILDKIT_PROGRESS=plain;",
@@ -379,12 +392,15 @@ enum TerminalBenchAgent {
     ImportPath(String),
 }
 
-fn terminal_bench_agent(profile: &AgentProfile) -> Result<TerminalBenchAgent> {
-    if let Some(path) = profile.labels.get("terminal_bench_agent_import_path") {
+fn terminal_bench_agent(
+    profile: &AgentProfile,
+    compatibility: &BenchmarkRuntimeCompatibility,
+) -> Result<TerminalBenchAgent> {
+    if let Some(path) = &compatibility.terminal_bench_agent_import_path {
         return Ok(TerminalBenchAgent::ImportPath(path.clone()));
     }
-    let model = terminal_bench_model(profile);
-    if let Some(name) = profile.labels.get("terminal_bench_agent") {
+    let model = compatibility.terminal_bench_model.clone();
+    if let Some(name) = &compatibility.terminal_bench_agent {
         if requires_terminal_bench_model(name) && model.is_none() {
             bail!(
                 "agent profile {} must set label terminal_bench_model or model for terminal-bench {} agent",
@@ -424,15 +440,6 @@ fn terminal_bench_agent(profile: &AgentProfile) -> Result<TerminalBenchAgent> {
             profile.name
         ),
     }
-}
-
-fn terminal_bench_model(profile: &AgentProfile) -> Option<String> {
-    profile
-        .labels
-        .get("terminal_bench_model")
-        .or_else(|| profile.labels.get("model"))
-        .filter(|value| !value.trim().is_empty() && value.as_str() != "user-configured")
-        .cloned()
 }
 
 fn requires_terminal_bench_model(name: &str) -> bool {

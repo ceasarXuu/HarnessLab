@@ -1,5 +1,4 @@
 use super::*;
-use crate::runner::external::terminal_bench_cleanup;
 use harnesslab_core::{
     ArtifactSpec, BenchmarkIdentity, BenchmarkRef, ExecutionConfig, ExternalRunnerKind,
     ExternalRunnerSpec, NetworkPolicy, ResourceHint, RunConfigOverrides, RunPaths, SandboxSpec,
@@ -267,20 +266,18 @@ fn panic_cleanup(_run_id: &str) -> Result<CleanupResult, String> {
 }
 
 fn panic_compose_cleanup(
-    _run_dir: &Path,
-    _run_id: &str,
-) -> Result<terminal_bench_cleanup::RunCleanupResult, String> {
+    _target: &super::super::external::RuntimeCleanupTarget,
+) -> Result<super::super::external::RuntimeCleanupReport, String> {
     panic!("compose cleanup must not run")
 }
 
 fn ok_compose_cleanup(
-    run_dir: &Path,
-    run_id: &str,
-) -> Result<terminal_bench_cleanup::RunCleanupResult, String> {
-    Ok(terminal_bench_cleanup::RunCleanupResult {
-        removed: vec![format!("network:{}", run_dir.display())],
-        tokens: vec![run_id.to_string()],
-        projects: vec![format!("project-{run_id}")],
+    target: &super::super::external::RuntimeCleanupTarget,
+) -> Result<super::super::external::RuntimeCleanupReport, String> {
+    Ok(super::super::external::RuntimeCleanupReport {
+        removed: vec![format!("network:{}", target.run_dir.display())],
+        tokens: vec![target.scan_run_id.clone()],
+        projects: vec![format!("project-{}", target.scan_run_id)],
         snapshot_projects: 0,
         matched_projects: 1,
     })

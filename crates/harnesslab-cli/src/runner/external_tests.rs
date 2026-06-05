@@ -6,6 +6,7 @@ use super::terminal_bench_timeout::{
 use crate::agent_registry::{
     MaterializedAgentProfile, materialize_profile, resolve_profile_capabilities,
 };
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use harnesslab_core::{
     AgentKind, FailureClass, FailureCode, InputMode, ProcessRecord, RunAs, TerminationReason,
     default_agent_profile,
@@ -118,7 +119,8 @@ fn terminal_bench_env_uses_effective_agent_timeout() {
     let profile = default_agent_profile("custom", AgentKind::Custom, "agent");
     let materialized = materialize_profile(&profile).unwrap();
 
-    let env = terminal_bench_agent_env(&profile, &materialized, 42);
+    let compatibility = BenchmarkRuntimeCompatibility::from_profile(&profile);
+    let env = terminal_bench_agent_env(&profile, &materialized, 42, &compatibility);
 
     assert!(env.contains("export HARNESSLAB_AGENT_TIMEOUT_SEC='42'"));
     assert!(env.contains("export HARNESSLAB_AGENT_SETUP_COMMAND=''"));
@@ -139,7 +141,8 @@ fn agt_reg_005_terminal_bench_env_uses_materialized_setup_not_raw_profile() {
         warnings: Vec::new(),
     };
 
-    let env = terminal_bench_agent_env(&profile, &materialized, 42);
+    let compatibility = BenchmarkRuntimeCompatibility::from_profile(&profile);
+    let env = terminal_bench_agent_env(&profile, &materialized, 42, &compatibility);
 
     assert!(env.contains("export HARNESSLAB_AGENT_SETUP_COMMAND='materialized-only-setup'"));
     assert!(!env.contains("raw-profile-setup"));
@@ -165,8 +168,13 @@ fn terminal_bench_tty_mode_maps_to_stdin_for_import_agent() {
 
     assert_eq!(terminal_bench_input_mode(&profile), "stdin");
     assert!(
-        terminal_bench_agent_env(&profile, &materialized, 5)
-            .contains("export HARNESSLAB_AGENT_INPUT_MODE='stdin'")
+        terminal_bench_agent_env(
+            &profile,
+            &materialized,
+            5,
+            &BenchmarkRuntimeCompatibility::from_profile(&profile)
+        )
+        .contains("export HARNESSLAB_AGENT_INPUT_MODE='stdin'")
     );
 }
 
