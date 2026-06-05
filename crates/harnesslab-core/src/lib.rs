@@ -6,6 +6,7 @@ pub mod config;
 pub mod model;
 pub mod path_safety;
 pub mod redaction;
+pub mod runtime;
 pub mod usage;
 
 pub use agent_profile::*;
@@ -16,4 +17,5 @@ pub use config::*;
 pub use model::*;
 pub use path_safety::*;
 pub use redaction::*;
+pub use runtime::*;
 pub use usage::*;

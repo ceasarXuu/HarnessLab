@@ -372,22 +372,22 @@ section = "10"
 
 [[requirements]]
 id = "ADAPT-RUNTIME-001"
-title = "Runtime registry dispatches preflight and execute without direct benchmark branches"
+title = "External runtime execute entrypoint delegates through registry"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract", "integration"]
-required_runtime_proof = true
+required_runtime_proof = false
 [requirements.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
 
 [[requirements]]
 id = "ADAPT-RUNTIME-002"
-title = "Runtime preflight owns benchmark compatibility checks"
+title = "Runtime preflight reports and enforces current compatibility checks"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]

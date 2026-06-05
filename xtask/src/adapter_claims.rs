@@ -248,6 +248,18 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             test_target: Some("lib"),
             file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
+        "ADAPT-RUNTIME-001" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry",
+            test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs"],
+        }),
+        "ADAPT-RUNTIME-002" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "runner::external::runtime_adapter::tests::adapt_runtime_002_preflight_reports_and_enforces_current_compatibility",
+            test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs"],
+        }),
         "SWEPRO-005" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "swepro_005_replay_requires_stored_swe_runtime_materials",

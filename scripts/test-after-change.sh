@@ -204,8 +204,8 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-DATA-003) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_003_list_tasks_returns_stable_task_ids_and_source_refs"; test_target="lib" ;;
     ADAPT-DATA-004) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_004_snapshot_task_captures_replay_sufficient_identity"; test_target="lib" ;;
     ADAPT-DATA-005) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper"; test_target="lib" ;;
-    ADAPT-RUNTIME-001) planned_adapter_proof "$id" "Phase 3: runtime registry dispatch" ;;
-    ADAPT-RUNTIME-002) planned_adapter_proof "$id" "Phase 3: runtime preflight ownership" ;;
+    ADAPT-RUNTIME-001) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry"; test_target="lib" ;;
+    ADAPT-RUNTIME-002) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_002_preflight_reports_and_enforces_current_compatibility"; test_target="lib" ;;
     ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;
     ADAPT-RUNTIME-004) planned_adapter_proof "$id" "Phase 6: cleanup report" ;;
     ADAPT-RUNTIME-005) planned_adapter_proof "$id" "Phase 6: runtime event taxonomy" ;;
