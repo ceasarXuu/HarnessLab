@@ -114,6 +114,20 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     .unwrap();
     assert_preflight(swe_sandbox_report, ExternalRunnerKind::SweBenchPro, None);
 
+    let mut swe_missing_source = external_task("swe-task", ExternalRunnerKind::SweBenchPro);
+    swe_missing_source
+        .external_runner
+        .as_mut()
+        .unwrap()
+        .source_path = None;
+    let swe_missing_source_report =
+        preflight_external_task(&swe_sandbox_profile, &swe_missing_source).unwrap();
+    assert_blocked_preflight(
+        swe_missing_source_report,
+        ExternalRunnerKind::SweBenchPro,
+        "source_path",
+    );
+
     let error = super::super::validate_profile_for_plan(
         &terminal_profile,
         &[external_task("tb-task", ExternalRunnerKind::TerminalBench)],
@@ -198,6 +212,7 @@ fn assert_runtime_label_access_is_allowlisted() {
         include_str!("terminal_bench_adapter.rs"),
         include_str!("terminal_bench.rs"),
         include_str!("terminal_bench_env.rs"),
+        include_str!("swe_bench_pro_adapter.rs"),
         include_str!("swe_bench_pro/agent.rs"),
         include_str!("../../doctor_run_as.rs"),
     ];

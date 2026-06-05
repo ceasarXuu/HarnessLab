@@ -273,6 +273,30 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
                 "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
             ],
         }),
+        "SWEPRO-001" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "swepro_001_metadata_failure_is_classified_and_observable",
+            test_target: Some("test:swe_runtime_phase_contract"),
+            file_patterns: SWE_PHASE_FILE_PATTERNS,
+        }),
+        "SWEPRO-002" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "swepro_002_workspace_failure_is_classified_and_observable",
+            test_target: Some("test:swe_runtime_phase_contract"),
+            file_patterns: SWE_PHASE_FILE_PATTERNS,
+        }),
+        "SWEPRO-003" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "swepro_003_diff_capture_failure_and_empty_patch_are_distinct",
+            test_target: Some("test:swe_runtime_phase_contract"),
+            file_patterns: SWE_PHASE_FILE_PATTERNS,
+        }),
+        "SWEPRO-004" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "swepro_004_evaluator_parse_corruption_is_not_patch_failure",
+            test_target: Some("test:swe_runtime_phase_contract"),
+            file_patterns: SWE_PHASE_FILE_PATTERNS,
+        }),
         "SWEPRO-005" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "swepro_005_replay_requires_stored_swe_runtime_materials",
@@ -282,6 +306,12 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
         _ => None,
     }
 }
+
+const SWE_PHASE_FILE_PATTERNS: &[&str] = &[
+    "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+];
 
 fn ensure_assignment(route: &str, key: &str, expected: &str, id: &str) -> Result<()> {
     let values = assignment_values(route, key);

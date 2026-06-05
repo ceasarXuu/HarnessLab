@@ -18,6 +18,7 @@ mod runtime_adapter;
 mod runtime_anchor;
 mod runtime_snapshot;
 mod swe_bench_pro;
+mod swe_bench_pro_adapter;
 mod terminal_bench;
 mod terminal_bench_adapter;
 pub(super) mod terminal_bench_cleanup;

@@ -323,6 +323,13 @@ fn file_patterns_for(id: &str) -> Vec<String> {
         ACTIVE_RUNTIME_ID | "ADAPT-RUNTIME-002" => {
             vec!["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs".to_string()]
         }
+        "SWEPRO-001" | "SWEPRO-002" | "SWEPRO-003" | "SWEPRO-004" => {
+            vec![
+                "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs".to_string(),
+                "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs".to_string(),
+                "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs".to_string(),
+            ]
+        }
         "SWEPRO-005" => {
             vec!["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs".to_string()]
         }

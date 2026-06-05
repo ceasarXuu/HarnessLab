@@ -37,6 +37,7 @@ pub enum FailureClass {
 #[serde(rename_all = "snake_case")]
 pub enum FailureCode {
     SandboxCreateFailed,
+    MetadataExtractionFailed,
     WorkspacePrepFailed,
     AgentSpawnError,
     AgentTimeout,
@@ -147,6 +148,9 @@ pub fn health_impact_for_failure(
     match (failure_class, failure_code) {
         (_, Some(FailureCode::DockerNetworkPoolExhausted)) => HealthImpact::EnvironmentUnhealthy,
         (_, Some(FailureCode::ExternalRunnerSetupFailed)) => HealthImpact::EnvironmentUnhealthy,
+        (_, Some(FailureCode::MetadataExtractionFailed | FailureCode::WorkspacePrepFailed)) => {
+            HealthImpact::EnvironmentUnhealthy
+        }
         (
             FailureClass::Execution,
             Some(

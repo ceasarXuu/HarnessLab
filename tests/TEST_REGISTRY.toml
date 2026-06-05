@@ -1546,9 +1546,13 @@ title = "Metadata extraction failure is classified and observable"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-001"
-file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+]
 required_artifacts = ["events.jsonl", "results.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1562,9 +1566,13 @@ title = "Workspace preparation failure is classified and observable"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-002"
-file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+]
 required_artifacts = ["events.jsonl", "results.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1574,13 +1582,17 @@ contracts = ["SweBenchProRuntimeAdapter"]
 
 [[tests]]
 id = "SWEPRO-003"
-title = "Invalid patch and empty patch are distinct benchmark failures"
+title = "Diff capture failure and empty patch are distinct patch failures"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-003"
-file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+]
 required_artifacts = ["results.json", "git-diff.status.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
@@ -1594,9 +1606,13 @@ title = "Evaluator parse corruption is distinct from agent patch failure"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-004"
-file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+file_patterns = [
+  "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+]
 required_artifacts = ["events.jsonl", "verifier/stderr.log"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
