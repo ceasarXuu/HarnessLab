@@ -3,6 +3,12 @@ mod support;
 use assert_cmd::Command;
 use std::fs;
 use std::path::Path;
+use support::runtime_snapshot::{
+    assert_json_array_has_name, assert_material_scope, material_path,
+    rewrite_snapshot_pair_for_material, rewrite_snapshot_scope_with_authority,
+    rewrite_task_runtime_anchor_for_attempt, run_ids, shell_quote, stable_file_checksum,
+    task_runtime_path,
+};
 use support::swe::{
     fake_swe_tools, init_home, path_with, run_swe_json, swe_bench_root, write_agent,
     write_swe_gold_agent,
@@ -37,8 +43,12 @@ fn swepro_005_replay_requires_stored_swe_runtime_materials() {
 
     let public_path = attempt_dir.join("external-runtime.public.json");
     let private_path = attempt_dir.join("external-runtime.private.json");
+    let task_runtime_path = task_runtime_path(&attempt_dir);
+    let benchmark_path = run_dir.join("benchmark.snapshot.json");
     let public_original = fs::read(&public_path).unwrap();
     let private_original = fs::read(&private_path).unwrap();
+    let task_runtime_original = fs::read(&task_runtime_path).unwrap();
+    let benchmark_original = fs::read(&benchmark_path).unwrap();
 
     fs::rename(
         &public_path,
@@ -129,6 +139,98 @@ fn swepro_005_replay_requires_stored_swe_runtime_materials() {
         "external-runtime snapshot mismatch",
     );
     fs::write(&private_path, &private_original).unwrap();
+
+    let parquet_path = material_path(&private_path, "parquet");
+    let parquet_original = fs::read(&parquet_path).unwrap();
+    fs::write(&parquet_path, "drifted parquet").unwrap();
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime live material drift for task instance_demo; material=parquet",
+    );
+    rewrite_snapshot_pair_for_material(&private_path, &public_path, "parquet", &parquet_path);
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime attempt anchor mismatch",
+    );
+    rewrite_task_runtime_anchor_for_attempt(&task_runtime_path, &private_path, &public_path);
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "task-runtime.snapshot.json mismatch",
+    );
+    fs::write(&private_path, &private_original).unwrap();
+    fs::write(&public_path, &public_original).unwrap();
+    fs::write(&task_runtime_path, &task_runtime_original).unwrap();
+    fs::write(&parquet_path, parquet_original).unwrap();
+
+    rewrite_snapshot_scope_with_authority(
+        &private_path,
+        &public_path,
+        &task_runtime_path,
+        &benchmark_path,
+        "parquet",
+        Some("unknown"),
+    );
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime material validation scope missing",
+    );
+    fs::write(&private_path, &private_original).unwrap();
+    fs::write(&public_path, &public_original).unwrap();
+    fs::write(&task_runtime_path, &task_runtime_original).unwrap();
+    fs::write(&benchmark_path, &benchmark_original).unwrap();
+
+    rewrite_snapshot_scope_with_authority(
+        &private_path,
+        &public_path,
+        &task_runtime_path,
+        &benchmark_path,
+        "parquet",
+        None,
+    );
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime material validation scope missing",
+    );
+    fs::write(&private_path, &private_original).unwrap();
+    fs::write(&public_path, &public_original).unwrap();
+    fs::write(&task_runtime_path, &task_runtime_original).unwrap();
+    fs::write(&benchmark_path, &benchmark_original).unwrap();
+
+    let evaluator_path = root
+        .path()
+        .join("_src/SWE-bench_Pro-os/swe_bench_pro_eval.py");
+    let evaluator_original = fs::read(&evaluator_path).unwrap();
+    fs::write(&evaluator_path, "drifted evaluator").unwrap();
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime live material drift",
+    );
+    fs::write(&evaluator_path, evaluator_original).unwrap();
+
+    let run_script_path = root
+        .path()
+        .join("_src/SWE-bench_Pro-os/run_scripts/instance_demo/run_script.sh");
+    let run_script_original = fs::read(&run_script_path).unwrap();
+    fs::remove_file(&run_script_path).unwrap();
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime live material missing",
+    );
+    fs::write(&run_script_path, run_script_original).unwrap();
 
     fs::create_dir_all(run_dir.join("tasks").join(task_id).join("attempts/2")).unwrap();
     assert_replay_blocker(
@@ -267,13 +369,77 @@ fn assert_swe_external_runtime_snapshots(
     assert_json_array_has_name(&public["runtime_materials"], "evaluator");
     assert_json_array_has_name(&private["replay_materials"], "raw_sample");
     assert_json_array_has_name(&private["replay_materials"], "prediction_eval_json");
+    assert_material_scope(
+        &private["replay_materials"],
+        "parquet",
+        "live_external",
+        true,
+    );
+    assert_material_scope(
+        &private["replay_materials"],
+        "evaluator",
+        "live_external",
+        true,
+    );
+    assert_material_scope(
+        &private["replay_materials"],
+        "run_script",
+        "live_external",
+        true,
+    );
+    assert_material_scope(
+        &private["replay_materials"],
+        "raw_sample",
+        "archived_attempt",
+        false,
+    );
+    assert_material_scope(
+        &private["replay_materials"],
+        "prediction_eval_json",
+        "archived_attempt",
+        false,
+    );
+    let task_runtime: serde_json::Value =
+        serde_json::from_reader(fs::File::open(task_runtime_path(attempt_dir)).unwrap()).unwrap();
+    let anchor = task_runtime["external_runtime_attempts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["attempt"] == 1)
+        .unwrap();
+    assert_eq!(
+        anchor["private_checksum"],
+        stable_file_checksum(&private_path)
+    );
+    assert_eq!(
+        anchor["public_checksum"],
+        stable_file_checksum(&public_path)
+    );
+    assert_eq!(
+        anchor["runtime_fingerprint"],
+        private["runtime_fingerprint"]
+    );
+    assert_eq!(anchor["public_fingerprint"], private["public_fingerprint"]);
+    let benchmark: serde_json::Value =
+        serde_json::from_reader(fs::File::open(run_dir.join("benchmark.snapshot.json")).unwrap())
+            .unwrap();
+    let benchmark_task = benchmark["task_runtime_snapshots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["task_id"] == task_id)
+        .unwrap();
+    assert_eq!(
+        benchmark_task["external_runtime_attempts"],
+        task_runtime["external_runtime_attempts"]
+    );
     assert_json_array_has_name(&private["commands"], "metadata_extraction");
     assert_json_array_has_name(&private["commands"], "workspace_preparation");
     assert_json_array_has_name(&private["commands"], "evaluation");
 }
 
 fn assert_replay_blocker(home: &Path, bin: &Path, run_dir: &Path, message: &str) {
-    let run_count = fs::read_dir(home.join("runs")).unwrap().count();
+    let runs_before = run_ids(home);
     let stderr = Command::cargo_bin("harnesslab")
         .unwrap()
         .env("PATH", path_with(bin))
@@ -291,7 +457,7 @@ fn assert_replay_blocker(home: &Path, bin: &Path, run_dir: &Path, message: &str)
         .stderr
         .clone();
     assert!(String::from_utf8(stderr).unwrap().contains(message));
-    assert_eq!(fs::read_dir(home.join("runs")).unwrap().count(), run_count);
+    assert_eq!(run_ids(home), runs_before);
 }
 
 fn mutate_json(path: &Path, mutate: impl FnOnce(&mut serde_json::Value)) {
@@ -319,19 +485,4 @@ fn swe_bench_root_with_prefix(prefix: &str) -> tempfile::TempDir {
     fs::write(source.join("run_scripts/instance_demo/run_script.sh"), "").unwrap();
     fs::write(source.join("run_scripts/instance_demo/parser.py"), "").unwrap();
     root
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn assert_json_array_has_name(array: &serde_json::Value, name: &str) {
-    assert!(
-        array
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|entry| entry["name"] == name || entry["phase"] == name),
-        "missing {name} in {array}"
-    );
 }

@@ -1,13 +1,15 @@
+use super::runtime_anchor::{AnchorProjection, anchor_attempt_snapshot};
 use crate::runner::store;
 use anyhow::Result;
 use harnesslab_core::{ExternalRunnerKind, redact_public_value};
-use harnesslab_infra::atomic_write_json;
+use harnesslab_infra::{atomic_write_json, stable_checksum_bytes, stable_file_checksum};
 use serde::Serialize;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub(super) struct ExternalRuntimeSnapshotRequest<'a> {
+    pub(super) run_id: &'a str,
     pub(super) attempt_dir: &'a Path,
     pub(super) benchmark: &'a str,
     pub(super) task_id: &'a str,
@@ -38,6 +40,14 @@ pub(super) struct RuntimeMaterial {
     pub(super) name: &'static str,
     pub(super) path: PathBuf,
     pub(super) public_path: Option<String>,
+    pub(super) validation_scope: RuntimeMaterialValidationScope,
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum RuntimeMaterialValidationScope {
+    LiveExternal,
+    ArchivedAttempt,
 }
 
 pub(super) fn write_external_runtime_snapshots(
@@ -106,16 +116,28 @@ pub(super) fn write_external_runtime_snapshots(
         runtime_policy,
         commands: public_commands,
         runtime_materials: public_materials,
-        public_artifacts: request.public_artifacts,
+        public_artifacts: request.public_artifacts.clone(),
         runtime_fingerprint,
     };
     let private_path = request.attempt_dir.join("external-runtime.private.json");
     atomic_write_json(&private_path, &private)?;
     restrict_private_snapshot(&private_path)?;
-    atomic_write_json(
-        &request.attempt_dir.join("external-runtime.public.json"),
-        &public,
-    )?;
+    let public_path = request.attempt_dir.join("external-runtime.public.json");
+    atomic_write_json(&public_path, &public)?;
+    let private_checksum = stable_file_checksum(&private_path);
+    let public_checksum = stable_file_checksum(&public_path);
+    anchor_attempt_snapshot(AnchorProjection {
+        run_id: request.run_id.to_string(),
+        task_id: request.task_id.to_string(),
+        attempt: request.attempt,
+        attempt_dir: request.attempt_dir.to_path_buf(),
+        private_path,
+        public_path,
+        private_checksum,
+        public_checksum,
+        runtime_fingerprint: private.runtime_fingerprint.clone(),
+        public_fingerprint: private.public_fingerprint.clone(),
+    })?;
     Ok(())
 }
 
@@ -187,6 +209,7 @@ struct MaterialSnapshot {
     name: String,
     path: String,
     public_path: Option<String>,
+    validation_scope: RuntimeMaterialValidationScope,
     exists: bool,
     size_bytes: Option<u64>,
     checksum: String,
@@ -196,6 +219,7 @@ struct MaterialSnapshot {
 struct PublicMaterialSnapshot {
     name: String,
     public_path: Option<String>,
+    validation_scope: RuntimeMaterialValidationScope,
     exists: bool,
     size_bytes: Option<u64>,
     checksum: String,
@@ -244,6 +268,7 @@ fn material_snapshot(material: &RuntimeMaterial, attempt_dir: &Path) -> Material
             .public_path
             .clone()
             .or_else(|| relative_to_attempt(&material.path, attempt_dir)),
+        validation_scope: material.validation_scope,
         exists: metadata.is_some(),
         size_bytes: metadata.as_ref().map(std::fs::Metadata::len),
         checksum: stable_file_checksum(&material.path),
@@ -254,6 +279,7 @@ fn public_material_snapshot(material: &MaterialSnapshot) -> PublicMaterialSnapsh
     PublicMaterialSnapshot {
         name: material.name.clone(),
         public_path: material.public_path.clone(),
+        validation_scope: material.validation_scope,
         exists: material.exists,
         size_bytes: material.size_bytes,
         checksum: material.checksum.clone(),
@@ -302,22 +328,6 @@ fn private_redaction_basis() -> Vec<String> {
         "local dataset/source/attempt paths".to_string(),
         "sensitive token scanner".to_string(),
     ]
-}
-
-fn stable_file_checksum(path: &Path) -> String {
-    match fs::read(path) {
-        Ok(bytes) => stable_checksum_bytes(&bytes),
-        Err(_) => stable_checksum_bytes(format!("missing:{}", path.display()).as_bytes()),
-    }
-}
-
-fn stable_checksum_bytes(bytes: &[u8]) -> String {
-    let mut hash = 0xcbf29ce484222325u64;
-    for byte in bytes {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    format!("fnv64:{hash:016x}")
 }
 
 fn runtime_fingerprint(

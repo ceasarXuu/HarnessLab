@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 pub mod agent_schema_docs;
+pub mod runtime_snapshot;
 pub mod swe;
 
 use std::fs;

@@ -124,7 +124,8 @@ fn validate_external_runtime_snapshots(source: &Path, plan: &BenchmarkPlan) -> R
             );
         }
         for attempt_dir in attempts {
-            validate_external_runtime_snapshot_pair(&attempt_dir, plan, task)?;
+            let task_runtime = task_runtime_snapshot_artifact(source, &task.task_id)?;
+            validate_external_runtime_snapshot_pair(&attempt_dir, plan, task, &task_runtime)?;
         }
     }
     Ok(())
@@ -134,6 +135,7 @@ fn validate_external_runtime_snapshot_pair(
     attempt_dir: &Path,
     plan: &BenchmarkPlan,
     task: &harnesslab_core::TaskPlan,
+    task_runtime: &RuntimeTaskSnapshot,
 ) -> Result<()> {
     let private_path = attempt_dir.join("external-runtime.private.json");
     if !private_path.exists() {
@@ -203,6 +205,111 @@ fn validate_external_runtime_snapshot_pair(
             task.task_id
         );
     }
+    validate_attempt_anchor(
+        attempt,
+        &private_path,
+        &public_path,
+        &private,
+        task,
+        task_runtime,
+    )?;
+    validate_live_materials(&private, task)?;
+    Ok(())
+}
+
+fn validate_live_materials(private: &Value, task: &harnesslab_core::TaskPlan) -> Result<()> {
+    let Some(materials) = private["replay_materials"].as_array() else {
+        bail!(
+            "replay blocker: external-runtime snapshot mismatch for task {}; cannot safely replay external benchmark task with missing replay materials",
+            task.task_id
+        );
+    };
+    for material in materials {
+        let name = material["name"].as_str().unwrap_or("unknown");
+        match material["validation_scope"].as_str() {
+            Some("live_external") => validate_live_material(material, name, task)?,
+            Some("archived_attempt") => {}
+            _ => {
+                bail!(
+                    "replay blocker: external-runtime material validation scope missing for task {}; material={name}",
+                    task.task_id
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_live_material(
+    material: &Value,
+    name: &str,
+    task: &harnesslab_core::TaskPlan,
+) -> Result<()> {
+    let Some(path) = material["path"].as_str() else {
+        bail!(
+            "replay blocker: external-runtime live material path missing for task {}; material={name}",
+            task.task_id
+        );
+    };
+    let path = Path::new(path);
+    if !path.is_file() {
+        bail!(
+            "replay blocker: external-runtime live material missing for task {}; material={name}; path={}",
+            task.task_id,
+            path.display()
+        );
+    }
+    let actual = stable_file_checksum(path);
+    let expected = material["checksum"].as_str().unwrap_or_default();
+    if actual != expected {
+        bail!(
+            "replay blocker: external-runtime live material drift for task {}; material={name}; expected={expected}; actual={actual}",
+            task.task_id
+        );
+    }
+    Ok(())
+}
+
+fn validate_attempt_anchor(
+    attempt: u64,
+    private_path: &Path,
+    public_path: &Path,
+    private: &Value,
+    task: &harnesslab_core::TaskPlan,
+    task_runtime: &RuntimeTaskSnapshot,
+) -> Result<()> {
+    let Some(anchor) = task_runtime
+        .external_runtime_attempts
+        .iter()
+        .find(|anchor| u64::from(anchor.attempt) == attempt)
+    else {
+        bail!(
+            "replay blocker: external-runtime attempt anchor missing for task {}; attempt={attempt}",
+            task.task_id
+        );
+    };
+    let Some(task_dir) = private_path
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::parent)
+    else {
+        bail!(
+            "replay blocker: external-runtime attempt anchor path invalid for task {}; attempt={attempt}",
+            task.task_id
+        );
+    };
+    if attempt_relative_path(private_path, task_dir) != anchor.private_path
+        || attempt_relative_path(public_path, task_dir) != anchor.public_path
+        || stable_file_checksum(private_path) != anchor.private_checksum
+        || stable_file_checksum(public_path) != anchor.public_checksum
+        || private["runtime_fingerprint"].as_str() != Some(anchor.runtime_fingerprint.as_str())
+        || private["public_fingerprint"].as_str() != Some(anchor.public_fingerprint.as_str())
+    {
+        bail!(
+            "replay blocker: external-runtime attempt anchor mismatch for task {}; attempt={attempt}",
+            task.task_id
+        );
+    }
     Ok(())
 }
 
@@ -264,6 +371,29 @@ fn stable_checksum_bytes(bytes: &[u8]) -> String {
         hash = hash.wrapping_mul(0x100000001b3);
     }
     format!("fnv64:{hash:016x}")
+}
+
+fn stable_file_checksum(path: &Path) -> String {
+    match fs::read(path) {
+        Ok(bytes) => stable_checksum_bytes(&bytes),
+        Err(_) => stable_checksum_bytes(format!("missing:{}", path.display()).as_bytes()),
+    }
+}
+
+fn task_runtime_snapshot_artifact(source: &Path, task_id: &str) -> Result<RuntimeTaskSnapshot> {
+    read_json(
+        &source
+            .join("tasks")
+            .join(task_dir_name(task_id)?)
+            .join("task-runtime.snapshot.json"),
+    )
+}
+
+fn attempt_relative_path(path: &Path, task_dir: &Path) -> String {
+    path.strip_prefix(task_dir)
+        .unwrap_or(path)
+        .display()
+        .to_string()
 }
 
 fn task_runtime_snapshot_for<'a>(

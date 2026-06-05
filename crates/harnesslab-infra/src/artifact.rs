@@ -35,6 +35,22 @@ pub fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T> {
     serde_json::from_slice(&content).with_context(|| format!("parse {}", path.display()))
 }
 
+pub fn stable_file_checksum(path: &Path) -> String {
+    match fs::read(path) {
+        Ok(bytes) => stable_checksum_bytes(&bytes),
+        Err(_) => stable_checksum_bytes(format!("missing:{}", path.display()).as_bytes()),
+    }
+}
+
+pub fn stable_checksum_bytes(bytes: &[u8]) -> String {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("fnv64:{hash:016x}")
+}
+
 pub fn collect_artifacts(
     base: &Path,
     destination: &Path,
