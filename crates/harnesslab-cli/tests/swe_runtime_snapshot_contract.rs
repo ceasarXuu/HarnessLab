@@ -435,6 +435,7 @@ fn assert_swe_external_runtime_snapshots(
     );
     assert_json_array_has_name(&private["commands"], "metadata_extraction");
     assert_json_array_has_name(&private["commands"], "workspace_preparation");
+    assert_json_array_has_name(&private["commands"], "agent_execution");
     assert_json_array_has_name(&private["commands"], "evaluation");
 }
 

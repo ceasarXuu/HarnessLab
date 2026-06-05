@@ -57,8 +57,7 @@
   blocking findings.
 - Phase 3 must replace the planned `ADAPT-RUNTIME-001..002` routes with real
   runtime registry and preflight tests.
-- Phase 5 must replace the planned `SWEPRO-001..004` routes with real
-  SWE-bench Pro runtime failure classification tests.
-- Phase 6 must replace the planned `ADAPT-RUNTIME-003..005` and `SWEPRO-005`
-  routes with real runtime snapshot, event taxonomy, cleanup, redaction, and
-  replay-material tests.
+- Phase 5 replaced the planned `SWEPRO-001..004` routes with real SWE-bench Pro
+  runtime failure classification tests.
+- Phase 6 must replace the planned `ADAPT-RUNTIME-003..004` routes with real
+  runtime snapshot, cleanup, redaction, and replay-material tests.

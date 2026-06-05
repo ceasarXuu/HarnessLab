@@ -1,4 +1,4 @@
-use super::{ExternalTaskExecution, swe_bench_pro, terminal_bench_adapter};
+use super::{ExternalTaskExecution, swe_bench_pro_adapter, terminal_bench_adapter};
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result};
 use harnesslab_core::{
@@ -68,7 +68,7 @@ pub(super) fn runtime_adapter_for(
         ExternalRunnerKind::TerminalBench => {
             &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER
         }
-        ExternalRunnerKind::SweBenchPro => &SWE_BENCH_PRO_RUNTIME_ADAPTER,
+        ExternalRunnerKind::SweBenchPro => &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
     }
 }
 
@@ -114,46 +114,6 @@ pub(super) fn cleanup_runtime_target(
     target: &RuntimeCleanupTarget,
 ) -> Result<RuntimeCleanupReport, String> {
     runtime_adapter_for(target.runner_kind).cleanup_target_resources(target)
-}
-
-struct SweBenchProRuntimeAdapter;
-
-static SWE_BENCH_PRO_RUNTIME_ADAPTER: SweBenchProRuntimeAdapter = SweBenchProRuntimeAdapter;
-
-impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
-    fn adapter_id(&self) -> &'static str {
-        "swe-bench-pro-runtime"
-    }
-
-    fn kind(&self) -> ExternalRunnerKind {
-        ExternalRunnerKind::SweBenchPro
-    }
-
-    fn preflight(&self, ctx: RuntimePreflightContext<'_>) -> RuntimePreflightReport {
-        preflight_report(self, ctx, None)
-    }
-
-    fn execute(&self, ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
-        let runner = ctx
-            .task
-            .external_runner
-            .as_ref()
-            .context("swe-bench-pro task missing runner spec")?;
-        let compatibility = BenchmarkRuntimeCompatibility::from_profile(ctx.profile);
-        swe_bench_pro::execute(
-            &ctx,
-            Path::new(&runner.dataset_path),
-            runner.source_path.as_deref().map(Path::new),
-            &compatibility,
-        )
-    }
-
-    fn cleanup_target_resources(
-        &self,
-        _target: &RuntimeCleanupTarget,
-    ) -> Result<RuntimeCleanupReport, String> {
-        Err("swe-bench-pro has no run-level runtime cleanup target".to_string())
-    }
 }
 
 pub(super) fn preflight_report(

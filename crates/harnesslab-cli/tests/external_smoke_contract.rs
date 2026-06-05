@@ -309,7 +309,12 @@ fn int_011_swe_bench_pro_workspace_failure_stays_task_failure() {
             1,
         );
         assert_eq!(results["tasks"][0]["failure_class"], "execution");
-        assert_eq!(results["tasks"][0]["failure_code"], "workspace_prep_failed");
+        let expected_code = if env_key == "HARNESSLAB_FAKE_SWE_METADATA_FAIL" {
+            "metadata_extraction_failed"
+        } else {
+            "workspace_prep_failed"
+        };
+        assert_eq!(results["tasks"][0]["failure_code"], expected_code);
         assert!(run_dir.join("report.html").is_file());
         assert!(
             fs::read_to_string(run_dir.join("events.jsonl"))

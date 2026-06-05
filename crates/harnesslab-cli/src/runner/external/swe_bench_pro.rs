@@ -1,6 +1,6 @@
 use super::ExternalTaskExecution;
-use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
-use anyhow::{Context, Result, bail};
+use super::swe_bench_pro_adapter::SweBenchProRuntimeAttempt;
+use anyhow::{Result, bail};
 use harnesslab_core::{
     EvaluationRecord, FailureClass, FailureCode, Outcome, PatchRecord, PatchStatus,
     TaskAttemptResult, TaskPlan, TaskState, UsageRecord, classify_agent_process,
@@ -9,19 +9,21 @@ use harnesslab_core::{
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 mod agent;
+mod metadata;
 mod runtime_snapshot;
+use metadata::{SweInstance, load_instance};
 
-pub(super) fn execute(
+pub(super) fn execute_prepared(
     ctx: &ExternalTaskExecution<'_>,
-    dataset_path: &Path,
-    source_path: Option<&Path>,
-    compatibility: &BenchmarkRuntimeCompatibility,
+    attempt: SweBenchProRuntimeAttempt,
 ) -> Result<TaskAttemptResult> {
-    let source_path = source_path.context("swe-bench-pro external runner missing source_path")?;
+    let dataset_path = attempt.dataset_path;
+    let source_path = attempt.source_path;
+    let compatibility = attempt.compatibility;
     let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
     let workspace = attempt_root.join("workspace");
     fs::create_dir_all(&workspace)?;
@@ -32,10 +34,29 @@ pub(super) fn execute(
         "external_runner_started",
         "swe-bench-pro metadata extraction",
     )?;
-    let instance = match load_instance(dataset_path, &ctx.task.task_id, &swe_dir) {
+    append_swe_event(
+        ctx,
+        "swe_bench_pro_metadata_extraction_started",
+        "phase=metadata_extraction status=started",
+    )?;
+    let instance = match load_instance(&dataset_path, &ctx.task.task_id, &swe_dir) {
         Ok(instance) => instance,
         Err(error) => {
-            return setup_failure_result(ctx, &format!("metadata extraction failed: {error}"));
+            let message = format!("metadata extraction failed: {error}");
+            missing_evaluation(ctx.attempt_dir, &message)?;
+            runtime_snapshot::write_swe_setup_failure_snapshots(
+                ctx,
+                &dataset_path,
+                Some(&source_path),
+                &swe_dir,
+                &workspace,
+            )?;
+            return setup_failure_result(
+                ctx,
+                "metadata_extraction",
+                FailureCode::MetadataExtractionFailed,
+                &message,
+            );
         }
     };
     append_swe_event(
@@ -43,11 +64,37 @@ pub(super) fn execute(
         "external_runner_workspace_started",
         "swe-bench-pro workspace prep",
     )?;
+    append_swe_event(
+        ctx,
+        "swe_bench_pro_workspace_prep_started",
+        "phase=workspace_preparation status=started",
+    )?;
     if let Err(error) = prepare_workspace(&workspace, &swe_dir, &instance) {
-        return setup_failure_result(ctx, &format!("workspace preparation failed: {error}"));
+        let message = format!("workspace preparation failed: {error}");
+        missing_evaluation(ctx.attempt_dir, &message)?;
+        runtime_snapshot::write_swe_runtime_snapshots(
+            ctx,
+            &dataset_path,
+            &source_path,
+            &swe_dir,
+            &workspace,
+            &instance,
+        )?;
+        return setup_failure_result(
+            ctx,
+            "workspace_preparation",
+            FailureCode::WorkspacePrepFailed,
+            &message,
+        );
     }
     let agent_task = task_with_real_instruction(ctx.task, &instance);
-    let agent_run = agent::run_agent(ctx, &agent_task, &workspace, &instance, compatibility)?;
+    append_swe_event(ctx, "external_runner_agent_started", "swe-bench-pro agent")?;
+    append_swe_event(
+        ctx,
+        "swe_bench_pro_agent_started",
+        "phase=agent_execution status=started",
+    )?;
+    let agent_run = agent::run_agent(ctx, &agent_task, &workspace, &instance, &compatibility)?;
     let agent = agent_run.process;
     let agent_failure = agent_run
         .sandbox_failure
@@ -56,49 +103,83 @@ pub(super) fn execute(
             let failure = classify_agent_process(&agent);
             (failure.class, failure.code)
         });
-    let (evaluation, patch, failure_class, failure_code, score) =
-        if agent_failure.0 == FailureClass::Execution {
+    let (evaluation, patch, failure_class, failure_code, score) = if agent_failure.0
+        == FailureClass::Execution
+    {
+        (
+            missing_evaluation(ctx.attempt_dir, "agent failed before evaluator")?,
+            None,
+            agent_failure.0,
+            agent_failure.1,
+            0.0,
+        )
+    } else {
+        append_swe_event(
+            ctx,
+            "external_runner_patch_started",
+            "swe-bench-pro patch capture",
+        )?;
+        append_swe_event(
+            ctx,
+            "swe_bench_pro_patch_capture_started",
+            "phase=patch_capture status=started",
+        )?;
+        let patch = capture_prediction(&workspace, ctx.attempt_dir, ctx.task, &instance)?;
+        let patch_status = patch_status_label(patch.status);
+        append_swe_event(
+            ctx,
+            "external_runner_patch_captured",
+            &format!("phase=patch_capture status={patch_status}"),
+        )?;
+        append_swe_event(
+            ctx,
+            "swe_bench_pro_patch_captured",
+            &format!("phase=patch_capture status={patch_status}"),
+        )?;
+        let patch_failure = patch_failure(&patch);
+        if let Some(failure) = patch_failure {
             (
-                missing_evaluation(ctx.attempt_dir, "agent failed before evaluator")?,
-                None,
-                agent_failure.0,
-                agent_failure.1,
+                missing_evaluation(ctx.attempt_dir, "no valid diff captured")?,
+                Some(patch),
+                failure.0,
+                failure.1,
                 0.0,
             )
         } else {
-            let patch = capture_prediction(&workspace, ctx.attempt_dir, ctx.task, &instance)?;
-            let patch_failure = patch_failure(&patch);
-            if let Some(failure) = patch_failure {
-                (
-                    missing_evaluation(ctx.attempt_dir, "no valid diff captured")?,
-                    Some(patch),
-                    failure.0,
-                    failure.1,
-                    0.0,
-                )
-            } else {
+            append_swe_event(
+                ctx,
+                "external_runner_evaluator_started",
+                "swe-bench-pro evaluator",
+            )?;
+            append_swe_event(
+                ctx,
+                "swe_bench_pro_evaluator_started",
+                "phase=evaluator status=started",
+            )?;
+            let evaluation = run_evaluator(&source_path, &swe_dir, ctx.attempt_dir, ctx.task)?;
+            if let Some(parse_error) = &evaluation.parse_error {
+                append_swe_event(ctx, "external_result_parse_failed", parse_error)?;
                 append_swe_event(
                     ctx,
-                    "external_runner_evaluator_started",
-                    "swe-bench-pro evaluator",
+                    "swe_bench_pro_result_parse_failed",
+                    &format!(
+                        "phase=evaluator parser=eval_results final_failure_class=execution final_failure_code=evaluator_error message={parse_error}"
+                    ),
                 )?;
-                let evaluation = run_evaluator(source_path, &swe_dir, ctx.attempt_dir, ctx.task)?;
-                if let Some(parse_error) = &evaluation.parse_error {
-                    append_swe_event(ctx, "external_result_parse_failed", parse_error)?;
-                }
-                let score = evaluation.record.raw_score;
-                let failure = if evaluation.parse_error.is_some() {
-                    (FailureClass::Execution, Some(FailureCode::EvaluatorError))
-                } else if evaluation.record.exit_code == Some(0) && score >= 1.0 {
-                    (FailureClass::None, None)
-                } else if evaluation.record.exit_code == Some(0) {
-                    (FailureClass::Benchmark, Some(FailureCode::TestFailed))
-                } else {
-                    (FailureClass::Benchmark, Some(FailureCode::EvaluatorError))
-                };
-                (evaluation.record, Some(patch), failure.0, failure.1, score)
             }
-        };
+            let score = evaluation.record.raw_score;
+            let failure = if evaluation.parse_error.is_some() {
+                (FailureClass::Execution, Some(FailureCode::EvaluatorError))
+            } else if evaluation.record.exit_code == Some(0) && score >= 1.0 {
+                (FailureClass::None, None)
+            } else if evaluation.record.exit_code == Some(0) {
+                (FailureClass::Benchmark, Some(FailureCode::TestFailed))
+            } else {
+                (FailureClass::Benchmark, Some(FailureCode::EvaluatorError))
+            };
+            (evaluation.record, Some(patch), failure.0, failure.1, score)
+        }
+    };
     let result = TaskAttemptResult {
         schema_version: 1,
         task_id: ctx.task.task_id.clone(),
@@ -127,8 +208,8 @@ pub(super) fn execute(
     };
     runtime_snapshot::write_swe_runtime_snapshots(
         ctx,
-        dataset_path,
-        source_path,
+        &dataset_path,
+        &source_path,
         &swe_dir,
         &workspace,
         &instance,
@@ -145,11 +226,21 @@ fn append_swe_event(ctx: &ExternalTaskExecution<'_>, name: &str, message: &str) 
     )
 }
 
-fn setup_failure_result(
+pub(super) fn setup_failure_result(
     ctx: &ExternalTaskExecution<'_>,
+    phase: &str,
+    failure_code: FailureCode,
     message: &str,
 ) -> Result<TaskAttemptResult> {
     append_swe_event(ctx, "external_runner_setup_failed", message)?;
+    append_swe_event(
+        ctx,
+        "swe_bench_pro_setup_failed",
+        &format!(
+            "phase={phase} failure_class=execution failure_code={} pending_tasks_should_abort=false message={message}",
+            failure_code_label(failure_code)
+        ),
+    )?;
     let result = TaskAttemptResult {
         schema_version: 1,
         task_id: ctx.task.task_id.clone(),
@@ -158,11 +249,8 @@ fn setup_failure_result(
         state: TaskState::Failure,
         outcome: Outcome::Failure,
         failure_class: FailureClass::Execution,
-        failure_code: Some(FailureCode::WorkspacePrepFailed),
-        health_impact: health_impact_for_failure(
-            FailureClass::Execution,
-            Some(FailureCode::WorkspacePrepFailed),
-        ),
+        failure_code: Some(failure_code),
+        health_impact: health_impact_for_failure(FailureClass::Execution, Some(failure_code)),
         benchmark_score: 0.0,
         duration_ms: ctx.started.elapsed().as_millis() as u64,
         agent: None,
@@ -175,90 +263,32 @@ fn setup_failure_result(
     Ok(result)
 }
 
-#[derive(Debug, Clone)]
-struct SweInstance {
-    instance_id: String,
-    repo: String,
-    base_commit: String,
-    dockerhub_tag: String,
-    parquet_path: PathBuf,
-    problem_statement: String,
-    requirements: String,
-    gold_patch: String,
-}
-
-fn load_instance(dataset_path: &Path, task_id: &str, swe_dir: &Path) -> Result<SweInstance> {
-    let raw_sample = swe_dir.join("raw_sample.jsonl");
-    let instance_json = swe_dir.join("instance.json");
-    let script_path = swe_dir.join("extract_instance.py");
-    fs::write(&script_path, extract_script())?;
-    let parquet = first_parquet(dataset_path).context("swe-bench-pro parquet data is missing")?;
-    let process = HostProcessExecutor::exec(&ExecSpec {
-        command: runtime_snapshot::metadata_extract_command(
-            &script_path,
-            &parquet,
-            task_id,
-            &raw_sample,
-            &instance_json,
-        ),
-        stdin: None,
-        working_dir: swe_dir.to_path_buf(),
-        timeout_sec: 300,
-        no_output_timeout_sec: None,
-        no_output_progress_paths: Vec::new(),
-        no_output_activity_patterns: Vec::new(),
-        no_output_activity_event: None,
-        env_clear: false,
-        env_vars: std::collections::BTreeMap::new(),
-        stdout_path: swe_dir.join("metadata.stdout.log"),
-        stderr_path: swe_dir.join("metadata.stderr.log"),
-    })?;
-    if process.exit_code != Some(0) {
-        bail!("failed to extract SWE-bench Pro instance metadata");
-    }
-    let value: Value = serde_json::from_slice(&fs::read(instance_json)?)?;
-    Ok(SweInstance {
-        instance_id: json_string(&value, "instance_id")?,
-        repo: json_string(&value, "repo")?,
-        base_commit: json_string(&value, "base_commit")?,
-        dockerhub_tag: json_string(&value, "dockerhub_tag")?,
-        parquet_path: parquet,
-        problem_statement: json_string(&value, "problem_statement")?,
-        requirements: json_string(&value, "requirements")?,
-        gold_patch: json_string(&value, "patch")?,
-    })
-}
-
-fn extract_script() -> &'static str {
-    r#"
-import json
-import pandas as pd
-import sys
-
-parquet, instance_id, raw_sample_path, instance_json_path = sys.argv[1:5]
-df = pd.read_parquet(parquet)
-matches = df[df["instance_id"] == instance_id]
-if matches.empty:
-    raise SystemExit(f"instance_id not found: {instance_id}")
-row = matches.iloc[0].where(pd.notna(matches.iloc[0]), "")
-record = row.to_dict()
-with open(raw_sample_path, "w") as f:
-    f.write(json.dumps(record) + "\n")
-keys = ["instance_id", "repo", "base_commit", "dockerhub_tag", "problem_statement", "requirements", "patch"]
-with open(instance_json_path, "w") as f:
-    json.dump({key: str(record.get(key, "")) for key in keys}, f)
-"#
-}
-
-fn first_parquet(dataset_path: &Path) -> Option<std::path::PathBuf> {
-    let mut files = fs::read_dir(dataset_path.join("data"))
-        .ok()?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "parquet"))
-        .map(|entry| entry.path())
-        .collect::<Vec<_>>();
-    files.sort();
-    files.into_iter().next()
+pub(super) fn source_path_failure_result(
+    ctx: &ExternalTaskExecution<'_>,
+    dataset_path: &Path,
+) -> Result<TaskAttemptResult> {
+    let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
+    let workspace = attempt_root.join("workspace");
+    fs::create_dir_all(&workspace)?;
+    let swe_dir = attempt_root.join("swe-bench-pro");
+    fs::create_dir_all(&swe_dir)?;
+    missing_evaluation(
+        ctx.attempt_dir,
+        "swe-bench-pro external runner missing source_path",
+    )?;
+    runtime_snapshot::write_swe_setup_failure_snapshots(
+        ctx,
+        dataset_path,
+        None,
+        &swe_dir,
+        &workspace,
+    )?;
+    setup_failure_result(
+        ctx,
+        "source_path_validation",
+        FailureCode::ExternalRunnerSetupFailed,
+        "swe-bench-pro external runner missing source_path",
+    )
 }
 
 fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -> Result<()> {
@@ -450,18 +480,20 @@ fn patch_failure(patch: &PatchRecord) -> Option<(FailureClass, Option<FailureCod
     }
 }
 
-fn json_string(value: &Value, key: &str) -> Result<String> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .with_context(|| format!("missing string field {key}"))
+fn patch_status_label(status: PatchStatus) -> &'static str {
+    match status {
+        PatchStatus::NotApplicable => "not_applicable",
+        PatchStatus::Captured => "captured",
+        PatchStatus::Empty => "empty",
+        PatchStatus::ApplyFailed => "apply_failed",
+    }
 }
 
-fn docker_host_prefix() -> &'static str {
-    "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi"
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
+fn failure_code_label(code: FailureCode) -> &'static str {
+    match code {
+        FailureCode::MetadataExtractionFailed => "metadata_extraction_failed",
+        FailureCode::WorkspacePrepFailed => "workspace_prep_failed",
+        FailureCode::ExternalRunnerSetupFailed => "external_runner_setup_failed",
+        _ => "other",
+    }
 }

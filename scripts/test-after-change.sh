@@ -209,10 +209,10 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;
     ADAPT-RUNTIME-004) planned_adapter_proof "$id" "Phase 6: cleanup report" ;;
     ADAPT-RUNTIME-005) package="harnesslab-cli"; test_name="adapt_runtime_005_terminal_bench_event_taxonomy_is_stable"; test_target="test:terminal_bench_runtime_event_contract" ;;
-    SWEPRO-001) planned_adapter_proof "$id" "Phase 5: metadata failure classification" ;;
-    SWEPRO-002) planned_adapter_proof "$id" "Phase 5: workspace failure classification" ;;
-    SWEPRO-003) planned_adapter_proof "$id" "Phase 5: patch failure classification" ;;
-    SWEPRO-004) planned_adapter_proof "$id" "Phase 5: evaluator parse classification" ;;
+    SWEPRO-001) package="harnesslab-cli"; test_name="swepro_001_metadata_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;
+    SWEPRO-002) package="harnesslab-cli"; test_name="swepro_002_workspace_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;
+    SWEPRO-003) package="harnesslab-cli"; test_name="swepro_003_diff_capture_failure_and_empty_patch_are_distinct"; test_target="test:swe_runtime_phase_contract" ;;
+    SWEPRO-004) package="harnesslab-cli"; test_name="swepro_004_evaluator_parse_corruption_is_not_patch_failure"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     META-008) exec scripts/verify-planned-adapter-selectors.sh ;;

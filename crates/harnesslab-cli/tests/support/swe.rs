@@ -221,6 +221,10 @@ mkdir -p "$out"
 if [ "${HARNESSLAB_FAKE_SWE_SKIP_EVAL_RESULTS:-}" = "1" ]; then
   exit 0
 fi
+if [ "${HARNESSLAB_FAKE_SWE_CORRUPT_EVAL_RESULTS:-}" = "1" ]; then
+  printf '{"instance_demo":' > "$out/eval_results.json"
+  exit 0
+fi
 printf '{"instance_demo":true}' > "$out/eval_results.json"
 exit 0
 "#,

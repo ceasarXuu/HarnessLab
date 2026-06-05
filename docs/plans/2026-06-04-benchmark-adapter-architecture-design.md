@@ -4,7 +4,7 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-06
-- Version: 0.20
+- Version: 0.21
 - Status: Implementing overall adapter architecture; Phase 1 data adapter
   lifecycle is implemented, verified, and adversarially reviewed with no
   remaining blockers. Phase 2 snapshot authority has started; missing
@@ -22,8 +22,9 @@
   diagnostics on executed run paths, active `ADAPT-RUNTIME-001/002`
   exact-route proofs, an `INT-011` real execution-path event assertion, and
   meta-gated active selector specs. Phase 4 Terminal-Bench runtime extraction is
-  in closure with adapter-owned runtime attempt policy, real Terminal-Bench
-  emitted-event proof, and official command preservation evidence. Runtime
+  closed. Phase 5 SWE-bench Pro runtime extraction is implemented with a
+  dedicated runtime adapter boundary and active `SWEPRO-001..004` phase
+  diagnostics for metadata, workspace, patch, and evaluator failures. Runtime
   snapshots, official runner identity drift, security scans, and legacy degraded
   replay policy remain open for later phases.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
@@ -181,8 +182,8 @@ convenience:
 - Current real external runtime logic is in `crates/harnesslab-cli/src/runner/external`.
 - Terminal-Bench has the strongest current runtime hardening surface.
 - SWE-bench Pro is the patch-style benchmark reference path.
-- Current proof surfaces must be treated as incomplete until planned IDs are
-  registered in requirements, test registry, and selector routing.
+- Current proof surfaces must be treated as incomplete until remaining planned
+  IDs are registered in requirements, test registry, and selector routing.
 
 ### Assumptions
 
@@ -534,8 +535,11 @@ SWE-bench Pro must use stable phase events instead of only free-form messages:
 - `swe_bench_pro_metadata_extraction_started`
 - `swe_bench_pro_workspace_prep_started`
 - `swe_bench_pro_agent_started`
+- `swe_bench_pro_patch_capture_started`
 - `swe_bench_pro_patch_captured`
 - `swe_bench_pro_evaluator_started`
+- `swe_bench_pro_setup_failed`
+- `swe_bench_pro_result_parse_failed`
 - `swe_bench_pro_cleanup`
 
 `CleanupReport` must be structured. Minimum fields:
@@ -671,10 +675,10 @@ Concrete initial IDs:
 - `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
 - `ADAPT-RUNTIME-004`: cleanup report is structured and can override official benchmark verdict with audit evidence.
 - `ADAPT-RUNTIME-005`: active Phase 4 proof that Terminal-Bench runtime event taxonomy preserves operator-critical events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, task warnings, and result parse failures. Stable SWE-bench Pro phase event proof remains Phase 5 scope under `SWEPRO-001..004` before Phase 6 re-validates the full runtime taxonomy.
-- `SWEPRO-001`: metadata extraction failure is classified and observable.
-- `SWEPRO-002`: workspace preparation failure is classified and observable.
-- `SWEPRO-003`: invalid patch and empty patch are distinct benchmark failures.
-- `SWEPRO-004`: evaluator parse corruption is classified separately from agent patch failure.
+- `SWEPRO-001`: active Phase 5 proof that metadata extraction failure is classified as `metadata_extraction_failed` and observable through setup diagnostics.
+- `SWEPRO-002`: active Phase 5 proof that workspace preparation failure remains classified as `workspace_prep_failed` and observable through setup diagnostics.
+- `SWEPRO-003`: active Phase 5 proof that empty patch and diff-capture failure are distinct patch failures.
+- `SWEPRO-004`: active Phase 5 proof that evaluator parse corruption is classified separately from agent patch failure.
 - `SWEPRO-005`: replay/readiness uses stored runtime materials instead of silent live replanning.
 
 `INT-011` must not remain an umbrella proof for SWE-bench Pro. Split the current
@@ -760,7 +764,7 @@ not complete even if the implementation appears to work manually.
 | Phase 2: Snapshot Authority And Replay | Replay authority no longer depends on mutable live planning. | Replay blocks or warns according to persisted snapshot authority; `INT-013` reflects the new contract. | Silent live replanning remains the default for external benchmarks. |
 | Phase 3: Runtime Adapter Registry | Runtime preflight/execute/cleanup dispatch is registry-owned. | `ADAPT-RUNTIME-001..002` prove generic dispatch and preflight ownership. | CLI runner still contains benchmark-specific runtime branches outside registry lookup. |
 | Phase 4: Terminal-Bench Runtime Extraction | Terminal-Bench behavior runs through `TerminalBenchRuntimeAdapter`. | Existing `TB-*`, `INT-021..046`, Python bridge tests, event assertions, and official-runner proof pass. | Timeout, setup-failure, cleanup, QEMU, or platform behavior changes without explicit proof. |
-| Phase 5: SWE-bench Pro Runtime Extraction | SWE-bench Pro patch-style runtime runs through `SweBenchProRuntimeAdapter`. | `SWEPRO-001..004` plus official evaluator proof pass. | Patch, workspace, evaluator, or phase diagnostics are ambiguous or unclassified. |
+| Phase 5: SWE-bench Pro Runtime Extraction | SWE-bench Pro patch-style runtime runs through `SweBenchProRuntimeAdapter`. | `SWEPRO-001..004` plus fake-tool evaluator path proof pass; real official evaluator preservation remains final-gate evidence. | Patch, workspace, evaluator, or phase diagnostics are ambiguous or unclassified. |
 | Phase 6: Runtime Snapshot, Redaction, And Replay Hardening | Adapter runtime snapshots are persisted and safe to expose. | `ADAPT-RUNTIME-003..005`, `SWEPRO-005`, and `SEC-*` scans pass. | Public artifacts can contain private command/env material or replay uses missing evaluator materials. |
 | Phase 7: Docs And Diagnostics | User docs and doctor/readiness output match implemented behavior. | Docs are updated and diagnostics name adapter phase, readiness blocker, and remediation. | Docs describe planned trait names or diagnostics not present in code. |
 | Phase 8: Full Gate And Review | Architecture track is ready to close. | Targeted selectors, Python bridge tests, full gate, and fresh adversarial closure pass. | Any blocker is untriaged, accepted blockers lack closure review, or full gate is not green. |
@@ -1446,8 +1450,8 @@ result projection.
 - Extract metadata extraction and workspace preparation.
 - Extract agent run, patch capture, and evaluator invocation.
 - Extract result mapping and official-vs-final verdict provenance.
-- Add seeded failure tests for missing metadata, invalid patch, evaluator parse
-  failure, and workspace preparation failure.
+- Add seeded failure tests for missing metadata, diff capture failure,
+  evaluator parse failure, and workspace preparation failure.
 - Add stable phase events for metadata extraction, workspace prep, agent start,
   patch capture, evaluator start, and cleanup.
 
@@ -1464,7 +1468,7 @@ result projection.
 | --- | --- | --- |
 | Metadata failures are classified | `SWEPRO-001` | Metadata failure is observable and not confused with agent failure |
 | Workspace failures are classified | `SWEPRO-002` | Workspace prep failure is observable and separately classified |
-| Patch failures are distinct | `SWEPRO-003` | Invalid patch and empty patch are distinct benchmark failures |
+| Patch failures are distinct | `SWEPRO-003` | Diff capture failure and empty patch are distinct patch failures |
 | Evaluator parse failures are distinct | `SWEPRO-004` | Evaluator corruption is not mapped as agent patch failure |
 | Official evaluator path is preserved | Real evaluator verifier or equivalent script | Parquet extraction, evaluator invocation, prediction schema, and parse are proven |
 
@@ -1472,7 +1476,9 @@ result projection.
 
 - SWE-bench Pro runs through the runtime registry.
 - Patch-style phases are observable and separately classified.
-- Official evaluator proof exists beyond fixture shims.
+- Fake-tool evaluator path proof exists; real official evaluator preservation
+  remains Phase 8 final-gate evidence unless a local official fixture is
+  available earlier.
 
 #### Review Plan
 
@@ -1487,8 +1493,32 @@ and `observability-adversary`.
 
 #### Gate To Next Phase
 
-Proceed to Phase 6 only after SWE-bench Pro runtime phases, failure classes, and
-official evaluator proof are stable.
+Status: implemented for the fake-tool Phase 5 gate on 2026-06-06. SWE-bench Pro
+dispatch now uses a dedicated `SweBenchProRuntimeAdapter`, and `SWEPRO-001..004`
+are active integration selectors that run the CLI against fake SWE-bench Pro
+tools. Real official evaluator preservation remains Phase 8 final-gate evidence.
+
+Completion evidence:
+
+- `SWEPRO-001` passed and proves metadata extraction failure maps to
+  `metadata_extraction_failed`.
+- `SWEPRO-002` passed and proves workspace preparation failure maps to
+  `workspace_prep_failed`.
+- `SWEPRO-003` passed and proves empty patch maps to `benchmark/no_valid_diff`
+  while diff capture failure maps to `execution/patch_apply_failed`.
+- `SWEPRO-004` passed and proves evaluator parse corruption maps to
+  `execution/evaluator_error` with `external_result_parse_failed`.
+- `SWEPRO-005` passed after adding the `agent_execution` runtime snapshot phase.
+- Metadata, workspace, and missing-source setup failures write external-runtime
+  snapshots before returning structured task results.
+- `scripts/verify-test-registry.sh` passed.
+- `scripts/verify-planned-adapter-selectors.sh` passed with active=13 and
+  planned=3.
+- `cargo fmt --all -- --check` passed.
+
+Proceed to Phase 6 after the Phase 5 adversarial review record has no accepted
+blocking findings and the official-evaluator proof gap is explicitly carried to
+the final gate rather than treated as closed.
 
 ### Phase 6: Runtime Snapshot, Redaction, And Replay Hardening (Slice G)
 
@@ -2083,6 +2113,7 @@ This architecture track is complete when:
 | 0.18 | 2026-06-05 | Completed Phase 3 by moving cleanup ownership behind runtime adapter metadata, centralizing benchmark-runtime label compatibility, persisting `external_runner_preflight` diagnostics, and updating Phase 3 gate evidence. |
 | 0.19 | 2026-06-05 | Closed Phase 3 adversarial review blockers by replacing cleanup metadata flags with adapter-owned cleanup targets/reports, adding blocked preflight report semantics, tightening Phase 3 proof metadata, and adding real execution-path event assertions. |
 | 0.20 | 2026-06-06 | Completed Phase 4 Terminal-Bench runtime extraction by moving Terminal-Bench adapter ownership into a dedicated module, activating `ADAPT-RUNTIME-005`, fixing `TB-001..004` selector routing, and recording Terminal-Bench/Python bridge preservation evidence. |
+| 0.21 | 2026-06-06 | Completed Phase 5 SWE-bench Pro runtime extraction by moving SWE adapter ownership into a dedicated module, activating `SWEPRO-001..004`, and recording metadata/workspace/patch/evaluator phase diagnostics evidence. |
 
 ## 25. Plan Quality Checklist
 

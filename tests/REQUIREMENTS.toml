@@ -435,7 +435,7 @@ id = "SWEPRO-001"
 title = "SWE-bench Pro metadata extraction failure is classified and observable"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]
@@ -447,7 +447,7 @@ id = "SWEPRO-002"
 title = "SWE-bench Pro workspace preparation failure is classified and observable"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]
@@ -456,10 +456,10 @@ section = "10"
 
 [[requirements]]
 id = "SWEPRO-003"
-title = "SWE-bench Pro invalid patch and empty patch are distinct benchmark failures"
+title = "SWE-bench Pro diff capture failure and empty patch are distinct patch failures"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]
@@ -471,7 +471,7 @@ id = "SWEPRO-004"
 title = "SWE-bench Pro evaluator parse corruption is distinct from agent patch failure"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]

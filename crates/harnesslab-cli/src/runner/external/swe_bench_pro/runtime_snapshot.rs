@@ -1,9 +1,11 @@
-use super::{SweInstance, docker_host_prefix, docker_image, shell_quote};
+use super::metadata::first_parquet;
+use super::{SweInstance, docker_image};
 use crate::runner::external::ExternalTaskExecution;
 use crate::runner::external::runtime_snapshot::{
     ExternalRuntimeSnapshotRequest, RuntimeMaterial, RuntimeMaterialValidationScope,
     RuntimePhaseCommand, write_external_runtime_snapshots,
 };
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::Result;
 use harnesslab_core::ExternalRunnerKind;
 use std::path::Path;
@@ -41,6 +43,42 @@ pub(super) fn write_swe_runtime_snapshots(
             "prediction.jsonl".to_string(),
             "prediction.eval.json".to_string(),
             "patch.diff".to_string(),
+            "verifier/stdout.log".to_string(),
+            "verifier/stderr.log".to_string(),
+        ],
+        extra_redaction_refs: vec![
+            swe_dir.display().to_string(),
+            workspace.display().to_string(),
+        ],
+    })
+}
+
+pub(super) fn write_swe_setup_failure_snapshots(
+    ctx: &ExternalTaskExecution<'_>,
+    dataset_path: &Path,
+    source_path: Option<&Path>,
+    swe_dir: &Path,
+    workspace: &Path,
+) -> Result<()> {
+    write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
+        run_id: &ctx.spec.run_id,
+        attempt_dir: ctx.attempt_dir,
+        benchmark: "swe-bench-pro",
+        task_id: &ctx.task.task_id,
+        attempt: ctx.attempt,
+        runner_kind: ExternalRunnerKind::SweBenchPro,
+        adapter_version: SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION,
+        network: ctx.spec.execution.network,
+        timeout_sec: ctx.spec.execution.timeout_sec.or(Some(7200)),
+        profile: ctx.profile,
+        dataset_path,
+        source_path,
+        commands: setup_failure_commands(ctx, dataset_path, source_path, swe_dir, workspace),
+        materials: setup_failure_materials(ctx, dataset_path, source_path, swe_dir),
+        public_artifacts: vec![
+            "swe-bench-pro/raw_sample.jsonl".to_string(),
+            "swe-bench-pro/instance.json".to_string(),
+            "swe-bench-pro/workspace-manifest.json".to_string(),
             "verifier/stdout.log".to_string(),
             "verifier/stderr.log".to_string(),
         ],
@@ -131,6 +169,18 @@ fn swe_runtime_commands(
             stderr_path: swe_dir.join("workspace.stderr.log"),
         },
         RuntimePhaseCommand {
+            phase: "agent_execution",
+            command: agent_execution_command(ctx, instance),
+            working_dir: attempt_root.join("workspace"),
+            timeout_sec: ctx
+                .spec
+                .execution
+                .timeout_sec
+                .unwrap_or(ctx.profile.timeout_sec),
+            stdout_path: attempt_root.join("agent/stdout.log"),
+            stderr_path: attempt_root.join("agent/stderr.log"),
+        },
+        RuntimePhaseCommand {
             phase: "evaluation",
             command: evaluator_command(source_path, swe_dir, attempt_root),
             working_dir: source_path.to_path_buf(),
@@ -139,6 +189,122 @@ fn swe_runtime_commands(
             stderr_path: attempt_root.join("verifier/stderr.log"),
         },
     ])
+}
+
+fn setup_failure_commands(
+    ctx: &ExternalTaskExecution<'_>,
+    dataset_path: &Path,
+    source_path: Option<&Path>,
+    swe_dir: &Path,
+    workspace: &Path,
+) -> Vec<RuntimePhaseCommand> {
+    let parquet = first_parquet(dataset_path);
+    let metadata_command = parquet
+        .as_ref()
+        .map(|path| {
+            metadata_extract_command(
+                &swe_dir.join("extract_instance.py"),
+                path,
+                &ctx.task.task_id,
+                &swe_dir.join("raw_sample.jsonl"),
+                &swe_dir.join("instance.json"),
+            )
+        })
+        .unwrap_or_else(|| {
+            "swe-bench-pro metadata extraction blocked: parquet missing".to_string()
+        });
+    let mut commands = vec![RuntimePhaseCommand {
+        phase: "metadata_extraction",
+        command: metadata_command,
+        working_dir: swe_dir.to_path_buf(),
+        timeout_sec: 300,
+        stdout_path: swe_dir.join("metadata.stdout.log"),
+        stderr_path: swe_dir.join("metadata.stderr.log"),
+    }];
+    commands.push(RuntimePhaseCommand {
+        phase: "source_path_validation",
+        command: source_path
+            .map(|path| format!("source_path={}", shell_quote(&path.display().to_string())))
+            .unwrap_or_else(|| "source_path missing".to_string()),
+        working_dir: swe_dir.to_path_buf(),
+        timeout_sec: 0,
+        stdout_path: ctx.attempt_dir.join("verifier/stdout.log"),
+        stderr_path: ctx.attempt_dir.join("verifier/stderr.log"),
+    });
+    commands.push(RuntimePhaseCommand {
+        phase: "workspace_preparation",
+        command: "swe-bench-pro workspace preparation pending metadata".to_string(),
+        working_dir: workspace.to_path_buf(),
+        timeout_sec: 1800,
+        stdout_path: swe_dir.join("workspace.stdout.log"),
+        stderr_path: swe_dir.join("workspace.stderr.log"),
+    });
+    commands
+}
+
+fn setup_failure_materials(
+    ctx: &ExternalTaskExecution<'_>,
+    dataset_path: &Path,
+    source_path: Option<&Path>,
+    swe_dir: &Path,
+) -> Vec<RuntimeMaterial> {
+    let parquet =
+        first_parquet(dataset_path).unwrap_or_else(|| dataset_path.join("data/[missing].parquet"));
+    let mut materials = vec![
+        RuntimeMaterial {
+            name: "parquet",
+            path: parquet,
+            public_path: None,
+            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+        },
+        RuntimeMaterial {
+            name: "raw_sample",
+            path: swe_dir.join("raw_sample.jsonl"),
+            public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+        },
+        RuntimeMaterial {
+            name: "instance",
+            path: swe_dir.join("instance.json"),
+            public_path: Some("swe-bench-pro/instance.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+        },
+    ];
+    if let Some(source_path) = source_path {
+        materials.push(RuntimeMaterial {
+            name: "evaluator",
+            path: source_path.join("swe_bench_pro_eval.py"),
+            public_path: None,
+            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+        });
+    }
+    materials.push(RuntimeMaterial {
+        name: "verifier_stderr",
+        path: ctx.attempt_dir.join("verifier/stderr.log"),
+        public_path: Some("verifier/stderr.log".to_string()),
+        validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+    });
+    materials
+}
+
+fn agent_execution_command(ctx: &ExternalTaskExecution<'_>, instance: &SweInstance) -> String {
+    if BenchmarkRuntimeCompatibility::from_profile(ctx.profile).swe_bench_pro_uses_gold_agent() {
+        "git apply -".to_string()
+    } else {
+        format!(
+            "harnesslab sandbox agent image={} command={}",
+            shell_quote(&docker_image(instance)),
+            shell_quote(&ctx.profile.command)
+        )
+    }
+}
+
+fn docker_host_prefix() -> &'static str {
+    "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi"
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
 }
 
 fn swe_runtime_materials(

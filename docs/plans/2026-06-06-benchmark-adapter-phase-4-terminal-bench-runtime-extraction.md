@@ -40,7 +40,7 @@ cleanup semantics.
 | `cargo fmt --all -- --check` | passed |
 | `cargo check --workspace --all-targets --all-features` | passed |
 | `scripts/verify-test-registry.sh` | passed |
-| `scripts/verify-planned-adapter-selectors.sh` | passed; active=9 planned=7 |
+| `scripts/verify-planned-adapter-selectors.sh` | passed at Phase 4 closure; active=9 planned=7 |
 
 ## Event Taxonomy Covered By `ADAPT-RUNTIME-005`
 
@@ -67,17 +67,17 @@ execution keeps using the hardened official runner path; this phase changes
 ownership boundaries and proof coverage, not the user CLI contract.
 
 `ADAPT-RUNTIME-005` is intentionally limited to the Phase 4 Terminal-Bench event
-taxonomy and command preservation proof. Phase 5 must add stable SWE-bench Pro
-phase diagnostics under `SWEPRO-001..004`, and Phase 6 must add public/private
-runtime snapshot and structured cleanup-report artifact assertions under
-`ADAPT-RUNTIME-003..004`.
+taxonomy and command preservation proof. Phase 5 now records stable SWE-bench
+Pro phase diagnostics under `SWEPRO-001..004`, and Phase 6 must add
+public/private runtime snapshot and structured cleanup-report artifact
+assertions under `ADAPT-RUNTIME-003..004`.
 
 ## Remaining Work
 
 - Phase 4 adversarial review is passed in
   `vs_review/2026-06-06-benchmark-adapter-phase-4-terminal-bench-runtime-review.md`.
-- Complete Phase 5 by extracting SWE-bench Pro runtime phases into
-  `SweBenchProRuntimeAdapter`.
+- Phase 5 is completed in
+  `docs/plans/2026-06-06-benchmark-adapter-phase-5-swe-bench-pro-runtime-extraction.md`.
 - Complete Phase 6 public/private runtime snapshots, cleanup-report artifacts,
   redaction scans, and replay hardening.
 - Complete Phase 7 docs/doctor/readiness alignment.
