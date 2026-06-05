@@ -1027,10 +1027,23 @@ Status as of 2026-06-05:
   binding between `task.snapshot.json` and `task_plan_hash`.
 - `REPLAY-008` proves external-task replay blocks before creating a new replay
   run when task runtime snapshot authority is empty, missing, or divergent.
-- Phase 2 remains open for drift detection, `external-runtime.public.json`,
-  `external-runtime.private.json`, explicit legacy degraded replay policy,
-  `SWEPRO-005`, and the decision whether per-task runtime snapshots should be
-  projected during run setup instead of attempt execution.
+- SWE-bench Pro now writes `external-runtime.private.json` and
+  `external-runtime.public.json` for each attempt. Public snapshots redact local
+  runtime paths and omit private path fields and redaction basis; private
+  snapshots retain dataset/source paths, raw phase commands, working
+  directories, replay material checksums, and public/private runtime
+  fingerprints.
+- Replay now treats attempt-level external runtime snapshots as readiness
+  authority for external tasks and blocks before creating a new replay run if
+  those snapshots are missing, incomplete, or diverge from the authoritative
+  plan and fingerprint chain.
+- `SWEPRO-005` proves SWE-bench Pro replay uses stored runtime materials and
+  fails closed when public/private runtime material authority is missing or
+  divergent.
+- Phase 2 remains open for drift detection, explicit legacy degraded replay
+  policy, broader `external-runtime.*.json` generalization/redaction scans, and
+  the decision whether per-task runtime snapshots should be projected during
+  run setup instead of attempt execution.
 
 #### Deliverables
 
@@ -1045,6 +1058,7 @@ Status as of 2026-06-05:
 | Missing authoritative snapshot blocks replay | Replay readiness test | External benchmark replay blocks before task execution |
 | Task runtime snapshot is persisted | `REPLAY-007` | New runs write matching `BenchmarkPlan.task_runtime_snapshots` and per-task `task-runtime.snapshot.json` |
 | External-task runtime snapshot authority is required | `REPLAY-008` | Replay blocks empty, missing, or divergent task runtime authority before creating a replay run |
+| SWE external runtime materials are required | `SWEPRO-005` | SWE-bench Pro writes public/private attempt runtime snapshots and replay blocks missing or divergent runtime material authority before creating a replay run |
 | Mutable data drift is detected | Replay drift fixture | Dataset/evaluator/source mismatch warns or blocks by adapter policy |
 | Legacy degraded replay is explicit if retained | CLI/replay test | Degraded mode emits warning and cannot run silently |
 | SWE replay avoids live replanning | `SWEPRO-005` | Stored runtime materials are used as authority |
@@ -1349,7 +1363,7 @@ secret leaks.
 | Runtime snapshots are written | `ADAPT-RUNTIME-003` | Required public/private fields exist in correct artifacts |
 | Cleanup report is structured | `ADAPT-RUNTIME-004` | Cleanup report carries phase, success, evidence, and final verdict effect |
 | Event taxonomy is preserved | `ADAPT-RUNTIME-005` | Terminal-Bench and SWE phase events stay queryable |
-| Replay uses stored materials | `SWEPRO-005` | Missing live data does not trigger silent replanning |
+| Replay uses stored materials | `SWEPRO-005` | Missing, removed, or divergent stored runtime materials block replay before task execution |
 | Public artifacts do not leak secrets | `SEC-*` fake secret scans | Fake secrets are absent from public snapshots, events, reports, and warnings |
 
 #### Exit Criteria
@@ -1883,6 +1897,7 @@ This architecture track is complete when:
 | 0.8 | 2026-06-05 | Started Phase 2 snapshot authority by removing silent replay live replanning when `benchmark.snapshot.json` is missing and updating `INT-013` to the fail-closed contract. |
 | 0.9 | 2026-06-05 | Added `task-runtime.snapshot.json` persistence and `REPLAY-007` proof while keeping Phase 2 open for drift checks, external runtime snapshots, legacy replay policy, and `SWEPRO-005`. |
 | 0.10 | 2026-06-05 | Added `REPLAY-008` fail-closed external-task replay checks for empty, missing, and divergent task runtime snapshot authority. |
+| 0.11 | 2026-06-05 | Added SWE-bench Pro `external-runtime.public/private.json` snapshots and `SWEPRO-005` replay readiness proof for stored runtime materials. |
 
 ## 25. Plan Quality Checklist
 

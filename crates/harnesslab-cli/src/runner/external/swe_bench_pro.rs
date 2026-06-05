@@ -8,10 +8,11 @@ use harnesslab_core::{
 use harnesslab_infra::{ExecSpec, HostProcessExecutor, append_event, atomic_write_json, event};
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 mod agent;
+mod runtime_snapshot;
 
 pub(super) fn execute(
     ctx: &ExternalTaskExecution<'_>,
@@ -122,6 +123,14 @@ pub(super) fn execute(
         usage: UsageRecord::Unknown,
         warnings: vec![FailureCode::UsageUnknown],
     };
+    runtime_snapshot::write_swe_runtime_snapshots(
+        ctx,
+        dataset_path,
+        source_path,
+        &swe_dir,
+        &workspace,
+        &instance,
+    )?;
     atomic_write_json(&ctx.attempt_dir.join("result.json"), &result)?;
     Ok(result)
 }
@@ -170,6 +179,7 @@ struct SweInstance {
     repo: String,
     base_commit: String,
     dockerhub_tag: String,
+    parquet_path: PathBuf,
     problem_statement: String,
     requirements: String,
     gold_patch: String,
@@ -182,13 +192,12 @@ fn load_instance(dataset_path: &Path, task_id: &str, swe_dir: &Path) -> Result<S
     fs::write(&script_path, extract_script())?;
     let parquet = first_parquet(dataset_path).context("swe-bench-pro parquet data is missing")?;
     let process = HostProcessExecutor::exec(&ExecSpec {
-        command: format!(
-            "unset PYTHONHOME PYTHONPATH PYTHONUSERBASE; export PYTHONNOUSERSITE=1; uv run --with pandas --with pyarrow python {} {} {} {} {}",
-            shell_quote(&script_path.display().to_string()),
-            shell_quote(&parquet.display().to_string()),
-            shell_quote(task_id),
-            shell_quote(&raw_sample.display().to_string()),
-            shell_quote(&instance_json.display().to_string())
+        command: runtime_snapshot::metadata_extract_command(
+            &script_path,
+            &parquet,
+            task_id,
+            &raw_sample,
+            &instance_json,
         ),
         stdin: None,
         working_dir: swe_dir.to_path_buf(),
@@ -211,6 +220,7 @@ fn load_instance(dataset_path: &Path, task_id: &str, swe_dir: &Path) -> Result<S
         repo: json_string(&value, "repo")?,
         base_commit: json_string(&value, "base_commit")?,
         dockerhub_tag: json_string(&value, "dockerhub_tag")?,
+        parquet_path: parquet,
         problem_statement: json_string(&value, "problem_statement")?,
         requirements: json_string(&value, "requirements")?,
         gold_patch: json_string(&value, "patch")?,
@@ -258,13 +268,7 @@ fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -
         "workspace": workspace.display().to_string(),
     });
     atomic_write_json(&swe_dir.join("workspace-manifest.json"), &manifest)?;
-    let command = format!(
-        "set -e; {}; image={}; docker pull --platform linux/amd64 \"$image\"; cid=$(docker create --platform linux/amd64 \"$image\"); trap 'docker rm -f \"$cid\" >/dev/null 2>&1 || true' EXIT; docker cp \"$cid:/app/.\" {}; cd {}; git config user.email harnesslab@example.invalid; git config user.name HarnessLab",
-        docker_host_prefix(),
-        shell_quote(&docker_image(instance)),
-        shell_quote(&workspace.display().to_string()),
-        shell_quote(&workspace.display().to_string())
-    );
+    let command = runtime_snapshot::workspace_prepare_command(workspace, instance);
     let process = HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,
@@ -357,25 +361,7 @@ fn run_evaluator(
     let attempt_root = fs::canonicalize(attempt_dir)?;
     let eval_dir = swe_dir.join("eval");
     fs::create_dir_all(&eval_dir)?;
-    let command = format!(
-        "set -e; {}; unset PYTHONHOME PYTHONPATH PYTHONUSERBASE; export PYTHONNOUSERSITE=1; uv run --with pandas --with tqdm --with docker python {} --raw_sample_path {} --patch_path {} --output_dir {} --scripts_dir {} --dockerhub_username jefzda --use_local_docker --docker_platform linux/amd64 --num_workers 1 --redo",
-        docker_host_prefix(),
-        shell_quote(
-            &source_path
-                .join("swe_bench_pro_eval.py")
-                .display()
-                .to_string()
-        ),
-        shell_quote(&swe_dir.join("raw_sample.jsonl").display().to_string()),
-        shell_quote(
-            &attempt_root
-                .join("prediction.eval.json")
-                .display()
-                .to_string()
-        ),
-        shell_quote(&eval_dir.display().to_string()),
-        shell_quote(&source_path.join("run_scripts").display().to_string()),
-    );
+    let command = runtime_snapshot::evaluator_command(source_path, swe_dir, &attempt_root);
     let process = HostProcessExecutor::exec(&ExecSpec {
         command,
         stdin: None,

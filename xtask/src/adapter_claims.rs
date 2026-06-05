@@ -61,7 +61,7 @@ pub(super) fn ensure_claimed_adapter_ids_are_registered(
             bail!("planned adapter proof {id} must route to planned_adapter_proof, got: {route}");
         }
         if entry.status == "active" {
-            ensure_active_route_matches_claimed_id(id, route)?;
+            ensure_active_route_matches_claimed_id(id, entry, route)?;
         }
     }
     Ok(())
@@ -170,7 +170,11 @@ fn selector_route_for_id<'a>(script: &'a str, id: &str) -> Option<&'a str> {
         .find(|line| line.starts_with(&needle))
 }
 
-fn ensure_active_route_matches_claimed_id(id: &str, route: &str) -> Result<()> {
+fn ensure_active_route_matches_claimed_id(
+    id: &str,
+    entry: &super::TestEntry,
+    route: &str,
+) -> Result<()> {
     if route.contains("planned_adapter_proof") {
         bail!("active adapter proof {id} must not route to planned_adapter_proof, got: {route}");
     }
@@ -180,6 +184,17 @@ fn ensure_active_route_matches_claimed_id(id: &str, route: &str) -> Result<()> {
     ensure_assignment(route, "test_name", spec.test_name, id)?;
     if let Some(test_target) = spec.test_target {
         ensure_assignment(route, "test_target", test_target, id)?;
+    }
+    for expected in spec.file_patterns {
+        if !entry
+            .file_patterns
+            .iter()
+            .any(|pattern| pattern == expected)
+        {
+            bail!(
+                "active adapter proof {id} file_patterns missing expected selector file {expected}"
+            );
+        }
     }
     Ok(())
 }
@@ -198,6 +213,7 @@ struct ActiveRouteSpec {
     package: &'static str,
     test_name: &'static str,
     test_target: Option<&'static str>,
+    file_patterns: &'static [&'static str],
 }
 
 fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
@@ -206,26 +222,37 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             package: "harnesslab-adapters",
             test_name: "data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache",
             test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
         "ADAPT-DATA-002" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "data_contract_tests::adapt_data_002_prepare_is_idempotent_and_rejects_unready_data",
             test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
         "ADAPT-DATA-003" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "data_contract_tests::adapt_data_003_list_tasks_returns_stable_task_ids_and_source_refs",
             test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
         "ADAPT-DATA-004" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "data_contract_tests::adapt_data_004_snapshot_task_captures_replay_sufficient_identity",
             test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
         "ADAPT-DATA-005" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper",
             test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
+        }),
+        "SWEPRO-005" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "swepro_005_replay_requires_stored_swe_runtime_materials",
+            test_target: Some("test:swe_runtime_snapshot_contract"),
+            file_patterns: &["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"],
         }),
         _ => None,
     }

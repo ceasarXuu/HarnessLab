@@ -471,7 +471,7 @@ id = "SWEPRO-005"
 title = "SWE-bench Pro replay and readiness use stored runtime materials"
 area = "adapter-runtime"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]

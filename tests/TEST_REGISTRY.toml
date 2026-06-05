@@ -1282,6 +1282,8 @@ required_artifacts = [
   "agent-runtime.materialized.json",
   "benchmark.snapshot.json",
   "tasks/<task-id>/attempts/1/result.json",
+  "tasks/<task-id>/attempts/1/external-runtime.private.json",
+  "tasks/<task-id>/attempts/1/external-runtime.public.json",
   "tasks/<task-id>/attempts/1/agent/stdout.log",
   "tasks/<task-id>/attempts/1/agent/stderr.log",
   "tasks/<task-id>/attempts/1/verifier/stdout.log",
@@ -1524,7 +1526,7 @@ title = "Metadata extraction failure is classified and observable"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-001"
-file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
 required_artifacts = ["events.jsonl", "results.json"]
 status = "planned"
 [tests.source]
@@ -1540,7 +1542,7 @@ title = "Workspace preparation failure is classified and observable"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-002"
-file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
 required_artifacts = ["events.jsonl", "results.json"]
 status = "planned"
 [tests.source]
@@ -1556,7 +1558,7 @@ title = "Invalid patch and empty patch are distinct benchmark failures"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-003"
-file_patterns = ["crates/harnesslab-cli/tests/external_smoke_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
 required_artifacts = ["results.json", "git-diff.status.json"]
 status = "planned"
 [tests.source]
@@ -1588,9 +1590,9 @@ title = "Replay and readiness use stored runtime materials"
 layer = "integration"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-005"
-file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+file_patterns = ["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"]
 required_artifacts = ["external-runtime.private.json", "external-runtime.public.json"]
-status = "planned"
+status = "active"
 [tests.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"

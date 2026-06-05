@@ -212,7 +212,7 @@ if [[ "${1:-}" == "--select" ]]; then
     SWEPRO-002) planned_adapter_proof "$id" "Phase 5: workspace failure classification" ;;
     SWEPRO-003) planned_adapter_proof "$id" "Phase 5: patch failure classification" ;;
     SWEPRO-004) planned_adapter_proof "$id" "Phase 5: evaluator parse classification" ;;
-    SWEPRO-005) planned_adapter_proof "$id" "Phase 6: replay runtime materials" ;;
+    SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     META-008) exec scripts/verify-planned-adapter-selectors.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
