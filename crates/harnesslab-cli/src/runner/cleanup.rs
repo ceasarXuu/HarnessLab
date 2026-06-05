@@ -64,10 +64,10 @@ impl RunSandboxCleanup {
         }
         let message = match (self.cleanup_orphans)(&self.run_id) {
             Ok(result) => format!(
-                "docker cleanup {phase}: removed {} sandbox container(s)",
+                "docker cleanup {phase}: removed_count={} has_error=false",
                 result.removed.len()
             ),
-            Err(error) => format!("docker cleanup {phase} warning: {error}"),
+            Err(_) => format!("docker cleanup {phase}: removed_count=0 has_error=true"),
         };
         let _ = append_event(
             &self.events_path,
@@ -75,26 +75,20 @@ impl RunSandboxCleanup {
             &[],
         );
         for target in self.runtime_cleanup_targets_for_phase(phase) {
-            let label = target
-                .run_dir
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("unknown-run");
             let message = match (self.cleanup_runtime)(target) {
                 Ok(result) => format!(
-                    "{} {phase}: run={} scan_run_id={} tokens={} projects={} snapshot_projects={} matched_projects={} removed {} compose resource(s)",
+                    "{} {phase}: runner_kind={:?} tokens_count={} projects_count={} snapshot_projects={} matched_projects={} removed_count={} has_error=false",
                     target.message_prefix,
-                    label,
-                    target.scan_run_id,
-                    display_list(&result.tokens),
-                    display_list(&result.projects),
+                    target.runner_kind,
+                    result.tokens.len(),
+                    result.projects.len(),
                     result.snapshot_projects,
                     result.matched_projects,
-                    result.removed.len()
+                    result.removed.len(),
                 ),
-                Err(error) => format!(
-                    "{} {phase} warning: run={} scan_run_id={} error={}",
-                    target.message_prefix, label, target.scan_run_id, error
+                Err(_) => format!(
+                    "{} {phase} warning: runner_kind={:?} has_error=true",
+                    target.message_prefix, target.runner_kind
                 ),
             };
             let _ = append_event(
@@ -136,14 +130,6 @@ pub(super) fn plan_requires_docker(plan: &BenchmarkPlan) -> bool {
     plan.tasks
         .iter()
         .any(|task| !matches!(task.sandbox_spec.image.as_str(), "host" | "host-fixture"))
-}
-
-fn display_list(items: &[String]) -> String {
-    if items.is_empty() {
-        "none".to_string()
-    } else {
-        items.join(",")
-    }
 }
 
 #[cfg(test)]

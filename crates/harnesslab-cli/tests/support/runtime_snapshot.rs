@@ -122,6 +122,29 @@ pub fn rewrite_snapshot_scope_with_authority(
     rewrite_benchmark_task_runtime_snapshot(benchmark_path, task_runtime_path);
 }
 
+pub fn rewrite_snapshot_adapter_version_with_authority(
+    private_path: &Path,
+    public_path: &Path,
+    task_runtime_path: &Path,
+    benchmark_path: &Path,
+    adapter_version: &str,
+) {
+    let mut private: serde_json::Value =
+        serde_json::from_slice(&fs::read(private_path).unwrap()).unwrap();
+    let mut public: serde_json::Value =
+        serde_json::from_slice(&fs::read(public_path).unwrap()).unwrap();
+    private["adapter_version"] = serde_json::json!(adapter_version);
+    public["adapter_version"] = serde_json::json!(adapter_version);
+    let runtime_fingerprint = runtime_fingerprint_from_private(&private);
+    private["runtime_fingerprint"] = serde_json::json!(runtime_fingerprint);
+    public["runtime_fingerprint"] = private["runtime_fingerprint"].clone();
+    private["public_fingerprint"] = serde_json::json!(public_fingerprint_from_public(&public));
+    fs::write(private_path, serde_json::to_vec_pretty(&private).unwrap()).unwrap();
+    fs::write(public_path, serde_json::to_vec_pretty(&public).unwrap()).unwrap();
+    rewrite_task_runtime_anchor_for_attempt(task_runtime_path, private_path, public_path);
+    rewrite_benchmark_task_runtime_snapshot(benchmark_path, task_runtime_path);
+}
+
 pub fn stable_file_checksum(path: &Path) -> String {
     stable_checksum_bytes(&fs::read(path).unwrap())
 }
@@ -198,6 +221,7 @@ fn runtime_fingerprint_from_private(private: &serde_json::Value) -> String {
         "commands": private["commands"].clone(),
         "replay_materials": private["replay_materials"].clone(),
         "public_artifacts": private["public_artifacts"].clone(),
+        "runtime_diagnostics": private["runtime_diagnostics"].clone(),
     }))
 }
 
@@ -214,6 +238,7 @@ fn public_fingerprint_from_public(public: &serde_json::Value) -> String {
         "commands": public["commands"].clone(),
         "runtime_materials": public["runtime_materials"].clone(),
         "public_artifacts": public["public_artifacts"].clone(),
+        "runtime_diagnostics": public["runtime_diagnostics"].clone(),
         "runtime_fingerprint": public["runtime_fingerprint"].clone(),
     }))
 }

@@ -50,6 +50,8 @@ pub(super) fn write_swe_runtime_snapshots(
             swe_dir.display().to_string(),
             workspace.display().to_string(),
         ],
+        private_diagnostics: None,
+        public_diagnostics: None,
     })
 }
 
@@ -86,6 +88,8 @@ pub(super) fn write_swe_setup_failure_snapshots(
             swe_dir.display().to_string(),
             workspace.display().to_string(),
         ],
+        private_diagnostics: None,
+        public_diagnostics: None,
     })
 }
 
@@ -256,18 +260,21 @@ fn setup_failure_materials(
             path: parquet,
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "raw_sample",
             path: swe_dir.join("raw_sample.jsonl"),
             public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "instance",
             path: swe_dir.join("instance.json"),
             public_path: Some("swe-bench-pro/instance.json".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
     ];
     if let Some(source_path) = source_path {
@@ -276,6 +283,7 @@ fn setup_failure_materials(
             path: source_path.join("swe_bench_pro_eval.py"),
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
         });
     }
     materials.push(RuntimeMaterial {
@@ -283,6 +291,7 @@ fn setup_failure_materials(
         path: ctx.attempt_dir.join("verifier/stderr.log"),
         public_path: Some("verifier/stderr.log".to_string()),
         validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+        include_in_public: true,
     });
     materials
 }
@@ -319,12 +328,14 @@ fn swe_runtime_materials(
             path: instance.parquet_path.clone(),
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "evaluator",
             path: source_path.join("swe_bench_pro_eval.py"),
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "run_script",
@@ -334,24 +345,28 @@ fn swe_runtime_materials(
                 .join("run_script.sh"),
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "raw_sample",
             path: swe_dir.join("raw_sample.jsonl"),
             public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "instance",
             path: swe_dir.join("instance.json"),
             public_path: Some("swe-bench-pro/instance.json".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "workspace_manifest",
             path: swe_dir.join("workspace-manifest.json"),
             public_path: Some("swe-bench-pro/workspace-manifest.json".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
     ];
     let _ = instance;
@@ -361,24 +376,28 @@ fn swe_runtime_materials(
             path: ctx.attempt_dir.join("prediction.jsonl"),
             public_path: Some("prediction.jsonl".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "prediction_eval_json",
             path: ctx.attempt_dir.join("prediction.eval.json"),
             public_path: Some("prediction.eval.json".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "patch_diff",
             path: ctx.attempt_dir.join("patch.diff"),
             public_path: Some("patch.diff".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
         RuntimeMaterial {
             name: "eval_results",
             path: swe_dir.join("eval/eval_results.json"),
             public_path: Some("swe-bench-pro/eval/eval_results.json".to_string()),
             validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
         },
     ]);
     materials

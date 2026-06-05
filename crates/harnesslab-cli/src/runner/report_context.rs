@@ -8,7 +8,7 @@ pub(super) fn build_report_context(
     request: &ReportWriteRequest<'_>,
 ) -> harnesslab_report::ReportContext {
     harnesslab_report::ReportContext {
-        run_id: request.spec.run_id.clone(),
+        run_id: "[PRIVATE_RUN_ID]".to_string(),
         agent: request.spec.agent_profile_ref.clone(),
         agent_config_summary: super::store::agent_config_summary(
             request.spec,
@@ -32,9 +32,9 @@ pub(super) fn build_report_context(
         has_version_probe_snapshot: request.version_snapshot.is_some(),
         benchmark: request.spec.benchmark.name.clone(),
         split: request.spec.benchmark.split.clone(),
-        report_path: request.report_path.clone(),
-        replay_command: super::store::replay_command(request.spec),
-        original_command: super::store::original_command_from_snapshot(request.run_dir),
+        report_path: "report.html".to_string(),
+        replay_command: "harnesslab run replay [RUN_DIR]".to_string(),
+        original_command: "[PRIVATE_COMMAND]".to_string(),
         resumed: request.resumed,
         run_health_status: request.run_health.status.clone(),
         run_health_reason: request.run_health.reason.clone(),
@@ -47,7 +47,6 @@ pub(super) struct ReportWriteRequest<'a> {
     pub(super) report_profile: &'a AgentProfile,
     pub(super) report_materialized: &'a MaterializedAgentProfile,
     pub(super) version_snapshot: Option<&'a AgentVersionSnapshot>,
-    pub(super) report_path: String,
     pub(super) run_health: super::monitor::ReportHealth,
     pub(super) resumed: bool,
     pub(super) results: &'a harnesslab_core::RunResults,

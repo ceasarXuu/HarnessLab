@@ -138,6 +138,7 @@ fn apply_gold_patch(
         runtime_profile,
         report_profile,
         "git apply -",
+        &[],
     )?;
     let status = Command::new("git")
         .arg("apply")

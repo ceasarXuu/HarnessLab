@@ -25,6 +25,8 @@ pub(super) struct ExternalRuntimeSnapshotRequest<'a> {
     pub(super) materials: Vec<RuntimeMaterial>,
     pub(super) public_artifacts: Vec<String>,
     pub(super) extra_redaction_refs: Vec<String>,
+    pub(super) private_diagnostics: Option<Value>,
+    pub(super) public_diagnostics: Option<Value>,
 }
 
 pub(super) struct RuntimePhaseCommand {
@@ -41,6 +43,7 @@ pub(super) struct RuntimeMaterial {
     pub(super) path: PathBuf,
     pub(super) public_path: Option<String>,
     pub(super) validation_scope: RuntimeMaterialValidationScope,
+    pub(super) include_in_public: bool,
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -76,6 +79,7 @@ pub(super) fn write_external_runtime_snapshots(
         .collect::<Vec<_>>();
     let public_materials = materials
         .iter()
+        .filter(|material| material.include_in_public)
         .map(public_material_snapshot)
         .collect::<Vec<_>>();
     let runtime_fingerprint =
@@ -101,6 +105,7 @@ pub(super) fn write_external_runtime_snapshots(
         commands: private_commands,
         replay_materials: materials.clone(),
         public_artifacts: request.public_artifacts.clone(),
+        runtime_diagnostics: request.private_diagnostics.clone(),
         runtime_fingerprint: runtime_fingerprint.clone(),
         public_fingerprint,
         redaction_basis: private_redaction_basis(),
@@ -117,6 +122,7 @@ pub(super) fn write_external_runtime_snapshots(
         commands: public_commands,
         runtime_materials: public_materials,
         public_artifacts: request.public_artifacts.clone(),
+        runtime_diagnostics: request.public_diagnostics.clone(),
         runtime_fingerprint,
     };
     let private_path = request.attempt_dir.join("external-runtime.private.json");
@@ -156,6 +162,7 @@ struct PrivateExternalRuntimeSnapshot {
     commands: Vec<PrivateCommandSnapshot>,
     replay_materials: Vec<MaterialSnapshot>,
     public_artifacts: Vec<String>,
+    runtime_diagnostics: Option<Value>,
     runtime_fingerprint: String,
     public_fingerprint: String,
     redaction_basis: Vec<String>,
@@ -174,6 +181,7 @@ struct PublicExternalRuntimeSnapshot {
     commands: Vec<PublicCommandSnapshot>,
     runtime_materials: Vec<PublicMaterialSnapshot>,
     public_artifacts: Vec<String>,
+    runtime_diagnostics: Option<Value>,
     runtime_fingerprint: String,
 }
 
@@ -210,6 +218,7 @@ struct MaterialSnapshot {
     path: String,
     public_path: Option<String>,
     validation_scope: RuntimeMaterialValidationScope,
+    include_in_public: bool,
     exists: bool,
     size_bytes: Option<u64>,
     checksum: String,
@@ -248,15 +257,41 @@ fn private_command_snapshot(command: &RuntimePhaseCommand) -> PrivateCommandSnap
 fn public_command_snapshot(
     command: &RuntimePhaseCommand,
     secret_refs: &[&str],
-    attempt_dir: &Path,
+    _attempt_dir: &Path,
 ) -> PublicCommandSnapshot {
     PublicCommandSnapshot {
         phase: command.phase.to_string(),
-        command: redact_public_value(&command.command, secret_refs),
+        command: public_command_text(&command.command, secret_refs),
         timeout_sec: command.timeout_sec,
-        stdout_path: public_path(&command.stdout_path, attempt_dir),
-        stderr_path: public_path(&command.stderr_path, attempt_dir),
+        stdout_path: "[PRIVATE_ARTIFACT]".to_string(),
+        stderr_path: "[PRIVATE_ARTIFACT]".to_string(),
     }
+}
+
+fn public_command_text(command: &str, secret_refs: &[&str]) -> String {
+    let redacted = redact_public_value(command, secret_refs);
+    redact_flag_value(
+        &redact_flag_value(&redacted, "--run-id", "[PRIVATE_RUN_ID]"),
+        "--agent-import-path",
+        "[PRIVATE_AGENT_IMPORT]",
+    )
+}
+
+fn redact_flag_value(command: &str, flag: &str, replacement: &str) -> String {
+    let mut parts = command.split_whitespace();
+    let mut output = Vec::new();
+    let flag_prefix = format!("{flag}=");
+    while let Some(part) = parts.next() {
+        if part.starts_with(&flag_prefix) {
+            output.push(format!("{flag}={replacement}"));
+            continue;
+        }
+        output.push(part.to_string());
+        if part == flag && parts.next().is_some() {
+            output.push(replacement.to_string());
+        }
+    }
+    output.join(" ")
 }
 
 fn material_snapshot(material: &RuntimeMaterial, attempt_dir: &Path) -> MaterialSnapshot {
@@ -269,6 +304,7 @@ fn material_snapshot(material: &RuntimeMaterial, attempt_dir: &Path) -> Material
             .clone()
             .or_else(|| relative_to_attempt(&material.path, attempt_dir)),
         validation_scope: material.validation_scope,
+        include_in_public: material.include_in_public,
         exists: metadata.is_some(),
         size_bytes: metadata.as_ref().map(std::fs::Metadata::len),
         checksum: stable_file_checksum(&material.path),
@@ -284,10 +320,6 @@ fn public_material_snapshot(material: &MaterialSnapshot) -> PublicMaterialSnapsh
         size_bytes: material.size_bytes,
         checksum: material.checksum.clone(),
     }
-}
-
-fn public_path(path: &Path, attempt_dir: &Path) -> String {
-    relative_to_attempt(path, attempt_dir).unwrap_or_else(|| "[PRIVATE_PATH]".to_string())
 }
 
 fn relative_to_attempt(path: &Path, attempt_dir: &Path) -> Option<String> {
@@ -314,6 +346,7 @@ fn push_path_refs(refs: &mut Vec<String>, value: &str) {
     let escaped = value.replace('\'', "'\\''");
     push_ref(refs, escaped.clone());
     push_ref(refs, format!("'{escaped}'"));
+    push_ref(refs, format!("\"{}\"", value.replace('"', "\\\"")));
 }
 
 fn push_ref(refs: &mut Vec<String>, value: String) {
@@ -349,6 +382,7 @@ fn runtime_fingerprint(
         "commands": commands,
         "replay_materials": materials,
         "public_artifacts": &request.public_artifacts,
+        "runtime_diagnostics": &request.private_diagnostics,
     }))
 }
 
@@ -371,8 +405,28 @@ fn public_fingerprint(
         "commands": commands,
         "runtime_materials": materials,
         "public_artifacts": &request.public_artifacts,
+        "runtime_diagnostics": &request.public_diagnostics,
         "runtime_fingerprint": runtime_fingerprint,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn public_command_text_redacts_sensitive_flag_values() {
+        let command = "tb run --run-id run-1 --agent-import-path bench.agent:Agent --run-id=run-2";
+
+        let public = public_command_text(command, &[]);
+
+        assert!(public.contains("--run-id [PRIVATE_RUN_ID]"));
+        assert!(public.contains("--run-id=[PRIVATE_RUN_ID]"));
+        assert!(public.contains("--agent-import-path [PRIVATE_AGENT_IMPORT]"));
+        assert!(!public.contains("run-1"));
+        assert!(!public.contains("run-2"));
+        assert!(!public.contains("bench.agent:Agent"));
+    }
 }
 
 fn stable_json_checksum(value: &Value) -> Result<String> {

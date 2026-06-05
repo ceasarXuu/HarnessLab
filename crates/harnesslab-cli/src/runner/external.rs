@@ -25,6 +25,7 @@ pub(super) mod terminal_bench_cleanup;
 mod terminal_bench_env;
 mod terminal_bench_result;
 mod terminal_bench_runtime;
+mod terminal_bench_runtime_snapshot;
 mod terminal_bench_timeout;
 
 pub(super) use runtime_adapter::{RuntimeCleanupPhase, RuntimeCleanupReport, RuntimeCleanupTarget};
@@ -201,10 +202,14 @@ pub(super) fn write_external_command_snapshot(
     runtime_profile: &AgentProfile,
     report_profile: &AgentProfile,
     command: &str,
+    extra_redaction_refs: &[String],
 ) -> Result<()> {
     let agent_dir = attempt_dir.join("agent");
     fs::create_dir_all(&agent_dir)?;
-    let secrets = external_snapshot_secret_refs(runtime_profile);
+    let mut secrets = external_snapshot_secret_refs(runtime_profile);
+    for extra in extra_redaction_refs {
+        push_redaction_ref(&mut secrets, extra);
+    }
     let secret_refs = secrets.iter().map(String::as_str).collect::<Vec<_>>();
     fs::write(
         agent_dir.join("command.txt"),
@@ -223,12 +228,20 @@ fn external_snapshot_secret_refs(runtime_profile: &AgentProfile) -> Vec<String> 
         if secret.is_empty() {
             continue;
         }
-        push_unique(&mut refs, secret.clone());
-        let escaped = secret.replace('\'', "'\\''");
-        push_unique(&mut refs, escaped.clone());
-        push_unique(&mut refs, format!("'{escaped}'"));
+        push_redaction_ref(&mut refs, &secret);
     }
     refs
+}
+
+fn push_redaction_ref(refs: &mut Vec<String>, value: &str) {
+    if value.is_empty() {
+        return;
+    }
+    push_unique(refs, value.to_string());
+    let escaped = value.replace('\'', "'\\''");
+    push_unique(refs, escaped.clone());
+    push_unique(refs, format!("'{escaped}'"));
+    push_unique(refs, format!("\"{}\"", value.replace('"', "\\\"")));
 }
 
 fn push_unique(values: &mut Vec<String>, value: String) {

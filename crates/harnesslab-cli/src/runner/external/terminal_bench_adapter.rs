@@ -6,6 +6,9 @@ use super::{
         TerminalBenchRuntimeAttempt, append_runner_config_event, terminal_bench_docker_platform,
         terminal_bench_no_output_activity_patterns, terminal_bench_runtime_dataset,
     },
+    terminal_bench_runtime_snapshot::{
+        TerminalBenchSnapshotDiagnostics, write_terminal_bench_runtime_snapshots,
+    },
     terminal_bench_timeout::{
         terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
         terminal_bench_timeout_values,
@@ -108,21 +111,24 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
             &result_path,
             &ctx.attempt_dir.join("agent/command.txt"),
         )?;
-        terminal_bench::execute_prepared(
+        let prepared = TerminalBenchRuntimeAttempt {
+            source_dataset_path: dataset_path.to_path_buf(),
+            runtime_dataset_path,
+            output_root: output_root.clone(),
+            official_run_id: official_run_id.clone(),
+            result_path,
+            command,
+            process_timeout_sec,
+            no_output_timeout_sec,
+            no_output_progress_paths: vec![output_root.join(&official_run_id).join("run.log")],
+            no_output_activity_patterns: terminal_bench_no_output_activity_patterns(),
+        };
+        write_terminal_bench_runtime_snapshots(
             &ctx,
-            TerminalBenchRuntimeAttempt {
-                source_dataset_path: dataset_path.to_path_buf(),
-                runtime_dataset_path,
-                output_root: output_root.clone(),
-                official_run_id: official_run_id.clone(),
-                result_path,
-                command,
-                process_timeout_sec,
-                no_output_timeout_sec,
-                no_output_progress_paths: vec![output_root.join(&official_run_id).join("run.log")],
-                no_output_activity_patterns: terminal_bench_no_output_activity_patterns(),
-            },
-        )
+            &prepared,
+            TerminalBenchSnapshotDiagnostics::PreExecution,
+        )?;
+        terminal_bench::execute_prepared(&ctx, prepared)
     }
 
     fn cleanup_targets(&self, ctx: RuntimeCleanupContext<'_>) -> Vec<RuntimeCleanupTarget> {
@@ -187,8 +193,40 @@ pub(super) fn append_command_snapshot(
         ctx.profile,
         ctx.report_profile,
         &report_command,
+        &terminal_bench_command_redaction_refs(
+            ctx.attempt_dir,
+            dataset_path,
+            output_root,
+            run_id,
+            docker_platform,
+            compatibility,
+        ),
     )?;
     Ok(command)
+}
+
+fn terminal_bench_command_redaction_refs(
+    attempt_dir: &Path,
+    dataset_path: &Path,
+    output_root: &Path,
+    run_id: &str,
+    docker_platform: &str,
+    compatibility: &BenchmarkRuntimeCompatibility,
+) -> Vec<String> {
+    let mut refs = vec![
+        attempt_dir.display().to_string(),
+        dataset_path.display().to_string(),
+        output_root.display().to_string(),
+        output_root.join(run_id).display().to_string(),
+        docker_platform.to_string(),
+    ];
+    if let Some(path) = &compatibility.terminal_bench_agent_import_path {
+        refs.push(path.clone());
+    }
+    if let Some(path) = &compatibility.terminal_bench_agent_pythonpath {
+        refs.push(path.clone());
+    }
+    refs
 }
 
 pub(super) fn docker_platform_for_task(task_id: &str) -> String {

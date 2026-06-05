@@ -35,15 +35,24 @@ fn adapt_runtime_005_terminal_bench_event_taxonomy_is_stable() {
     assert_event_message(
         &success_events,
         "terminal_bench_cleanup",
-        &["pre_task", "token=", "removed"],
+        &[
+            "pre_task",
+            "projects_count=",
+            "removed_count=",
+            "containers_removed=",
+            "networks_removed=",
+            "has_error=false",
+        ],
     );
+    assert_event_message_excludes(&success_events, "terminal_bench_cleanup", &["token="]);
     assert_event_message(&success_events, "task_warning", &["AgentTimeout"]);
     assert_command_snapshot(&success_command);
     assert_argv_log(&argv_log, "--agent", "oracle");
 
     let (import_command, import_argv) = run_import_path_command_case();
     assert!(import_command.contains("--agent-import-path"));
-    assert!(import_command.contains("bench_agents.fake:Agent"));
+    assert!(import_command.contains("[REDACTED]"));
+    assert!(!import_command.contains("bench_agents.fake:Agent"));
     assert_argv_log(
         &import_argv,
         "--agent-import-path",
@@ -434,11 +443,7 @@ fn assert_event_message(events: &[serde_json::Value], name: &str, fragments: &[&
         .find(|event| event["event"] == name)
         .unwrap_or_else(|| panic!("missing event {name}; events={events:#?}"));
     assert_eq!(event["schema_version"], 1);
-    assert!(
-        event["run_id"]
-            .as_str()
-            .is_some_and(|value| !value.is_empty())
-    );
+    assert_eq!(event["run_id"], "[PRIVATE_RUN_ID]");
     assert!(
         event["task_id"]
             .as_str()
@@ -449,6 +454,20 @@ fn assert_event_message(events: &[serde_json::Value], name: &str, fragments: &[&
         assert!(
             message.contains(fragment),
             "event {name} missing {fragment}; message={message}"
+        );
+    }
+}
+
+fn assert_event_message_excludes(events: &[serde_json::Value], name: &str, fragments: &[&str]) {
+    let event = events
+        .iter()
+        .find(|event| event["event"] == name)
+        .unwrap_or_else(|| panic!("missing event {name}; events={events:#?}"));
+    let message = event["message"].as_str().unwrap_or_default();
+    for fragment in fragments {
+        assert!(
+            !message.contains(fragment),
+            "event {name} unexpectedly contained {fragment}; message={message}"
         );
     }
 }

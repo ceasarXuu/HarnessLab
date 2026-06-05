@@ -298,7 +298,7 @@ mod tests {
                         && event.message.contains(&format!("attempt={attempt}"))
                 })
                 .unwrap_or_else(|| panic!("missing projection event for attempt {attempt}"));
-            assert_eq!(event.run_id, "run");
+            assert_eq!(event.run_id, "[PRIVATE_RUN_ID]");
             assert!(event.message.contains(&expected_private));
             assert!(event.message.contains(&expected_public));
         }

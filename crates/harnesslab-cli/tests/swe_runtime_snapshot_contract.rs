@@ -5,13 +5,13 @@ use std::fs;
 use std::path::Path;
 use support::runtime_snapshot::{
     assert_json_array_has_name, assert_material_scope, material_path,
-    rewrite_snapshot_pair_for_material, rewrite_snapshot_scope_with_authority,
-    rewrite_task_runtime_anchor_for_attempt, run_ids, shell_quote, stable_file_checksum,
-    task_runtime_path,
+    rewrite_snapshot_adapter_version_with_authority, rewrite_snapshot_pair_for_material,
+    rewrite_snapshot_scope_with_authority, rewrite_task_runtime_anchor_for_attempt, run_ids,
+    shell_quote, stable_file_checksum, task_runtime_path,
 };
 use support::swe::{
-    fake_swe_tools, init_home, path_with, run_swe_json, swe_bench_root, write_agent,
-    write_swe_gold_agent,
+    fake_swe_tools, init_home, path_with, run_swe_json, swe_bench_root, swe_bench_root_with_prefix,
+    write_agent, write_swe_gold_agent,
 };
 
 #[test]
@@ -200,6 +200,24 @@ fn swepro_005_replay_requires_stored_swe_runtime_materials() {
         bin.path(),
         &run_dir,
         "external-runtime material validation scope missing",
+    );
+    fs::write(&private_path, &private_original).unwrap();
+    fs::write(&public_path, &public_original).unwrap();
+    fs::write(&task_runtime_path, &task_runtime_original).unwrap();
+    fs::write(&benchmark_path, &benchmark_original).unwrap();
+
+    rewrite_snapshot_adapter_version_with_authority(
+        &private_path,
+        &public_path,
+        &task_runtime_path,
+        &benchmark_path,
+        "swe-bench-pro-runtime.v0",
+    );
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "external-runtime adapter version drift",
     );
     fs::write(&private_path, &private_original).unwrap();
     fs::write(&public_path, &public_original).unwrap();
@@ -465,25 +483,4 @@ fn mutate_json(path: &Path, mutate: impl FnOnce(&mut serde_json::Value)) {
     let mut snapshot: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
     mutate(&mut snapshot);
     fs::write(path, serde_json::to_vec_pretty(&snapshot).unwrap()).unwrap();
-}
-
-fn swe_bench_root_with_prefix(prefix: &str) -> tempfile::TempDir {
-    let root = tempfile::Builder::new().prefix(prefix).tempdir().unwrap();
-    let data_dir = root
-        .path()
-        .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/data");
-    fs::create_dir_all(&data_dir).unwrap();
-    fs::write(data_dir.join("test-00000-of-00001.parquet"), "parquet").unwrap();
-    fs::write(
-        root.path()
-            .join("swe-bench-pro/ScaleAI__SWE-bench_Pro/README.md"),
-        "splits:\n- name: test\n  num_examples: 1\n",
-    )
-    .unwrap();
-    let source = root.path().join("_src/SWE-bench_Pro-os");
-    fs::create_dir_all(source.join("run_scripts/instance_demo")).unwrap();
-    fs::write(source.join("swe_bench_pro_eval.py"), "").unwrap();
-    fs::write(source.join("run_scripts/instance_demo/run_script.sh"), "").unwrap();
-    fs::write(source.join("run_scripts/instance_demo/parser.py"), "").unwrap();
-    root
 }

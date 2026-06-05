@@ -1,5 +1,7 @@
 use anyhow::{Result, bail};
-use harnesslab_core::{BenchmarkPlan, RunSpec, RuntimeTaskSnapshot, task_dir_name};
+use harnesslab_core::{
+    BenchmarkPlan, ExternalRunnerKind, RunSpec, RuntimeTaskSnapshot, task_dir_name,
+};
 use harnesslab_infra::read_json;
 use serde_json::Value;
 use std::fs;
@@ -194,6 +196,14 @@ fn validate_external_runtime_snapshot_pair(
             task.task_id
         );
     }
+    let expected_adapter_version = current_adapter_version(runner.kind);
+    if private["adapter_version"].as_str() != Some(expected_adapter_version) {
+        bail!(
+            "replay blocker: external-runtime adapter version drift for task {}; stored={} current={expected_adapter_version}; cannot safely replay external benchmark task with changed runtime adapter semantics",
+            task.task_id,
+            private["adapter_version"].as_str().unwrap_or("unknown")
+        );
+    }
     let runtime_fingerprint = runtime_fingerprint_from_private(&private)?;
     let public_fingerprint = public_fingerprint_from_public(&public)?;
     if private["runtime_fingerprint"].as_str() != Some(runtime_fingerprint.as_str())
@@ -215,6 +225,13 @@ fn validate_external_runtime_snapshot_pair(
     )?;
     validate_live_materials(&private, task)?;
     Ok(())
+}
+
+fn current_adapter_version(kind: ExternalRunnerKind) -> &'static str {
+    match kind {
+        ExternalRunnerKind::TerminalBench => "terminal-bench-runtime.v1",
+        ExternalRunnerKind::SweBenchPro => "swe-bench-pro-runtime.v1",
+    }
 }
 
 fn validate_live_materials(private: &Value, task: &harnesslab_core::TaskPlan) -> Result<()> {
@@ -340,6 +357,7 @@ fn runtime_fingerprint_from_private(private: &Value) -> Result<String> {
         "commands": private["commands"].clone(),
         "replay_materials": private["replay_materials"].clone(),
         "public_artifacts": private["public_artifacts"].clone(),
+        "runtime_diagnostics": private["runtime_diagnostics"].clone(),
     }))
 }
 
@@ -356,6 +374,7 @@ fn public_fingerprint_from_public(public: &Value) -> Result<String> {
         "commands": public["commands"].clone(),
         "runtime_materials": public["runtime_materials"].clone(),
         "public_artifacts": public["public_artifacts"].clone(),
+        "runtime_diagnostics": public["runtime_diagnostics"].clone(),
         "runtime_fingerprint": public["runtime_fingerprint"].clone(),
     }))
 }

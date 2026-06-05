@@ -260,6 +260,29 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             test_target: Some("lib"),
             file_patterns: &["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs"],
         }),
+        "ADAPT-RUNTIME-003" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted",
+            test_target: Some("test:external_runtime_snapshot_contract"),
+            file_patterns: &[
+                "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+                "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+            ],
+        }),
+        "ADAPT-RUNTIME-004" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "adapt_runtime_004_cleanup_report_is_structured_and_affects_final_verdict",
+            test_target: Some("test:external_runtime_snapshot_contract"),
+            file_patterns: &[
+                "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+            ],
+        }),
         "ADAPT-RUNTIME-005" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "adapt_runtime_005_terminal_bench_event_taxonomy_is_stable",
@@ -301,7 +324,11 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             package: "harnesslab-cli",
             test_name: "swepro_005_replay_requires_stored_swe_runtime_materials",
             test_target: Some("test:swe_runtime_snapshot_contract"),
-            file_patterns: &["crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs"],
+            file_patterns: &[
+                "crates/harnesslab-cli/src/runner/replay.rs",
+                "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+                "crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs",
+            ],
         }),
         _ => None,
     }

@@ -76,8 +76,10 @@ exit 64
     assert!(docker_log.contains("actual-prefix-"));
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("terminal_bench_cleanup"));
-    assert!(events.contains("projects=actual-prefix-"));
-    assert!(events.contains("removed containers=1 networks=1"));
+    assert!(!events.contains("projects=actual-prefix-"));
+    assert!(events.contains("projects_count=1"));
+    assert!(events.contains("containers_removed=1"));
+    assert!(events.contains("networks_removed=1"));
     assert!(
         run_dir
             .join("terminal-bench-compose-projects.json")
@@ -190,7 +192,8 @@ exit 0
     assert_eq!(task["benchmark_score"], 0.0);
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("terminal-bench cleanup post_task warning"));
-    assert!(events.contains("metadata write failed"));
+    assert!(events.contains("has_error=true"));
+    assert!(!events.contains("metadata write failed"));
     let report = fs::read_to_string(run_dir.join("report.html")).unwrap();
     assert!(report.contains("execution/agent_cleanup_failed"));
 }

@@ -206,8 +206,8 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-DATA-005) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper"; test_target="lib" ;;
     ADAPT-RUNTIME-001) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry"; test_target="lib" ;;
     ADAPT-RUNTIME-002) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_002_preflight_reports_and_enforces_current_compatibility"; test_target="lib" ;;
-    ADAPT-RUNTIME-003) planned_adapter_proof "$id" "Phase 6: runtime snapshots" ;;
-    ADAPT-RUNTIME-004) planned_adapter_proof "$id" "Phase 6: cleanup report" ;;
+    ADAPT-RUNTIME-003) package="harnesslab-cli"; test_name="adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted"; test_target="test:external_runtime_snapshot_contract" ;;
+    ADAPT-RUNTIME-004) package="harnesslab-cli"; test_name="adapt_runtime_004_cleanup_report_is_structured_and_affects_final_verdict"; test_target="test:external_runtime_snapshot_contract" ;;
     ADAPT-RUNTIME-005) package="harnesslab-cli"; test_name="adapt_runtime_005_terminal_bench_event_taxonomy_is_stable"; test_target="test:terminal_bench_runtime_event_contract" ;;
     SWEPRO-001) package="harnesslab-cli"; test_name="swepro_001_metadata_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-002) package="harnesslab-cli"; test_name="swepro_002_workspace_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;

@@ -74,8 +74,8 @@ pub(super) fn append_runner_config_event(
     process_timeout_sec: u64,
     no_output_timeout_sec: Option<u64>,
     docker_platform: &str,
-    official_result_path: &Path,
-    command_snapshot_path: &Path,
+    _official_result_path: &Path,
+    _command_snapshot_path: &Path,
 ) -> Result<()> {
     let no_output_timeout = no_output_timeout_sec
         .map(|timeout| timeout.to_string())
@@ -90,9 +90,7 @@ pub(super) fn append_runner_config_event(
             Some(&ctx.task.task_id),
             "external_runner_configured",
             &format!(
-                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} docker_platform={docker_platform} progress_paths={progress_paths} activity_patterns={activity_patterns} official_result_path={} command_snapshot_path={}",
-                official_result_path.display(),
-                command_snapshot_path.display()
+                "terminal-bench process_timeout_sec={process_timeout_sec} no_output_timeout_sec={no_output_timeout} activity_grace_sec={activity_grace} docker_platform={docker_platform} progress_paths={progress_paths} activity_patterns={activity_patterns} official_result_path=official/terminal-bench/<run-id>/results.json command_snapshot_path=agent/command.txt",
             ),
         ),
         &[],
@@ -118,10 +116,13 @@ pub(super) fn terminal_bench_runtime_dataset(
             Some(&ctx.task.task_id),
             "terminal_bench_dataset_prepared",
             &format!(
-                "compatibility={} source_dataset={} runtime_dataset={}",
+                "compatibility={} source_dataset=[PRIVATE_PATH] runtime_dataset={}",
                 mode.label(),
-                dataset_path.display(),
-                runtime_dataset.display()
+                runtime_dataset
+                    .strip_prefix(ctx.attempt_dir)
+                    .ok()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_else(|| "[PRIVATE_PATH]".to_string())
             ),
         ),
         &[],
