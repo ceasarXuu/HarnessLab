@@ -779,7 +779,8 @@ Expected:
 
 - Replay creates a new run directory.
 - Replay uses snapshot agent profile, not current global profile.
-- Replay fails before execution if benchmark checksum is missing or mismatched.
+- Replay fails before execution if the authoritative benchmark snapshot is
+  missing or benchmark identity is mismatched.
 - Replay fails before execution if required agent command is missing.
 - Replay fails before execution if required sandbox image tag/digest is unavailable.
 - If `version_command` exists and output differs from snapshot, replay readiness reports blocker or warning according to profile policy.
@@ -922,7 +923,7 @@ Pass criteria:
 | INT-010 | replay missing data | remove cached manifest | readiness blocker, no task starts |
 | INT-011 | resume mid-agent | simulate interrupted `agent_running` attempt | old attempt marked interrupted, logs preserved |
 | INT-012 | replay missing agent | remove fake agent binary from PATH | readiness blocker, no task starts |
-| INT-013 | replay version mismatch | fake version command output differs | readiness warning/blocker follows profile policy |
+| INT-013 | replay missing benchmark snapshot | remove `benchmark.snapshot.json` | replay blocker, no task starts |
 | INT-014 | replay missing image | remove or reference missing sandbox image | readiness blocker, no task starts |
 
 ### 13.4 E2E Tests
