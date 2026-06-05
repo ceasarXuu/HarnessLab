@@ -4,9 +4,10 @@
 - Related plan: `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md`
 - Phase: Phase 2: Snapshot Authority And Replay Contract
 - Status: Started. Missing authoritative benchmark snapshot now blocks replay
-  by default, and new runs now persist task runtime snapshots. Drift checks,
-  replay enforcement for task runtime snapshots, external-runtime schema,
-  legacy degraded mode decision, and `SWEPRO-005` remain open.
+  by default, new runs now persist task runtime snapshots, and external-task
+  replay now blocks missing or divergent task runtime authority. Drift checks,
+  external-runtime schema, legacy degraded mode decision, and `SWEPRO-005`
+  remain open.
 
 ## Landed Contract
 
@@ -28,6 +29,10 @@
   snapshot.
 - `REPLAY-007` now verifies the `task.snapshot.json` hash matches
   `task-runtime.snapshot.json.task_plan_hash`, not just artifact existence.
+- `REPLAY-008` now proves external-task replay blocks when
+  `BenchmarkPlan.task_runtime_snapshots` is empty, when the per-task
+  `task-runtime.snapshot.json` artifact is missing, or when that artifact
+  diverges from `benchmark.snapshot.json`.
 
 ## Task Runtime Snapshot Schema
 
@@ -51,14 +56,14 @@ generated from prepared immutable benchmark data plus the task plan hash:
   replay before task execution.
 - `REPLAY-007`: active, validates new runs write `BenchmarkPlan.task_runtime_snapshots`
   and matching per-task `task-runtime.snapshot.json` beside `task.snapshot.json`.
+- `REPLAY-008`: active, validates external-task replay fails before creating a
+  replay run when task runtime snapshot authority is empty, missing, or
+  divergent.
 - `SWEPRO-005`: still planned, must prove SWE-bench Pro replay/readiness uses
   stored runtime materials instead of silent live replanning.
 
 ## Open Before Phase Closure
 
-- Decide whether replay should hard-block empty or missing task runtime
-  snapshots for all external benchmarks immediately, or only after the legacy
-  degraded replay policy is resolved.
 - Decide whether per-task runtime snapshots should be projected during run
   setup instead of attempt execution before they become first-class replay
   authority.
@@ -73,6 +78,7 @@ generated from prepared immutable benchmark data plus the task plan hash:
 
 ## Verification Evidence
 
+- `scripts/test-after-change.sh --select REPLAY-008`: 1 passed.
 - `scripts/test-after-change.sh --select REPLAY-007`: 1 passed.
 - `scripts/test-after-change.sh --select ADAPT-DATA-005`: 1 passed.
 - `scripts/test-after-change.sh --select INT-013`: 1 passed.
@@ -81,11 +87,14 @@ generated from prepared immutable benchmark data plus the task plan hash:
 - `cargo test -p harnesslab-cli --all-features --lib`: 119 passed.
 - `cargo test -p harnesslab-cli --test replay_contract -- --nocapture`: 12
   passed before the `REPLAY-007` slice.
+- `cargo check --all-targets`: passed.
 - `scripts/test-after-change.sh --select META-002`: passed with 42
-  requirements, 169 tests, and 16 adapter claims from 3 sources.
+  requirements, 170 tests, and 16 adapter claims from 3 sources.
 - `cargo fmt --check`: passed.
 - `git diff --check`: passed.
-- `crates/harnesslab-cli/src/runner.rs` line count checked: 489 lines, below
+- `crates/harnesslab-cli/src/runner.rs` line count checked: 492 lines, below
   the 500-line repository constraint.
+- `crates/harnesslab-cli/tests/task_snapshot_contract.rs` line count checked:
+  205 lines, below the 500-line repository constraint.
 - `crates/harnesslab-cli/tests/replay_contract.rs` line count checked: 491
   lines, below the 500-line repository constraint.
