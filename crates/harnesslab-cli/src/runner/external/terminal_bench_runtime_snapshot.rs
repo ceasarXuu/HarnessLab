@@ -4,10 +4,11 @@ use super::runtime_snapshot::{
 };
 use super::terminal_bench_cleanup::TaskCleanupOutcome;
 use super::{ExternalTaskExecution, terminal_bench_runtime::TerminalBenchRuntimeAttempt};
+use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::Result;
 use harnesslab_core::{ExternalRunnerKind, FailureClass, FailureCode};
 use serde_json::Value;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 const TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION: &str = "terminal-bench-runtime.v1";
 
@@ -40,10 +41,7 @@ pub(super) fn write_terminal_bench_runtime_snapshots(
         }],
         materials: runtime_materials(ctx, prepared),
         public_artifacts: public_artifacts(prepared),
-        extra_redaction_refs: vec![
-            prepared.runtime_dataset_path.display().to_string(),
-            prepared.output_root.display().to_string(),
-        ],
+        extra_redaction_refs: runtime_redaction_refs(ctx, prepared),
         private_diagnostics,
         public_diagnostics,
     })
@@ -205,6 +203,32 @@ fn runtime_materials(
     ]
 }
 
+fn runtime_redaction_refs(
+    ctx: &ExternalTaskExecution<'_>,
+    prepared: &TerminalBenchRuntimeAttempt,
+) -> Vec<String> {
+    let compatibility = BenchmarkRuntimeCompatibility::from_profile(ctx.profile);
+    let mut refs = vec![
+        prepared.runtime_dataset_path.display().to_string(),
+        prepared.output_root.display().to_string(),
+        ctx.profile.command.clone(),
+        ctx.report_profile.command.clone(),
+    ];
+    if let Some(setup_script) = &ctx.materialized_profile.setup_script {
+        refs.push(setup_script.clone());
+    }
+    if let Some(setup_script) = &ctx.report_materialized_profile.setup_script {
+        refs.push(setup_script.clone());
+    }
+    if let Some(path) = compatibility.terminal_bench_agent_import_path {
+        refs.push(path);
+    }
+    if let Some(path) = compatibility.terminal_bench_agent_pythonpath {
+        refs.push(path);
+    }
+    refs
+}
+
 fn public_artifacts(prepared: &TerminalBenchRuntimeAttempt) -> Vec<String> {
     let mut artifacts = vec!["cleanup-report.json".to_string()];
     if let Some(path) = official_result_public_path(prepared) {
@@ -232,7 +256,7 @@ fn runtime_dataset_scope(
     }
 }
 
-fn relative_attempt_path(attempt_dir: &Path, path: &PathBuf) -> Option<String> {
+fn relative_attempt_path(attempt_dir: &Path, path: &Path) -> Option<String> {
     path.strip_prefix(attempt_dir)
         .ok()
         .map(|path| path.display().to_string())

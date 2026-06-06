@@ -109,14 +109,25 @@ if ! rg --fixed-strings -- "--agent-import-path" "$COMMAND_SNAPSHOT" >/dev/null;
   echo "missing import-path flag in command snapshot: $COMMAND_SNAPSHOT" >&2
   exit 1
 fi
-if ! rg --fixed-strings "harnesslab_tb_agent:HarnessLabCommandAgent" "$COMMAND_SNAPSHOT" >/dev/null; then
-  echo "missing import-path proof in command snapshot: $COMMAND_SNAPSHOT" >&2
+if ! rg --fixed-strings -- "--agent-import-path '[REDACTED]'" "$COMMAND_SNAPSHOT" >/dev/null; then
+  echo "missing redacted import-path proof in command snapshot: $COMMAND_SNAPSHOT" >&2
+  exit 1
+fi
+if rg --fixed-strings "harnesslab_tb_agent:HarnessLabCommandAgent" "$COMMAND_SNAPSHOT" >/dev/null; then
+  echo "raw import-path leaked in command snapshot: $COMMAND_SNAPSHOT" >&2
   exit 1
 fi
 if ! rg --fixed-strings -- "--global-agent-timeout-sec 33" "$COMMAND_SNAPSHOT" >/dev/null; then
   echo "missing import agent cleanup grace proof in command snapshot: $COMMAND_SNAPSHOT" >&2
   exit 1
 fi
+python3 - "$RUN_DIR/tasks/hello-world/attempts/1/external-runtime.private.json" <<'PY'
+import json, sys
+snapshot = json.load(open(sys.argv[1]))
+commands = [command["command"] for command in snapshot["commands"]]
+assert any("harnesslab_tb_agent:HarnessLabCommandAgent" in command for command in commands), commands
+print("private runtime snapshot import-path proof ok")
+PY
 if ! rg --fixed-strings "external_runner_configured" "$RUN_DIR/events.jsonl" >/dev/null; then
   echo "missing runner configuration event" >&2
   exit 1

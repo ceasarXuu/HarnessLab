@@ -266,10 +266,11 @@ fn assert_forbidden_imports(path: &str, source: &str) {
 
     for import in imports {
         for forbidden in forbidden_import_roots() {
+            let forbidden_runtime_import = import.starts_with(forbidden)
+                || import.starts_with("std::") && import.contains("process")
+                || import.starts_with("tokio::") && import.contains("process");
             assert!(
-                !import.starts_with(forbidden)
-                    && !(import.starts_with("std::") && import.contains("process"))
-                    && !(import.starts_with("tokio::") && import.contains("process")),
+                !forbidden_runtime_import,
                 "{path} imports forbidden runtime boundary path {import}"
             );
         }

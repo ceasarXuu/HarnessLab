@@ -124,36 +124,43 @@ pub(super) fn cleanup_task_resources(
     }
 }
 
-pub(super) fn write_task_cleanup_report(
-    attempt_dir: &Path,
-    task_id: &str,
-    attempt: u32,
-    _official_run_id: &str,
-    pre_task: &TaskCleanupOutcome,
-    post_task: &TaskCleanupOutcome,
-    official_failure_class: FailureClass,
-    official_failure_code: Option<FailureCode>,
-    final_failure_class: FailureClass,
-    final_failure_code: Option<FailureCode>,
-    cleanup_overrides_result: bool,
-) -> Result<()> {
+pub(super) struct TaskCleanupReportRequest<'a> {
+    pub(super) attempt_dir: &'a Path,
+    pub(super) task_id: &'a str,
+    pub(super) attempt: u32,
+    pub(super) pre_task: &'a TaskCleanupOutcome,
+    pub(super) post_task: &'a TaskCleanupOutcome,
+    pub(super) official_failure_class: FailureClass,
+    pub(super) official_failure_code: Option<FailureCode>,
+    pub(super) final_failure_class: FailureClass,
+    pub(super) final_failure_code: Option<FailureCode>,
+    pub(super) cleanup_overrides_result: bool,
+}
+
+pub(super) fn write_task_cleanup_report(request: TaskCleanupReportRequest<'_>) -> Result<()> {
     let report = TaskCleanupReport {
         schema_version: 1,
         benchmark: "terminal-bench",
-        task_id: task_id.to_string(),
-        attempt,
-        phases: vec![public_outcome(pre_task), public_outcome(post_task)],
+        task_id: request.task_id.to_string(),
+        attempt: request.attempt,
+        phases: vec![
+            public_outcome(request.pre_task),
+            public_outcome(request.post_task),
+        ],
         official_failure: CleanupFailureSnapshot {
-            class: official_failure_class,
-            code: official_failure_code,
+            class: request.official_failure_class,
+            code: request.official_failure_code,
         },
         final_failure: CleanupFailureSnapshot {
-            class: final_failure_class,
-            code: final_failure_code,
+            class: request.final_failure_class,
+            code: request.final_failure_code,
         },
-        final_verdict_effect: final_verdict_effect(post_task, cleanup_overrides_result),
+        final_verdict_effect: final_verdict_effect(
+            request.post_task,
+            request.cleanup_overrides_result,
+        ),
     };
-    atomic_write_json(&attempt_dir.join("cleanup-report.json"), &report)
+    atomic_write_json(&request.attempt_dir.join("cleanup-report.json"), &report)
 }
 
 #[derive(Serialize)]

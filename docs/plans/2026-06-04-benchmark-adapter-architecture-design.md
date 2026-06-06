@@ -4,37 +4,12 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-06
-- Version: 0.23
-- Status: Implementing overall adapter architecture; Phase 1 data adapter
-  lifecycle is implemented, verified, and adversarially reviewed with no
-  remaining blockers. Phase 2 snapshot authority has started; missing
-  authoritative benchmark snapshots now block replay by default, and new runs
-  now write task runtime snapshots. External-task replay now blocks empty,
-  missing, or divergent task runtime snapshot authority. SWE-bench Pro now has
-  public/private external runtime snapshots, benchmark-anchored attempt
-  checksums mirrored into task-runtime snapshots, fingerprint-backed replay
-  validation, run-scoped serialized anchor projection, and replay-time live
-  material drift blockers for parquet, evaluator, and run-script inputs.
-  Phase 3 runtime registry now exits cleanly with a CLI-local
-  `BenchmarkRuntimeAdapter` trait, registry-dispatched preflight/execute entry
-  points, adapter-owned cleanup targets, typed runtime compatibility,
-  `ready|blocked` preflight reports, persisted `external_runner_preflight`
-  diagnostics on executed run paths, active `ADAPT-RUNTIME-001/002`
-  exact-route proofs, an `INT-011` real execution-path event assertion, and
-  meta-gated active selector specs. Phase 4 Terminal-Bench runtime extraction is
-  closed. Phase 5 SWE-bench Pro runtime extraction is implemented with a
-  dedicated runtime adapter boundary and active `SWEPRO-001..004` phase
-  diagnostics for metadata, workspace, patch, and evaluator failures. Phase 6
-  now persists Terminal-Bench public/private external runtime snapshots,
-  writes structured cleanup reports, blocks replay on runtime adapter version
-  drift, removes raw command/log files from the Terminal-Bench public artifact
-  list, activates `ADAPT-RUNTIME-003/004`, and verifies the local
-  snapshot/redaction/cleanup gate. Phase 7 docs/diagnostics alignment and
-  Phase 8 full-gate closure remain open. Phase 7 local implementation now adds
-  `adapter_phase=preflight` readiness diagnostics and remediation text, updates
-  development operations artifact guidance, and aligns the Terminal-Bench
-  playbook with the implemented public/private external runtime artifact
-  boundary. Focused Phase 7 review remains open.
+- Version: 0.25
+- Status: Phases 1-8 are implemented, tested, documented, and locally
+  review-closed. Phase 8 evidence records a passing full local gate, passing
+  active adapter selector guard, Python bridge health, real Terminal-Bench
+  verifier scripts, rollback/fallback readiness, and final closure notes in
+  `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`.
 - Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development

@@ -15,6 +15,7 @@ use super::{
     },
     write_external_command_snapshot,
 };
+use crate::agent_registry::MaterializedAgentProfile;
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result, bail};
 use harnesslab_core::{
@@ -168,33 +169,35 @@ pub(super) fn append_command_snapshot(
     compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Result<String> {
     let agent = terminal_bench_agent(ctx.profile, compatibility)?;
-    let command = terminal_bench_command(
+    let command = terminal_bench_command(TerminalBenchCommandRequest {
         dataset_path,
-        &agent,
+        agent: &agent,
         output_root,
         run_id,
-        ctx.profile,
+        profile: ctx.profile,
+        materialized_profile: ctx.materialized_profile,
         ctx,
         docker_platform,
         compatibility,
-    );
-    let report_command = terminal_bench_command(
+    });
+    let report_command = terminal_bench_command(TerminalBenchCommandRequest {
         dataset_path,
-        &agent,
+        agent: &agent,
         output_root,
         run_id,
-        ctx.report_profile,
+        profile: ctx.report_profile,
+        materialized_profile: ctx.report_materialized_profile,
         ctx,
         docker_platform,
         compatibility,
-    );
+    });
     write_external_command_snapshot(
         ctx.attempt_dir,
         ctx.profile,
         ctx.report_profile,
         &report_command,
         &terminal_bench_command_redaction_refs(
-            ctx.attempt_dir,
+            ctx,
             dataset_path,
             output_root,
             run_id,
@@ -206,7 +209,7 @@ pub(super) fn append_command_snapshot(
 }
 
 fn terminal_bench_command_redaction_refs(
-    attempt_dir: &Path,
+    ctx: &ExternalTaskExecution<'_>,
     dataset_path: &Path,
     output_root: &Path,
     run_id: &str,
@@ -214,12 +217,20 @@ fn terminal_bench_command_redaction_refs(
     compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Vec<String> {
     let mut refs = vec![
-        attempt_dir.display().to_string(),
+        ctx.attempt_dir.display().to_string(),
         dataset_path.display().to_string(),
         output_root.display().to_string(),
         output_root.join(run_id).display().to_string(),
         docker_platform.to_string(),
+        ctx.profile.command.clone(),
+        ctx.report_profile.command.clone(),
     ];
+    if let Some(setup_script) = &ctx.materialized_profile.setup_script {
+        refs.push(setup_script.clone());
+    }
+    if let Some(setup_script) = &ctx.report_materialized_profile.setup_script {
+        refs.push(setup_script.clone());
+    }
     if let Some(path) = &compatibility.terminal_bench_agent_import_path {
         refs.push(path.clone());
     }
@@ -249,16 +260,30 @@ pub(super) fn terminal_bench_official_agent_timeout(
     }
 }
 
-fn terminal_bench_command(
-    dataset_path: &Path,
-    agent: &TerminalBenchAgent,
-    output_root: &Path,
-    run_id: &str,
-    profile: &AgentProfile,
-    ctx: &ExternalTaskExecution<'_>,
-    docker_platform: &str,
-    compatibility: &BenchmarkRuntimeCompatibility,
-) -> String {
+struct TerminalBenchCommandRequest<'a, 'ctx> {
+    dataset_path: &'a Path,
+    agent: &'a TerminalBenchAgent,
+    output_root: &'a Path,
+    run_id: &'a str,
+    profile: &'a AgentProfile,
+    materialized_profile: &'a MaterializedAgentProfile,
+    ctx: &'a ExternalTaskExecution<'ctx>,
+    docker_platform: &'a str,
+    compatibility: &'a BenchmarkRuntimeCompatibility,
+}
+
+fn terminal_bench_command(request: TerminalBenchCommandRequest<'_, '_>) -> String {
+    let TerminalBenchCommandRequest {
+        dataset_path,
+        agent,
+        output_root,
+        run_id,
+        profile,
+        materialized_profile,
+        ctx,
+        docker_platform,
+        compatibility,
+    } = request;
     let (agent_timeout, test_timeout, _) = terminal_bench_timeout_values(
         ctx.spec.execution.timeout_sec,
         profile.timeout_sec,
@@ -270,7 +295,7 @@ fn terminal_bench_command(
         matches!(agent, TerminalBenchAgent::ImportPath(_)),
     );
     let mut command = vec![
-        terminal_bench_agent_env(profile, ctx.materialized_profile, agent_timeout, compatibility),
+        terminal_bench_agent_env(profile, materialized_profile, agent_timeout, compatibility),
         "if [ -z \"${DOCKER_HOST:-}\" ] && [ -S \"$HOME/.colima/default/docker.sock\" ]; then export DOCKER_HOST=\"unix://$HOME/.colima/default/docker.sock\"; fi;".to_string(),
         format!(
             "export DOCKER_DEFAULT_PLATFORM={}; export BUILDKIT_PROGRESS=plain;",

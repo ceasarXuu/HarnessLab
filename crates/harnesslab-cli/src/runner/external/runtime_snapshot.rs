@@ -2,7 +2,9 @@ use super::runtime_anchor::{AnchorProjection, anchor_attempt_snapshot};
 use crate::runner::store;
 use anyhow::Result;
 use harnesslab_core::{ExternalRunnerKind, redact_public_value};
-use harnesslab_infra::{atomic_write_json, stable_checksum_bytes, stable_file_checksum};
+use harnesslab_infra::{
+    atomic_write_json, stable_checksum_bytes, stable_file_checksum, stable_path_checksum,
+};
 use serde::Serialize;
 use serde_json::Value;
 use std::fs;
@@ -219,6 +221,7 @@ struct MaterialSnapshot {
     public_path: Option<String>,
     validation_scope: RuntimeMaterialValidationScope,
     include_in_public: bool,
+    kind: String,
     exists: bool,
     size_bytes: Option<u64>,
     checksum: String,
@@ -229,6 +232,7 @@ struct PublicMaterialSnapshot {
     name: String,
     public_path: Option<String>,
     validation_scope: RuntimeMaterialValidationScope,
+    kind: String,
     exists: bool,
     size_bytes: Option<u64>,
     checksum: String,
@@ -296,6 +300,16 @@ fn redact_flag_value(command: &str, flag: &str, replacement: &str) -> String {
 
 fn material_snapshot(material: &RuntimeMaterial, attempt_dir: &Path) -> MaterialSnapshot {
     let metadata = fs::metadata(&material.path).ok();
+    let kind = metadata
+        .as_ref()
+        .map(|metadata| {
+            if metadata.is_dir() {
+                "directory"
+            } else {
+                "file"
+            }
+        })
+        .unwrap_or("missing");
     MaterialSnapshot {
         name: material.name.to_string(),
         path: material.path.display().to_string(),
@@ -305,9 +319,10 @@ fn material_snapshot(material: &RuntimeMaterial, attempt_dir: &Path) -> Material
             .or_else(|| relative_to_attempt(&material.path, attempt_dir)),
         validation_scope: material.validation_scope,
         include_in_public: material.include_in_public,
+        kind: kind.to_string(),
         exists: metadata.is_some(),
         size_bytes: metadata.as_ref().map(std::fs::Metadata::len),
-        checksum: stable_file_checksum(&material.path),
+        checksum: stable_path_checksum(&material.path),
     }
 }
 
@@ -316,6 +331,7 @@ fn public_material_snapshot(material: &MaterialSnapshot) -> PublicMaterialSnapsh
         name: material.name.clone(),
         public_path: material.public_path.clone(),
         validation_scope: material.validation_scope,
+        kind: material.kind.clone(),
         exists: material.exists,
         size_bytes: material.size_bytes,
         checksum: material.checksum.clone(),
@@ -410,25 +426,6 @@ fn public_fingerprint(
     }))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn public_command_text_redacts_sensitive_flag_values() {
-        let command = "tb run --run-id run-1 --agent-import-path bench.agent:Agent --run-id=run-2";
-
-        let public = public_command_text(command, &[]);
-
-        assert!(public.contains("--run-id [PRIVATE_RUN_ID]"));
-        assert!(public.contains("--run-id=[PRIVATE_RUN_ID]"));
-        assert!(public.contains("--agent-import-path [PRIVATE_AGENT_IMPORT]"));
-        assert!(!public.contains("run-1"));
-        assert!(!public.contains("run-2"));
-        assert!(!public.contains("bench.agent:Agent"));
-    }
-}
-
 fn stable_json_checksum(value: &Value) -> Result<String> {
     Ok(stable_checksum_bytes(&serde_json::to_vec(value)?))
 }
@@ -446,4 +443,23 @@ fn restrict_private_snapshot(path: &Path) -> Result<()> {
 #[cfg(not(unix))]
 fn restrict_private_snapshot(_path: &Path) -> Result<()> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn public_command_text_redacts_sensitive_flag_values() {
+        let command = "tb run --run-id run-1 --agent-import-path bench.agent:Agent --run-id=run-2";
+
+        let public = public_command_text(command, &[]);
+
+        assert!(public.contains("--run-id [PRIVATE_RUN_ID]"));
+        assert!(public.contains("--run-id=[PRIVATE_RUN_ID]"));
+        assert!(public.contains("--agent-import-path [PRIVATE_AGENT_IMPORT]"));
+        assert!(!public.contains("run-1"));
+        assert!(!public.contains("run-2"));
+        assert!(!public.contains("bench.agent:Agent"));
+    }
 }
