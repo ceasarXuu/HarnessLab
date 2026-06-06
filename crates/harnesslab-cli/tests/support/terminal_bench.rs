@@ -200,6 +200,7 @@ pub fn fake_uvx_and_docker(body: &str, docker_body: Option<&str>) -> tempfile::T
 pub fn fake_uvx_and_docker_buildx(body: &str) -> tempfile::TempDir {
     let bin = tempfile::tempdir().unwrap();
     write_executable(&bin.path().join("uvx"), body);
+    write_executable(&bin.path().join("docker"), "exit 0\n");
     #[cfg(unix)]
     std::os::unix::fs::symlink("/bin/sleep", bin.path().join("docker-buildx")).unwrap();
     #[cfg(not(unix))]

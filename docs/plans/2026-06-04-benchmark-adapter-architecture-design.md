@@ -3,18 +3,21 @@
 ## Plan Metadata
 
 - Created: 2026-06-04
-- Updated: 2026-06-06
-- Version: 0.25
+- Updated: 2026-06-07
+- Version: 0.26
 - Status: Phases 1-8 are implemented, tested, documented, and locally
   review-closed. Phase 8 evidence records a passing full local gate, passing
   active adapter selector guard, Python bridge health, real Terminal-Bench
   verifier scripts, rollback/fallback readiness, and final closure notes in
   `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`.
-- Owner / Responsible: Unknown; must be assigned before Phase 0 starts.
+- Owner / Responsible: implementation closure is recorded in this plan and
+  `/vs_review/`; named long-term product ownership is outside this repository
+  change set.
 - Related Systems: `crates/harnesslab-adapters`, `crates/harnesslab-cli/src/runner/external`,
   test registry, replay artifacts, doctor/readiness diagnostics, development
   operations docs.
 - Related Links: `vs_review/2026-06-04-benchmark-adapter-architecture-review.md`,
+  `vs_review/2026-06-07-benchmark-adapter-remaining-closure-review.md`,
   `docs/architecture.md`, `docs/mvp-development-spec.md`,
   `docs/development-operations.md`, `docs/test-engineering.md`.
 - Risk Level: High
@@ -30,10 +33,12 @@
 - Key decision: split adapter responsibility into data/planning adapters and runtime/execution adapters.
 - Key decision: benchmark adapters consume already materialized agent runtime configuration; they must not reinterpret raw agent profile policy.
 - Key decision: Terminal-Bench remains the hardening reference; SWE-bench Pro becomes the patch-style reference.
-- Must confirm before implementation: whether to add a new `harnesslab-runtime-adapters` crate now, or first extract runtime traits inside `harnesslab-cli/src/runner/external`.
-- Status reason: Phase 1 has landed the data adapter lifecycle, while runtime
-  behavior still lives in benchmark-specific CLI branches and remains Phase 3+
-  scope.
+- Resolved implementation decision: keep runtime traits CLI-local for MVP and
+  extract a separate runtime-adapter crate only when out-of-tree benchmark
+  contribution becomes a concrete requirement.
+- Status reason: Phases 1-8 have landed the data adapter lifecycle, runtime
+  registry, Terminal-Bench and SWE-bench Pro runtime adapters, replay
+  snapshots, redaction, diagnostics, and final closure evidence.
 
 ### Plan Optimization Findings
 
@@ -735,7 +740,7 @@ not complete even if the implementation appears to work manually.
 | Phase 4 | Terminal-Bench behavior is equivalent before and after extraction according to existing selectors and official-runner proof. |
 | Phase 5 | SWE-bench Pro runtime phases are first-class and evaluator behavior is proven beyond fixture-only shims. |
 | Phase 6 | Public/private runtime snapshot boundaries are test-enforced and replay hardening handles missing or changed evaluator materials. |
-| Phase 7 | Docs, doctor/readiness diagnostics, event names, and artifact names match implemented code locally; focused review pending. |
+| Phase 7 | Docs, doctor/readiness diagnostics, event names, and artifact names match implemented code locally; focused review closed. |
 | Phase 8 | Acceptance matrix, full gate, rollback/fallback readiness, and fresh adversarial closure all pass. |
 
 ### Phase Gate Overview
@@ -2036,25 +2041,16 @@ still apply.
 - Update the review report with final evidence, unresolved risks, and any
   deferred follow-up plan.
 
-## 21. Open Questions
+## 21. Resolved Questions And External Ownership
 
-1. Should runtime adapter extraction stay inside `harnesslab-cli` for the first implementation, or should a new crate be introduced immediately?
-2. Should `PreparedBenchmark` become persisted before every run even when no preparation was needed?
-3. Should real external benchmark smoke checks be mandatory in the default full gate or remain explicit verifier scripts until CI resources are stable?
-4. Should `ExternalRunnerKind` remain a closed enum for MVP, or move toward string-based adapter ids before dynamic plugins exist?
-5. Should legacy degraded replay be retained at all, or should external benchmark replay always block when authoritative snapshots are missing?
-6. Who owns implementation and final release approval for this track?
-
-### Open Question Resolution Gates
-
-| Open Question | Blocks Phase | Required Resolution Evidence |
+| Question | Resolution | Evidence |
 | --- | --- | --- |
-| Runtime trait location: CLI first or new crate now | Phase 3 | Decision log update plus dependency-direction check from Phase 0/3 inventory. |
-| Whether `PreparedBenchmark` is persisted for every run | Phase 2 | Snapshot schema decision and replay test expectation. |
-| Whether official benchmark smoke checks are mandatory in default full gate | Phase 8 | CI capability decision or manual-evidence requirement in the final review report. |
-| Whether `ExternalRunnerKind` remains the MVP registry key | Phase 3 | Runtime registry API decision and compatibility test coverage. |
-| Whether legacy degraded replay is retained | Phase 2 | User/product decision reflected in replay CLI/tests and user-facing docs. |
-| Implementation and release approval owner | Phase 0 | Owner field updated or phase closure explicitly blocked. |
+| Runtime trait location: CLI first or new crate now | Keep runtime traits inside `harnesslab-cli` for MVP. Extract a separate crate only when out-of-tree adapter contribution becomes a concrete requirement. | `crates/harnesslab-cli/src/runner/external/runtime_adapter.rs`; Phase 3-8 selectors and full gate. |
+| Whether `PreparedBenchmark` is persisted for every run | Do not add a separate `PreparedBenchmark` artifact for MVP. Replay authority is split across `benchmark.snapshot.json`, per-task `task-runtime.snapshot.json`, and per-attempt `external-runtime.*.json`. | `REPLAY-007`, `REPLAY-008`, `ADAPT-RUNTIME-003`, `SWEPRO-005`. |
+| Whether official benchmark smoke checks are mandatory in the default full gate | The local full gate runs the real Terminal-Bench verifier scripts. CI environments without the required resources must record equivalent manual evidence in `/vs_review/`. | `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`. |
+| Whether `ExternalRunnerKind` remains the MVP registry key | Keep the closed enum for MVP and revisit string ids only when dynamic plugins or out-of-tree adapters exist. | `runtime_adapter_for` dispatch and `ADAPT-RUNTIME-001`. |
+| Whether legacy degraded replay is retained | Silent live replanning is retired; external replay fails closed when authoritative snapshots or runtime materials are missing or drift. | `INT-013`, `INT-018`, `ADAPT-RUNTIME-003`, `SWEPRO-005`. |
+| Implementation and release approval owner | Implementation closure is recorded in this plan, Phase 8 closure notes, and `/vs_review/`. Long-term product ownership remains outside this repository change set and does not block adapter architecture closure. | Phase 8 closure report and pushed implementation commits. |
 
 ## 22. Done Definition
 
@@ -2077,8 +2073,10 @@ This architecture track is complete when:
 | --- | --- | --- | --- |
 | Keep MVP adapter support in-process and Rust-first. | Accepted | Dynamic plugins are not required for MVP and would add runtime surface area. | New benchmark adapters require out-of-tree contribution before MVP scope closes. |
 | Split data/planning adapters from runtime/execution adapters. | Accepted | Data adapters should not own process, filesystem, event writer, or cleanup concerns. | Runtime contract cannot remain stable across Terminal-Bench and SWE-bench Pro. |
-| Extract runtime traits inside CLI first. | Proposed | Current runtime dependencies live at the application boundary. | Phase 0 proves a new crate is cleaner without pulling CLI dependencies into adapter data code. |
+| Extract runtime traits inside CLI first. | Accepted | Current runtime dependencies live at the application boundary, and the MVP implementation is review-closed without a separate runtime-adapter crate. | Out-of-tree benchmark contribution becomes required. |
 | Retire silent replay live replanning by default. | Accepted | Silent replanning can corrupt replay authority. | User explicitly accepts legacy degraded replay as a product behavior. |
+| Keep `ExternalRunnerKind` as the MVP runtime registry key. | Accepted | Closed enum dispatch keeps the current adapter boundary explicit while dynamic plugin scope remains out of MVP. | Dynamic plugins or third-party benchmark adapters become product requirements. |
+| Validate `required_artifacts` at registry level. | Accepted | Registry artifacts are now checked for safe relative paths, duplicate rejection, and exact `INT-011` runtime artifact drift. | Selected tests publish artifacts to a common post-test location, enabling existence checks. |
 
 ## 24. Change Log
 
@@ -2107,6 +2105,9 @@ This architecture track is complete when:
 | 0.21 | 2026-06-06 | Completed Phase 5 SWE-bench Pro runtime extraction by moving SWE adapter ownership into a dedicated module, activating `SWEPRO-001..004`, and recording metadata/workspace/patch/evaluator phase diagnostics evidence. |
 | 0.22 | 2026-06-06 | Completed the current Phase 6 local gate by adding Terminal-Bench `external-runtime.public/private.json` snapshots, structured `cleanup-report.json`, active `ADAPT-RUNTIME-003/004` routes, public artifact/path redaction, replay adapter-version drift blocking, and snapshot/redaction/cleanup evidence. |
 | 0.23 | 2026-06-06 | Added Phase 7 local docs/diagnostics alignment with `adapter_phase=preflight` readiness diagnostics, remediation text, updated operations guidance, and updated Terminal-Bench artifact/replay playbook language. |
+| 0.24 | 2026-06-06 | Recorded Phase 8 final-gate evidence, rollback/fallback readiness, active selector inventory, real Terminal-Bench verifier evidence, and final adversarial review closure. |
+| 0.25 | 2026-06-06 | Marked Phases 1-8 implemented, tested, documented, and locally review-closed after the Phase 8 commit. |
+| 0.26 | 2026-06-07 | Resolved stale decision-log items and added registry-level executable validation for `required_artifacts`; post-test shared-location artifact existence checks remain a future enhancement. |
 
 ## 25. Plan Quality Checklist
 
