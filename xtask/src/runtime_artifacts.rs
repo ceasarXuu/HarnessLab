@@ -2,13 +2,81 @@ use super::RegistryDoc;
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeSet;
 use std::fs;
+use std::path::{Component, Path};
 
 const INT_011_ARTIFACT_CONTRACT: &str =
     "tests/artifact_contracts/int_011_swe_bench_pro_runtime_artifacts.txt";
 
 pub(super) fn ensure_runtime_artifact_contracts(registry: &RegistryDoc) -> Result<()> {
+    ensure_required_artifacts_are_executable_registry_contracts(registry)?;
     let expected = load_artifact_contract(INT_011_ARTIFACT_CONTRACT)?;
     ensure_int_011_artifacts_match_contract(registry, &expected)
+}
+
+fn ensure_required_artifacts_are_executable_registry_contracts(
+    registry: &RegistryDoc,
+) -> Result<()> {
+    for test in &registry.tests {
+        if matches!(test.status.as_str(), "deprecated") {
+            continue;
+        }
+        let mut seen = BTreeSet::new();
+        for artifact in test.required_artifacts.as_deref().unwrap_or(&[]) {
+            let normalized = normalize_required_artifact_path(test.id.as_str(), artifact)?;
+            if !seen.insert(normalized) {
+                bail!(
+                    "test {} has duplicate required_artifact: {artifact}",
+                    test.id
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn normalize_required_artifact_path(test_id: &str, artifact: &str) -> Result<String> {
+    let raw = artifact;
+    let artifact = raw.trim();
+    if raw != artifact {
+        bail!("test {test_id} required_artifact has surrounding whitespace: {raw}");
+    }
+    if artifact.is_empty() {
+        bail!("test {test_id} has an empty required_artifact");
+    }
+    if artifact.contains('\\') {
+        bail!("test {test_id} required_artifact uses backslashes: {artifact}");
+    }
+    let path = Path::new(artifact);
+    if path.is_absolute() {
+        bail!("test {test_id} required_artifact must be relative: {artifact}");
+    }
+    let mut normalized = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(value) => {
+                normalized.push(value.to_string_lossy().to_string());
+            }
+            Component::ParentDir => {
+                bail!("test {test_id} required_artifact escapes run artifacts: {artifact}");
+            }
+            Component::CurDir => {
+                bail!(
+                    "test {test_id} required_artifact uses current-directory segments: {artifact}"
+                );
+            }
+            Component::RootDir | Component::Prefix(_) => {
+                bail!("test {test_id} required_artifact must be relative: {artifact}");
+            }
+        }
+    }
+    if normalized.is_empty() {
+        bail!("test {test_id} has an empty required_artifact");
+    }
+    let normalized = normalized.join("/");
+    if normalized != artifact {
+        bail!("test {test_id} required_artifact is not normalized: {artifact}");
+    }
+    Ok(normalized)
 }
 
 fn ensure_int_011_artifacts_match_contract(
@@ -96,6 +164,69 @@ mod tests {
         let registry = registry_with_int_011(artifacts);
 
         ensure_int_011_artifacts_match_contract(&registry, &test_contract()).unwrap();
+    }
+
+    #[test]
+    fn runtime_artifacts_004_required_artifacts_reject_unsafe_paths() {
+        for artifact in [
+            "",
+            " results.json ",
+            "/tmp/result.json",
+            "../result.json",
+            "./result.json",
+            "a//b",
+            "a/b/",
+            "a\\b",
+        ] {
+            let registry = registry_with_int_011(vec![artifact.to_string()]);
+
+            let error =
+                ensure_required_artifacts_are_executable_registry_contracts(&registry).unwrap_err();
+
+            assert!(
+                error.to_string().contains("required_artifact"),
+                "unexpected error for {artifact:?}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_artifacts_005_required_artifacts_reject_duplicates() {
+        let registry =
+            registry_with_int_011(vec!["results.json".to_string(), "results.json".to_string()]);
+
+        let error =
+            ensure_required_artifacts_are_executable_registry_contracts(&registry).unwrap_err();
+
+        assert!(error.to_string().contains("duplicate required_artifact"));
+    }
+
+    #[test]
+    fn runtime_artifacts_006_required_artifacts_reject_normalized_duplicate_variants() {
+        for artifacts in [
+            vec!["a/b".to_string(), "a//b".to_string()],
+            vec!["a/b".to_string(), "a/b/".to_string()],
+        ] {
+            let registry = registry_with_int_011(artifacts);
+
+            let error =
+                ensure_required_artifacts_are_executable_registry_contracts(&registry).unwrap_err();
+
+            assert!(
+                error.to_string().contains("not normalized"),
+                "unexpected error: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_artifacts_007_required_artifacts_accept_relative_run_paths() {
+        let registry = registry_with_int_011(vec![
+            "results.json".to_string(),
+            "tasks/<task-id>/attempts/1/external-runtime.public.json".to_string(),
+        ]);
+
+        ensure_required_artifacts_are_executable_registry_contracts(&registry).unwrap();
     }
 
     fn replace_artifact(artifacts: &mut [String], old: &str, new: &str) {

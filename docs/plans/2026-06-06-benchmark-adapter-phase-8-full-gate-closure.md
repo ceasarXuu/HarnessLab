@@ -88,21 +88,25 @@ test suite and scripts. The planned-only selector remains
   environment drift, keep Phase 8 closed only with equivalent manual evidence
   recorded in `/vs_review/`.
 
-## Remaining Non-Blocking Follow-Ups
+## Post-Closure Enhancements
 
-- `tests/TEST_REGISTRY.toml` is still a global registry/config artifact and is
-  large. Prior review accepted it outside the single-code-file line-count
-  boundary, but future registry sharding remains useful.
+- `tests/TEST_REGISTRY.toml` remains a global registry/config artifact. It is
+  accepted outside the single-code-file line-count boundary, but future registry
+  sharding can improve maintainability.
 - Direct OS-level directory-entry fault injection and direct public material
-  checksum mutation remain future hardening beyond the current replay snapshot
+  checksum mutation are optional hardening beyond the current replay snapshot
   closure.
-- Registry `required_artifacts` remain traceability metadata plus test-owned
-  assertions rather than a selector-runner interpreted contract. Future work
-  can make artifact requirements directly executable at the selector layer.
+- Registry `required_artifacts` now have registry-level executable validation
+  for safe relative artifact paths, duplicate rejection, and the existing
+  `INT-011` exact runtime artifact contract. Future work can still add
+  post-test artifact existence checks once selected tests publish artifacts to a
+  shared location.
 
 ## Final Closure Decision
 
 - Final adversarial review: `vs_review/2026-06-06-benchmark-adapter-phase-8-final-review.md`.
+- Remaining follow-up closure review:
+  `vs_review/2026-06-07-benchmark-adapter-remaining-closure-review.md`.
 - Blocking findings from Round 1: accepted and fixed.
 - Round 2 closure review: completed with no remaining code blocker; the only
   accepted blocker was the open closure artifact itself, now fixed.
