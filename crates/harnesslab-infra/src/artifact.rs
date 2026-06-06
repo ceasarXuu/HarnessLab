@@ -42,6 +42,39 @@ pub fn stable_file_checksum(path: &Path) -> String {
     }
 }
 
+pub fn stable_path_checksum(path: &Path) -> String {
+    if path.is_dir() {
+        stable_directory_checksum(path)
+    } else {
+        stable_file_checksum(path)
+    }
+}
+
+fn stable_directory_checksum(path: &Path) -> String {
+    let mut entries = Vec::new();
+    for entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let relative = entry
+            .path()
+            .strip_prefix(path)
+            .unwrap_or_else(|_| entry.path())
+            .display()
+            .to_string();
+        entries.push((relative, stable_file_checksum(entry.path())));
+    }
+    entries.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut bytes = Vec::new();
+    for (relative, checksum) in entries {
+        bytes.extend_from_slice(relative.as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(checksum.as_bytes());
+        bytes.push(b'\n');
+    }
+    stable_checksum_bytes(&bytes)
+}
+
 pub fn stable_checksum_bytes(bytes: &[u8]) -> String {
     let mut hash = 0xcbf29ce484222325u64;
     for byte in bytes {

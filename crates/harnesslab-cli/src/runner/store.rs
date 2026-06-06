@@ -13,7 +13,6 @@ pub(super) const RUNTIME_PROFILE_SNAPSHOT: &str = "agent-profile.runtime.json";
 pub(super) const REPORT_PROFILE_SNAPSHOT: &str = "agent-profile.snapshot.json";
 pub(super) const MATERIALIZED_PROFILE_SNAPSHOT: &str = "agent-runtime.materialized.json";
 pub(super) const AGENT_VERSION_SNAPSHOT: &str = "agent-version.snapshot.json";
-#[cfg(test)]
 const ORIGINAL_COMMAND_UNAVAILABLE: &str = "[ORIGINAL_COMMAND_UNAVAILABLE]";
 
 #[derive(Debug)]
@@ -258,7 +257,6 @@ pub(super) fn replay_command(spec: &RunSpec) -> String {
     format!("harnesslab run replay {}", shell_quote(&spec.paths.run_dir))
 }
 
-#[cfg(test)]
 pub(super) fn original_command_from_snapshot(run_dir: &Path) -> String {
     fs::read_to_string(run_dir.join("command.txt"))
         .ok()
@@ -268,6 +266,15 @@ pub(super) fn original_command_from_snapshot(run_dir: &Path) -> String {
                 .find_map(|line| line.strip_prefix("original_command=").map(str::to_string))
         })
         .unwrap_or_else(|| ORIGINAL_COMMAND_UNAVAILABLE.to_string())
+}
+
+pub(super) fn report_original_command_from_snapshot(run_dir: &Path) -> String {
+    let original_command = original_command_from_snapshot(run_dir);
+    if original_command == ORIGINAL_COMMAND_UNAVAILABLE {
+        original_command
+    } else {
+        "[PRIVATE_COMMAND]".to_string()
+    }
 }
 
 pub(super) fn log_profile_snapshot_loaded(

@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use harnesslab_core::{
     BenchmarkPlan, ExternalRunnerKind, RunSpec, RuntimeTaskSnapshot, task_dir_name,
 };
-use harnesslab_infra::read_json;
+use harnesslab_infra::{read_json, stable_path_checksum};
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
@@ -269,14 +269,26 @@ fn validate_live_material(
         );
     };
     let path = Path::new(path);
-    if !path.is_file() {
+    let kind = material["kind"].as_str().unwrap_or("file");
+    let exists = match kind {
+        "file" => path.is_file(),
+        "directory" => path.is_dir(),
+        "missing" => false,
+        _ => {
+            bail!(
+                "replay blocker: external-runtime live material kind unknown for task {}; material={name}; kind={kind}",
+                task.task_id
+            );
+        }
+    };
+    if !exists {
         bail!(
             "replay blocker: external-runtime live material missing for task {}; material={name}; path={}",
             task.task_id,
             path.display()
         );
     }
-    let actual = stable_file_checksum(path);
+    let actual = stable_path_checksum(path);
     let expected = material["checksum"].as_str().unwrap_or_default();
     if actual != expected {
         bail!(

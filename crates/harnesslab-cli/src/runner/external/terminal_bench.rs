@@ -179,17 +179,18 @@ pub(super) fn execute_prepared(
         warnings,
     };
     terminal_bench_cleanup::write_task_cleanup_report(
-        ctx.attempt_dir,
-        &ctx.task.task_id,
-        ctx.attempt,
-        &prepared.official_run_id,
-        &pre_cleanup,
-        &post_cleanup,
-        official_failure_class,
-        official_failure_code,
-        failure_class,
-        failure_code,
-        cleanup_overrides_result,
+        terminal_bench_cleanup::TaskCleanupReportRequest {
+            attempt_dir: ctx.attempt_dir,
+            task_id: &ctx.task.task_id,
+            attempt: ctx.attempt,
+            pre_task: &pre_cleanup,
+            post_task: &post_cleanup,
+            official_failure_class,
+            official_failure_code,
+            final_failure_class: failure_class,
+            final_failure_code: failure_code,
+            cleanup_overrides_result,
+        },
     )?;
     write_terminal_bench_runtime_snapshots(
         ctx,

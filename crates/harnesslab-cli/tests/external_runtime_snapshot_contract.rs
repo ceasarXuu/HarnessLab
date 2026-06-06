@@ -1,6 +1,9 @@
+#[path = "support/external_runtime_assertions.rs"]
+mod external_runtime_assertions;
 #[path = "support/terminal_bench.rs"]
 mod terminal_bench_support;
 
+use external_runtime_assertions::*;
 use std::fs;
 use std::path::Path;
 use terminal_bench_support::*;
@@ -63,6 +66,18 @@ fn adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted() {
     assert_json_array_has_name(&private["replay_materials"], "command_snapshot");
     assert_json_array_has_name(&private["replay_materials"], "runner_stdout");
     assert_json_array_has_name(&private["replay_materials"], "runner_stderr");
+    assert_eq!(
+        material_kind(&private["replay_materials"], "source_dataset"),
+        "directory"
+    );
+    assert_eq!(
+        material_kind(&private["replay_materials"], "runtime_dataset"),
+        "directory"
+    );
+    assert_eq!(
+        material_kind(&private["replay_materials"], "official_result"),
+        "file"
+    );
     let official_result_public_path =
         material_public_path(&public["runtime_materials"], "official_result");
     assert_public_artifacts_eq(
@@ -159,6 +174,20 @@ fn adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted() {
         &run_dir.join("report.html"),
         &root.path().display().to_string(),
     );
+
+    harnesslab()
+        .env("PATH", path_with(bin.path()))
+        .env("HARNESSLAB_PHASE6_SECRET", secret)
+        .args([
+            "--home",
+            home.path().to_str().unwrap(),
+            "run",
+            "replay",
+            run_dir.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success();
 
     assert_import_path_public_surface_is_redacted();
 }
@@ -345,9 +374,18 @@ exit 0
 
 fn assert_import_path_public_surface_is_redacted() {
     let import_path = "bench_agents.fake:Agent";
+    let pythonpath = "/tmp/phase8-private-pythonpath";
+    let agent_command = "printf phase8-private-agent-command";
+    let setup_command = "printf phase8-private-setup-command";
     let home = tempfile::tempdir().unwrap();
     init_home(home.path());
-    write_agent(home.path(), "oracle", None, Some(import_path));
+    write_import_agent_with_private_material(
+        home.path(),
+        import_path,
+        pythonpath,
+        agent_command,
+        setup_command,
+    );
     let root = terminal_bench_root();
     let bin = fake_uvx(success_script());
     let (results, run_dir, _) = run_terminal(home.path(), root.path(), bin.path(), 0);
@@ -370,8 +408,20 @@ fn assert_import_path_public_surface_is_redacted() {
         assert_public_text_file_does_not_contain(&path, results["run_id"].as_str().unwrap());
     }
     let public_text = fs::read_to_string(attempt_dir.join("external-runtime.public.json")).unwrap();
+    let command_text = fs::read_to_string(attempt_dir.join("agent/command.txt")).unwrap();
     assert!(!public_text.contains(import_path));
     assert!(public_text.contains("--agent-import-path [PRIVATE_AGENT_IMPORT]"));
+    for raw in [import_path, pythonpath, agent_command, setup_command] {
+        assert!(
+            !public_text.contains(raw),
+            "public runtime snapshot leaked {raw}"
+        );
+        assert!(
+            !command_text.contains(raw),
+            "public command snapshot leaked {raw}"
+        );
+    }
+    assert!(command_text.contains("--agent-import-path '[REDACTED]'"));
     assert_public_text_file_contains(&run_dir.join("events.jsonl"), "[PRIVATE_RUN_ID]");
     assert_public_text_file_contains(&run_dir.join("report.html"), "[PRIVATE_RUN_ID]");
 }
@@ -409,91 +459,4 @@ terminal_bench_agent = "oracle"
 "#
     );
     fs::write(home.join("agents/fake.toml"), content).unwrap();
-}
-
-fn assert_json_array_has_name(array: &serde_json::Value, name: &str) {
-    assert!(
-        array
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|value| value["name"] == name),
-        "missing name {name}: {array:#?}"
-    );
-}
-
-fn assert_json_array_missing_name(array: &serde_json::Value, name: &str) {
-    assert!(
-        !array
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|value| value["name"] == name),
-        "unexpected name {name}: {array:#?}"
-    );
-}
-
-fn assert_json_array_has_phase(array: &serde_json::Value, phase: &str) {
-    assert!(
-        array
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|value| value["phase"] == phase),
-        "missing phase {phase}: {array:#?}"
-    );
-}
-
-fn material_public_path(array: &serde_json::Value, name: &str) -> String {
-    array
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|value| value["name"] == name)
-        .and_then(|value| value["public_path"].as_str())
-        .unwrap_or_else(|| panic!("missing public_path for material {name}: {array:#?}"))
-        .to_string()
-}
-
-fn artifact_list_contains(array: &serde_json::Value, artifact: &str) -> bool {
-    array
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|value| value.as_str() == Some(artifact))
-}
-
-fn assert_public_artifacts_eq(array: &serde_json::Value, expected: &[&str]) {
-    let mut actual = array
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|value| value.as_str().unwrap().to_string())
-        .collect::<Vec<_>>();
-    let mut expected = expected
-        .iter()
-        .map(|value| value.to_string())
-        .collect::<Vec<_>>();
-    actual.sort();
-    expected.sort();
-    assert_eq!(actual, expected);
-    for forbidden in [
-        "agent/command.txt",
-        "agent/stdout.log",
-        "agent/stderr.log",
-        "verifier/stdout.log",
-        "verifier/stderr.log",
-    ] {
-        assert!(!actual.iter().any(|artifact| artifact == forbidden));
-    }
-}
-
-fn assert_public_text_file_does_not_contain(path: &Path, secret: &str) {
-    let content = fs::read_to_string(path).unwrap();
-    assert!(!content.contains(secret), "public artifact leaked");
-}
-
-fn assert_public_text_file_contains(path: &Path, expected: &str) {
-    let content = fs::read_to_string(path).unwrap();
-    assert!(content.contains(expected), "public artifact missed marker");
 }

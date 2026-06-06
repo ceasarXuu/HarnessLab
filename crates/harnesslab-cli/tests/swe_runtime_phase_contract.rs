@@ -261,10 +261,7 @@ fn assert_events_include(events: &[serde_json::Value], names: &[&str]) {
         .map(|record| record["event"].as_str().expect("event name"))
         .collect::<Vec<_>>();
     for name in names {
-        assert!(
-            event_names.iter().any(|event| *event == *name),
-            "missing {name}"
-        );
+        assert!(event_names.contains(name), "missing {name}");
     }
 }
 

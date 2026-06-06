@@ -34,7 +34,7 @@ pub(super) fn build_report_context(
         split: request.spec.benchmark.split.clone(),
         report_path: "report.html".to_string(),
         replay_command: "harnesslab run replay [RUN_DIR]".to_string(),
-        original_command: "[PRIVATE_COMMAND]".to_string(),
+        original_command: super::store::report_original_command_from_snapshot(request.run_dir),
         resumed: request.resumed,
         run_health_status: request.run_health.status.clone(),
         run_health_reason: request.run_health.reason.clone(),

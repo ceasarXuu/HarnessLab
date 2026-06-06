@@ -4,6 +4,24 @@ set -euo pipefail
 selector_rows="$(cargo run -p xtask -- list-adapter-proof-selectors)"
 planned_ids=()
 active_ids=()
+expected_active_ids=(
+  ADAPT-DATA-001
+  ADAPT-DATA-002
+  ADAPT-DATA-003
+  ADAPT-DATA-004
+  ADAPT-DATA-005
+  ADAPT-RUNTIME-001
+  ADAPT-RUNTIME-002
+  ADAPT-RUNTIME-003
+  ADAPT-RUNTIME-004
+  ADAPT-RUNTIME-005
+  SWEPRO-001
+  SWEPRO-002
+  SWEPRO-003
+  SWEPRO-004
+  SWEPRO-005
+)
+expected_planned_ids=(ADAPT-DATA-000)
 
 while IFS=$'\t' read -r status id; do
   [[ -z "${status:-}" || -z "${id:-}" ]] && continue
@@ -16,6 +34,20 @@ done <<<"$selector_rows"
 
 if [[ "${#active_ids[@]}" -eq 0 ]]; then
   echo "no active adapter proof selectors found" >&2
+  exit 1
+fi
+
+if [[ "${active_ids[*]}" != "${expected_active_ids[*]}" ]]; then
+  echo "active adapter selector inventory drifted" >&2
+  echo "expected: ${expected_active_ids[*]}" >&2
+  echo "actual:   ${active_ids[*]}" >&2
+  exit 1
+fi
+
+if [[ "${planned_ids[*]}" != "${expected_planned_ids[*]}" ]]; then
+  echo "planned adapter selector inventory drifted" >&2
+  echo "expected: ${expected_planned_ids[*]}" >&2
+  echo "actual:   ${planned_ids[*]}" >&2
   exit 1
 fi
 
