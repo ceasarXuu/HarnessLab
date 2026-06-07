@@ -10,7 +10,15 @@ use anyhow::Result;
 use harnesslab_core::ExternalRunnerKind;
 use std::path::Path;
 
-const SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION: &str = "swe-bench-pro-runtime.v1";
+pub(in crate::runner::external) const SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION: &str =
+    "swe-bench-pro-runtime.v1";
+
+#[derive(Clone, Copy)]
+pub(in crate::runner::external) enum SweSetupFailurePhase {
+    SourcePathValidation,
+    MetadataExtraction,
+    WorkspacePreparation,
+}
 
 pub(super) fn write_swe_runtime_snapshots(
     ctx: &ExternalTaskExecution<'_>,
@@ -55,12 +63,13 @@ pub(super) fn write_swe_runtime_snapshots(
     })
 }
 
-pub(super) fn write_swe_setup_failure_snapshots(
+pub(in crate::runner::external) fn write_swe_setup_failure_snapshots(
     ctx: &ExternalTaskExecution<'_>,
     dataset_path: &Path,
     source_path: Option<&Path>,
     swe_dir: &Path,
     workspace: &Path,
+    phase: SweSetupFailurePhase,
 ) -> Result<()> {
     write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
         run_id: &ctx.spec.run_id,
@@ -75,15 +84,9 @@ pub(super) fn write_swe_setup_failure_snapshots(
         profile: ctx.profile,
         dataset_path,
         source_path,
-        commands: setup_failure_commands(ctx, dataset_path, source_path, swe_dir, workspace),
-        materials: setup_failure_materials(ctx, dataset_path, source_path, swe_dir),
-        public_artifacts: vec![
-            "swe-bench-pro/raw_sample.jsonl".to_string(),
-            "swe-bench-pro/instance.json".to_string(),
-            "swe-bench-pro/workspace-manifest.json".to_string(),
-            "verifier/stdout.log".to_string(),
-            "verifier/stderr.log".to_string(),
-        ],
+        commands: setup_failure_commands(ctx, dataset_path, source_path, swe_dir, workspace, phase),
+        materials: setup_failure_materials(ctx, dataset_path, source_path, swe_dir, phase),
+        public_artifacts: setup_failure_public_artifacts(phase),
         extra_redaction_refs: vec![
             swe_dir.display().to_string(),
             workspace.display().to_string(),
@@ -201,7 +204,20 @@ fn setup_failure_commands(
     source_path: Option<&Path>,
     swe_dir: &Path,
     workspace: &Path,
+    phase: SweSetupFailurePhase,
 ) -> Vec<RuntimePhaseCommand> {
+    if matches!(phase, SweSetupFailurePhase::SourcePathValidation) {
+        return vec![RuntimePhaseCommand {
+            phase: "source_path_validation",
+            command: source_path
+                .map(|path| format!("source_path={}", shell_quote(&path.display().to_string())))
+                .unwrap_or_else(|| "source_path missing".to_string()),
+            working_dir: swe_dir.to_path_buf(),
+            timeout_sec: 0,
+            stdout_path: ctx.attempt_dir.join("verifier/stdout.log"),
+            stderr_path: ctx.attempt_dir.join("verifier/stderr.log"),
+        }];
+    }
     let parquet = first_parquet(dataset_path);
     let metadata_command = parquet
         .as_ref()
@@ -225,24 +241,16 @@ fn setup_failure_commands(
         stdout_path: swe_dir.join("metadata.stdout.log"),
         stderr_path: swe_dir.join("metadata.stderr.log"),
     }];
-    commands.push(RuntimePhaseCommand {
-        phase: "source_path_validation",
-        command: source_path
-            .map(|path| format!("source_path={}", shell_quote(&path.display().to_string())))
-            .unwrap_or_else(|| "source_path missing".to_string()),
-        working_dir: swe_dir.to_path_buf(),
-        timeout_sec: 0,
-        stdout_path: ctx.attempt_dir.join("verifier/stdout.log"),
-        stderr_path: ctx.attempt_dir.join("verifier/stderr.log"),
-    });
-    commands.push(RuntimePhaseCommand {
-        phase: "workspace_preparation",
-        command: "swe-bench-pro workspace preparation pending metadata".to_string(),
-        working_dir: workspace.to_path_buf(),
-        timeout_sec: 1800,
-        stdout_path: swe_dir.join("workspace.stdout.log"),
-        stderr_path: swe_dir.join("workspace.stderr.log"),
-    });
+    if matches!(phase, SweSetupFailurePhase::WorkspacePreparation) {
+        commands.push(RuntimePhaseCommand {
+            phase: "workspace_preparation",
+            command: "swe-bench-pro workspace preparation".to_string(),
+            working_dir: workspace.to_path_buf(),
+            timeout_sec: 1800,
+            stdout_path: swe_dir.join("workspace.stdout.log"),
+            stderr_path: swe_dir.join("workspace.stderr.log"),
+        });
+    }
     commands
 }
 
@@ -251,38 +259,46 @@ fn setup_failure_materials(
     dataset_path: &Path,
     source_path: Option<&Path>,
     swe_dir: &Path,
+    phase: SweSetupFailurePhase,
 ) -> Vec<RuntimeMaterial> {
     let parquet =
         first_parquet(dataset_path).unwrap_or_else(|| dataset_path.join("data/[missing].parquet"));
-    let mut materials = vec![
-        RuntimeMaterial {
-            name: "parquet",
-            path: parquet,
-            public_path: None,
-            validation_scope: RuntimeMaterialValidationScope::LiveExternal,
-            include_in_public: true,
-        },
-        RuntimeMaterial {
-            name: "raw_sample",
-            path: swe_dir.join("raw_sample.jsonl"),
-            public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
-            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
-            include_in_public: true,
-        },
-        RuntimeMaterial {
-            name: "instance",
-            path: swe_dir.join("instance.json"),
-            public_path: Some("swe-bench-pro/instance.json".to_string()),
-            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
-            include_in_public: true,
-        },
-    ];
+    let mut materials = vec![RuntimeMaterial {
+        name: "parquet",
+        path: parquet,
+        public_path: None,
+        validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+        include_in_public: true,
+    }];
     if let Some(source_path) = source_path {
         materials.push(RuntimeMaterial {
             name: "evaluator",
             path: source_path.join("swe_bench_pro_eval.py"),
             public_path: None,
             validation_scope: RuntimeMaterialValidationScope::LiveExternal,
+            include_in_public: true,
+        });
+    }
+    if matches!(phase, SweSetupFailurePhase::WorkspacePreparation) {
+        materials.push(RuntimeMaterial {
+            name: "raw_sample",
+            path: swe_dir.join("raw_sample.jsonl"),
+            public_path: Some("swe-bench-pro/raw_sample.jsonl".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
+        });
+        materials.push(RuntimeMaterial {
+            name: "instance",
+            path: swe_dir.join("instance.json"),
+            public_path: Some("swe-bench-pro/instance.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
+            include_in_public: true,
+        });
+        materials.push(RuntimeMaterial {
+            name: "workspace_manifest",
+            path: swe_dir.join("workspace-manifest.json"),
+            public_path: Some("swe-bench-pro/workspace-manifest.json".to_string()),
+            validation_scope: RuntimeMaterialValidationScope::ArchivedAttempt,
             include_in_public: true,
         });
     }
@@ -294,6 +310,21 @@ fn setup_failure_materials(
         include_in_public: true,
     });
     materials
+}
+
+fn setup_failure_public_artifacts(phase: SweSetupFailurePhase) -> Vec<String> {
+    let mut artifacts = vec![
+        "verifier/stdout.log".to_string(),
+        "verifier/stderr.log".to_string(),
+    ];
+    if matches!(phase, SweSetupFailurePhase::WorkspacePreparation) {
+        artifacts.extend([
+            "swe-bench-pro/raw_sample.jsonl".to_string(),
+            "swe-bench-pro/instance.json".to_string(),
+            "swe-bench-pro/workspace-manifest.json".to_string(),
+        ]);
+    }
+    artifacts
 }
 
 fn agent_execution_command(ctx: &ExternalTaskExecution<'_>, instance: &SweInstance) -> String {

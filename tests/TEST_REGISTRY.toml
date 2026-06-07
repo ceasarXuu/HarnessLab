@@ -1552,6 +1552,28 @@ requirements = ["ADAPT-RUNTIME-005"]
 contracts = ["RuntimeEvents"]
 
 [[tests]]
+id = "ADAPT-RUNTIME-006"
+title = "External runtime internal errors are classified and snapshotted"
+layer = "integration"
+owner_module = "harnesslab-cli"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-006"
+file_patterns = [
+  "crates/harnesslab-cli/tests/external_runtime_error_contract.rs",
+  "crates/harnesslab-cli/src/runner/external.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["events.jsonl", "result.json", "external-runtime.private.json", "external-runtime.public.json", "internal-error.private.json", "internal-error.public.json"]
+status = "active"
+[tests.source]
+doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
+section = "10"
+[tests.verifies]
+requirements = ["ADAPT-RUNTIME-006"]
+contracts = ["RuntimeAdapter", "RuntimeSnapshot"]
+
+[[tests]]
 id = "SWEPRO-001"
 title = "Metadata extraction failure is classified and observable"
 layer = "integration"
@@ -1561,6 +1583,7 @@ file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
 ]
 required_artifacts = ["events.jsonl", "results.json"]
 status = "active"
@@ -1581,6 +1604,7 @@ file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
 ]
 required_artifacts = ["events.jsonl", "results.json"]
 status = "active"
@@ -1601,6 +1625,7 @@ file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
 ]
 required_artifacts = ["results.json", "git-diff.status.json"]
 status = "active"
@@ -1621,6 +1646,7 @@ file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
 ]
 required_artifacts = ["events.jsonl", "verifier/stderr.log"]
 status = "active"

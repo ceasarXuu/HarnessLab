@@ -1,7 +1,8 @@
 use super::*;
 use harnesslab_core::{
-    AgentKind, ArtifactSpec, BenchmarkRef, ExecutionConfig, ExternalRunnerSpec, NetworkPolicy,
-    ResourceHint, RunPaths, RunSpec, RuntimePreflightReport, SandboxSpec, TaskPlan,
+    AgentKind, ArtifactSpec, AttemptProvenance, BenchmarkIdentity, BenchmarkPlan, BenchmarkRef,
+    ExecutionConfig, ExternalRunnerSpec, NetworkPolicy, ResourceHint, RunConfigOverrides, RunPaths,
+    RunSpec, RuntimePreflightReport, RuntimeTaskSnapshot, SandboxSpec, SourceRef, TaskPlan,
     VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType, default_agent_profile,
 };
 
@@ -27,7 +28,8 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
     assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
     assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
     assert!(external_entrypoint.contains("preflight_external_task(profile, task)?"));
-    assert!(external_entrypoint.contains("runtime_adapter_for(runner.kind).execute(ctx)"));
+    assert!(external_entrypoint.contains("let adapter = runtime_adapter_for(runner.kind)"));
+    assert!(external_entrypoint.contains("adapter.execute(&ctx)"));
     assert!(!cleanup_entrypoint.contains("terminal_bench"));
     assert!(!cleanup_entrypoint.contains("compose_cleanup"));
     assert!(!external_entrypoint.contains("terminal_bench::execute"));
@@ -164,6 +166,116 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     assert!(events.contains("blocking_reason=none"));
     assert!(events.contains("compatibility_exception=none"));
     assert!(events.contains("compatibility_label_keys=terminal_bench_agent"));
+}
+
+#[test]
+fn adapt_runtime_002_swe_source_path_failure_snapshot_is_phase_accurate() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let attempt_dir = run_dir.path().join("tasks/swe-task/attempts/1");
+    std::fs::create_dir_all(&attempt_dir).unwrap();
+    let spec = run_spec(run_dir.path());
+    let profile = default_agent_profile("agent", AgentKind::Fake, "true");
+    let materialized = crate::agent_registry::materialize_profile(&profile).unwrap();
+    let mut task = external_task("swe-task", ExternalRunnerKind::SweBenchPro);
+    let dataset_dir = run_dir.path().join("dataset");
+    std::fs::create_dir_all(&dataset_dir).unwrap();
+    let runner = task.external_runner.as_mut().unwrap();
+    runner.dataset_path = dataset_dir.display().to_string();
+    runner.source_path = None;
+    write_runtime_authority(run_dir.path(), &task);
+    let ctx = super::super::ExternalTaskExecution {
+        run_dir: run_dir.path(),
+        spec: &spec,
+        profile: &profile,
+        report_profile: &profile,
+        materialized_profile: &materialized,
+        report_materialized_profile: &materialized,
+        task: &task,
+        attempt: 1,
+        provenance: AttemptProvenance::Original,
+        attempt_dir: &attempt_dir,
+        started: std::time::Instant::now(),
+    };
+
+    let result = runtime_adapter_for(ExternalRunnerKind::SweBenchPro)
+        .execute(&ctx)
+        .expect("source path failure is structured");
+
+    assert_eq!(
+        result.failure_code,
+        Some(harnesslab_core::FailureCode::ExternalRunnerSetupFailed)
+    );
+    let public: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(attempt_dir.join("external-runtime.public.json")).unwrap(),
+    )
+    .unwrap();
+    let phases = public["commands"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|command| command["phase"].as_str().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(phases, vec!["source_path_validation"]);
+    let public_artifacts = public["public_artifacts"].as_array().unwrap();
+    for unexpected in [
+        "swe-bench-pro/raw_sample.jsonl",
+        "swe-bench-pro/instance.json",
+        "swe-bench-pro/workspace-manifest.json",
+        "prediction.jsonl",
+        "patch.diff",
+    ] {
+        assert!(
+            !public_artifacts
+                .iter()
+                .any(|artifact| artifact.as_str() == Some(unexpected)),
+            "source_path failure should not advertise {unexpected}"
+        );
+    }
+}
+
+fn write_runtime_authority(run_dir: &std::path::Path, task: &TaskPlan) {
+    let benchmark = BenchmarkIdentity {
+        name: "swe-bench-pro".to_string(),
+        version: "fixture".to_string(),
+    };
+    let runtime_snapshot = RuntimeTaskSnapshot {
+        benchmark: benchmark.clone(),
+        split: "smoke".to_string(),
+        task_id: task.task_id.clone(),
+        source_ref: SourceRef {
+            benchmark: "swe-bench-pro".to_string(),
+            upstream_id: task.task_id.clone(),
+            checksum: "fixture".to_string(),
+        },
+        upstream_metadata_hash: "fixture".to_string(),
+        instruction_hash: "fixture".to_string(),
+        task_plan_hash: "fixture".to_string(),
+        external_runner: task.external_runner.clone(),
+        external_runtime_attempts: Vec::new(),
+    };
+    let task_dir = run_dir.join("tasks").join(&task.task_id);
+    std::fs::create_dir_all(&task_dir).unwrap();
+    harnesslab_infra::atomic_write_json(
+        &task_dir.join("task-runtime.snapshot.json"),
+        &runtime_snapshot,
+    )
+    .unwrap();
+    harnesslab_infra::atomic_write_json(
+        &run_dir.join("benchmark.snapshot.json"),
+        &BenchmarkPlan {
+            benchmark,
+            split: "smoke".to_string(),
+            prepared_benchmark_ref: "fixture".to_string(),
+            tasks: vec![task.clone()],
+            task_runtime_snapshots: vec![runtime_snapshot],
+            run_config_overrides: RunConfigOverrides {
+                timeout_sec: None,
+                network: None,
+            },
+            warnings: Vec::new(),
+        },
+    )
+    .unwrap();
 }
 
 fn assert_preflight(

@@ -3,13 +3,19 @@ use crate::runner::external::runtime_adapter::{
     RuntimeCleanupContext, cleanup_runtime_target, preflight_external_task, runtime_adapter_for,
     runtime_cleanup_targets,
 };
+use crate::runner::external::runtime_snapshot::{
+    ExternalRuntimeSnapshotRequest, RuntimePhaseCommand, write_external_runtime_snapshots,
+};
 use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentProfile, AttemptProvenance, RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan,
-    redact_public_value,
+    AgentProfile, AttemptProvenance, ExternalRunnerKind, FailureClass, FailureCode, Outcome,
+    RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan, TaskState, UsageRecord,
+    health_impact_for_failure, redact_public_value,
 };
-use harnesslab_infra::{append_event, event};
+use harnesslab_infra::{append_event, atomic_write_json, event};
+use std::error::Error;
+use std::fmt;
 use std::fs;
 use std::path::Path;
 
@@ -90,6 +96,48 @@ pub(super) fn cleanup_runtime_resources(
     target: &RuntimeCleanupTarget,
 ) -> Result<RuntimeCleanupReport, String> {
     cleanup_runtime_target(target)
+}
+
+pub(super) fn runtime_adapter_version(kind: ExternalRunnerKind) -> &'static str {
+    runtime_adapter_for(kind).adapter_version()
+}
+
+#[derive(Debug)]
+pub(super) struct AdapterInternalError {
+    subphase: &'static str,
+    failure_code: FailureCode,
+    message: String,
+}
+
+impl AdapterInternalError {
+    fn subphase(&self) -> &'static str {
+        self.subphase
+    }
+
+    fn failure_code(&self) -> FailureCode {
+        self.failure_code
+    }
+}
+
+impl fmt::Display for AdapterInternalError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.message)
+    }
+}
+
+impl Error for AdapterInternalError {}
+
+pub(super) fn adapter_internal_error(
+    subphase: &'static str,
+    failure_code: FailureCode,
+    error: anyhow::Error,
+) -> anyhow::Error {
+    AdapterInternalError {
+        subphase,
+        failure_code,
+        message: error.to_string(),
+    }
+    .into()
 }
 
 fn collect_runtime_preflight_reports<'a>(
@@ -185,7 +233,187 @@ pub(super) fn execute_external_task(ctx: ExternalTaskExecution<'_>) -> Result<Ta
     let Some(runner) = &ctx.task.external_runner else {
         bail!("external task missing runner spec");
     };
-    runtime_adapter_for(runner.kind).execute(ctx)
+    let adapter = runtime_adapter_for(runner.kind);
+    match adapter.execute(&ctx) {
+        Ok(result) => Ok(result),
+        Err(error) => internal_error_result(&ctx, adapter, error),
+    }
+}
+
+fn internal_error_result(
+    ctx: &ExternalTaskExecution<'_>,
+    adapter: &dyn runtime_adapter::BenchmarkRuntimeAdapter,
+    error: anyhow::Error,
+) -> Result<TaskAttemptResult> {
+    let typed_error = error.downcast_ref::<AdapterInternalError>();
+    let adapter_subphase = typed_error
+        .map(AdapterInternalError::subphase)
+        .unwrap_or("execute");
+    let failure_code = typed_error
+        .map(AdapterInternalError::failure_code)
+        .unwrap_or(FailureCode::ExternalRunnerSetupFailed);
+    let public_message = format!(
+        "adapter_id={} adapter_phase=execute adapter_subphase={} runner_kind={:?} failure_class=execution failure_code={} public_diagnostics=internal-error.public.json private_diagnostics=internal-error.private.json",
+        adapter.adapter_id(),
+        adapter_subphase,
+        adapter.kind(),
+        failure_code_event_label(failure_code)
+    );
+    let private_message = format!(
+        "{} error={error}",
+        public_message.replace("private_diagnostics=internal-error.private.json", "")
+    );
+    let redaction_refs = event_redaction_refs(ctx);
+    let secret_refs = redaction_refs
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    append_event(
+        &ctx.run_dir.join("events.jsonl"),
+        &event(
+            &ctx.spec.run_id,
+            Some(&ctx.task.task_id),
+            "external_runner_internal_error",
+            &public_message,
+        ),
+        &secret_refs,
+    )?;
+    let result = TaskAttemptResult {
+        schema_version: 1,
+        task_id: ctx.task.task_id.clone(),
+        attempt: ctx.attempt,
+        provenance: ctx.provenance,
+        state: TaskState::Failure,
+        outcome: Outcome::Failure,
+        failure_class: FailureClass::Execution,
+        failure_code: Some(failure_code),
+        health_impact: health_impact_for_failure(FailureClass::Execution, Some(failure_code)),
+        benchmark_score: 0.0,
+        duration_ms: ctx.started.elapsed().as_millis() as u64,
+        agent: None,
+        evaluation: None,
+        patch: None,
+        usage: UsageRecord::Unknown,
+        warnings: vec![FailureCode::UsageUnknown],
+    };
+    write_internal_error_snapshot(
+        ctx,
+        adapter,
+        adapter_subphase,
+        failure_code,
+        &private_message,
+    )?;
+    atomic_write_json(&ctx.attempt_dir.join("result.json"), &result)?;
+    Ok(result)
+}
+
+fn write_internal_error_snapshot(
+    ctx: &ExternalTaskExecution<'_>,
+    adapter: &dyn runtime_adapter::BenchmarkRuntimeAdapter,
+    adapter_subphase: &'static str,
+    failure_code: FailureCode,
+    message: &str,
+) -> Result<()> {
+    let public_diagnostics = serde_json::json!({
+        "internal_error": {
+            "adapter_id": adapter.adapter_id(),
+            "phase": "execute",
+            "subphase": adapter_subphase,
+            "failure_code": failure_code_event_label(failure_code)
+        }
+    });
+    let private_diagnostics = serde_json::json!({
+        "internal_error": {
+            "adapter_id": adapter.adapter_id(),
+            "phase": "execute",
+            "subphase": adapter_subphase,
+            "failure_code": failure_code_event_label(failure_code),
+            "message": message
+        }
+    });
+    atomic_write_json(
+        &ctx.attempt_dir.join("internal-error.public.json"),
+        &public_diagnostics,
+    )?;
+    atomic_write_json(
+        &ctx.attempt_dir.join("internal-error.private.json"),
+        &private_diagnostics,
+    )?;
+    if ctx
+        .attempt_dir
+        .join("external-runtime.public.json")
+        .is_file()
+        && ctx
+            .attempt_dir
+            .join("external-runtime.private.json")
+            .is_file()
+    {
+        return Ok(());
+    }
+    let runner = ctx
+        .task
+        .external_runner
+        .as_ref()
+        .expect("external task runner checked before adapter execution");
+    write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
+        run_id: &ctx.spec.run_id,
+        attempt_dir: ctx.attempt_dir,
+        benchmark: adapter.benchmark_name(),
+        task_id: &ctx.task.task_id,
+        attempt: ctx.attempt,
+        runner_kind: runner.kind,
+        adapter_version: adapter.adapter_version(),
+        network: ctx.spec.execution.network,
+        timeout_sec: ctx
+            .spec
+            .execution
+            .timeout_sec
+            .or(Some(ctx.profile.timeout_sec)),
+        profile: ctx.profile,
+        dataset_path: Path::new(&runner.dataset_path),
+        source_path: runner.source_path.as_deref().map(Path::new),
+        commands: vec![RuntimePhaseCommand {
+            phase: adapter_subphase,
+            command: format!("{} internal error", adapter.adapter_id()),
+            working_dir: ctx.attempt_dir.to_path_buf(),
+            timeout_sec: ctx
+                .spec
+                .execution
+                .timeout_sec
+                .unwrap_or(ctx.profile.timeout_sec),
+            stdout_path: ctx.attempt_dir.join("agent/stdout.log"),
+            stderr_path: ctx.attempt_dir.join("agent/stderr.log"),
+        }],
+        materials: Vec::new(),
+        public_artifacts: vec!["result.json".to_string(), "events.jsonl".to_string()],
+        extra_redaction_refs: vec![ctx.attempt_dir.display().to_string()],
+        private_diagnostics: Some(private_diagnostics),
+        public_diagnostics: Some(public_diagnostics),
+    })
+}
+
+fn event_redaction_refs(ctx: &ExternalTaskExecution<'_>) -> Vec<String> {
+    let mut refs = store::secret_values(ctx.profile);
+    refs.push(ctx.run_dir.display().to_string());
+    refs.push(ctx.attempt_dir.display().to_string());
+    if let Some(runner) = &ctx.task.external_runner {
+        refs.push(runner.dataset_path.clone());
+        if let Some(source_path) = &runner.source_path {
+            refs.push(source_path.clone());
+        }
+    }
+    refs
+}
+
+fn failure_code_event_label(code: FailureCode) -> &'static str {
+    match code {
+        FailureCode::AgentCleanupFailed => "agent_cleanup_failed",
+        FailureCode::ArtifactCollectionFailed => "artifact_collection_failed",
+        FailureCode::ExternalRunnerSetupFailed => "external_runner_setup_failed",
+        FailureCode::EvaluatorError => "evaluator_error",
+        FailureCode::PatchApplyFailed => "patch_apply_failed",
+        _ => "other",
+    }
 }
 
 pub(super) fn write_external_command_snapshot(

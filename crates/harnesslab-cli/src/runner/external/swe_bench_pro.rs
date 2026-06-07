@@ -14,7 +14,7 @@ use std::process::Command;
 
 mod agent;
 mod metadata;
-mod runtime_snapshot;
+pub(super) mod runtime_snapshot;
 use metadata::{SweInstance, load_instance};
 
 pub(super) fn execute_prepared(
@@ -50,6 +50,7 @@ pub(super) fn execute_prepared(
                 Some(&source_path),
                 &swe_dir,
                 &workspace,
+                runtime_snapshot::SweSetupFailurePhase::MetadataExtraction,
             )?;
             return setup_failure_result(
                 ctx,
@@ -72,13 +73,13 @@ pub(super) fn execute_prepared(
     if let Err(error) = prepare_workspace(&workspace, &swe_dir, &instance) {
         let message = format!("workspace preparation failed: {error}");
         missing_evaluation(ctx.attempt_dir, &message)?;
-        runtime_snapshot::write_swe_runtime_snapshots(
+        runtime_snapshot::write_swe_setup_failure_snapshots(
             ctx,
             &dataset_path,
-            &source_path,
+            Some(&source_path),
             &swe_dir,
             &workspace,
-            &instance,
+            runtime_snapshot::SweSetupFailurePhase::WorkspacePreparation,
         )?;
         return setup_failure_result(
             ctx,
@@ -213,8 +214,21 @@ pub(super) fn execute_prepared(
         &swe_dir,
         &workspace,
         &instance,
-    )?;
-    atomic_write_json(&ctx.attempt_dir.join("result.json"), &result)?;
+    )
+    .map_err(|error| {
+        super::adapter_internal_error(
+            "post_execution_snapshot",
+            FailureCode::ArtifactCollectionFailed,
+            error,
+        )
+    })?;
+    atomic_write_json(&ctx.attempt_dir.join("result.json"), &result).map_err(|error| {
+        super::adapter_internal_error(
+            "post_execution_result",
+            FailureCode::ArtifactCollectionFailed,
+            error,
+        )
+    })?;
     Ok(result)
 }
 
@@ -261,34 +275,6 @@ pub(super) fn setup_failure_result(
     };
     atomic_write_json(&ctx.attempt_dir.join("result.json"), &result)?;
     Ok(result)
-}
-
-pub(super) fn source_path_failure_result(
-    ctx: &ExternalTaskExecution<'_>,
-    dataset_path: &Path,
-) -> Result<TaskAttemptResult> {
-    let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
-    let workspace = attempt_root.join("workspace");
-    fs::create_dir_all(&workspace)?;
-    let swe_dir = attempt_root.join("swe-bench-pro");
-    fs::create_dir_all(&swe_dir)?;
-    missing_evaluation(
-        ctx.attempt_dir,
-        "swe-bench-pro external runner missing source_path",
-    )?;
-    runtime_snapshot::write_swe_setup_failure_snapshots(
-        ctx,
-        dataset_path,
-        None,
-        &swe_dir,
-        &workspace,
-    )?;
-    setup_failure_result(
-        ctx,
-        "source_path_validation",
-        FailureCode::ExternalRunnerSetupFailed,
-        "swe-bench-pro external runner missing source_path",
-    )
 }
 
 fn prepare_workspace(workspace: &Path, swe_dir: &Path, instance: &SweInstance) -> Result<()> {
@@ -447,7 +433,7 @@ fn parse_score(path: &Path, task_id: &str) -> Result<f64> {
     )
 }
 
-fn missing_evaluation(attempt_dir: &Path, message: &str) -> Result<EvaluationRecord> {
+pub(super) fn missing_evaluation(attempt_dir: &Path, message: &str) -> Result<EvaluationRecord> {
     fs::create_dir_all(attempt_dir.join("verifier"))?;
     fs::write(attempt_dir.join("verifier/stdout.log"), "")?;
     fs::write(attempt_dir.join("verifier/stderr.log"), message)?;

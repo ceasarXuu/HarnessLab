@@ -348,7 +348,7 @@ mod tests {
 
         let result =
             super::super::runtime_adapter::runtime_adapter_for(ExternalRunnerKind::TerminalBench)
-                .execute(ctx)
+                .execute(&ctx)
                 .unwrap();
 
         assert_eq!(result.state, TaskState::Failure);

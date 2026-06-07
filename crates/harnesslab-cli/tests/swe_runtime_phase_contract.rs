@@ -55,6 +55,25 @@ fn swepro_001_metadata_failure_is_classified_and_observable() {
     assert_event_absent(&events, "external_runner_workspace_started");
     assert_event_absent(&events, "external_runner_agent_started");
     assert_external_runtime_snapshots_exist(&results, &run_dir);
+    assert_setup_failure_snapshot(
+        &results,
+        &run_dir,
+        &["metadata_extraction"],
+        &[
+            "workspace_preparation",
+            "agent_execution",
+            "evaluation",
+            "source_path_validation",
+        ],
+        &[
+            "swe-bench-pro/raw_sample.jsonl",
+            "swe-bench-pro/instance.json",
+            "swe-bench-pro/workspace-manifest.json",
+            "prediction.jsonl",
+            "prediction.eval.json",
+            "patch.diff",
+        ],
+    );
 }
 
 #[test]
@@ -104,6 +123,13 @@ fn swepro_002_workspace_failure_is_classified_and_observable() {
     );
     assert_event_absent(&events, "external_runner_agent_started");
     assert_external_runtime_snapshots_exist(&results, &run_dir);
+    assert_setup_failure_snapshot(
+        &results,
+        &run_dir,
+        &["metadata_extraction", "workspace_preparation"],
+        &["agent_execution", "evaluation", "source_path_validation"],
+        &["prediction.jsonl", "prediction.eval.json", "patch.diff"],
+    );
 }
 
 #[test]
@@ -219,6 +245,47 @@ fn assert_external_runtime_snapshots_exist(results: &serde_json::Value, run_dir:
             .iter()
             .any(|command| command["phase"] == "metadata_extraction")
     );
+}
+
+fn assert_setup_failure_snapshot(
+    results: &serde_json::Value,
+    run_dir: &Path,
+    expected_phases: &[&str],
+    unexpected_phases: &[&str],
+    unexpected_artifacts: &[&str],
+) {
+    let task_id = results["tasks"][0]["task_id"].as_str().unwrap();
+    let attempt_dir = run_dir.join("tasks").join(task_id).join("attempts/1");
+    let public: serde_json::Value = serde_json::from_slice(
+        &fs::read(attempt_dir.join("external-runtime.public.json")).unwrap(),
+    )
+    .unwrap();
+    let commands = public["commands"].as_array().unwrap();
+    for expected in expected_phases {
+        assert!(
+            commands
+                .iter()
+                .any(|command| command["phase"].as_str() == Some(expected)),
+            "setup failure snapshot should advertise reached phase {expected}"
+        );
+    }
+    for unexpected in unexpected_phases {
+        assert!(
+            !commands
+                .iter()
+                .any(|command| command["phase"].as_str() == Some(unexpected)),
+            "setup failure snapshot should not advertise unreached phase {unexpected}"
+        );
+    }
+    let artifacts = public["public_artifacts"].as_array().unwrap();
+    for unexpected in unexpected_artifacts {
+        assert!(
+            !artifacts
+                .iter()
+                .any(|artifact| artifact.as_str() == Some(unexpected)),
+            "setup failure snapshot should not advertise {unexpected}"
+        );
+    }
 }
 
 struct FakeRun {

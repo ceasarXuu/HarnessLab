@@ -209,6 +209,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-RUNTIME-003) package="harnesslab-cli"; test_name="adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted"; test_target="test:external_runtime_snapshot_contract" ;;
     ADAPT-RUNTIME-004) package="harnesslab-cli"; test_name="adapt_runtime_004_cleanup_report_is_structured_and_affects_final_verdict"; test_target="test:external_runtime_snapshot_contract" ;;
     ADAPT-RUNTIME-005) package="harnesslab-cli"; test_name="adapt_runtime_005_terminal_bench_event_taxonomy_is_stable"; test_target="test:terminal_bench_runtime_event_contract" ;;
+    ADAPT-RUNTIME-006) package="harnesslab-cli"; test_name="adapt_runtime_006_adapter_internal_error_is_classified_and_snapshotted"; test_target="test:external_runtime_error_contract" ;;
     SWEPRO-001) package="harnesslab-cli"; test_name="swepro_001_metadata_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-002) package="harnesslab-cli"; test_name="swepro_002_workspace_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-003) package="harnesslab-cli"; test_name="swepro_003_diff_capture_failure_and_empty_patch_are_distinct"; test_target="test:swe_runtime_phase_contract" ;;
