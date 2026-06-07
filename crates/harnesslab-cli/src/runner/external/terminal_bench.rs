@@ -191,7 +191,14 @@ pub(super) fn execute_prepared(
             final_failure_code: failure_code,
             cleanup_overrides_result,
         },
-    )?;
+    )
+    .map_err(|error| {
+        super::adapter_internal_error(
+            "post_execution_cleanup",
+            FailureCode::AgentCleanupFailed,
+            error,
+        )
+    })?;
     write_terminal_bench_runtime_snapshots(
         ctx,
         &prepared,
@@ -204,8 +211,21 @@ pub(super) fn execute_prepared(
             failure_code,
             cleanup_overrides_result,
         ),
-    )?;
-    write_task_result(ctx, &result)?;
+    )
+    .map_err(|error| {
+        super::adapter_internal_error(
+            "post_execution_snapshot",
+            FailureCode::ArtifactCollectionFailed,
+            error,
+        )
+    })?;
+    write_task_result(ctx, &result).map_err(|error| {
+        super::adapter_internal_error(
+            "post_execution_result",
+            FailureCode::ArtifactCollectionFailed,
+            error,
+        )
+    })?;
     Ok(result)
 }
 

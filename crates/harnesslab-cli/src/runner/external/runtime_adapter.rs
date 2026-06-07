@@ -9,9 +9,11 @@ use std::path::{Path, PathBuf};
 
 pub(super) trait BenchmarkRuntimeAdapter: Sync {
     fn adapter_id(&self) -> &'static str;
+    fn adapter_version(&self) -> &'static str;
+    fn benchmark_name(&self) -> &'static str;
     fn kind(&self) -> ExternalRunnerKind;
     fn preflight(&self, ctx: RuntimePreflightContext<'_>) -> RuntimePreflightReport;
-    fn execute(&self, ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult>;
+    fn execute(&self, ctx: &ExternalTaskExecution<'_>) -> Result<TaskAttemptResult>;
     fn cleanup_targets(&self, _ctx: RuntimeCleanupContext<'_>) -> Vec<RuntimeCleanupTarget> {
         Vec::new()
     }

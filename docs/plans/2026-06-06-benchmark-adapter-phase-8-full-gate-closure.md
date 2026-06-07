@@ -9,10 +9,39 @@ alignment.
 
 ## Current Closure State
 
-- Status: closed locally after final closure review and final full-gate rerun.
+- Status: conditionally closed for the 2026-06-06 local evidence set. The
+  2026-06-07 implemented-architecture review reopened evidence-quality blockers
+  around raw adapter error normalization, black-box provenance, generic artifact
+  oracle wording, and SWE-bench Pro real official evaluator preservation. The
+  runtime code blockers are fixed in the 2026-06-07 blocker-fix pass; SWE real
+  official evaluator preservation remains environment-gated.
 - Date: 2026-06-06
 - Repository: `<repo-root>`
 - Architecture plan: `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md`
+
+## 2026-06-07 Blocker-Fix Addendum
+
+- Covered runtime-adapter execution `Err` paths now normalize into structured
+  execution attempt results, append sanitized `external_runner_internal_error`
+  events, and write attempt diagnostics. The fallback is still best-effort:
+  if the fallback writer itself cannot append events or write attempt artifacts,
+  the run remains fail-fast rather than pretending closure was persisted.
+- `ADAPT-RUNTIME-006` is active and proves the internal-error path through a
+  black-box CLI run, events, `result.json`, preserved `external-runtime.*.json`,
+  and `internal-error.*.json` diagnostics.
+- SWE-bench Pro metadata and workspace-prep failures now write phase-accurate
+  setup-failure snapshots that do not advertise unreached phases or artifacts
+  that were never produced.
+- Replay adapter-version authority now comes from the runtime adapter registry
+  rather than a separate hard-coded replay map.
+- `required_artifacts` remains scoped to registry-level path validation,
+  duplicate rejection, and the exact `INT-011` runtime artifact contract.
+  Generic shared-location post-test artifact existence checks are still a
+  future enhancement.
+- SWE-bench Pro real official evaluator preservation is not proven in the
+  current local environment. Local `docker info` failed because the Colima
+  Docker daemon was unavailable, so this proof must be recorded later in a
+  Docker-capable environment.
 
 ## Implemented Final-Gate Fixes
 
@@ -42,14 +71,14 @@ alignment.
 | --- | --- | --- |
 | Full local gate | `CARGO_INCREMENTAL=0 scripts/test-after-change.sh` | passed; final output `PASS scripts/test-after-change.sh` |
 | Coverage gate | included in full local gate | line 95.12% (`12284/12914`), branch 78.95% (`1238/1568`) |
-| Registry check | included in full local gate | `registry ok: 43 requirements, 171 tests`; `adapter proof claims ok: 16 ids from 3 sources` |
+| Registry check | 2026-06-07 blocker-fix rerun | `registry ok: 44 requirements, 172 tests`; `adapter proof claims ok: 17 ids from 3 sources` |
 | Python bridge | included in full local gate | `32 passed, 7 subtests passed` |
 | Terminal-Bench registered setup | included in full local gate | `PASS terminal-bench registered setup` |
 | Terminal-Bench import timeout cleanup | included in full local gate and rerun directly | `PASS terminal-bench import timeout cleanup`; private runtime snapshot import-path proof ok |
 | Terminal-Bench import success cleanup | included in full local gate | `PASS terminal-bench import success cleanup` |
 | Terminal-Bench docker activity watchdog | included in full local gate | `PASS terminal-bench docker activity watchdog` |
 | Terminal-Bench docker activity grace expiry | included in full local gate | `PASS terminal-bench docker activity grace expiry` |
-| Active adapter selector guard | `CARGO_INCREMENTAL=0 scripts/verify-planned-adapter-selectors.sh` | exact inventory verified; `adapter selectors ok: active=15 planned=1` |
+| Active adapter selector guard | `CARGO_INCREMENTAL=0 scripts/verify-planned-adapter-selectors.sh` | exact inventory verified; 2026-06-07 blocker-fix rerun reported `adapter selectors ok: active=16 planned=1` |
 | Post-helper-split runtime snapshot contract | `cargo fmt --all && cargo test -p harnesslab-cli --test external_runtime_snapshot_contract adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted -- --nocapture` | passed |
 | Diff hygiene | `git diff --check` | passed |
 
@@ -59,7 +88,7 @@ The active adapter selector guard reran after the final code changes and now
 enforces this exact active-route inventory:
 
 - `ADAPT-DATA-001..005`
-- `ADAPT-RUNTIME-001..005`
+- `ADAPT-RUNTIME-001..006`
 - `SWEPRO-001..005`
 
 The full local gate also executed the registered `TB-*`, `INT-*`, `SEC-*`,
@@ -107,9 +136,19 @@ test suite and scripts. The planned-only selector remains
 - Final adversarial review: `vs_review/2026-06-06-benchmark-adapter-phase-8-final-review.md`.
 - Remaining follow-up closure review:
   `vs_review/2026-06-07-benchmark-adapter-remaining-closure-review.md`.
+- Implemented-architecture blocker review:
+  `vs_review/2026-06-07-benchmark-adapter-implemented-architecture-review.md`.
+- Blocker-fix review:
+  `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`.
 - Blocking findings from Round 1: accepted and fixed.
-- Round 2 closure review: completed with no remaining code blocker; the only
-  accepted blocker was the open closure artifact itself, now fixed.
+- Blocker-fix Round 2 closure review: completed with no remaining runtime/code
+  blocker. The only accepted blocker was premature closure wording in this
+  document; this update replaces that self-closing claim with review-backed
+  closure language and records the response in
+  `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`.
 - Final full-gate rerun passed with line coverage 95.12% (`12284/12914`) and
   branch coverage 78.95% (`1238/1568`).
-- Phase 8 closure criteria are satisfied.
+- Phase 8 closure criteria are satisfied for registered selector coverage,
+  Terminal-Bench official verifier coverage, fake-tool SWE behavior, replay
+  snapshots, and redaction. Full SWE-bench Pro official evaluator preservation
+  remains conditional on a Docker-capable verifier run.

@@ -296,6 +296,18 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
                 "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
             ],
         }),
+        "ADAPT-RUNTIME-006" => Some(ActiveRouteSpec {
+            package: "harnesslab-cli",
+            test_name: "adapt_runtime_006_adapter_internal_error_is_classified_and_snapshotted",
+            test_target: Some("test:external_runtime_error_contract"),
+            file_patterns: &[
+                "crates/harnesslab-cli/tests/external_runtime_error_contract.rs",
+                "crates/harnesslab-cli/src/runner/external.rs",
+                "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+                "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+            ],
+        }),
         "SWEPRO-001" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "swepro_001_metadata_failure_is_classified_and_observable",
@@ -338,6 +350,7 @@ const SWE_PHASE_FILE_PATTERNS: &[&str] = &[
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
 ];
 
 fn ensure_assignment(route: &str, key: &str, expected: &str, id: &str) -> Result<()> {

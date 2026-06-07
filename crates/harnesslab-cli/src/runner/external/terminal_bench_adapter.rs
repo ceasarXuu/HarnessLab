@@ -7,7 +7,8 @@ use super::{
         terminal_bench_no_output_activity_patterns, terminal_bench_runtime_dataset,
     },
     terminal_bench_runtime_snapshot::{
-        TerminalBenchSnapshotDiagnostics, write_terminal_bench_runtime_snapshots,
+        TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION, TerminalBenchSnapshotDiagnostics,
+        write_terminal_bench_runtime_snapshots,
     },
     terminal_bench_timeout::{
         terminal_bench_no_output_timeout_sec, terminal_bench_process_timeout_sec,
@@ -42,6 +43,14 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
         ADAPTER_ID
     }
 
+    fn adapter_version(&self) -> &'static str {
+        TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION
+    }
+
+    fn benchmark_name(&self) -> &'static str {
+        "terminal-bench"
+    }
+
     fn kind(&self) -> ExternalRunnerKind {
         ExternalRunnerKind::TerminalBench
     }
@@ -53,7 +62,7 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
         }
     }
 
-    fn execute(&self, ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
+    fn execute(&self, ctx: &ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
         let runner = ctx
             .task
             .external_runner
@@ -482,11 +491,9 @@ fn official_run_id(spec: &RunSpec, task: &harnesslab_core::TaskPlan, attempt: u3
     format!("{}-{}-{}", spec.run_id, task.task_id, attempt)
         .chars()
         .map(|ch| {
-            if ch.is_ascii_alphanumeric() {
-                ch.to_ascii_lowercase()
-            } else {
-                '-'
-            }
+            ch.is_ascii_alphanumeric()
+                .then(|| ch.to_ascii_lowercase())
+                .unwrap_or('-')
         })
         .collect()
 }

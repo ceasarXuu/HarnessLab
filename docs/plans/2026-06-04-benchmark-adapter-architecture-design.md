@@ -4,12 +4,14 @@
 
 - Created: 2026-06-04
 - Updated: 2026-06-07
-- Version: 0.26
-- Status: Phases 1-8 are implemented, tested, documented, and locally
-  review-closed. Phase 8 evidence records a passing full local gate, passing
-  active adapter selector guard, Python bridge health, real Terminal-Bench
-  verifier scripts, rollback/fallback readiness, and final closure notes in
-  `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`.
+- Version: 0.28
+- Status: Phases 1-8 are implemented and the 2026-06-07 blocker-fix pass
+  closed the covered runtime-adapter execution internal-error path, black-box
+  internal-error provenance, metadata/workspace setup snapshot shape, and replay
+  adapter-version authority. Phase 8 remains conditionally closed for the local
+  fake-tool and Terminal-Bench evidence set, but must not be described as fully
+  closed for SWE-bench Pro real official evaluator preservation until a
+  Docker-capable verifier run is recorded.
 - Owner / Responsible: implementation closure is recorded in this plan and
   `/vs_review/`; named long-term product ownership is outside this repository
   change set.
@@ -18,6 +20,7 @@
   operations docs.
 - Related Links: `vs_review/2026-06-04-benchmark-adapter-architecture-review.md`,
   `vs_review/2026-06-07-benchmark-adapter-remaining-closure-review.md`,
+  `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`,
   `docs/architecture.md`, `docs/mvp-development-spec.md`,
   `docs/development-operations.md`, `docs/test-engineering.md`.
 - Risk Level: High
@@ -38,7 +41,9 @@
   contribution becomes a concrete requirement.
 - Status reason: Phases 1-8 have landed the data adapter lifecycle, runtime
   registry, Terminal-Bench and SWE-bench Pro runtime adapters, replay
-  snapshots, redaction, diagnostics, and final closure evidence.
+  snapshots, redaction, and diagnostics. The current closure evidence is strong
+  for registered selectors and fake-tool SWE paths, while real SWE official
+  evaluator preservation remains an environment-gated proof.
 
 ### Plan Optimization Findings
 
@@ -663,6 +668,11 @@ Concrete initial IDs:
 - `ADAPT-RUNTIME-003`: external-runtime public/private snapshots are written with required fields.
 - `ADAPT-RUNTIME-004`: cleanup report is structured and can override official benchmark verdict with audit evidence.
 - `ADAPT-RUNTIME-005`: active Phase 4 proof that Terminal-Bench runtime event taxonomy preserves operator-critical events, including `external_runner_configured`, `terminal_bench_dataset_prepared`, `external_runner_activity`, `external_runner_no_progress`, `external_runner_timeout`, `external_runner_setup_failed`, cleanup events, task warnings, and result parse failures. Stable SWE-bench Pro phase event proof remains Phase 5 scope under `SWEPRO-001..004` before Phase 6 re-validates the full runtime taxonomy.
+- `ADAPT-RUNTIME-006`: active post-review proof that covered external runtime
+  adapter execution internal errors are normalized into classified task results,
+  sanitized internal-error events, preserved adapter runtime snapshots, and
+  public/private internal-error diagnostics rather than escaping as scheduler
+  worker failures.
 - `SWEPRO-001`: active Phase 5 proof that metadata extraction failure is classified as `metadata_extraction_failed` and observable through setup diagnostics.
 - `SWEPRO-002`: active Phase 5 proof that workspace preparation failure remains classified as `workspace_prep_failed` and observable through setup diagnostics.
 - `SWEPRO-003`: active Phase 5 proof that empty patch and diff-capture failure are distinct patch failures.
@@ -722,7 +732,7 @@ can be expanded during implementation, but the minimum ledger is fixed here.
 | Phase 3 | Runtime registry slice report | `ADAPT-RUNTIME-001..002`, branch inventory before/after, preflight report evidence | Orchestrator cannot keep hidden benchmark-specific runtime execution branches outside registry dispatch. |
 | Phase 4 | Terminal-Bench extraction report | Existing `TB-*`, `INT-021..046`, Python bridge, event assertions, official-runner proof | Terminal-Bench timeout, setup, cleanup, QEMU, and platform semantics must match the pre-extraction path. |
 | Phase 5 | SWE-bench Pro extraction report | `SWEPRO-001..004`, official evaluator proof, phase event evidence | Metadata, workspace, patch, evaluator, and parse failures must be distinguishable. |
-| Phase 6 | Snapshot/redaction report | `ADAPT-RUNTIME-003..005`, `SWEPRO-005`, `SEC-*`, fake secret scans | Public runtime artifacts, events, reports, and replay warnings cannot expose private runtime material. |
+| Phase 6 | Snapshot/redaction report | `ADAPT-RUNTIME-003..006`, `SWEPRO-005`, `SEC-*`, fake secret scans | Public runtime artifacts, events, reports, and replay warnings cannot expose private runtime material. |
 | Phase 7 | Docs/diagnostics report or review section | Architecture/MVP/operations/user docs diff, doctor/readiness output checks | User-facing docs and diagnostics cannot describe planned-only behavior as implemented. |
 | Phase 8 | Final `/vs_review/` closure report | Full targeted selector set, full gate, final review closure, rollback/fallback notes | No untriaged finding, unresolved blocker, or missing required evidence may remain. |
 
@@ -753,7 +763,7 @@ not complete even if the implementation appears to work manually.
 | Phase 3: Runtime Adapter Registry | Runtime preflight/execute/cleanup dispatch is registry-owned. | `ADAPT-RUNTIME-001..002` prove generic dispatch and preflight ownership. | CLI runner still contains benchmark-specific runtime branches outside registry lookup. |
 | Phase 4: Terminal-Bench Runtime Extraction | Terminal-Bench behavior runs through `TerminalBenchRuntimeAdapter`. | Existing `TB-*`, `INT-021..046`, Python bridge tests, event assertions, and official-runner proof pass. | Timeout, setup-failure, cleanup, QEMU, or platform behavior changes without explicit proof. |
 | Phase 5: SWE-bench Pro Runtime Extraction | SWE-bench Pro patch-style runtime runs through `SweBenchProRuntimeAdapter`. | `SWEPRO-001..004` plus fake-tool evaluator path proof pass; real official evaluator preservation remains final-gate evidence. | Patch, workspace, evaluator, or phase diagnostics are ambiguous or unclassified. |
-| Phase 6: Runtime Snapshot, Redaction, And Replay Hardening | Adapter runtime snapshots are persisted and safe to expose. | `ADAPT-RUNTIME-003..005`, `SWEPRO-005`, and `SEC-*` scans pass. | Public artifacts can contain private command/env material or replay uses missing evaluator materials. |
+| Phase 6: Runtime Snapshot, Redaction, And Replay Hardening | Adapter runtime snapshots are persisted and safe to expose. | `ADAPT-RUNTIME-003..006`, `SWEPRO-005`, and `SEC-*` scans pass. | Public artifacts can contain private command/env material or replay uses missing evaluator materials. |
 | Phase 7: Docs And Diagnostics | User docs and doctor/readiness output match implemented behavior. | Docs are updated and diagnostics name adapter phase, readiness blocker, and remediation. | Docs describe planned trait names or diagnostics not present in code. |
 | Phase 8: Full Gate And Review | Architecture track is ready to close. | Targeted selectors, Python bridge tests, full gate, and fresh adversarial closure pass. | Any blocker is untriaged, accepted blockers lack closure review, or full gate is not green. |
 
@@ -1900,9 +1910,9 @@ Before claiming the adapter architecture track is complete:
 | Requirement | Proof |
 | --- | --- |
 | Adapter data contract is explicit | concrete registered `ADAPT-DATA-001..005` tests for descriptor, inspect, prepare, list, source refs, task-plan creation, and task snapshot |
-| Runtime adapter dispatch is generic | concrete registered `ADAPT-RUNTIME-001..005` tests for preflight, execute, cleanup, runtime snapshots, event taxonomy, and no direct benchmark-specific CLI branch outside registry |
+| Runtime adapter dispatch is generic | concrete registered `ADAPT-RUNTIME-001..006` tests for preflight, execute, cleanup, runtime snapshots, event taxonomy, internal error normalization, and no direct benchmark-specific CLI branch outside registry |
 | Terminal-Bench behavior preserved | existing `TB-*`, `INT-021..046`, Python bridge tests, and at least one official-runner preservation proof |
-| SWE-bench Pro behavior preserved | concrete registered `SWEPRO-001..005` tests and at least one official evaluator preservation proof |
+| SWE-bench Pro behavior preserved | concrete registered `SWEPRO-001..005` tests plus `INT-011` fake-tool evaluator artifact proof; real official evaluator preservation remains a Docker-capable final evidence gate |
 | Runtime config is observable | `external_runner_configured`, adapter phase events, cleanup reports, `external-runtime.public.json`, and `external-runtime.private.json` assertions |
 | Failure mapping is stable | seeded failure fixtures per style |
 | Replay does not rely on mutable data silently | replay readiness tests for missing snapshot blocker, mutable data drift detection, adapter version warning, and explicit legacy degraded replay if retained |
@@ -2026,7 +2036,7 @@ still apply.
 | Phase failure classification | `events.jsonl`, result artifacts, seeded fixtures | Metadata, workspace, agent, patch, evaluator, timeout, setup, cleanup, and replay failures are distinguishable |
 | Runtime snapshot completeness | `external-runtime.*.json` tests | Required public/private fields exist and forbidden public fields are absent |
 | Replay readiness | Replay tests and warnings | Missing required snapshots/evaluator materials block before execution unless explicit degraded replay is selected |
-| Official behavior preservation | Verifier scripts and existing selectors | Terminal-Bench and SWE-bench Pro official paths pass preservation proof |
+| Official behavior preservation | Verifier scripts and existing selectors | Terminal-Bench official paths pass preservation proof locally; SWE-bench Pro official evaluator preservation requires a Docker-capable verifier run before full closure can be claimed |
 | Secret exposure prevention | `SEC-*` scans | Fake secrets are absent from public events, snapshots, reports, and warnings |
 
 ## 20. Post-Release Verification And Cleanup
@@ -2048,6 +2058,7 @@ still apply.
 | Runtime trait location: CLI first or new crate now | Keep runtime traits inside `harnesslab-cli` for MVP. Extract a separate crate only when out-of-tree adapter contribution becomes a concrete requirement. | `crates/harnesslab-cli/src/runner/external/runtime_adapter.rs`; Phase 3-8 selectors and full gate. |
 | Whether `PreparedBenchmark` is persisted for every run | Do not add a separate `PreparedBenchmark` artifact for MVP. Replay authority is split across `benchmark.snapshot.json`, per-task `task-runtime.snapshot.json`, and per-attempt `external-runtime.*.json`. | `REPLAY-007`, `REPLAY-008`, `ADAPT-RUNTIME-003`, `SWEPRO-005`. |
 | Whether official benchmark smoke checks are mandatory in the default full gate | The local full gate runs the real Terminal-Bench verifier scripts. CI environments without the required resources must record equivalent manual evidence in `/vs_review/`. | `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`. |
+| Whether SWE-bench Pro real official evaluator preservation is currently closed | Not closed in the current local environment. The fake-tool SWE selectors and `INT-011` artifact contract are active, but Docker daemon access is required before claiming real official evaluator preservation. | `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`; local `docker info` reports the Colima daemon is unavailable. |
 | Whether `ExternalRunnerKind` remains the MVP registry key | Keep the closed enum for MVP and revisit string ids only when dynamic plugins or out-of-tree adapters exist. | `runtime_adapter_for` dispatch and `ADAPT-RUNTIME-001`. |
 | Whether legacy degraded replay is retained | Silent live replanning is retired; external replay fails closed when authoritative snapshots or runtime materials are missing or drift. | `INT-013`, `INT-018`, `ADAPT-RUNTIME-003`, `SWEPRO-005`. |
 | Implementation and release approval owner | Implementation closure is recorded in this plan, Phase 8 closure notes, and `/vs_review/`. Long-term product ownership remains outside this repository change set and does not block adapter architecture closure. | Phase 8 closure report and pushed implementation commits. |
@@ -2066,6 +2077,11 @@ This architecture track is complete when:
 8. Full local gate passes.
 9. Fresh adversarial review closes all accepted blockers.
 10. Release, rollback, fallback, observability, and post-release cleanup evidence are recorded.
+
+Current evidence boundary: items 1-10 are satisfied for registered selector
+coverage and local fake-tool SWE behavior. Full SWE-bench Pro official behavior
+closure additionally requires a Docker-capable official evaluator preservation
+run recorded in `/vs_review/`.
 
 ## 23. Decision Log
 
@@ -2108,6 +2124,8 @@ This architecture track is complete when:
 | 0.24 | 2026-06-06 | Recorded Phase 8 final-gate evidence, rollback/fallback readiness, active selector inventory, real Terminal-Bench verifier evidence, and final adversarial review closure. |
 | 0.25 | 2026-06-06 | Marked Phases 1-8 implemented, tested, documented, and locally review-closed after the Phase 8 commit. |
 | 0.26 | 2026-06-07 | Resolved stale decision-log items and added registry-level executable validation for `required_artifacts`; post-test shared-location artifact existence checks remain a future enhancement. |
+| 0.27 | 2026-06-07 | Added `ADAPT-RUNTIME-006` for external-runtime internal error normalization and aligned replay adapter-version authority with the runtime adapter registry. |
+| 0.28 | 2026-06-07 | Downgraded closure wording for SWE-bench Pro real official evaluator preservation to an environment-gated proof and recorded the blocker-fix evidence boundary. |
 
 ## 25. Plan Quality Checklist
 

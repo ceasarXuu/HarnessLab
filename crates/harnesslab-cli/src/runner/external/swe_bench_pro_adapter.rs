@@ -2,10 +2,14 @@ use super::runtime_adapter::{
     BenchmarkRuntimeAdapter, RuntimeCleanupReport, RuntimeCleanupTarget, RuntimePreflightContext,
     preflight_report,
 };
+use super::swe_bench_pro::runtime_snapshot::{
+    SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION, SweSetupFailurePhase,
+};
 use super::{ExternalTaskExecution, swe_bench_pro};
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result};
-use harnesslab_core::{ExternalRunnerKind, TaskAttemptResult};
+use harnesslab_core::{ExternalRunnerKind, FailureCode, TaskAttemptResult};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 pub(super) static SWE_BENCH_PRO_RUNTIME_ADAPTER: SweBenchProRuntimeAdapter =
@@ -22,6 +26,14 @@ pub(super) struct SweBenchProRuntimeAdapter;
 impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
     fn adapter_id(&self) -> &'static str {
         "swe-bench-pro-runtime"
+    }
+
+    fn adapter_version(&self) -> &'static str {
+        SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION
+    }
+
+    fn benchmark_name(&self) -> &'static str {
+        "swe-bench-pro"
     }
 
     fn kind(&self) -> ExternalRunnerKind {
@@ -41,20 +53,17 @@ impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
         preflight_report(self, ctx, blocking_reason)
     }
 
-    fn execute(&self, ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
+    fn execute(&self, ctx: &ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
         let runner = ctx
             .task
             .external_runner
             .as_ref()
             .context("swe-bench-pro task missing runner spec")?;
         let Some(source_path) = runner.source_path.as_ref() else {
-            return swe_bench_pro::source_path_failure_result(
-                &ctx,
-                Path::new(&runner.dataset_path),
-            );
+            return source_path_failure_result(ctx, Path::new(&runner.dataset_path));
         };
         swe_bench_pro::execute_prepared(
-            &ctx,
+            ctx,
             SweBenchProRuntimeAttempt {
                 dataset_path: Path::new(&runner.dataset_path).to_path_buf(),
                 source_path: Path::new(source_path).to_path_buf(),
@@ -69,4 +78,33 @@ impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
     ) -> Result<RuntimeCleanupReport, String> {
         Err("swe-bench-pro has no run-level runtime cleanup target".to_string())
     }
+}
+
+fn source_path_failure_result(
+    ctx: &ExternalTaskExecution<'_>,
+    dataset_path: &Path,
+) -> Result<TaskAttemptResult> {
+    let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
+    let workspace = attempt_root.join("workspace");
+    fs::create_dir_all(&workspace)?;
+    let swe_dir = attempt_root.join("swe-bench-pro");
+    fs::create_dir_all(&swe_dir)?;
+    swe_bench_pro::missing_evaluation(
+        ctx.attempt_dir,
+        "swe-bench-pro external runner missing source_path",
+    )?;
+    swe_bench_pro::runtime_snapshot::write_swe_setup_failure_snapshots(
+        ctx,
+        dataset_path,
+        None,
+        &swe_dir,
+        &workspace,
+        SweSetupFailurePhase::SourcePathValidation,
+    )?;
+    swe_bench_pro::setup_failure_result(
+        ctx,
+        "source_path_validation",
+        FailureCode::ExternalRunnerSetupFailed,
+        "swe-bench-pro external runner missing source_path",
+    )
 }

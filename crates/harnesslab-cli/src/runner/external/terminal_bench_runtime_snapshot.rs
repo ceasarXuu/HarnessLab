@@ -10,7 +10,7 @@ use harnesslab_core::{ExternalRunnerKind, FailureClass, FailureCode};
 use serde_json::Value;
 use std::path::Path;
 
-const TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION: &str = "terminal-bench-runtime.v1";
+pub(super) const TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION: &str = "terminal-bench-runtime.v1";
 
 pub(super) fn write_terminal_bench_runtime_snapshots(
     ctx: &ExternalTaskExecution<'_>,
