@@ -501,3 +501,147 @@ required_runtime_proof = true
 [requirements.source]
 doc = "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md"
 section = "10"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-001"
+title = "Adapter protocol descriptor, identity and authority schemas are validated"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "gate"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-002"
+title = "Adapter protocol registry rejects binding conflicts"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "gate"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-003"
+title = "Adapter protocol data lifecycle conformance is black-box validated"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-004"
+title = "Adapter protocol runtime lifecycle and failure taxonomy are validated"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-005"
+title = "Adapter protocol artifacts, public/private boundaries and redaction are validated"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-006"
+title = "Adapter protocol replay authority fixtures fail closed on drift and mixed authority"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-007"
+title = "Adapter protocol doctor readiness and report metadata are generic"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["contract", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-008"
+title = "Adapter protocol no-branch guard rejects generic-layer benchmark branches"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["gate"]
+required_runtime_proof = false
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-009"
+title = "Adapter protocol scaffold golden path compiles and runs conformance"
+area = "adapter-protocol"
+risk = "high"
+status = "planned"
+expected_layers = ["gate", "integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-010"
+title = "Existing adapters preserve behavior while passing protocol gates"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-011"
+title = "Third adapter proves horizontal extension without generic-layer changes"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["integration", "gate"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+
+[[requirements]]
+id = "ADAPT-PROTOCOL-012"
+title = "Stable adapter promotion evidence archive is validated"
+area = "adapter-protocol"
+risk = "critical"
+status = "planned"
+expected_layers = ["gate"]
+required_runtime_proof = true
+[requirements.source]
+doc = "docs/adapter-protocol.md"
+section = "17"

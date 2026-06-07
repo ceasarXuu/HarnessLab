@@ -2,7 +2,7 @@
 
 - Created: 2026-06-08
 - Updated: 2026-06-08
-- Version: 0.5
+- Version: 0.6
 - Status: In Progress
 - Owner / Responsible: implementation owner TBD
 - Related Systems: `harnesslab-core`, `harnesslab-adapters`, `harnesslab-cli`, `harnesslab-report`, `xtask`, `tests/REQUIREMENTS.toml`, `tests/TEST_REGISTRY.toml`
@@ -12,6 +12,7 @@
   - `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`
   - `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-phase-0-branch-inventory.md`
   - `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-phase-0-frozen-selector-manifest.md`
+  - `docs/adapter-protocol.md`
   - `tests/FROZEN_SELECTOR_MANIFEST.toml`
   - `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`
 - Risk Level: High
@@ -1341,3 +1342,4 @@ Minimum new selector families:
 | 0.3 | 2026-06-08 | Started implementation with Phase 0 branch inventory and frozen selector manifest deliverables; Phase 0 review is pending before Phase 1 protocol specification work. |
 | 0.4 | 2026-06-08 | Added Phase 0 machine-enforced frozen selector lockfile and `xtask` guard; expanded inventory for integrations, serialized authority fields, registry dispatch classification, and readiness-owned label references. |
 | 0.5 | 2026-06-08 | Hardened Phase 0 frozen guard with independent selector id baseline, exact router case locking, and execution file content hashes for the shared selector executor and external proof scripts. |
+| 0.6 | 2026-06-08 | Started Phase 1 protocol specification with `docs/adapter-protocol.md` and registered `ADAPT-PROTOCOL-001..012` as planned requirement/test/selector gates. |

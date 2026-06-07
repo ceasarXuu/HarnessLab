@@ -16,7 +16,7 @@ fn registry_001_claim_parser_expands_ranges_across_sources() {
         ),
         (
             "b.md".to_string(),
-            "`ADAPT-RUNTIME-001` and ADAPT-DATA-*".to_string(),
+            "`ADAPT-RUNTIME-001`, `ADAPT-PROTOCOL-001..002`, and ADAPT-DATA-*".to_string(),
         ),
     ];
 
@@ -25,6 +25,8 @@ fn registry_001_claim_parser_expands_ranges_across_sources() {
     assert!(ids.contains("ADAPT-DATA-002"));
     assert!(ids.contains("ADAPT-DATA-003"));
     assert!(ids.contains("ADAPT-RUNTIME-001"));
+    assert!(ids.contains("ADAPT-PROTOCOL-001"));
+    assert!(ids.contains("ADAPT-PROTOCOL-002"));
     assert!(ids.contains("SWEPRO-005"));
     assert!(!ids.contains("ADAPT-DATA-*"));
 }

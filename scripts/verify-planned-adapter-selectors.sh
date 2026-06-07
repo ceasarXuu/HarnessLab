@@ -22,7 +22,21 @@ expected_active_ids=(
   SWEPRO-004
   SWEPRO-005
 )
-expected_planned_ids=(ADAPT-DATA-000)
+expected_planned_ids=(
+  ADAPT-DATA-000
+  ADAPT-PROTOCOL-001
+  ADAPT-PROTOCOL-002
+  ADAPT-PROTOCOL-003
+  ADAPT-PROTOCOL-004
+  ADAPT-PROTOCOL-005
+  ADAPT-PROTOCOL-006
+  ADAPT-PROTOCOL-007
+  ADAPT-PROTOCOL-008
+  ADAPT-PROTOCOL-009
+  ADAPT-PROTOCOL-010
+  ADAPT-PROTOCOL-011
+  ADAPT-PROTOCOL-012
+)
 
 while IFS=$'\t' read -r status id; do
   [[ -z "${status:-}" || -z "${id:-}" ]] && continue
