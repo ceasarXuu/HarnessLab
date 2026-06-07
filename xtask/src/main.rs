@@ -8,12 +8,19 @@ use walkdir::WalkDir;
 
 mod adapter_claims;
 mod coverage;
+mod frozen_execution_files;
+mod frozen_selector_ids;
+mod frozen_selectors;
 mod runtime_artifacts;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::VerifyTestRegistry => verify_test_registry(),
+        Command::VerifyFrozenSelectorManifest => {
+            frozen_selectors::verify_frozen_selector_manifest()
+        }
+        Command::PrintFrozenSelectorManifest => frozen_selectors::print_frozen_selector_manifest(),
         Command::GenerateTestTraceability => generate_traceability(),
         Command::ListAdapterProofSelectors => list_adapter_proof_selectors(),
         Command::ScanSecrets { secret, paths } => scan_secrets(&secret, &paths),
@@ -66,6 +73,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     VerifyTestRegistry,
+    VerifyFrozenSelectorManifest,
+    PrintFrozenSelectorManifest,
     GenerateTestTraceability,
     ListAdapterProofSelectors,
     ScanSecrets {
