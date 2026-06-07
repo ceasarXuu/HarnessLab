@@ -7,6 +7,7 @@ const ADAPTER_CLAIM_SOURCES: &[&str] = &[
     "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md",
     "docs/plans/2026-06-04-benchmark-adapter-phase-0-inventory.md",
     "docs/plans/2026-06-04-benchmark-adapter-phase-1-inventory.md",
+    "docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md",
 ];
 
 pub(super) fn load_adapter_claim_sources() -> Result<Vec<(String, String)>> {
@@ -117,7 +118,12 @@ fn collect_claimed_adapter_test_ids(
     source: &str,
     ids: &mut BTreeSet<String>,
 ) -> Result<()> {
-    for prefix in ["ADAPT-DATA-", "ADAPT-RUNTIME-", "SWEPRO-"] {
+    for prefix in [
+        "ADAPT-DATA-",
+        "ADAPT-RUNTIME-",
+        "ADAPT-PROTOCOL-",
+        "SWEPRO-",
+    ] {
         let mut offset = 0;
         while let Some(relative) = content[offset..].find(prefix) {
             let start = offset + relative;

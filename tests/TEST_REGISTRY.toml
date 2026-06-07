@@ -3317,3 +3317,207 @@ section = "8"
 [tests.verifies]
 requirements = ["agent_profile_run_as_enforcement"]
 contracts = ["RunPrecheck", "Doctor", "TerminalBenchExternalRunner", "SweBenchProExternalRunner"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-001"
+title = "Protocol descriptor, identity and authority schema validation"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-001"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-001"]
+contracts = ["AdapterProtocol", "AdapterProtocolAuthority"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-002"
+title = "Protocol registry conflict and binding resolution validation"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-002"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-002"]
+contracts = ["TaskRuntimeBinding", "AdapterRegistry"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-003"
+title = "Protocol data lifecycle black-box conformance"
+layer = "contract"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-003"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-003"]
+contracts = ["BenchmarkDataLifecycle"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-004"
+title = "Protocol runtime lifecycle and failure taxonomy conformance"
+layer = "contract"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-004"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-004"]
+contracts = ["RuntimeLifecycle", "FailureMapping"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-005"
+title = "Protocol artifact declaration and redaction conformance"
+layer = "contract"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-005"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-005"]
+contracts = ["ArtifactDeclaration", "Redaction"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-006"
+title = "Protocol replay authority old-new-mixed fixture conformance"
+layer = "integration"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-006"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-006"]
+contracts = ["ReplayAuthority"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-007"
+title = "Protocol generic doctor readiness and report metadata conformance"
+layer = "integration"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-007"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-007"]
+contracts = ["ReadinessProbe", "ReportMetadata"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-008"
+title = "Protocol no-branch guard with bypass fixtures"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-008"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-008"]
+contracts = ["NoBranchGuard"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-009"
+title = "Protocol scaffold golden path and generated adapter conformance"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-009"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-009"]
+contracts = ["AdapterScaffold", "AdapterConformance"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-010"
+title = "Protocol existing adapter migration preservation manifest"
+layer = "integration"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-010"
+file_patterns = ["docs/adapter-protocol.md", "tests/FROZEN_SELECTOR_MANIFEST.toml"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-010"]
+contracts = ["AdapterMigration", "FrozenSelectorManifest"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-011"
+title = "Protocol third-adapter horizontal extension proof"
+layer = "integration"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-011"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-011"]
+contracts = ["HorizontalExtension", "ForbiddenDiffGuard"]
+
+[[tests]]
+id = "ADAPT-PROTOCOL-012"
+title = "Protocol stable promotion evidence archive validation"
+layer = "gate"
+owner_module = "xtask"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-012"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+status = "planned"
+labels = ["infrastructure"]
+[tests.source]
+doc = "docs/adapter-protocol.md"
+section = "17"
+[tests.verifies]
+requirements = ["ADAPT-PROTOCOL-012"]
+contracts = ["StablePromotionEvidence"]

@@ -2,7 +2,7 @@ schema_version = 1
 
 [[execution_files]]
 path = "scripts/test-after-change.sh"
-hash = "fnv1a64:d11c595d892d1946"
+hash = "fnv1a64:44383850d4edc5bd"
 
 [[execution_files]]
 path = "scripts/verify-terminal-bench-python-adapter.sh"

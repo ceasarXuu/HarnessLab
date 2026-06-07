@@ -215,6 +215,18 @@ if [[ "${1:-}" == "--select" ]]; then
     SWEPRO-003) package="harnesslab-cli"; test_name="swepro_003_diff_capture_failure_and_empty_patch_are_distinct"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-004) package="harnesslab-cli"; test_name="swepro_004_evaluator_parse_corruption_is_not_patch_failure"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;
+    ADAPT-PROTOCOL-001) planned_adapter_proof "$id" "Phase 2: descriptor, identity, and protocol authority schema validation" ;;
+    ADAPT-PROTOCOL-002) planned_adapter_proof "$id" "Phase 2: registry conflict and binding resolution validation" ;;
+    ADAPT-PROTOCOL-003) planned_adapter_proof "$id" "Phase 3: data lifecycle black-box conformance" ;;
+    ADAPT-PROTOCOL-004) planned_adapter_proof "$id" "Phase 3: runtime lifecycle and failure taxonomy conformance" ;;
+    ADAPT-PROTOCOL-005) planned_adapter_proof "$id" "Phase 3: artifact declaration, public/private, and redaction conformance" ;;
+    ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;
+    ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;
+    ADAPT-PROTOCOL-008) planned_adapter_proof "$id" "Phase 4: static no-branch guard with bypass fixtures" ;;
+    ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;
+    ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;
+    ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;
+    ADAPT-PROTOCOL-012) planned_adapter_proof "$id" "Phase 8: stable promotion evidence archive validation" ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     META-008) exec scripts/verify-planned-adapter-selectors.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
