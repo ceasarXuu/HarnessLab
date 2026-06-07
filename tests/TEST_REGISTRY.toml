@@ -2951,11 +2951,25 @@ contracts = ["LocalTestGate"]
 
 [[tests]]
 id = "META-002"
-title = "Registry gate validates requirement coverage"
+title = "Registry gate validates requirement coverage and frozen selectors"
 layer = "gate"
 owner_module = "xtask"
 command = "scripts/verify-test-registry.sh"
-file_patterns = ["scripts/verify-test-registry.sh"]
+file_patterns = [
+  "scripts/verify-test-registry.sh",
+  "scripts/test-after-change.sh",
+  "scripts/verify-terminal-bench-python-adapter.sh",
+  "scripts/verify-terminal-bench-registered-setup.sh",
+  "scripts/verify-terminal-bench-docker-activity-watchdog.sh",
+  "scripts/verify-terminal-bench-docker-activity-grace-expiry.sh",
+  "scripts/verify-terminal-bench-import-success-cleanup.sh",
+  "scripts/verify-terminal-bench-import-timeout-cleanup.sh",
+  "tests/TEST_REGISTRY.toml",
+  "tests/FROZEN_SELECTOR_MANIFEST.toml",
+  "xtask/src/frozen_execution_files.rs",
+  "xtask/src/frozen_selector_ids.rs",
+  "xtask/src/frozen_selectors.rs",
+]
 required_artifacts = [
   "artifacts/test-traceability.json",
   "artifacts/adapter-proof-inventory.json",

@@ -1,0 +1,1624 @@
+schema_version = 1
+
+[[execution_files]]
+path = "scripts/test-after-change.sh"
+hash = "fnv1a64:d11c595d892d1946"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-python-adapter.sh"
+hash = "fnv1a64:75218c5328ce22a6"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-registered-setup.sh"
+hash = "fnv1a64:19f8795bf164c8f3"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-docker-activity-watchdog.sh"
+hash = "fnv1a64:d9acaaff8f90f55c"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-docker-activity-grace-expiry.sh"
+hash = "fnv1a64:bcdd3187322abea7"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-import-success-cleanup.sh"
+hash = "fnv1a64:93742d3d75037bee"
+
+[[execution_files]]
+path = "scripts/verify-terminal-bench-import-timeout-cleanup.sh"
+hash = "fnv1a64:6d69db582e2fe71d"
+
+[[selectors]]
+id = "ADAPT-DATA-000"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-000"
+router_case = 'ADAPT-DATA-000) planned_adapter_proof "$id" "Phase 0: retired gap sentinel" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+owning_contracts = ["BenchmarkAdapter"]
+
+[[selectors]]
+id = "ADAPT-DATA-001"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-001"
+router_case = 'ADAPT-DATA-001) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_001_descriptor_and_inspect_data_do_not_mutate_cache"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/Cargo.toml",
+    "crates/harnesslab-adapters/src/data_boundary_contract.rs",
+    "crates/harnesslab-adapters/src/data_boundary_scan.rs",
+    "crates/harnesslab-adapters/src/data_contract_tests.rs",
+    "crates/harnesslab-adapters/src/fake_patch.rs",
+    "crates/harnesslab-adapters/src/fake_terminal.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataAdapter"]
+
+[[selectors]]
+id = "ADAPT-DATA-002"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-002"
+router_case = 'ADAPT-DATA-002) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_002_prepare_is_idempotent_and_rejects_unready_data"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/data_contract_tests.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataAdapter"]
+
+[[selectors]]
+id = "ADAPT-DATA-003"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-003"
+router_case = 'ADAPT-DATA-003) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_003_list_tasks_returns_stable_task_ids_and_source_refs"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/data_contract_tests.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataAdapter"]
+
+[[selectors]]
+id = "ADAPT-DATA-004"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-004"
+router_case = 'ADAPT-DATA-004) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_004_snapshot_task_captures_replay_sufficient_identity"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/data_contract_tests.rs",
+    "crates/harnesslab-core/src/benchmark.rs",
+    "crates/harnesslab-adapters/src/fake_patch.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataAdapter"]
+
+[[selectors]]
+id = "ADAPT-DATA-005"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-DATA-005"
+router_case = 'ADAPT-DATA-005) package="harnesslab-adapters"; test_name="data_contract_tests::adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/data_contract_tests.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/fake_terminal.rs",
+    "crates/harnesslab-adapters/src/fake_patch.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataAdapter"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-001"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-001"
+router_case = 'ADAPT-RUNTIME-001) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-core/src/runtime.rs",
+    "crates/harnesslab-cli/src/runtime_compatibility.rs",
+    "crates/harnesslab-cli/src/runner/cleanup.rs",
+    "crates/harnesslab-cli/src/runner/external.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkRuntimeAdapter"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-002"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-002"
+router_case = 'ADAPT-RUNTIME-002) package="harnesslab-cli"; test_name="runner::external::runtime_adapter::tests::adapt_runtime_002_preflight_reports_and_enforces_current_compatibility"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-core/src/runtime.rs",
+    "crates/harnesslab-cli/src/runtime_compatibility.rs",
+    "crates/harnesslab-cli/src/runner/external.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
+]
+required_artifacts = ["events.jsonl"]
+owning_contracts = ["RuntimePreflight"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-003"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-003"
+router_case = 'ADAPT-RUNTIME-003) package="harnesslab-cli"; test_name="adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted"; test_target="test:external_runtime_snapshot_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+]
+required_artifacts = [
+    "external-runtime.private.json",
+    "external-runtime.public.json",
+]
+owning_contracts = ["RuntimeSnapshot"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-004"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-004"
+router_case = 'ADAPT-RUNTIME-004) package="harnesslab-cli"; test_name="adapt_runtime_004_cleanup_report_is_structured_and_affects_final_verdict"; test_target="test:external_runtime_snapshot_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
+]
+required_artifacts = ["cleanup-report.json"]
+owning_contracts = ["CleanupReport"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-005"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-005"
+router_case = 'ADAPT-RUNTIME-005) package="harnesslab-cli"; test_name="adapt_runtime_005_terminal_bench_event_taxonomy_is_stable"; test_target="test:terminal_bench_runtime_event_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_runtime_event_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = ["events.jsonl"]
+owning_contracts = ["RuntimeEvents"]
+
+[[selectors]]
+id = "ADAPT-RUNTIME-006"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-006"
+router_case = 'ADAPT-RUNTIME-006) package="harnesslab-cli"; test_name="adapt_runtime_006_adapter_internal_error_is_classified_and_snapshotted"; test_target="test:external_runtime_error_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/external_runtime_error_contract.rs",
+    "crates/harnesslab-cli/src/runner/external.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "result.json",
+    "external-runtime.private.json",
+    "external-runtime.public.json",
+    "internal-error.private.json",
+    "internal-error.public.json",
+]
+owning_contracts = [
+    "RuntimeAdapter",
+    "RuntimeSnapshot",
+]
+
+[[selectors]]
+id = "AGT-REG-005"
+status = "active"
+command = "scripts/test-after-change.sh --select AGT-REG-005"
+router_case = "AGT-REG-005) cargo test -p harnesslab-cli agt_reg_005 -- --nocapture; exec scripts/verify-terminal-bench-registered-setup.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "scripts/verify-terminal-bench-registered-setup.sh",
+    "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_env.rs",
+    "integrations/terminal_bench/harnesslab_tb_agent.py",
+    "integrations/terminal_bench/harnesslab_tb_agent_registry_test.py",
+]
+required_artifacts = [
+    "doctor.json",
+    "run.json",
+    "results.json",
+    "agent-runtime.materialized.json",
+    "agent_setup_command.sha256",
+    "agent_setup_stdout.log",
+    "agent_setup_stderr.log",
+]
+owning_contracts = [
+    "AgentRegistry",
+    "TerminalBenchExternalRunner",
+    "TerminalBenchBridge",
+    "RunArtifacts",
+]
+
+[[selectors]]
+id = "AGT-REG-012"
+status = "active"
+command = "scripts/test-after-change.sh --select AGT-REG-012"
+router_case = 'AGT-REG-012) run_filtered_tests "$id" "harnesslab-cli" "test:agent_registry_contract" "agt_reg_012" 2; run_filtered_tests "$id" "harnesslab-cli" "test:doctor_run_as_contract" "agt_reg_012" 4; run_filtered_tests "$id" "harnesslab-cli" "test:terminal_bench_run_as_contract" "agt_reg_012" 1; run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "agt_reg_012" 1; exit 0 ;;'
+expected_test_count = 8
+expected_pass_threshold = "8 selected tests run and pass"
+file_patterns = [
+    "crates/harnesslab-cli/src/agent_registry/materializer.rs",
+    "crates/harnesslab-cli/src/doctor_run_as.rs",
+    "crates/harnesslab-cli/src/runner/external.rs",
+    "crates/harnesslab-cli/tests/agent_registry_contract.rs",
+    "crates/harnesslab-cli/tests/doctor_run_as_contract.rs",
+    "crates/harnesslab-cli/tests/external_smoke_contract.rs",
+    "crates/harnesslab-cli/tests/terminal_bench_run_as_contract.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "RunPrecheck",
+    "Doctor",
+    "TerminalBenchExternalRunner",
+    "SweBenchProExternalRunner",
+]
+
+[[selectors]]
+id = "C-BENCH-001"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-001"
+router_case = 'C-BENCH-001) package="harnesslab-adapters"; test_name="registry::tests::c_bench_001_built_in_descriptors_include_required_benchmarks" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-adapters/src/registry.rs"]
+required_artifacts = []
+owning_contracts = ["BenchmarkAdapter"]
+
+[[selectors]]
+id = "C-BENCH-002"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-002"
+router_case = 'C-BENCH-002) package="harnesslab-adapters"; test_name="fake_terminal::tests::c_bench_002_fake_terminal_task_plan_is_serializable" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-adapters/src/fake_terminal.rs"]
+required_artifacts = []
+owning_contracts = ["TaskPlan"]
+
+[[selectors]]
+id = "C-BENCH-003"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-003"
+router_case = 'C-BENCH-003) package="harnesslab-adapters"; test_name="fake_patch::tests::c_bench_003_fake_patch_plan_has_patch_spec" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-adapters/src/fake_patch.rs"]
+required_artifacts = []
+owning_contracts = ["PatchStyleAdapter"]
+
+[[selectors]]
+id = "C-BENCH-004"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-004"
+router_case = 'C-BENCH-004) package="harnesslab-adapters"; test_name="registry::tests::c_bench_004_required_external_smoke_adapters_are_available" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "BenchmarkAdapter",
+    "TaskPlan",
+]
+
+[[selectors]]
+id = "C-BENCH-005"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-005"
+router_case = 'C-BENCH-005) package="harnesslab-cli"; test_name="bench_001_terminal_bench_info_uses_local_data_root" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "BenchmarkDescriptor",
+    "DataState",
+    "ExternalRunnerSpec",
+]
+
+[[selectors]]
+id = "C-BENCH-006"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-006"
+router_case = 'C-BENCH-006) package="harnesslab-cli"; test_name="bench_002_swe_bench_pro_info_uses_local_data_root" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "BenchmarkDescriptor",
+    "DataState",
+]
+
+[[selectors]]
+id = "C-BENCH-007"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-007"
+router_case = 'C-BENCH-007) package="harnesslab-cli"; test_name="bench_003_run_blocks_unsupported_local_full_split_before_planning" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/benchmark_data.rs",
+    "crates/harnesslab-cli/src/runner.rs",
+    "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "BenchmarkDescriptor",
+    "DataState",
+    "RunPreflight",
+]
+
+[[selectors]]
+id = "C-BENCH-008"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-008"
+router_case = 'C-BENCH-008) package="harnesslab-cli"; test_name="bench_004_run_blocks_swe_bench_pro_full_before_planning" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/benchmark_data.rs",
+    "crates/harnesslab-cli/src/runner.rs",
+    "crates/harnesslab-cli/tests/benchmark_contract.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "BenchmarkDescriptor",
+    "DataState",
+    "RunPreflight",
+]
+
+[[selectors]]
+id = "C-BENCH-009"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-009"
+router_case = 'C-BENCH-009) package="harnesslab-adapters"; test_name="terminal_bench::tests::c_bench_006_terminal_bench_maps_task_test_timeout"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-core/src/benchmark.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "ExternalRunnerSpec",
+    "VerifierSpec",
+    "TerminalBenchTaskMetadata",
+]
+
+[[selectors]]
+id = "C-BENCH-010"
+status = "active"
+command = "scripts/test-after-change.sh --select C-BENCH-010"
+router_case = 'C-BENCH-010) package="harnesslab-adapters"; test_name="terminal_bench::tests::c_bench_006_terminal_bench_ignores_timeout_text_inside_block_scalars"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-adapters/src/terminal_bench.rs"]
+required_artifacts = []
+owning_contracts = ["TerminalBenchTaskMetadata"]
+
+[[selectors]]
+id = "DOC-004"
+status = "active"
+command = "scripts/test-after-change.sh --select DOC-004"
+router_case = 'DOC-004) package="harnesslab-cli"; test_name="doc_004_doctor_reports_builtin_benchmark_readiness" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/doctor_contract.rs"]
+required_artifacts = []
+owning_contracts = [
+    "DoctorOutput",
+    "BenchmarkDescriptor",
+]
+
+[[selectors]]
+id = "INT-001"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-001"
+router_case = 'INT-001) package="harnesslab-cli"; test_name="int_001_init_empty_home_creates_config_and_profiles" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/init_contract.rs"]
+required_artifacts = ["artifacts/test-traceability.json"]
+owning_contracts = ["InitFlow"]
+
+[[selectors]]
+id = "INT-003"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-003"
+router_case = 'INT-003) package="harnesslab-cli"; test_name="int_003_fake_terminal_success_creates_report_and_results" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = [
+    "report.html",
+    "results.json",
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+]
+owning_contracts = ["RunOrchestrator"]
+
+[[selectors]]
+id = "INT-004"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-004"
+router_case = 'INT-004) package="harnesslab-cli"; test_name="int_004_fake_terminal_test_fail_exits_0_with_benchmark_verdict" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/run_output_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = ["FailureMapping"]
+
+[[selectors]]
+id = "INT-005"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-005"
+router_case = 'INT-005) package="harnesslab-cli"; test_name="int_005_fake_terminal_timeout_exits_1" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = ["results.json"]
+owning_contracts = ["AgentRunner"]
+
+[[selectors]]
+id = "INT-006"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-006"
+router_case = 'INT-006) package="harnesslab-cli"; test_name="int_006_fake_patch_success_saves_diff" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = [
+    "patch.diff",
+    "prediction.jsonl",
+]
+owning_contracts = ["PatchStyleAdapter"]
+
+[[selectors]]
+id = "INT-009"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-009"
+router_case = 'INT-009) package="harnesslab-cli"; test_name="int_009_replay_success_creates_new_run" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/cli_contract.rs"]
+required_artifacts = [
+    "report.html",
+    "results.json",
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+]
+owning_contracts = ["Replay"]
+
+[[selectors]]
+id = "INT-011"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-011"
+router_case = 'INT-011) run_filtered_tests "$id" "harnesslab-cli" "test:external_smoke_contract" "int_011_swe_bench_pro" 10; exit 0 ;;'
+expected_test_count = 10
+expected_pass_threshold = "10 selected tests run and pass"
+file_patterns = [
+    "crates/harnesslab-cli/tests/external_smoke_contract.rs",
+    "tests/artifact_contracts/int_011_swe_bench_pro_runtime_artifacts.txt",
+]
+required_artifacts = [
+    "run.json",
+    "command.txt",
+    "results.json",
+    "events.jsonl",
+    "report.html",
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+    "agent-runtime.materialized.json",
+    "benchmark.snapshot.json",
+    "tasks/<task-id>/attempts/1/result.json",
+    "tasks/<task-id>/attempts/1/external-runtime.private.json",
+    "tasks/<task-id>/attempts/1/external-runtime.public.json",
+    "tasks/<task-id>/attempts/1/agent/stdout.log",
+    "tasks/<task-id>/attempts/1/agent/stderr.log",
+    "tasks/<task-id>/attempts/1/verifier/stdout.log",
+    "tasks/<task-id>/attempts/1/verifier/stderr.log",
+    "tasks/<task-id>/attempts/1/git-diff.status.json",
+    "tasks/<task-id>/attempts/1/git-diff.stderr.log",
+    "tasks/<task-id>/attempts/1/patch.diff",
+    "tasks/<task-id>/attempts/1/prediction.jsonl",
+    "tasks/<task-id>/attempts/1/prediction.eval.json",
+    "tasks/<task-id>/attempts/1/swe-bench-pro/eval/eval_results.json",
+]
+owning_contracts = [
+    "BenchmarkAdapter",
+    "RunOrchestrator",
+]
+
+[[selectors]]
+id = "INT-012"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-012"
+router_case = 'INT-012) package="harnesslab-cli"; test_name="int_012_replay_text_output_succeeds" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = [
+    "report.html",
+    "results.json",
+]
+owning_contracts = ["Replay"]
+
+[[selectors]]
+id = "INT-013"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-013"
+router_case = 'INT-013) package="harnesslab-cli"; test_name="int_013_replay_blocks_when_benchmark_snapshot_is_missing" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/replay.rs",
+    "crates/harnesslab-cli/tests/replay_contract.rs",
+]
+required_artifacts = [
+    "stderr",
+    "runs-dir-count",
+]
+owning_contracts = [
+    "Replay",
+    "SnapshotAuthority",
+]
+
+[[selectors]]
+id = "INT-014"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-014"
+router_case = 'INT-014) package="harnesslab-cli"; test_name="int_014_resume_rejects_invalid_profile_snapshot" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = [
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+]
+owning_contracts = [
+    "Resume",
+    "AgentProfile",
+]
+
+[[selectors]]
+id = "INT-015"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-015"
+router_case = 'INT-015) package="harnesslab-cli"; test_name="int_008_resume_failed_run_recovers_once_and_reports_latest_attempt" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner.rs",
+    "crates/harnesslab-cli/src/runner/schedule.rs",
+    "crates/harnesslab-cli/tests/resume_contract.rs",
+    "crates/harnesslab-report/src/lib.rs",
+]
+required_artifacts = [
+    "results.json",
+    "report.html",
+    "events.jsonl",
+]
+owning_contracts = [
+    "Resume",
+    "RunOrchestrator",
+    "ReportHtml",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-016"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-016"
+router_case = 'INT-016) package="harnesslab-cli"; test_name="int_016_resume_interrupted_attempt_schedules_recovery_attempt" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner.rs",
+    "crates/harnesslab-cli/src/runner/schedule.rs",
+    "crates/harnesslab-cli/tests/resume_contract.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+]
+owning_contracts = [
+    "Resume",
+    "RunOrchestrator",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-017"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-017"
+router_case = 'INT-017) package="harnesslab-cli"; test_name="int_017_replay_redacts_public_artifacts_without_current_env" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = [
+    "report.html",
+    "command.txt",
+    "events.jsonl",
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+]
+owning_contracts = [
+    "Replay",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-018"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-018"
+router_case = 'INT-018) package="harnesslab-cli"; test_name="int_018_replay_rejects_redacted_legacy_profile_without_runtime_snapshot" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["agent-profile.snapshot.json"]
+owning_contracts = [
+    "Replay",
+    "AgentProfile",
+]
+
+[[selectors]]
+id = "INT-019"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-019"
+router_case = 'INT-019) package="harnesslab-cli"; test_name="int_019_resume_report_marks_missing_original_command" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/replay_contract.rs"]
+required_artifacts = ["report.html"]
+owning_contracts = [
+    "Resume",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-020"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-020"
+router_case = 'INT-020) package="harnesslab-cli"; test_name="int_020_resume_redacts_public_artifacts_without_current_env" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/resume_contract.rs"]
+required_artifacts = [
+    "report.html",
+    "command.txt",
+    "events.jsonl",
+    "agent-profile.runtime.json",
+    "agent-profile.snapshot.json",
+]
+owning_contracts = [
+    "Resume",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-021"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-021"
+router_case = 'INT-021) package="harnesslab-cli"; test_name="int_021_terminal_bench_silent_official_runner_is_no_progress" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "RunMonitor",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-022"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-022"
+router_case = 'INT-022) package="harnesslab-cli"; test_name="int_022_terminal_bench_official_agent_timeout_is_benchmark_verdict" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "run-health.json",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "RunMonitor",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-023"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-023"
+router_case = 'INT-023) package="harnesslab-cli"; test_name="int_023_terminal_bench_repeated_official_agent_timeouts_do_not_abort_run" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "RunMonitor",
+]
+
+[[selectors]]
+id = "INT-024"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-024"
+router_case = 'INT-024) package="harnesslab-cli"; test_name="int_024_terminal_bench_success_with_agent_timeout_gets_warning" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "EventLog",
+    "Report",
+]
+
+[[selectors]]
+id = "INT-025"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-025"
+router_case = 'INT-025) package="harnesslab-cli"; test_name="int_025_terminal_bench_default_no_output_watchdog_is_enabled" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "events.jsonl",
+    "results.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+]
+
+[[selectors]]
+id = "INT-026"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-026"
+router_case = 'INT-026) package="harnesslab-cli"; test_name="int_026_terminal_bench_no_progress_overrides_official_result" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-027"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-027"
+router_case = 'INT-027) package="harnesslab-cli"; test_name="int_027_terminal_bench_repeated_no_progress_aborts_run" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-028"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-028"
+router_case = 'INT-028) package="harnesslab-cli"; test_name="int_028_terminal_bench_hard_timeout_overrides_official_result" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-029"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-029"
+router_case = "INT-029) exec scripts/verify-terminal-bench-docker-activity-watchdog.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "scripts/verify-terminal-bench-docker-activity-watchdog.sh",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-infra/src/process.rs",
+    "crates/harnesslab-infra/src/process_no_output.rs",
+    "crates/harnesslab-infra/src/process_activity.rs",
+    "crates/harnesslab-infra/src/process_progress.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-031"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-031"
+router_case = 'INT-031) package="harnesslab-cli"; test_name="int_031_terminal_bench_progress_deferral_still_hard_times_out" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/tests/terminal_bench_watchdog_contract.rs"]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-032"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-032"
+router_case = 'INT-032) package="harnesslab-cli"; test_name="int_032_resume_rejects_malformed_event_log_before_reuse" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/app.rs",
+    "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+    "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = ["events.jsonl"]
+owning_contracts = [
+    "EventLog",
+    "Resume",
+]
+
+[[selectors]]
+id = "INT-033"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-033"
+router_case = 'INT-033) package="harnesslab-cli"; test_name="int_033_replay_rejects_malformed_source_event_log" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/app.rs",
+    "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+    "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = ["events.jsonl"]
+owning_contracts = [
+    "EventLog",
+    "Replay",
+]
+
+[[selectors]]
+id = "INT-034"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-034"
+router_case = 'INT-034) package="harnesslab-cli"; test_name="int_034_report_open_rejects_malformed_event_log" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/app.rs",
+    "crates/harnesslab-cli/tests/event_log_integrity_contract.rs",
+    "crates/harnesslab-infra/src/event.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = [
+    "EventLog",
+    "ReportHtml",
+]
+
+[[selectors]]
+id = "INT-035"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-035"
+router_case = 'INT-035) package="harnesslab-cli"; test_name="int_035_terminal_bench_stale_docker_activity_becomes_no_progress" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_activity_grace_contract.rs",
+    "crates/harnesslab-infra/src/process.rs",
+    "crates/harnesslab-infra/src/process_no_output.rs",
+    "crates/harnesslab-infra/src/process_activity.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-036"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-036"
+router_case = "INT-036) exec scripts/verify-terminal-bench-docker-activity-grace-expiry.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "scripts/verify-terminal-bench-docker-activity-grace-expiry.sh",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-infra/src/process.rs",
+    "crates/harnesslab-infra/src/process_no_output.rs",
+    "crates/harnesslab-infra/src/process_activity.rs",
+    "crates/harnesslab-infra/src/process_progress.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-037"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-037"
+router_case = "INT-037) exec scripts/verify-terminal-bench-import-success-cleanup.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "integrations/terminal_bench/harnesslab_tb_agent.py",
+    "integrations/terminal_bench/harnesslab_tb_process.py",
+    "scripts/verify-terminal-bench-import-success-cleanup.sh",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "agent_cleanup.log",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "INT-038"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-038"
+router_case = "INT-038) exec scripts/verify-terminal-bench-import-timeout-cleanup.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "integrations/terminal_bench/harnesslab_tb_agent.py",
+    "integrations/terminal_bench/harnesslab_tb_process.py",
+    "scripts/verify-terminal-bench-import-timeout-cleanup.sh",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "agent_error.log",
+    "agent_cleanup.log",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "INT-039"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-039"
+router_case = 'INT-039) package="harnesslab-cli"; test_name="int_039_terminal_bench_stale_early_run_log_becomes_no_progress" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_failure_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-infra/src/process.rs",
+    "crates/harnesslab-infra/src/process_no_output.rs",
+    "crates/harnesslab-infra/src/process_progress.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "HostProcessExecutor",
+    "RunMonitor",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-040"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-040"
+router_case = 'INT-040) package="harnesslab-cli"; test_name="int_040_terminal_bench_post_task_cleanup_failure_is_execution_failure" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "INT-041"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-041"
+router_case = 'INT-041) package="harnesslab-cli"; test_name="int_041_cleanup_failure_does_not_mask_no_progress_health" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+    "crates/harnesslab-cli/src/runner/monitor.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+    "RunMonitor",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "INT-042"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-042"
+router_case = 'INT-042) package="harnesslab-cli"; test_name="int_042_cleanup_failure_overrides_benchmark_failure_with_warning" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "INT-043"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-043"
+router_case = 'INT-043) package="harnesslab-cli"; test_name="int_043_cleanup_failure_does_not_mask_runner_timeout_health" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_cleanup_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_cleanup.rs",
+    "crates/harnesslab-cli/src/runner/monitor.rs",
+]
+required_artifacts = [
+    "results.json",
+    "events.jsonl",
+    "run-health.json",
+    "report.html",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+    "RunMonitor",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "INT-044"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-044"
+router_case = 'INT-044) package="harnesslab-cli"; test_name="int_044_terminal_bench_runtime_exports_amd64_platform_by_default"; test_target="test:terminal_bench_runtime_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_runtime_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "results.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "BenchmarkRuntimeAdapter",
+    "EventLog",
+]
+
+[[selectors]]
+id = "INT-045"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-045"
+router_case = 'INT-045) package="harnesslab-cli"; test_name="int_011_terminal_bench_run_timeout_override_does_not_inflate_test_timeout"; test_target="test:terminal_bench_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+]
+required_artifacts = [
+    "results.json",
+    "run.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "TimeoutPolicy",
+]
+
+[[selectors]]
+id = "INT-046"
+status = "active"
+command = "scripts/test-after-change.sh --select INT-046"
+router_case = 'INT-046) package="harnesslab-cli"; test_name="int_046_terminal_bench_bridge_setup_failure_drops_stale_benchmark_warning"; test_target="test:terminal_bench_setup_failure_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/terminal_bench_setup_failure_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/log_scan.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+]
+required_artifacts = [
+    "results.json",
+    "report.html",
+    "agent_setup_error.log",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+    "ReportHtml",
+]
+
+[[selectors]]
+id = "PY-TB-001"
+status = "active"
+command = "scripts/test-after-change.sh --select PY-TB-001"
+router_case = "PY-TB-001) exec scripts/verify-terminal-bench-python-adapter.sh ;;"
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "integrations/terminal_bench/harnesslab_tb_agent.py",
+    "integrations/terminal_bench/harnesslab_tb_agent_extract_test.py",
+    "integrations/terminal_bench/harnesslab_tb_agent_test.py",
+    "integrations/terminal_bench/harnesslab_tb_process.py",
+    "integrations/terminal_bench/harnesslab_tb_process_test.py",
+    "integrations/terminal_bench/harnesslab_tb_ps.py",
+    "scripts/verify-terminal-bench-python-adapter.sh",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "AgentRunner",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "SEC-001"
+status = "active"
+command = "scripts/test-after-change.sh --select SEC-001"
+router_case = 'CFG-003|SEC-001) package="harnesslab-core"; test_name="redaction::tests::cfg_003_redacts_secret_values_without_removing_names" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-core/src/redaction.rs"]
+required_artifacts = []
+owning_contracts = ["Redaction"]
+
+[[selectors]]
+id = "SWEPRO-001"
+status = "active"
+command = "scripts/test-after-change.sh --select SWEPRO-001"
+router_case = 'SWEPRO-001) package="harnesslab-cli"; test_name="swepro_001_metadata_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "results.json",
+]
+owning_contracts = ["SweBenchProRuntimeAdapter"]
+
+[[selectors]]
+id = "SWEPRO-002"
+status = "active"
+command = "scripts/test-after-change.sh --select SWEPRO-002"
+router_case = 'SWEPRO-002) package="harnesslab-cli"; test_name="swepro_002_workspace_failure_is_classified_and_observable"; test_target="test:swe_runtime_phase_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "results.json",
+]
+owning_contracts = ["SweBenchProRuntimeAdapter"]
+
+[[selectors]]
+id = "SWEPRO-003"
+status = "active"
+command = "scripts/test-after-change.sh --select SWEPRO-003"
+router_case = 'SWEPRO-003) package="harnesslab-cli"; test_name="swepro_003_diff_capture_failure_and_empty_patch_are_distinct"; test_target="test:swe_runtime_phase_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+]
+required_artifacts = [
+    "results.json",
+    "git-diff.status.json",
+]
+owning_contracts = ["SweBenchProRuntimeAdapter"]
+
+[[selectors]]
+id = "SWEPRO-004"
+status = "active"
+command = "scripts/test-after-change.sh --select SWEPRO-004"
+router_case = 'SWEPRO-004) package="harnesslab-cli"; test_name="swepro_004_evaluator_parse_corruption_is_not_patch_failure"; test_target="test:swe_runtime_phase_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "verifier/stderr.log",
+]
+owning_contracts = ["SweBenchProRuntimeAdapter"]
+
+[[selectors]]
+id = "SWEPRO-005"
+status = "active"
+command = "scripts/test-after-change.sh --select SWEPRO-005"
+router_case = 'SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/replay.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+    "crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs",
+]
+required_artifacts = [
+    "benchmark.snapshot.json",
+    "tasks/<task-id>/task-runtime.snapshot.json",
+    "external-runtime.private.json",
+    "external-runtime.public.json",
+]
+owning_contracts = [
+    "Replay",
+    "SweBenchProRuntimeAdapter",
+]
+
+[[selectors]]
+id = "TB-001"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-001"
+router_case = 'TB-001) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_failed_adapter_cleanup_overrides_success_score"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "TB-002"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-002"
+router_case = 'TB-002) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_error_is_execution_failure"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "TB-003"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-003"
+router_case = 'TB-003) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_live_child_cleanup_log_is_execution_failure"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ProcessCleanup",
+]
+
+[[selectors]]
+id = "TB-004"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-004"
+router_case = 'TB-004) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_hard_timeout_maps_to_external_runner_timeout"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+    "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "TB-005"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-005"
+router_case = 'TB-005) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_result_maps_parse_error_to_agent_output_parse_error"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+    "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "TB-006"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-006"
+router_case = 'TB-006) package="harnesslab-cli"; test_name="runner::external::tests::terminal_bench_no_output_timeout_defaults_to_setup_watchdog"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_timeout.rs",
+    "crates/harnesslab-cli/src/runner/external_tests.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "ExternalMonitorPolicy",
+]
+
+[[selectors]]
+id = "TB-007"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-007"
+router_case = 'TB-007) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::detects_terminal_bench_compose_setup_failure"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/log_scan.rs",
+    "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+]
+
+[[selectors]]
+id = "TB-008"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-008"
+router_case = 'TB-008) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prepares_qemu_dataset_without_mutating_source"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs"]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "BenchmarkRuntimeAdapter",
+]
+
+[[selectors]]
+id = "TB-009"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-009"
+router_case = 'TB-009) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prepares_forced_amd64_qemu_dataset"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs"]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "BenchmarkRuntimeAdapter",
+]
+
+[[selectors]]
+id = "TB-010"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-010"
+router_case = 'TB-010) package="harnesslab-cli"; test_name="runner::external::terminal_bench_runtime::tests::terminal_bench_runtime_prep_failure_is_structured_task_result"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/external/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_result.rs",
+    "crates/harnesslab-core/src/model.rs",
+]
+required_artifacts = [
+    "events.jsonl",
+    "result.json",
+]
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+    "TaskAttemptResult",
+]
+
+[[selectors]]
+id = "TB-011"
+status = "active"
+command = "scripts/test-after-change.sh --select TB-011"
+router_case = 'TB-011) package="harnesslab-cli"; test_name="runner::external::log_scan::tests::ignores_verifier_logs_with_docker_error_text"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = ["crates/harnesslab-cli/src/runner/external/log_scan.rs"]
+required_artifacts = []
+owning_contracts = [
+    "TerminalBenchExternalRunner",
+    "FailureMapping",
+]
