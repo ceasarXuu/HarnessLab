@@ -25,9 +25,8 @@ pub(super) fn replay_plan_from_source(source: &Path, spec: &RunSpec) -> Result<B
         return read_json(&snapshot);
     }
     bail!(
-        "replay blocker: benchmark.snapshot.json missing for {}/{}; cannot safely replay without authoritative benchmark snapshot",
-        spec.benchmark.name,
-        spec.benchmark.split
+        "replay blocker: benchmark.snapshot.json missing for run {}; cannot safely replay without authoritative benchmark snapshot",
+        spec.run_id,
     )
 }
 
@@ -48,9 +47,8 @@ pub(super) fn validate_replay_task_runtime_snapshots(
     }
     if plan.task_runtime_snapshots.is_empty() {
         bail!(
-            "replay blocker: task_runtime_snapshots missing for external benchmark {}/{}; cannot safely replay without task runtime authority",
-            plan.benchmark.name,
-            plan.split
+            "replay blocker: task_runtime_snapshots missing for prepared benchmark {}; cannot safely replay without task runtime authority",
+            plan.prepared_benchmark_ref,
         );
     }
     for task in &plan.tasks {
@@ -176,6 +174,21 @@ fn validate_external_runtime_snapshot_pair(
         )
     })?;
     let attempt = attempt_number(attempt_dir)?;
+    let snapshot_has_protocol_authority = private.get("protocol_authority").is_some()
+        || public.get("protocol_authority").is_some();
+    let task_has_protocol_authority = task.runtime_binding.is_some();
+    if snapshot_has_protocol_authority && !task_has_protocol_authority {
+        bail!(
+            "replay blocker: protocol_authority_inconsistent for task {}; snapshot contains protocol authority but task plan does not; cannot safely replay with mixed old/new authority",
+            task.task_id
+        );
+    }
+    if !snapshot_has_protocol_authority && task_has_protocol_authority {
+        bail!(
+            "replay blocker: protocol_authority_incomplete for task {}; task plan requires protocol authority but snapshot does not contain it; cannot safely replay with mixed old/new authority",
+            task.task_id
+        );
+    }
     let runtime_kind = super::external::runtime_runner_kind_for_task(task)?;
     let runner_kind = serde_json::to_value(runtime_kind)?;
     let dataset_ref = super::external::runtime_dataset_ref(task)?;
@@ -250,7 +263,14 @@ fn external_runtime_snapshot_mismatch_field(
     if private["visibility"] != "private" || public["visibility"] != "public" {
         return Some("visibility");
     }
-    if private["benchmark"] != plan.benchmark.name || public["benchmark"] != plan.benchmark.name {
+    let expected_benchmark_id = task
+        .runtime_binding
+        .as_ref()
+        .map(|binding| binding.authority.benchmark_id.as_str())
+        .unwrap_or(plan.benchmark.name.as_str());
+    if private["benchmark"].as_str() != Some(expected_benchmark_id)
+        || public["benchmark"].as_str() != Some(expected_benchmark_id)
+    {
         return Some("benchmark");
     }
     if private["task_id"] != task.task_id || public["task_id"] != task.task_id {

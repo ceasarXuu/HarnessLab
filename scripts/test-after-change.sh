@@ -222,7 +222,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-PROTOCOL-003) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_003_data_lifecycle_contract_foundation_is_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-004) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-005) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated"; test_target="lib" ;;
-    ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;
+    ADAPT-PROTOCOL-006) run_filtered_tests "$id" "harnesslab-cli" "test:replay_authority_contract" "adapt_protocol_006_" 2 ;;
     ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;
     ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;
     ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;
