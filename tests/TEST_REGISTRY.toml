@@ -3499,12 +3499,20 @@ contracts = ["ReplayAuthority"]
 [[tests]]
 id = "ADAPT-PROTOCOL-007"
 title = "Protocol generic doctor readiness and report metadata conformance"
-layer = "integration"
-owner_module = "xtask"
+layer = "unit"
+owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-007"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-cli/src/runtime_compatibility.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
+  "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+  "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+  "crates/harnesslab-cli/src/doctor_run_as.rs",
+  "crates/harnesslab-cli/src/runner.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"

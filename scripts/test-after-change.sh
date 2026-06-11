@@ -222,8 +222,8 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-PROTOCOL-003) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_003_data_lifecycle_contract_foundation_is_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-004) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-005) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated"; test_target="lib" ;;
-    ADAPT-PROTOCOL-006) run_filtered_tests "$id" "harnesslab-cli" "test:replay_authority_contract" "adapt_protocol_006_" 2 ;;
-    ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;
+    ADAPT-PROTOCOL-006) run_filtered_tests "$id" "harnesslab-cli" "test:replay_authority_contract" "adapt_protocol_006_" 2; exit 0 ;;
+    ADAPT-PROTOCOL-007) run_filtered_tests "$id" "harnesslab-cli" "lib" "adapt_protocol_007_" 2; exit 0 ;;
     ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;
     ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;
     ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;
@@ -239,7 +239,7 @@ if [[ "${1:-}" == "--select" ]]; then
       exit 2
       ;;
   esac
-  if [[ -z "$test_target" && "$test_name" != *::* ]]; then
+  if [[ -n "${test_name:-}" && -z "$test_target" && "$test_name" != *::* ]]; then
     crate_tests_dir="crates/$package/tests"
     if [[ -d "$crate_tests_dir" ]]; then
       matched_test_files=()
