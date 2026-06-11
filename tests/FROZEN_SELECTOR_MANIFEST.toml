@@ -288,11 +288,20 @@ owning_contracts = ["ReplayAuthority"]
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-007"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-007"
-router_case = 'ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;'
-expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
+router_case = 'ADAPT-PROTOCOL-007) run_filtered_tests "$id" "harnesslab-cli" "lib" "adapt_protocol_007_" 2 ;;'
+expected_test_count = 2
+expected_pass_threshold = "selected tests run exactly once and both pass"
+file_patterns = [
+    "crates/harnesslab-cli/src/runtime_compatibility.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs",
+    "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
+    "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
+    "crates/harnesslab-cli/src/doctor_run_as.rs",
+    "crates/harnesslab-cli/src/runner.rs",
+]
 required_artifacts = []
 owning_contracts = [
     "ReadinessProbe",
