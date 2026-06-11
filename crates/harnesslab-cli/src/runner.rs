@@ -26,10 +26,10 @@ use attempts::{TaskExecutionContext, execute_attempts};
 use cleanup::RunSandboxCleanup;
 use harnesslab_adapters::adapter_for_with_root;
 use harnesslab_core::{
-    AttemptProvenance, BenchmarkRef, FailureClass, FailureCode, Outcome, RunPaths, RunSpec,
-    TaskAttemptResult, TaskPlan, TaskState, classify_agent_process, classify_evaluation_process,
-    derive_exit_code, health_impact_for_failure, summarize_results, task_dir_name,
-    validate_benchmark_plan, validate_global_config, validate_run_spec,
+    AgentProfile, AttemptProvenance, BenchmarkRef, FailureClass, FailureCode, Outcome, RunPaths,
+    RunSpec, TaskAttemptResult, TaskPlan, TaskState, classify_agent_process,
+    classify_evaluation_process, derive_exit_code, health_impact_for_failure, summarize_results,
+    task_dir_name, validate_benchmark_plan, validate_global_config, validate_run_spec,
 };
 use harnesslab_infra::{
     append_event, atomic_write_json, collect_artifacts, command_exists, event, first_command_word,
@@ -53,7 +53,6 @@ use verifier::run_verifier;
 #[cfg(test)]
 use {
     attempts::panic_message,
-    harnesslab_core::AgentProfile,
     sandbox::{docker_create_request, render_command, task_requires_docker},
     schedule::{attempt_result_path, planned_attempts},
 };
@@ -249,6 +248,15 @@ pub(crate) fn replay_run(home: &Path, source: &Path, json: bool) -> Result<i32> 
     )?;
     run_output::emit_run_output(json, code, run_id, &run_dir, spec.replay_source_run_id)?;
     Ok(code)
+}
+
+pub(crate) fn adapter_compatibility_profiles(
+    profile: &AgentProfile,
+) -> Vec<crate::runtime_compatibility::AdapterCompatibilityProfile> {
+    external::runtime_adapter::runtime_adapters()
+        .iter()
+        .map(|adapter| adapter.compatibility_profile(profile))
+        .collect()
 }
 
 fn execute_plan(

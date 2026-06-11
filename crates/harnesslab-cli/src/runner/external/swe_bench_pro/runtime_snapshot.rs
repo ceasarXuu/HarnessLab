@@ -338,7 +338,7 @@ fn setup_failure_public_artifacts(phase: SweSetupFailurePhase) -> Vec<String> {
 }
 
 fn agent_execution_command(ctx: &ExternalTaskExecution<'_>, instance: &SweInstance) -> String {
-    if BenchmarkRuntimeCompatibility::from_profile(ctx.profile).swe_bench_pro_uses_gold_agent() {
+    if BenchmarkRuntimeCompatibility::from_profile(ctx.profile).swe_bench_pro_agent.as_deref() == Some("gold") {
         "git apply -".to_string()
     } else {
         format!(

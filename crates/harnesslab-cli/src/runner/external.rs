@@ -20,7 +20,7 @@ use std::fs;
 use std::path::Path;
 
 mod log_scan;
-mod runtime_adapter;
+pub(super) mod runtime_adapter;
 mod runtime_anchor;
 mod runtime_authority;
 mod runtime_snapshot;
