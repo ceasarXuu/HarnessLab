@@ -567,7 +567,7 @@ id = "ADAPT-PROTOCOL-006"
 title = "Adapter protocol replay authority fixtures fail closed on drift and mixed authority"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["integration"]
 required_runtime_proof = true
 [requirements.source]

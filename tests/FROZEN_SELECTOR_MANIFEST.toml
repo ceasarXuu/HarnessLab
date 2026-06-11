@@ -273,11 +273,16 @@ owning_contracts = [
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-006"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-006"
-router_case = 'ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;'
-expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
+router_case = 'ADAPT-PROTOCOL-006) run_filtered_tests "$id" "harnesslab-cli" "test:replay_authority_contract" "adapt_protocol_006_" 2 ;;'
+expected_test_count = 2
+expected_pass_threshold = "selected tests run exactly once and both pass"
+file_patterns = [
+    "crates/harnesslab-cli/src/runner/replay.rs",
+    "crates/harnesslab-cli/tests/replay_authority_contract.rs",
+    "crates/harnesslab-cli/tests/support/terminal_bench.rs",
+]
 required_artifacts = []
 owning_contracts = ["ReplayAuthority"]
 

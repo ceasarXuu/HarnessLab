@@ -3479,11 +3479,15 @@ contracts = ["ArtifactDeclaration", "Redaction"]
 id = "ADAPT-PROTOCOL-006"
 title = "Protocol replay authority old-new-mixed fixture conformance"
 layer = "integration"
-owner_module = "xtask"
+owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-006"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-cli/src/runner/replay.rs",
+  "crates/harnesslab-cli/tests/replay_authority_contract.rs",
+  "crates/harnesslab-cli/tests/support/terminal_bench.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
