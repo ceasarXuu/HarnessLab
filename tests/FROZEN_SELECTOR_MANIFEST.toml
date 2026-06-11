@@ -325,11 +325,19 @@ owning_contracts = ["NoBranchGuard"]
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-009"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-009"
-router_case = 'ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;'
-expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
+router_case = 'ADAPT-PROTOCOL-009) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_009_" 1; exit 0 ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/scaffold_golden_adapter.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "xtask/src/scaffold.rs",
+    "xtask/src/main.rs",
+]
 required_artifacts = []
 owning_contracts = [
     "AdapterScaffold",
