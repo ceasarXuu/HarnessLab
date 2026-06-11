@@ -158,6 +158,7 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
                 "host.agent_execution",
                 "run_as.readiness",
             ],
+            AdapterStability::Stable,
         ),
         binding(
             "swe-bench-pro",
@@ -176,6 +177,7 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
                 "patch.evaluator",
                 "host.agent_execution",
             ],
+            AdapterStability::ConditionalStableBlocked,
         ),
         binding(
             "deterministic-sample",
@@ -192,6 +194,7 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
                 "replay.authority",
                 "report.metadata",
             ],
+            AdapterStability::Experimental,
         ),
     ])
     .expect("built-in adapter protocol registry must be valid")
@@ -204,6 +207,7 @@ fn binding(
     mode: &str,
     legacy_runner_kind: Option<ExternalRunnerKind>,
     capabilities: &[&str],
+    stability: AdapterStability,
 ) -> AdapterBindingDescriptor {
     AdapterBindingDescriptor {
         benchmark_id: BenchmarkId::new(benchmark_id).expect("valid built-in benchmark id"),
@@ -215,10 +219,17 @@ fn binding(
             .iter()
             .map(|capability| CapabilityId::new(*capability).expect("valid capability id"))
             .collect(),
-        stability: AdapterStability::Experimental,
+        stability,
         legacy_runner_kind,
         enabled: true,
     }
+}
+
+fn stable_promotion_evidence_exists(adapter_id: &AdapterId) -> bool {
+    matches!(
+        adapter_id.as_str(),
+        "harnesslab.terminal-bench.runtime"
+    )
 }
 
 fn validate_bindings(bindings: &[AdapterBindingDescriptor]) -> Result<(), String> {
@@ -245,7 +256,9 @@ fn validate_bindings(bindings: &[AdapterBindingDescriptor]) -> Result<(), String
                 binding.protocol_version, binding.adapter_id
             ));
         }
-        if binding.stability == AdapterStability::Stable {
+        if binding.stability == AdapterStability::Stable
+            && !stable_promotion_evidence_exists(&binding.adapter_id)
+        {
             return Err(format!(
                 "stable_promotion_evidence_missing: adapter {} cannot be registered stable without evidence",
                 binding.adapter_id
@@ -437,6 +450,7 @@ mod tests {
 
         let mut stable_without_evidence = registry.bindings().to_vec();
         stable_without_evidence[0].stability = AdapterStability::Stable;
+        stable_without_evidence[0].adapter_id = AdapterId::new("harnesslab.unknown.runtime").unwrap();
         let error = AdapterRegistry::new(stable_without_evidence).unwrap_err();
         assert!(error.contains("stable_promotion_evidence_missing"));
 

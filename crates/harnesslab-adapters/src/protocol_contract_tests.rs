@@ -324,3 +324,113 @@ fn adapt_protocol_009_scaffold_golden_adapter_compiles_and_passes_conformance() 
     let error = validate_artifact_contracts(&missing_artifact).unwrap_err();
     assert!(error.contains("artifact_contract_missing"));
 }
+
+#[test]
+fn adapt_protocol_010_existing_adapters_have_protocol_descriptors_and_legacy_bindings() {
+    let registry = crate::built_in_protocol_registry();
+    let bindings = registry.bindings();
+    assert!(
+        bindings.len() >= 2,
+        "registry must contain at least Terminal-Bench and SWE-bench Pro bindings"
+    );
+
+    let tb = TerminalBenchAdapter::new();
+    let tb_descriptor = tb
+        .protocol_descriptor()
+        .expect("Terminal-Bench must expose a protocol descriptor after migration");
+    validate_data_lifecycle_contracts(&[tb_descriptor.clone()]).unwrap();
+    validate_runtime_lifecycle_contracts(&[tb_descriptor.clone()]).unwrap();
+    validate_artifact_contracts(&[tb_descriptor.clone()]).unwrap();
+    assert!(
+        tb_descriptor.binding.legacy_runner_kind.is_some(),
+        "Terminal-Bench binding must preserve legacy runner kind"
+    );
+
+    let swe = SweBenchProAdapter::new();
+    let swe_descriptor = swe
+        .protocol_descriptor()
+        .expect("SWE-bench Pro must expose a protocol descriptor after migration");
+    validate_data_lifecycle_contracts(&[swe_descriptor.clone()]).unwrap();
+    validate_runtime_lifecycle_contracts(&[swe_descriptor.clone()]).unwrap();
+    validate_artifact_contracts(&[swe_descriptor.clone()]).unwrap();
+    assert!(
+        swe_descriptor.binding.legacy_runner_kind.is_some(),
+        "SWE-bench Pro binding must preserve legacy runner kind"
+    );
+
+    let legacy_count = bindings
+        .iter()
+        .filter(|b| b.legacy_runner_kind.is_some())
+        .count();
+    assert_eq!(legacy_count, 2, "exactly two built-in bindings must have legacy runner kinds");
+}
+
+#[test]
+fn adapt_protocol_011_third_adapter_horizontal_extension_requires_no_legacy_kind() {
+    let registry = crate::built_in_protocol_registry();
+    let bindings = registry.bindings();
+    assert!(
+        bindings.len() >= 3,
+        "registry must contain at least three bindings for horizontal extension proof"
+    );
+
+    let third = bindings
+        .iter()
+        .find(|b| b.benchmark_id.as_str() == "deterministic-sample")
+        .expect("deterministic-sample binding must exist");
+    assert!(
+        third.legacy_runner_kind.is_none(),
+        "third adapter must not require legacy runner kind"
+    );
+    assert_eq!(
+        third.stability,
+        harnesslab_core::AdapterStability::Experimental,
+        "third adapter must be experimental until it proves stable promotion"
+    );
+
+    let adapter = DeterministicSampleAdapter;
+    let descriptor = adapter
+        .protocol_descriptor()
+        .expect("third adapter must expose a protocol descriptor");
+    validate_data_lifecycle_contracts(&[descriptor.clone()]).unwrap();
+    validate_runtime_lifecycle_contracts(&[descriptor.clone()]).unwrap();
+    validate_artifact_contracts(&[descriptor.clone()]).unwrap();
+}
+
+#[test]
+fn adapt_protocol_012_stable_promotion_evidence_matches_binding_stability() {
+    use harnesslab_core::AdapterStability;
+
+    let registry = crate::built_in_protocol_registry();
+    let bindings = registry.bindings();
+
+    let tb = bindings
+        .iter()
+        .find(|b| b.benchmark_id.as_str() == "terminal-bench")
+        .expect("terminal-bench binding must exist");
+    assert_eq!(
+        tb.stability,
+        AdapterStability::Stable,
+        "Terminal-Bench is stable"
+    );
+
+    let swe = bindings
+        .iter()
+        .find(|b| b.benchmark_id.as_str() == "swe-bench-pro")
+        .expect("swe-bench-pro binding must exist");
+    assert_eq!(
+        swe.stability,
+        AdapterStability::ConditionalStableBlocked,
+        "SWE-bench Pro is conditional-stable-blocked due to Docker-gated official proof"
+    );
+
+    let sample = bindings
+        .iter()
+        .find(|b| b.benchmark_id.as_str() == "deterministic-sample")
+        .expect("deterministic-sample binding must exist");
+    assert_eq!(
+        sample.stability,
+        AdapterStability::Experimental,
+        "deterministic-sample is experimental"
+    );
+}
