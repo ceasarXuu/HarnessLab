@@ -12,6 +12,8 @@ const REQUIRED_EXECUTION_FILE_PATHS: &[&str] = &[
     "scripts/verify-terminal-bench-docker-activity-grace-expiry.sh",
     "scripts/verify-terminal-bench-import-success-cleanup.sh",
     "scripts/verify-terminal-bench-import-timeout-cleanup.sh",
+    "scripts/verify-planned-adapter-selectors.sh",
+    "xtask/src/no_branch_guard.rs",
 ];
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

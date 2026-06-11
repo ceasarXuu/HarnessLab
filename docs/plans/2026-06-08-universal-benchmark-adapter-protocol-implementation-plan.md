@@ -843,8 +843,7 @@ not concrete benchmark modules.
   families, and report public artifact references for built-in protocol
   adapters.
 - Not yet landed: generic report metadata consumption, doctor readiness
-  consumption, live runtime artifact reconciliation proof, and static no-branch
-  enforcement.
+  consumption, and live runtime artifact reconciliation proof.
 
 #### Exit Criteria
 
@@ -902,6 +901,12 @@ phase exits.
 - Selector registry: route conformance and adapter proof selectors by protocol
   metadata.
 - Static guards: reject concrete benchmark branches in non-adapter code.
+  **Started:** `ADAPT-PROTOCOL-008` is active and executes
+  `cargo run -q -p xtask -- verify-no-branch-guard`; the registry validation
+  path also runs the guard. The guard rejects current benchmark tokens,
+  protocol-key branch forms such as `benchmark_id == ...` and
+  `adapter_id.as_str()`, and direct concrete-adapter imports outside
+  adapter-owned, metadata, test, and explicit legacy-shim allowlists.
 - Gate artifacts: write branch-guard result, selector inventory result, and
   protocol dispatch event field checks.
 
@@ -912,6 +917,12 @@ phase exits.
 - Generic doctor/readiness integration.
 - Generic report artifact integration.
 - Static no-branch guard.
+  **Started:** `xtask verify-no-branch-guard` and
+  `ADAPT-PROTOCOL-008` enforce the current allowlist, write
+  `artifacts/no-branch-guard.json`, and include bypass fixtures for rejected
+  generic branches, future benchmark-id branches, concrete adapter imports, and
+  allowed adapter/legacy paths. The guard source and selector inventory script
+  are frozen by the selector manifest execution-file hashes.
 
 #### Testing And Validation
 
@@ -1266,7 +1277,7 @@ have a fresh closure review.
 | Docker-capable SWE official evaluator environment | environment | Unknown/currently unavailable locally | Full SWE stable proof cannot close | Keep Docker-gated proof explicit until environment is available |
 | Adapter author UX expectations | person/product | Partially known | Scaffold may optimize wrong workflow | Validate with PRD review before Phase 5 |
 | Legacy replay fixtures | data/test | Unknown | Migration can break prior runs silently | Build fixture inventory in Phase 0 |
-| Static no-branch guard | tooling | Needs implementation | Genericity claim can become unenforced | Add in Phase 4 before third-adapter proof |
+| Static no-branch guard | tooling | Active with legacy allowlist and audit artifact | Genericity claim can become unenforced if allowlist expands silently | Keep `ADAPT-PROTOCOL-008` active, preserve frozen guard/source hashes, and shrink legacy entries as Phase 4 migrations land |
 
 ## 12. API And Compatibility Strategy
 
@@ -1397,3 +1408,4 @@ Minimum new selector families:
 | 0.9 | 2026-06-11 | Closed Phase 2 adversarial review after Round 5: accepted blockers from prior rounds are fixed and validated; remaining items are non-blocking Phase 3/4 work such as SWE protocol-only positive coverage and cleanup/report/doctor branch removal. |
 | 1.0 | 2026-06-11 | Started Phase 3 by adding protocol-facing adapter subcontracts and activating `ADAPT-PROTOCOL-003/004` for data lifecycle, runtime lifecycle, readiness probe, and central failure mapping contract foundation. |
 | 1.1 | 2026-06-11 | Extended Phase 3 by adding adapter-owned artifact/report declaration contracts and activating `ADAPT-PROTOCOL-005` for public/private artifact boundary and redaction policy validation. |
+| 1.2 | 2026-06-11 | Started Phase 4 guardrails by activating `ADAPT-PROTOCOL-008` with `xtask verify-no-branch-guard`, rejected-branch fixtures for protocol-key branches and concrete adapter imports, explicit adapter/metadata/legacy allowlists, `artifacts/no-branch-guard.json`, default registry-gate execution, and frozen selector/guard-source routing. |

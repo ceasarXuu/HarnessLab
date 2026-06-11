@@ -1588,6 +1588,7 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-001"
 file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/tests/support/swe.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1609,6 +1610,7 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-002"
 file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/tests/support/swe.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1630,6 +1632,7 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-003"
 file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/tests/support/swe.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1651,6 +1654,7 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-004"
 file_patterns = [
   "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+  "crates/harnesslab-cli/tests/support/swe.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -3511,9 +3515,14 @@ title = "Protocol no-branch guard with bypass fixtures"
 layer = "gate"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-008"
-file_patterns = ["docs/adapter-protocol.md"]
-required_artifacts = []
-status = "planned"
+file_patterns = [
+  "xtask/src/no_branch_guard.rs",
+  "xtask/src/main.rs",
+  "scripts/test-after-change.sh",
+  "scripts/verify-planned-adapter-selectors.sh",
+]
+required_artifacts = ["artifacts/no-branch-guard.json"]
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"

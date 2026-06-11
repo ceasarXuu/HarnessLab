@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export TMPDIR="${HARNESSLAB_TMPDIR:-$PWD/target/tmp}"
+mkdir -p "$TMPDIR"
 
 run_filtered_tests() {
   local selected_id="$1"
@@ -22,11 +24,11 @@ run_filtered_tests() {
   if [[ "$cargo_status" -ne 0 ]]; then
     exit "$cargo_status"
   fi
-  if ! grep -Eq "^running ${expected_count} tests?$" <<<"$output"; then
+  if ! printf '%s\n' "$output" | grep -Eq "^running ${expected_count} tests?$"; then
     echo "selected test group did not run expected count: ${selected_id} -> ${test_filter}, expected ${expected_count}" >&2
     exit 1
   fi
-  ok_count="$(grep -Ec "^test .*${test_filter//./\\.}.*\\.\\.\\. ok$" <<<"$output" || true)"
+  ok_count="$(printf '%s\n' "$output" | grep -Ec "^test .*${test_filter//./\\.}.*\\.\\.\\. ok$" || true)"
   if [[ "$ok_count" -ne "$expected_count" ]]; then
     echo "selected test group did not report expected ok lines: ${selected_id} -> ${test_filter}, expected ${expected_count}, got ${ok_count}" >&2
     exit 1
@@ -222,7 +224,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-PROTOCOL-005) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;
     ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;
-    ADAPT-PROTOCOL-008) planned_adapter_proof "$id" "Phase 4: static no-branch guard with bypass fixtures" ;;
+    ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;
     ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;
     ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;
     ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;
@@ -264,13 +266,13 @@ if [[ "${1:-}" == "--select" ]]; then
   if [[ "$cargo_status" -ne 0 ]]; then
     exit "$cargo_status"
   fi
-  running_one_count="$(grep -c '^running 1 test$' <<<"$output" || true)"
+  running_one_count="$(printf '%s\n' "$output" | grep -c '^running 1 test$' || true)"
   if [[ "$running_one_count" -ne 1 ]]; then
     echo "selected test did not run exactly once: $id -> $test_name" >&2
     exit 1
   fi
   test_basename="${test_name##*::}"
-  if ! grep -Eq "^test .*${test_basename//./\\.} .*\\.\\.\\. ok$" <<<"$output"; then
+  if ! printf '%s\n' "$output" | grep -Eq "^test .*${test_basename//./\\.} .*\\.\\.\\. ok$"; then
     echo "selected test output did not contain target ok line: $id -> $test_name" >&2
     exit 1
   fi

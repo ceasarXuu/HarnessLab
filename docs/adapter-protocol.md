@@ -3,7 +3,7 @@
 - Created: 2026-06-08
 - Updated: 2026-06-11
 - Version: 0.2
-- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, failure mapping schema, and artifact public/private declaration gates implemented; live doctor/no-branch gates remain planned
+- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, failure mapping schema, artifact public/private declaration gates, and static no-branch guard implemented; live doctor/report gates remain planned
 - Source plan: `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md`
 - Source PRD: `prd/2026-06-07-universal-benchmark-adapter-protocol.md`
 
@@ -394,7 +394,7 @@ Stable promotion evidence fields:
 | `ADAPT-PROTOCOL-005` | active | 3 | Artifact descriptor declaration, public/private, and redaction policy conformance. |
 | `ADAPT-PROTOCOL-006` | planned | 4 | Replay authority old/new/mixed fixture conformance. |
 | `ADAPT-PROTOCOL-007` | planned | 4 | Generic doctor/readiness/report metadata conformance. |
-| `ADAPT-PROTOCOL-008` | planned | before Phase 4 exit | Static no-branch guard with bypass fixtures. |
+| `ADAPT-PROTOCOL-008` | active | before Phase 4 exit | Static no-branch guard via `xtask verify-no-branch-guard`, bypass fixtures, explicit legacy allowlist, and `artifacts/no-branch-guard.json`. |
 | `ADAPT-PROTOCOL-009` | planned | 5 | Scaffold golden path and generated adapter conformance. |
 | `ADAPT-PROTOCOL-010` | planned | 6 | Existing adapter migration preservation manifest. |
 | `ADAPT-PROTOCOL-011` | planned | 7 | Third-adapter horizontal extension proof and forbidden-diff guard. |

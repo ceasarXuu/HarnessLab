@@ -243,6 +243,7 @@ case "$1" in
   pull) exit 0 ;;
   run)
     state="$0.workspace"
+    printf '[FAKE-DOCKER-RUN] $0=%s cwd=%s state=%s\n' "$0" "$(pwd)" "$state" >> /tmp/fake-docker-debug.log
     prev=""
     saw_image=0
     for arg in "$@"; do
@@ -251,7 +252,10 @@ case "$1" in
       fi
       if [ "$prev" = "-v" ]; then
         case "$arg" in
-          *:/workspace) printf '%s\n' "${arg%:/workspace}" > "$state" ;;
+          *:/workspace)
+            printf '%s\n' "${arg%:/workspace}" > "$state"
+            printf '[FAKE-DOCKER-RUN] wrote workspace=%s to %s\n' "${arg%:/workspace}" "$state" >> /tmp/fake-docker-debug.log
+          ;;
         esac
       fi
       prev="$arg"
@@ -279,19 +283,23 @@ case "$1" in
     git init -q
     git config user.email harnesslab@example.invalid
     git config user.name HarnessLab
+    git config core.filemode false
     printf 'old\n' > app.txt
     git add app.txt
     git commit -q -m init
     exit 0
     ;;
   exec)
-    workspace="$(cat "$0.workspace")"
+    printf '[FAKE-DOCKER-EXEC] $0=%s cwd=%s workspace_file=%s\n' "$0" "$(pwd)" "$0.workspace" >> /tmp/fake-docker-debug.log
+    workspace="$(cat "$0.workspace" 2>/dev/null)"
+    printf '[FAKE-DOCKER-EXEC] workspace=%s\n' "$workspace" >> /tmp/fake-docker-debug.log
     cmd=""
     for arg in "$@"; do
       cmd="$arg"
     done
     cmd="$(printf '%s' "$cmd" | sed "s#/workspace#$workspace#g")"
-    cd "$workspace"
+    cd "$workspace" 2>/dev/null || printf '[FAKE-DOCKER-EXEC] cd failed, cwd=%s\n' "$(pwd)" >> /tmp/fake-docker-debug.log
+    printf '[FAKE-DOCKER-EXEC] final cwd=%s cmd=%s\n' "$(pwd)" "$cmd" >> /tmp/fake-docker-debug.log
     if [ "${HARNESSLAB_FAKE_REQUIRE_CODEX_SETUP:-}" = "1" ]; then
       case "$cmd" in
         *"npm install -g @openai/codex"*"codex exec"*) printf 'new\n' > app.txt; exit 0 ;;
