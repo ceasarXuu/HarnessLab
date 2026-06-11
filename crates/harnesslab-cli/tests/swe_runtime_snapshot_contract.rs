@@ -392,7 +392,7 @@ fn assert_swe_external_runtime_snapshots(
         public["protocol_authority"]["adapter_version"],
         "swe-bench-pro-runtime.v1"
     );
-    assert_eq!(public["protocol_authority"]["stability"], "experimental");
+    assert_eq!(public["protocol_authority"]["stability"], "conditional-stable-blocked");
     assert!(public.get("redaction_basis").is_none());
     assert!(
         public["runtime_fingerprint"]

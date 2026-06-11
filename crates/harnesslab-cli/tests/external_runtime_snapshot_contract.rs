@@ -54,7 +54,7 @@ fn adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted() {
         public["protocol_authority"]["adapter_version"],
         "terminal-bench-runtime.v1"
     );
-    assert_eq!(public["protocol_authority"]["stability"], "experimental");
+    assert_eq!(public["protocol_authority"]["stability"], "stable");
     assert_eq!(public["adapter_version"], "terminal-bench-runtime.v1");
     assert_eq!(private["adapter_version"], "terminal-bench-runtime.v1");
     assert_eq!(
