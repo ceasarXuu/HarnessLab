@@ -13,6 +13,7 @@ mod frozen_selector_ids;
 mod frozen_selectors;
 mod no_branch_guard;
 mod runtime_artifacts;
+mod scaffold;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -25,6 +26,11 @@ fn main() -> Result<()> {
         Command::PrintFrozenSelectorManifest => frozen_selectors::print_frozen_selector_manifest(),
         Command::GenerateTestTraceability => generate_traceability(),
         Command::ListAdapterProofSelectors => list_adapter_proof_selectors(),
+        Command::AdapterScaffold {
+            benchmark_id,
+            adapter_id,
+            output_dir,
+        } => scaffold::scaffold_adapter(&benchmark_id, &adapter_id, &output_dir),
         Command::ScanSecrets { secret, paths } => scan_secrets(&secret, &paths),
         Command::CheckNewFileCoverage {
             lcov,
@@ -80,6 +86,14 @@ enum Command {
     PrintFrozenSelectorManifest,
     GenerateTestTraceability,
     ListAdapterProofSelectors,
+    AdapterScaffold {
+        #[arg(long)]
+        benchmark_id: String,
+        #[arg(long)]
+        adapter_id: String,
+        #[arg(long, default_value = ".")]
+        output_dir: PathBuf,
+    },
     ScanSecrets {
         #[arg(long)]
         secret: String,
