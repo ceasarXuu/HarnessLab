@@ -188,6 +188,7 @@ The boundary assertion covers:
 - `crates/harnesslab-adapters/src/protocol_contract.rs`
 - `crates/harnesslab-adapters/src/protocol_registry.rs`
 - `crates/harnesslab-adapters/src/registry.rs`
+- `crates/harnesslab-adapters/src/scaffold_golden_adapter.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs`

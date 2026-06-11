@@ -177,6 +177,22 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
                 "host.agent_execution",
             ],
         ),
+        binding(
+            "deterministic-sample",
+            "harnesslab.deterministic-sample.runtime",
+            "deterministic-sample-runtime.v1",
+            "deterministic-sample",
+            None,
+            &[
+                "descriptor",
+                "data.lifecycle",
+                "readiness.basic",
+                "artifacts.basic",
+                "failure.mapping",
+                "replay.authority",
+                "report.metadata",
+            ],
+        ),
     ])
     .expect("built-in adapter protocol registry must be valid")
 }
@@ -367,7 +383,7 @@ mod tests {
             terminal.authority().legacy_runner_kind,
             Some(ExternalRunnerKind::TerminalBench)
         );
-        assert_eq!(registry.bindings().len(), 2);
+        assert_eq!(registry.bindings().len(), 3);
 
         let mut duplicate_adapter = registry.bindings().to_vec();
         duplicate_adapter[1].adapter_id = duplicate_adapter[0].adapter_id.clone();
