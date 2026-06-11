@@ -23,11 +23,16 @@ pub fn scaffold_adapter(
     fs::write(&test_file, generate_test_module(benchmark_id, adapter_id))
         .with_context(|| format!("write scaffold test {}", test_file.display()))?;
 
+    let binding_file = output_dir.join("registry_binding.rs");
+    fs::write(&binding_file, generate_registry_binding(benchmark_id, adapter_id))
+        .with_context(|| format!("write registry binding snippet {}", binding_file.display()))?;
+
     println!(
         "scaffold ok: {} -> {}",
         benchmark_id,
         output_dir.display()
     );
+    println!("next step: copy the binding from registry_binding.rs into protocol_registry.rs");
     Ok(())
 }
 
@@ -447,6 +452,33 @@ mod tests {{
 }}
 "#,
         adapter_struct = adapter_struct,
+    )
+}
+
+fn generate_registry_binding(benchmark_id: &str, adapter_id: &str) -> String {
+    let mode = benchmark_id;
+    format!(
+        r#"// Copy this binding into the `bindings!` macro call in protocol_registry.rs,
+// then recompile to register the new adapter.
+
+binding(
+    "{benchmark_id}",
+    "{adapter_id}",
+    "{benchmark_id}-runtime.v1",
+    "{mode}",
+    None,
+    &[
+        "descriptor",
+        "data.lifecycle",
+        "readiness.basic",
+        "artifacts.basic",
+        "failure.mapping",
+        "replay.authority",
+        "report.metadata",
+    ],
+    AdapterStability::Experimental,
+),
+"#
     )
 }
 

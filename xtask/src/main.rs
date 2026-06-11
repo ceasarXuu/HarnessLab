@@ -15,6 +15,7 @@ mod frozen_selectors;
 mod no_branch_guard;
 mod runtime_artifacts;
 mod scaffold;
+mod scaffold_tests;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
