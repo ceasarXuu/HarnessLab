@@ -17,7 +17,11 @@ use super::{
     write_external_command_snapshot,
 };
 use crate::agent_registry::MaterializedAgentProfile;
-use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
+use crate::runtime_compatibility::{
+    AdapterCompatibilityProfile, BenchmarkRuntimeCompatibility, push_if_some,
+    TERMINAL_BENCH_AGENT_LABEL, TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL,
+    TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL, TERMINAL_BENCH_MODEL_LABEL,
+};
 use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentKind, AgentProfile, ExternalRunnerKind, RunSpec, RuntimePreflightReport, TaskAttemptResult,
@@ -53,6 +57,33 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
 
     fn kind(&self) -> ExternalRunnerKind {
         ExternalRunnerKind::TerminalBench
+    }
+
+    fn compatibility_profile(
+        &self,
+        profile: &AgentProfile,
+    ) -> AdapterCompatibilityProfile {
+        let compat = BenchmarkRuntimeCompatibility::from_profile(profile);
+        let host_execution_reason = if compat.terminal_bench_agent_import_path.is_some() {
+            Some("terminal-bench import agent host path")
+        } else {
+            None
+        };
+        let bridge_mode = if compat.terminal_bench_agent_import_path.is_some() {
+            "terminal-bench-import-path"
+        } else {
+            "terminal-bench-official-agent"
+        };
+        let mut consumed_label_keys = Vec::new();
+        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_LABEL, &compat.terminal_bench_agent);
+        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL, &compat.terminal_bench_agent_import_path);
+        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL, &compat.terminal_bench_agent_pythonpath);
+        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_MODEL_LABEL, &compat.terminal_bench_model);
+        AdapterCompatibilityProfile {
+            host_execution_reason,
+            bridge_mode,
+            consumed_label_keys,
+        }
     }
 
     fn preflight(&self, ctx: RuntimePreflightContext<'_>) -> RuntimePreflightReport {

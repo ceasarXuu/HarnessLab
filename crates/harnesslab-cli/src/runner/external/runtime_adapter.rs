@@ -1,5 +1,5 @@
 use super::{ExternalTaskExecution, swe_bench_pro_adapter, terminal_bench_adapter};
-use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
+use crate::runtime_compatibility::{AdapterCompatibilityProfile, BenchmarkRuntimeCompatibility};
 use anyhow::{Context, Result};
 use harnesslab_adapters::built_in_protocol_registry;
 use harnesslab_core::{
@@ -8,7 +8,7 @@ use harnesslab_core::{
 };
 use std::path::{Path, PathBuf};
 
-pub(super) trait BenchmarkRuntimeAdapter: Sync {
+pub(crate) trait BenchmarkRuntimeAdapter: Sync {
     fn adapter_id(&self) -> &'static str;
     fn adapter_version(&self) -> &'static str;
     fn benchmark_name(&self) -> &'static str;
@@ -22,10 +22,16 @@ pub(super) trait BenchmarkRuntimeAdapter: Sync {
         &self,
         target: &RuntimeCleanupTarget,
     ) -> Result<RuntimeCleanupReport, String>;
+    /// Adapter-local compatibility profile. Generic layers must not branch on
+    /// benchmark id; they consume this profile opaquely.
+    fn compatibility_profile(
+        &self,
+        profile: &AgentProfile,
+    ) -> AdapterCompatibilityProfile;
 }
 
 #[derive(Clone)]
-pub(super) struct RuntimePreflightContext<'a> {
+pub(crate) struct RuntimePreflightContext<'a> {
     pub(super) profile: &'a AgentProfile,
     pub(super) compatibility: BenchmarkRuntimeCompatibility,
     pub(super) task: &'a TaskPlan,
@@ -38,7 +44,7 @@ pub(in crate::runner) enum RuntimeCleanupPhase {
 }
 
 #[derive(Clone, Copy)]
-pub(super) struct RuntimeCleanupContext<'a> {
+pub(crate) struct RuntimeCleanupContext<'a> {
     pub(super) run_dir: &'a Path,
     pub(super) spec: &'a RunSpec,
     pub(super) plan: &'a BenchmarkPlan,
@@ -85,7 +91,7 @@ pub(super) fn runtime_adapter_for_adapter_id(
         .with_context(|| format!("unknown runtime adapter_id {adapter_id}"))
 }
 
-fn runtime_adapters() -> [&'static dyn BenchmarkRuntimeAdapter; 2] {
+pub(in crate::runner) fn runtime_adapters() -> [&'static dyn BenchmarkRuntimeAdapter; 2] {
     [
         &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER,
         &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
@@ -163,10 +169,8 @@ pub(super) fn preflight_report(
     ctx: RuntimePreflightContext<'_>,
     blocking_reason: Option<String>,
 ) -> RuntimePreflightReport {
-    let host_execution_reason = ctx
-        .compatibility
-        .host_execution_reason(adapter.kind())
-        .map(str::to_string);
+    let compat = adapter.compatibility_profile(ctx.profile);
+    let host_execution_reason = compat.host_execution_reason.map(str::to_string);
     RuntimePreflightReport {
         task_id: ctx.task.task_id.clone(),
         runner_kind: adapter.kind(),
@@ -210,10 +214,7 @@ pub(super) fn preflight_report(
             })
             .unwrap_or_default(),
         legacy_shim_used: ctx.task.runtime_binding.is_none(),
-        agent_bridge_mode: ctx
-            .compatibility
-            .agent_bridge_mode(adapter.kind())
-            .to_string(),
+        agent_bridge_mode: compat.bridge_mode.to_string(),
         readiness_status: if blocking_reason.is_some() {
             "blocked".to_string()
         } else {
@@ -222,9 +223,8 @@ pub(super) fn preflight_report(
         compatibility_exception: host_execution_reason
             .as_ref()
             .map(|_| "host-agent-run-as-current-only".to_string()),
-        compatibility_label_keys: ctx
-            .compatibility
-            .consumed_label_keys(adapter.kind())
+        compatibility_label_keys: compat
+            .consumed_label_keys
             .into_iter()
             .map(str::to_string)
             .collect(),

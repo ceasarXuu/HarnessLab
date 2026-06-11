@@ -6,7 +6,10 @@ use super::swe_bench_pro::runtime_snapshot::{
     SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION, SweSetupFailurePhase,
 };
 use super::{ExternalTaskExecution, swe_bench_pro};
-use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
+use crate::runtime_compatibility::{
+    AdapterCompatibilityProfile, BenchmarkRuntimeCompatibility, push_if_some,
+    SWE_BENCH_PRO_AGENT_LABEL,
+};
 use anyhow::Result;
 use harnesslab_core::{ExternalRunnerKind, FailureCode, TaskAttemptResult};
 use std::fs;
@@ -38,6 +41,31 @@ impl BenchmarkRuntimeAdapter for SweBenchProRuntimeAdapter {
 
     fn kind(&self) -> ExternalRunnerKind {
         ExternalRunnerKind::SweBenchPro
+    }
+
+    fn compatibility_profile(
+        &self,
+        profile: &harnesslab_core::AgentProfile,
+    ) -> AdapterCompatibilityProfile {
+        let compat = BenchmarkRuntimeCompatibility::from_profile(profile);
+        let host_execution_reason =
+            if compat.swe_bench_pro_agent.as_deref() == Some("gold") {
+                Some("swe-bench-pro gold host path")
+            } else {
+                None
+            };
+        let bridge_mode = if compat.swe_bench_pro_agent.as_deref() == Some("gold") {
+            "swe-bench-pro-gold"
+        } else {
+            "swe-bench-pro-sandbox-agent"
+        };
+        let mut consumed_label_keys = Vec::new();
+        push_if_some(&mut consumed_label_keys, SWE_BENCH_PRO_AGENT_LABEL, &compat.swe_bench_pro_agent);
+        AdapterCompatibilityProfile {
+            host_execution_reason,
+            bridge_mode,
+            consumed_label_keys,
+        }
     }
 
     fn preflight(

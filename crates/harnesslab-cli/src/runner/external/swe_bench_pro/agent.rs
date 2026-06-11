@@ -18,7 +18,7 @@ pub(super) fn run_agent(
     instance: &SweInstance,
     compatibility: &BenchmarkRuntimeCompatibility,
 ) -> Result<SweAgentRun> {
-    if compatibility.swe_bench_pro_uses_gold_agent() {
+    if compatibility.swe_bench_pro_agent.as_deref() == Some("gold") {
         return Ok(SweAgentRun {
             process: apply_gold_patch(
                 ctx.attempt_dir,
