@@ -145,6 +145,20 @@ path tokens:
 | `events.jsonl` | Runtime event persistence. |
 | `external-runtime` | Runtime snapshot ownership. |
 
+Exception: adapter protocol descriptor files may contain these exact artifact
+path literals only inside `artifact(...)` declaration arguments:
+
+- `external-runtime.public.json`
+- `external-runtime.private.json`
+- `events.jsonl`
+
+The current descriptor source set that receives `artifact(...)` argument
+stripping is limited to:
+
+- `crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs`
+- `crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs`
+- `crates/harnesslab-adapters/src/terminal_bench_protocol.rs`
+
 ## Module graph coverage
 
 The boundary assertion discovers files recursively from production `mod ...;`
@@ -169,11 +183,13 @@ The boundary assertion covers:
 - `crates/harnesslab-adapters/src/lib.rs`
 - `crates/harnesslab-adapters/src/fake_patch.rs`
 - `crates/harnesslab-adapters/src/fake_terminal.rs`
+- `crates/harnesslab-adapters/src/protocol_artifact_contract.rs`
 - `crates/harnesslab-adapters/src/protocol_contract_builtins.rs`
 - `crates/harnesslab-adapters/src/protocol_contract.rs`
 - `crates/harnesslab-adapters/src/protocol_registry.rs`
 - `crates/harnesslab-adapters/src/registry.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro.rs`
+- `crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs`
 - `crates/harnesslab-adapters/src/terminal_bench.rs`
 - `crates/harnesslab-adapters/src/terminal_bench_protocol.rs`

@@ -1,4 +1,7 @@
-use crate::{AdapterBindingDescriptor, built_in_protocol_registry};
+use crate::{
+    AdapterBindingDescriptor, ProtocolArtifactDeclaration, ProtocolReportMetadata,
+    built_in_protocol_registry,
+};
 use harnesslab_core::{
     AdapterId, BenchmarkDescriptor, CapabilityId, FailureClass, FailureCode, HealthImpact,
 };
@@ -10,6 +13,8 @@ pub struct ProtocolAdapterDescriptor {
     pub descriptor: BenchmarkDescriptor,
     pub data_lifecycle: ProtocolDataLifecycleContract,
     pub runtime_lifecycle: ProtocolRuntimeLifecycleContract,
+    pub artifacts: Vec<ProtocolArtifactDeclaration>,
+    pub report_metadata: ProtocolReportMetadata,
     pub readiness: Vec<ProtocolReadinessProbe>,
     pub failure_mapping: Vec<ProtocolFailureMapping>,
 }
@@ -135,7 +140,9 @@ pub fn validate_runtime_lifecycle_contracts(
     Ok(())
 }
 
-fn validate_unique_adapter_ids(descriptors: &[ProtocolAdapterDescriptor]) -> Result<(), String> {
+pub(crate) fn validate_unique_adapter_ids(
+    descriptors: &[ProtocolAdapterDescriptor],
+) -> Result<(), String> {
     let mut adapter_ids = BTreeSet::<AdapterId>::new();
     for descriptor in descriptors {
         if !adapter_ids.insert(descriptor.binding.adapter_id.clone()) {
@@ -148,7 +155,7 @@ fn validate_unique_adapter_ids(descriptors: &[ProtocolAdapterDescriptor]) -> Res
     Ok(())
 }
 
-fn validate_binding_descriptor_alignment(
+pub(crate) fn validate_binding_descriptor_alignment(
     descriptor: &ProtocolAdapterDescriptor,
 ) -> Result<(), String> {
     if descriptor.descriptor.name != descriptor.binding.benchmark_id.as_str() {

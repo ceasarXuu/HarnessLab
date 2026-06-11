@@ -18,10 +18,10 @@ continuing.
 
 | Check | Command | Result |
 |---|---|---|
-| Adapter proof selector inventory | `CARGO_INCREMENTAL=0 scripts/verify-planned-adapter-selectors.sh` | passed; `adapter selectors ok: active=16 planned=1` |
+| Adapter proof selector inventory | `CARGO_INCREMENTAL=0 scripts/verify-planned-adapter-selectors.sh` | passed; `adapter selectors ok: active=21 planned=8` |
 | Frozen registry source | `tests/TEST_REGISTRY.toml` | current id/title/command/artifact/contract rows are locked by `tests/FROZEN_SELECTOR_MANIFEST.toml` |
 | Frozen command router | `scripts/test-after-change.sh --select <id>` | every frozen selector must remain routed or be replaced by an equivalent-or-stronger registered selector |
-| Machine guard | `cargo run -p xtask -- verify-frozen-selector-manifest` | passed; `frozen selector manifest ok: total=86 execution_files=7 ADAPT-DATA=6 ADAPT-PROTOCOL-001=1 ADAPT-PROTOCOL-002=1 ADAPT-RUNTIME=6 AGT-REG-005=1 AGT-REG-012=1 C-BENCH=10 DOC-004=1 INT=41 PY-TB-001=1 SEC=1 SWEPRO=5 TB=11` |
+| Machine guard | `cargo run -p xtask -- verify-frozen-selector-manifest` | passed; `frozen selector manifest ok: total=96 execution_files=7 ADAPT-DATA=6 ADAPT-PROTOCOL-001=1 ADAPT-PROTOCOL-002=1 ADAPT-PROTOCOL-003=1 ADAPT-PROTOCOL-004=1 ADAPT-PROTOCOL-005=1 ADAPT-PROTOCOL-006=1 ADAPT-PROTOCOL-007=1 ADAPT-PROTOCOL-008=1 ADAPT-PROTOCOL-009=1 ADAPT-PROTOCOL-010=1 ADAPT-PROTOCOL-011=1 ADAPT-PROTOCOL-012=1 ADAPT-RUNTIME=6 AGT-REG-005=1 AGT-REG-012=1 C-BENCH=10 DOC-004=1 INT=41 PY-TB-001=1 SEC=1 SWEPRO=5 TB=11` |
 
 ## 3. Weakening Rules
 
@@ -61,6 +61,7 @@ The authoritative frozen selector lockfile is
 | Family / Explicit ID | Frozen Count | Notes |
 |---|---:|---|
 | `ADAPT-DATA-*` | 6 | Includes planned sentinel `ADAPT-DATA-000` and active data adapter proofs. |
+| `ADAPT-PROTOCOL-001..012` | 12 | Includes active protocol identity/registry/lifecycle/artifact gates and planned protocol migration gates. |
 | `ADAPT-RUNTIME-*` | 6 | Runtime preflight, snapshots, cleanup, events, and internal error proofs. |
 | `C-BENCH-*` | 10 | Built-in benchmark descriptor, discovery, split, and timeout metadata contracts. |
 | `DOC-004` | 1 | Doctor benchmark readiness. |
@@ -70,7 +71,7 @@ The authoritative frozen selector lockfile is
 | `TB-*` | 11 | Terminal-Bench runtime behavior contracts. |
 | `PY-TB-001` | 1 | Terminal-Bench Python bridge and process cleanup. |
 | `AGT-REG-005`, `AGT-REG-012` | 2 | Terminal-Bench registered setup and run-as/readiness behavior. |
-| Total | 84 | Verified by `cargo run -p xtask -- verify-frozen-selector-manifest`. |
+| Total | 96 | Verified by `cargo run -p xtask -- verify-frozen-selector-manifest`. |
 
 ## 6. Notable Corrected Rows
 
@@ -89,13 +90,13 @@ The authoritative frozen selector lockfile is
 |---|---|---|
 | Frozen ids listed with exact commands. | Met | `tests/FROZEN_SELECTOR_MANIFEST.toml` lists every frozen command. |
 | Required artifacts listed where registry declares them. | Met | `tests/FROZEN_SELECTOR_MANIFEST.toml` locks current `required_artifacts` values and the guard compares them to registry rows. |
-| Adapter selector baseline is green. | Met | `scripts/verify-planned-adapter-selectors.sh` passed with `active=16 planned=1`. |
+| Adapter selector baseline is green. | Met | `scripts/verify-planned-adapter-selectors.sh` passed with `active=21 planned=8`. |
 | Expected counts and owning contracts are frozen. | Met | `tests/FROZEN_SELECTOR_MANIFEST.toml` records `expected_test_count`, `router_case`, execution file hashes, and `owning_contracts`; `xtask/src/frozen_selectors.rs` validates them. |
 | Weakening rule documented and enforced. | Met | Section 3 defines weakening; `scripts/verify-test-registry.sh` runs the frozen selector guard. |
 
 ## 9. Next Required Work
 
-- Extend this manifest with `ADAPT-PROTOCOL-*` rows as soon as Phase 1 creates
-  planned registry entries.
+- Keep extending this manifest as planned `ADAPT-PROTOCOL-*` rows are promoted
+  to active proof gates.
 - Treat any selector replacement as a reviewed plan update, not an incidental
   test registry edit.

@@ -2,7 +2,7 @@ schema_version = 1
 
 [[execution_files]]
 path = "scripts/test-after-change.sh"
-hash = "fnv1a64:dc13566c46ef1045"
+hash = "fnv1a64:fc1f330dab3a15fb"
 
 [[execution_files]]
 path = "scripts/verify-terminal-bench-python-adapter.sh"
@@ -48,6 +48,7 @@ expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-adapters/Cargo.toml",
     "crates/harnesslab-adapters/src/data_boundary_contract.rs",
+    "crates/harnesslab-adapters/src/data_boundary_rule_sets.rs",
     "crates/harnesslab-adapters/src/data_boundary_scan.rs",
     "crates/harnesslab-adapters/src/data_contract_tests.rs",
     "crates/harnesslab-adapters/src/fake_patch.rs",
@@ -180,6 +181,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
     "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
     "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
     "crates/harnesslab-adapters/src/protocol_registry.rs",
@@ -187,6 +189,7 @@ file_patterns = [
     "crates/harnesslab-adapters/src/terminal_bench.rs",
     "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
     "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
     "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
     "crates/harnesslab-adapters/src/lib.rs",
     "tests/REQUIREMENTS.toml",
@@ -206,6 +209,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
     "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
     "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
     "crates/harnesslab-adapters/src/protocol_registry.rs",
@@ -213,6 +217,7 @@ file_patterns = [
     "crates/harnesslab-adapters/src/terminal_bench.rs",
     "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
     "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
     "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
     "crates/harnesslab-adapters/src/lib.rs",
     "tests/REQUIREMENTS.toml",
@@ -226,6 +231,122 @@ owning_contracts = [
     "ReadinessProbe",
     "FailureMapping",
 ]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-005"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-005"
+router_case = 'ADAPT-PROTOCOL-005) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "tests/REQUIREMENTS.toml",
+    "tests/TEST_REGISTRY.toml",
+    "scripts/test-after-change.sh",
+    "docs/adapter-protocol.md",
+]
+required_artifacts = []
+owning_contracts = [
+    "ArtifactDeclaration",
+    "Redaction",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-006"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-006"
+router_case = 'ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = ["ReplayAuthority"]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-007"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-007"
+router_case = 'ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = [
+    "ReadinessProbe",
+    "ReportMetadata",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-008"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-008"
+router_case = 'ADAPT-PROTOCOL-008) planned_adapter_proof "$id" "Phase 4: static no-branch guard with bypass fixtures" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = ["NoBranchGuard"]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-009"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-009"
+router_case = 'ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = [
+    "AdapterScaffold",
+    "AdapterConformance",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-010"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-010"
+router_case = 'ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = [
+    "docs/adapter-protocol.md",
+    "tests/FROZEN_SELECTOR_MANIFEST.toml",
+]
+required_artifacts = []
+owning_contracts = [
+    "AdapterMigration",
+    "FrozenSelectorManifest",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-011"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-011"
+router_case = 'ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = [
+    "HorizontalExtension",
+    "ForbiddenDiffGuard",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-012"
+status = "planned"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-012"
+router_case = 'ADAPT-PROTOCOL-012) planned_adapter_proof "$id" "Phase 8: stable promotion evidence archive validation" ;;'
+expected_pass_threshold = "selector command exits successfully"
+file_patterns = ["docs/adapter-protocol.md"]
+required_artifacts = []
+owning_contracts = ["StablePromotionEvidence"]
 
 [[selectors]]
 id = "ADAPT-RUNTIME-001"

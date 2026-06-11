@@ -1,3 +1,7 @@
+use crate::data_boundary_rule_sets::{
+    allowed_std_fs_calls, artifact_declaration_source, forbidden_runtime_path_literals,
+    strip_artifact_declaration_calls,
+};
 use crate::data_boundary_scan::{
     assert_boundary_scanner_regressions, call_names, has_path_attribute, identifier_tokens,
     path_sequences, qualified_call_paths, string_literals, strip_cfg_test_items,
@@ -352,6 +356,13 @@ fn assert_no_production_source_inclusion(path: &str, source: &str) {
 }
 
 fn assert_forbidden_path_literals(path: &str, source: &str) {
+    let declaration_stripped;
+    let source = if artifact_declaration_source(path) {
+        declaration_stripped = strip_artifact_declaration_calls(source);
+        declaration_stripped.as_str()
+    } else {
+        source
+    };
     let literals = string_literals(source);
 
     for literal in literals {
@@ -457,27 +468,5 @@ fn forbidden_calls() -> BTreeSet<&'static str> {
         "write_all_vectored",
         "write",
         "write_event",
-    ])
-}
-
-fn allowed_std_fs_calls() -> BTreeSet<&'static str> {
-    BTreeSet::from([
-        "canonicalize",
-        "metadata",
-        "read",
-        "read_dir",
-        "read_link",
-        "read_to_string",
-        "symlink_metadata",
-    ])
-}
-
-fn forbidden_runtime_path_literals() -> BTreeSet<&'static str> {
-    BTreeSet::from([
-        "attempt",
-        "attempt_dir",
-        "events.jsonl",
-        "external-runtime",
-        "run_dir",
     ])
 }

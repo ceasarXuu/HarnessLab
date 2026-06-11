@@ -1,7 +1,7 @@
 use crate::{
     BenchmarkAdapter, SweBenchProAdapter, TerminalBenchAdapter,
-    built_in_protocol_adapter_descriptors, validate_data_lifecycle_contracts,
-    validate_runtime_lifecycle_contracts,
+    built_in_protocol_adapter_descriptors, validate_artifact_contracts,
+    validate_data_lifecycle_contracts, validate_runtime_lifecycle_contracts,
 };
 use harnesslab_core::{CapabilityId, FailureClass, FailureCode};
 
@@ -150,4 +150,121 @@ fn adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated() {
     invalid_mapping[0].failure_mapping[0].failure_class = FailureClass::None;
     let error = validate_runtime_lifecycle_contracts(&invalid_mapping).unwrap_err();
     assert!(error.contains("failure_mapping_invalid"));
+}
+
+#[test]
+fn adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated() {
+    let descriptors = built_in_protocol_adapter_descriptors();
+    validate_artifact_contracts(&descriptors).unwrap();
+
+    for descriptor in &descriptors {
+        assert!(descriptor.artifacts.iter().any(|artifact| {
+            artifact.artifact_type == "runtime_snapshot" && artifact.visibility == "public"
+        }));
+        assert!(descriptor.artifacts.iter().any(|artifact| {
+            artifact.artifact_type == "runtime_snapshot" && artifact.visibility == "private"
+        }));
+        assert!(
+            descriptor
+                .report_metadata
+                .public_artifacts
+                .contains(&"external_runtime_public")
+        );
+        assert!(
+            !descriptor
+                .report_metadata
+                .public_artifacts
+                .contains(&"external_runtime_private"),
+            "private runtime snapshots must not be report-public for {}",
+            descriptor.binding.adapter_id
+        );
+    }
+
+    let mut missing_artifacts = descriptors.clone();
+    missing_artifacts[0].artifacts.clear();
+    let error = validate_artifact_contracts(&missing_artifacts).unwrap_err();
+    assert!(error.contains("artifact_contract_missing"));
+
+    let mut duplicate_artifact = descriptors.clone();
+    let duplicate = duplicate_artifact[0].artifacts[0].clone();
+    duplicate_artifact[0].artifacts.push(duplicate);
+    let error = validate_artifact_contracts(&duplicate_artifact).unwrap_err();
+    assert!(error.contains("artifact_contract_duplicate"));
+
+    let mut unsafe_path = descriptors.clone();
+    unsafe_path[0].artifacts[0].path = "../external-runtime.public.json";
+    let error = validate_artifact_contracts(&unsafe_path).unwrap_err();
+    assert!(error.contains("artifact_contract_unsafe_path"));
+
+    let mut backslash_path = descriptors.clone();
+    backslash_path[1].artifacts[0].path = r"nested\\external-runtime.public.json";
+    let error = validate_artifact_contracts(&backslash_path).unwrap_err();
+    assert!(error.contains("artifact_contract_unsafe_path"));
+
+    let mut duplicate_path = descriptors.clone();
+    duplicate_path[0].artifacts[1].path = duplicate_path[0].artifacts[0].path;
+    duplicate_path[0].artifacts[1].scope = duplicate_path[0].artifacts[0].scope;
+    let error = validate_artifact_contracts(&duplicate_path).unwrap_err();
+    assert!(error.contains("artifact_contract_duplicate_path"));
+
+    let mut public_private_only = descriptors.clone();
+    public_private_only[0].artifacts[0].redaction_policy = "private_only";
+    let error = validate_artifact_contracts(&public_private_only).unwrap_err();
+    assert!(error.contains("artifact_contract_public_private_only"));
+
+    let mut private_without_private_only = descriptors.clone();
+    let private_index = private_without_private_only[0]
+        .artifacts
+        .iter()
+        .position(|artifact| artifact.visibility == "private")
+        .unwrap();
+    private_without_private_only[0].artifacts[private_index].redaction_policy = "structured";
+    let error = validate_artifact_contracts(&private_without_private_only).unwrap_err();
+    assert!(error.contains("artifact_contract_private_redaction_policy"));
+
+    let mut missing_private_runtime = descriptors.clone();
+    missing_private_runtime[0]
+        .artifacts
+        .retain(|artifact| artifact.visibility != "private");
+    let error = validate_artifact_contracts(&missing_private_runtime).unwrap_err();
+    assert!(error.contains("artifact_contract_runtime_snapshot_pair_missing"));
+
+    let mut missing_capability_artifact = descriptors.clone();
+    missing_capability_artifact[1]
+        .artifacts
+        .retain(|artifact| artifact.artifact_id != "prediction");
+    let error = validate_artifact_contracts(&missing_capability_artifact).unwrap_err();
+    assert!(error.contains("patch.evaluator requires artifact prediction"));
+
+    let mut unknown_report_artifact = descriptors.clone();
+    unknown_report_artifact[0]
+        .report_metadata
+        .public_artifacts
+        .push("external_runtime_private");
+    let error = validate_artifact_contracts(&unknown_report_artifact).unwrap_err();
+    assert!(error.contains("report_metadata_undeclared_public_artifact"));
+
+    let mut private_section_ref = descriptors.clone();
+    private_section_ref[0].report_metadata.detail_sections[0]
+        .public_artifact_refs
+        .push("external_runtime_private");
+    let error = validate_artifact_contracts(&private_section_ref).unwrap_err();
+    assert!(error.contains("report_metadata_section_private_or_unknown_artifact"));
+
+    let mut duplicate_report_artifact = descriptors.clone();
+    duplicate_report_artifact[0]
+        .report_metadata
+        .public_artifacts
+        .push("external_runtime_public");
+    let error = validate_artifact_contracts(&duplicate_report_artifact).unwrap_err();
+    assert!(error.contains("report_metadata_duplicate_public_artifact"));
+
+    let mut duplicate_section = descriptors.clone();
+    let duplicate = duplicate_section[1].report_metadata.detail_sections[0].clone();
+    duplicate_section[1]
+        .report_metadata
+        .detail_sections
+        .push(duplicate);
+    let error = validate_artifact_contracts(&duplicate_section).unwrap_err();
+    assert!(error.contains("report_metadata_duplicate_section"));
 }

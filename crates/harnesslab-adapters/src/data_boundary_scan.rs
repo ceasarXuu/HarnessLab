@@ -63,6 +63,19 @@ pub(crate) fn assert_boundary_scanner_regressions() {
 
     let attr_probe = "#[ path = \"runtime_bridge.rs\" ]\nmod helper;";
     assert!(has_path_attribute(attr_probe));
+
+    let artifact_probe = r#"
+        artifact(
+            "events",
+            "attempt",
+            "events.jsonl",
+            "event_log",
+        );
+        let leaked = "events.jsonl";
+    "#;
+    let stripped = crate::data_boundary_rule_sets::strip_artifact_declaration_calls(artifact_probe);
+    assert!(!stripped.contains("\"attempt\""));
+    assert!(stripped.contains("let leaked = \"events.jsonl\""));
 }
 
 fn use_statements(source: &str) -> Vec<String> {

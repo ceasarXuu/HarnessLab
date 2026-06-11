@@ -1328,6 +1328,7 @@ command = "scripts/test-after-change.sh --select ADAPT-DATA-001"
 file_patterns = [
   "crates/harnesslab-adapters/Cargo.toml",
   "crates/harnesslab-adapters/src/data_boundary_contract.rs",
+  "crates/harnesslab-adapters/src/data_boundary_rule_sets.rs",
   "crates/harnesslab-adapters/src/data_boundary_scan.rs",
   "crates/harnesslab-adapters/src/data_contract_tests.rs",
   "crates/harnesslab-adapters/src/fake_patch.rs",
@@ -3376,6 +3377,7 @@ owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-003"
 file_patterns = [
   "crates/harnesslab-adapters/src/protocol_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
   "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
   "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
   "crates/harnesslab-adapters/src/protocol_registry.rs",
@@ -3383,6 +3385,7 @@ file_patterns = [
   "crates/harnesslab-adapters/src/terminal_bench.rs",
   "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
   "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
   "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
   "crates/harnesslab-adapters/src/lib.rs",
   "tests/REQUIREMENTS.toml",
@@ -3408,6 +3411,7 @@ owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-004"
 file_patterns = [
   "crates/harnesslab-adapters/src/protocol_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
   "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
   "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
   "crates/harnesslab-adapters/src/protocol_registry.rs",
@@ -3415,6 +3419,7 @@ file_patterns = [
   "crates/harnesslab-adapters/src/terminal_bench.rs",
   "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
   "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
   "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
   "crates/harnesslab-adapters/src/lib.rs",
   "tests/REQUIREMENTS.toml",
@@ -3438,9 +3443,26 @@ title = "Protocol artifact declaration and redaction conformance"
 layer = "contract"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-005"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "tests/REQUIREMENTS.toml",
+  "tests/TEST_REGISTRY.toml",
+  "scripts/test-after-change.sh",
+  "docs/adapter-protocol.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
