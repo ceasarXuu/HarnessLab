@@ -346,13 +346,17 @@ owning_contracts = [
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-010"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-010"
-router_case = 'ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;'
-expected_pass_threshold = "selector command exits successfully"
+router_case = 'ADAPT-PROTOCOL-010) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_010_" 1; exit 0 ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
-    "docs/adapter-protocol.md",
-    "tests/FROZEN_SELECTOR_MANIFEST.toml",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
 ]
 required_artifacts = []
 owning_contracts = [
@@ -362,11 +366,19 @@ owning_contracts = [
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-011"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-011"
-router_case = 'ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;'
-expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
+router_case = 'ADAPT-PROTOCOL-011) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_011_" 1 && cargo run -q -p xtask -- verify-forbidden-diff; exit 0 ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/scaffold_golden_adapter.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "xtask/src/forbidden_diff_guard.rs",
+    "xtask/src/main.rs",
+]
 required_artifacts = []
 owning_contracts = [
     "HorizontalExtension",
@@ -375,11 +387,16 @@ owning_contracts = [
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-012"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-012"
-router_case = 'ADAPT-PROTOCOL-012) planned_adapter_proof "$id" "Phase 8: stable promotion evidence archive validation" ;;'
-expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
+router_case = 'ADAPT-PROTOCOL-012) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_012_" 1; exit 0 ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+]
 required_artifacts = []
 owning_contracts = ["StablePromotionEvidence"]
 

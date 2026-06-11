@@ -3570,12 +3570,18 @@ contracts = ["AdapterScaffold", "AdapterConformance"]
 [[tests]]
 id = "ADAPT-PROTOCOL-010"
 title = "Protocol existing adapter migration preservation manifest"
-layer = "integration"
-owner_module = "xtask"
+layer = "unit"
+owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-010"
-file_patterns = ["docs/adapter-protocol.md", "tests/FROZEN_SELECTOR_MANIFEST.toml"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
@@ -3587,12 +3593,19 @@ contracts = ["AdapterMigration", "FrozenSelectorManifest"]
 [[tests]]
 id = "ADAPT-PROTOCOL-011"
 title = "Protocol third-adapter horizontal extension proof"
-layer = "integration"
-owner_module = "xtask"
+layer = "unit"
+owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-011"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/scaffold_golden_adapter.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "xtask/src/forbidden_diff_guard.rs",
+  "xtask/src/main.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
@@ -3604,12 +3617,16 @@ contracts = ["HorizontalExtension", "ForbiddenDiffGuard"]
 [[tests]]
 id = "ADAPT-PROTOCOL-012"
 title = "Protocol stable promotion evidence archive validation"
-layer = "gate"
-owner_module = "xtask"
+layer = "unit"
+owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-012"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"

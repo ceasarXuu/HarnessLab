@@ -226,9 +226,9 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-PROTOCOL-007) run_filtered_tests "$id" "harnesslab-cli" "lib" "adapt_protocol_007_" 2; exit 0 ;;
     ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;
     ADAPT-PROTOCOL-009) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_009_" 1; exit 0 ;;
-    ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;
-    ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;
-    ADAPT-PROTOCOL-012) planned_adapter_proof "$id" "Phase 8: stable promotion evidence archive validation" ;;
+    ADAPT-PROTOCOL-010) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_010_" 1; exit 0 ;;
+    ADAPT-PROTOCOL-011) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_011_" 1 && cargo run -q -p xtask -- verify-forbidden-diff; exit 0 ;;
+    ADAPT-PROTOCOL-012) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_012_" 1; exit 0 ;;
     META-002) exec scripts/verify-test-registry.sh ;;
     META-008) exec scripts/verify-planned-adapter-selectors.sh ;;
     COV-005) package="xtask"; test_name="coverage::tests::coverage_001_module_thresholds_are_enforced" ;;
