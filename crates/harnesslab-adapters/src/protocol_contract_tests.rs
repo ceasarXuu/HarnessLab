@@ -1,5 +1,5 @@
 use crate::{
-    BenchmarkAdapter, SweBenchProAdapter, TerminalBenchAdapter,
+    BenchmarkAdapter, DeterministicSampleAdapter, SweBenchProAdapter, TerminalBenchAdapter,
     built_in_protocol_adapter_descriptors, validate_artifact_contracts,
     validate_data_lifecycle_contracts, validate_runtime_lifecycle_contracts,
 };
@@ -267,4 +267,60 @@ fn adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated() 
         .push(duplicate);
     let error = validate_artifact_contracts(&duplicate_section).unwrap_err();
     assert!(error.contains("report_metadata_duplicate_section"));
+}
+
+#[test]
+fn adapt_protocol_009_scaffold_golden_adapter_compiles_and_passes_conformance() {
+    let adapter = DeterministicSampleAdapter;
+    let descriptor = adapter.protocol_descriptor().expect(
+        "scaffold golden adapter must expose a protocol descriptor"
+    );
+    assert_eq!(descriptor.descriptor.name, "deterministic-sample");
+    assert_eq!(
+        descriptor.binding.adapter_id.as_str(),
+        "harnesslab.deterministic-sample.runtime"
+    );
+    assert_eq!(descriptor.binding.default_mode.as_str(), "deterministic-sample");
+    assert!(descriptor.binding.legacy_runner_kind.is_none());
+
+    let descriptors = vec![descriptor.clone()];
+    validate_data_lifecycle_contracts(&descriptors).unwrap();
+    validate_runtime_lifecycle_contracts(&descriptors).unwrap();
+    validate_artifact_contracts(&descriptors).unwrap();
+
+    assert!(descriptor.runtime_lifecycle.cleanup.is_none());
+    assert_eq!(descriptor.readiness.len(), 2);
+    assert_eq!(descriptor.failure_mapping.len(), 1);
+    assert_eq!(descriptor.artifacts.len(), 5);
+    assert!(
+        descriptor.artifacts.iter().any(|a| {
+            a.artifact_type == "runtime_snapshot"
+                && a.visibility == "public"
+                && a.required_for_replay
+        })
+    );
+    assert!(
+        descriptor.artifacts.iter().any(|a| {
+            a.artifact_type == "runtime_snapshot"
+                && a.visibility == "private"
+                && a.redaction_policy == "private_only"
+        })
+    );
+
+    let mut missing_failure = descriptors.clone();
+    missing_failure[0].failure_mapping.clear();
+    let error = validate_runtime_lifecycle_contracts(&missing_failure).unwrap_err();
+    assert!(error.contains("failure_mapping_missing"));
+
+    let mut missing_readiness = descriptors.clone();
+    missing_readiness[0]
+        .readiness
+        .retain(|probe| probe.capability.as_str() != "readiness.basic");
+    let error = validate_runtime_lifecycle_contracts(&missing_readiness).unwrap_err();
+    assert!(error.contains("readiness_contract_missing"));
+
+    let mut missing_artifact = descriptors.clone();
+    missing_artifact[0].artifacts.clear();
+    let error = validate_artifact_contracts(&missing_artifact).unwrap_err();
+    assert!(error.contains("artifact_contract_missing"));
 }

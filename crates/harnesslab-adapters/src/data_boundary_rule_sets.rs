@@ -25,7 +25,8 @@ pub(crate) fn forbidden_runtime_path_literals() -> BTreeSet<&'static str> {
 pub(crate) fn artifact_declaration_source(path: &str) -> bool {
     matches!(
         path,
-        "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs"
+        "crates/harnesslab-adapters/src/scaffold_golden_adapter.rs"
+            | "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs"
             | "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs"
             | "crates/harnesslab-adapters/src/terminal_bench_protocol.rs"
     )
