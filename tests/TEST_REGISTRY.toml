@@ -3546,12 +3546,19 @@ contracts = ["NoBranchGuard"]
 [[tests]]
 id = "ADAPT-PROTOCOL-009"
 title = "Protocol scaffold golden path and generated adapter conformance"
-layer = "gate"
-owner_module = "xtask"
+layer = "unit"
+owner_module = "harnesslab-adapters"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-009"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/scaffold_golden_adapter.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "xtask/src/scaffold.rs",
+  "xtask/src/main.rs",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"

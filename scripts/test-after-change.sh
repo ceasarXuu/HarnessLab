@@ -225,7 +225,7 @@ if [[ "${1:-}" == "--select" ]]; then
     ADAPT-PROTOCOL-006) run_filtered_tests "$id" "harnesslab-cli" "test:replay_authority_contract" "adapt_protocol_006_" 2; exit 0 ;;
     ADAPT-PROTOCOL-007) run_filtered_tests "$id" "harnesslab-cli" "lib" "adapt_protocol_007_" 2; exit 0 ;;
     ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;
-    ADAPT-PROTOCOL-009) planned_adapter_proof "$id" "Phase 5: scaffold golden path and generated adapter conformance" ;;
+    ADAPT-PROTOCOL-009) run_filtered_tests "$id" "harnesslab-adapters" "lib" "adapt_protocol_009_" 1; exit 0 ;;
     ADAPT-PROTOCOL-010) planned_adapter_proof "$id" "Phase 6: existing adapter migration preservation manifest" ;;
     ADAPT-PROTOCOL-011) planned_adapter_proof "$id" "Phase 7: third-adapter horizontal extension proof and forbidden-diff guard" ;;
     ADAPT-PROTOCOL-012) planned_adapter_proof "$id" "Phase 8: stable promotion evidence archive validation" ;;
