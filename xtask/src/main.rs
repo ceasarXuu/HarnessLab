@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 
 mod adapter_claims;
 mod coverage;
+mod forbidden_diff_guard;
 mod frozen_execution_files;
 mod frozen_selector_ids;
 mod frozen_selectors;
@@ -23,6 +24,7 @@ fn main() -> Result<()> {
             frozen_selectors::verify_frozen_selector_manifest()
         }
         Command::VerifyNoBranchGuard => no_branch_guard::verify_no_branch_guard(),
+        Command::VerifyForbiddenDiff => forbidden_diff_guard::verify_forbidden_diff(),
         Command::PrintFrozenSelectorManifest => frozen_selectors::print_frozen_selector_manifest(),
         Command::GenerateTestTraceability => generate_traceability(),
         Command::ListAdapterProofSelectors => list_adapter_proof_selectors(),
@@ -86,6 +88,7 @@ enum Command {
     PrintFrozenSelectorManifest,
     GenerateTestTraceability,
     ListAdapterProofSelectors,
+    VerifyForbiddenDiff,
     AdapterScaffold {
         #[arg(long)]
         benchmark_id: String,
