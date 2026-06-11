@@ -6,6 +6,9 @@ use std::path::Path;
 
 pub trait BenchmarkAdapter {
     fn descriptor(&self) -> BenchmarkDescriptor;
+    fn protocol_descriptor(&self) -> Option<crate::ProtocolAdapterDescriptor> {
+        None
+    }
     fn inspect_data(&self) -> BenchmarkDataState {
         BenchmarkDataState {
             descriptor: self.descriptor(),

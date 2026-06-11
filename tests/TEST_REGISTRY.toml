@@ -3370,13 +3370,28 @@ contracts = ["TaskRuntimeBinding", "AdapterRegistry"]
 
 [[tests]]
 id = "ADAPT-PROTOCOL-003"
-title = "Protocol data lifecycle black-box conformance"
+title = "Protocol data lifecycle contract foundation"
 layer = "contract"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-003"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "tests/REQUIREMENTS.toml",
+  "tests/TEST_REGISTRY.toml",
+  "scripts/test-after-change.sh",
+  "docs/adapter-protocol.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
@@ -3387,20 +3402,35 @@ contracts = ["BenchmarkDataLifecycle"]
 
 [[tests]]
 id = "ADAPT-PROTOCOL-004"
-title = "Protocol runtime lifecycle and failure taxonomy conformance"
+title = "Protocol runtime lifecycle and failure taxonomy contract foundation"
 layer = "contract"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-004"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_contract.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+  "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/registry.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "tests/REQUIREMENTS.toml",
+  "tests/TEST_REGISTRY.toml",
+  "scripts/test-after-change.sh",
+  "docs/adapter-protocol.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
 section = "17"
 [tests.verifies]
 requirements = ["ADAPT-PROTOCOL-004"]
-contracts = ["RuntimeLifecycle", "FailureMapping"]
+contracts = ["RuntimeLifecycle", "ReadinessProbe", "FailureMapping"]
 
 [[tests]]
 id = "ADAPT-PROTOCOL-005"

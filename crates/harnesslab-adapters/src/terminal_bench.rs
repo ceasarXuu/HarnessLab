@@ -1,5 +1,6 @@
 use crate::{
     BenchmarkAdapter, built_in_protocol_registry, prepared_with_identity, stable_file_checksum,
+    terminal_bench_protocol_descriptor,
 };
 use harnesslab_core::{
     AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
@@ -67,6 +68,10 @@ impl BenchmarkAdapter for TerminalBenchAdapter {
                 },
             ],
         }
+    }
+
+    fn protocol_descriptor(&self) -> Option<crate::ProtocolAdapterDescriptor> {
+        Some(terminal_bench_protocol_descriptor(self.descriptor()))
     }
 
     fn inspect_data(&self) -> BenchmarkDataState {

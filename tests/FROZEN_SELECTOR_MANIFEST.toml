@@ -2,7 +2,7 @@ schema_version = 1
 
 [[execution_files]]
 path = "scripts/test-after-change.sh"
-hash = "fnv1a64:cb8e7e1310fff097"
+hash = "fnv1a64:dc13566c46ef1045"
 
 [[execution_files]]
 path = "scripts/verify-terminal-bench-python-adapter.sh"
@@ -169,6 +169,62 @@ required_artifacts = []
 owning_contracts = [
     "TaskRuntimeBinding",
     "AdapterRegistry",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-003"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-003"
+router_case = 'ADAPT-PROTOCOL-003) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_003_data_lifecycle_contract_foundation_is_validated"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "tests/REQUIREMENTS.toml",
+    "tests/TEST_REGISTRY.toml",
+    "scripts/test-after-change.sh",
+    "docs/adapter-protocol.md",
+]
+required_artifacts = []
+owning_contracts = ["BenchmarkDataLifecycle"]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-004"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-004"
+router_case = 'ADAPT-PROTOCOL-004) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "tests/REQUIREMENTS.toml",
+    "tests/TEST_REGISTRY.toml",
+    "scripts/test-after-change.sh",
+    "docs/adapter-protocol.md",
+]
+required_artifacts = []
+owning_contracts = [
+    "RuntimeLifecycle",
+    "ReadinessProbe",
+    "FailureMapping",
 ]
 
 [[selectors]]

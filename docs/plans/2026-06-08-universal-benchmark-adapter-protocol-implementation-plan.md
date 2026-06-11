@@ -478,8 +478,8 @@ must exist in `tests/REQUIREMENTS.toml`, `tests/TEST_REGISTRY.toml`,
 |---|---|---|
 | `ADAPT-PROTOCOL-001` | planned in Phase 1, active in Phase 2 | Descriptor, identity, and protocol authority schema validation. |
 | `ADAPT-PROTOCOL-002` | planned in Phase 1, active in Phase 2 | Registry conflict and binding resolution validation. |
-| `ADAPT-PROTOCOL-003` | planned in Phase 1, active in Phase 3 | Data lifecycle black-box conformance. |
-| `ADAPT-PROTOCOL-004` | planned in Phase 1, active in Phase 3 | Runtime lifecycle and failure taxonomy black-box conformance. |
+| `ADAPT-PROTOCOL-003` | planned in Phase 1, active in Phase 3 | Data lifecycle protocol contract foundation. |
+| `ADAPT-PROTOCOL-004` | planned in Phase 1, active in Phase 3 | Runtime lifecycle, readiness, and failure taxonomy contract foundation. |
 | `ADAPT-PROTOCOL-005` | planned in Phase 1, active in Phase 3 | Artifact declaration, public/private, and redaction conformance. |
 | `ADAPT-PROTOCOL-006` | planned in Phase 1, active in Phase 4 | Replay authority old/new/mixed fixture conformance. |
 | `ADAPT-PROTOCOL-007` | planned in Phase 1, active in Phase 4 | Generic doctor/readiness/report metadata conformance. |
@@ -787,7 +787,10 @@ not concrete benchmark modules.
 
 #### Implementation Tasks
 
-- Define protocol-facing adapter descriptor and subcontracts.
+- Define protocol-facing adapter descriptor and subcontracts. **Started:** the
+  adapter crate now exposes `ProtocolAdapterDescriptor` plus adapter-owned data
+  lifecycle, runtime lifecycle, readiness probe, and central failure mapping
+  records for built-in adapters.
 - Move runtime compatibility checks into adapter-declared readiness/capability
   methods.
 - Implement versioned readiness probe records and generic readiness event fields.
@@ -802,10 +805,13 @@ not concrete benchmark modules.
 
 #### Deliverables
 
-- Protocol adapter interface.
-- Adapter readiness contract.
+- Protocol adapter interface. **Started:** `ADAPT-PROTOCOL-003/004` validate
+  built-in descriptors through protocol conformance records.
+- Adapter readiness contract. **Started:** runtime conformance requires
+  readiness probes for declared readiness capabilities.
 - Artifact declaration contract.
-- Failure taxonomy contract.
+- Failure taxonomy contract. **Started:** runtime conformance rejects empty,
+  duplicate, or non-failure mappings.
 
 #### Testing And Validation
 
@@ -816,6 +822,21 @@ not concrete benchmark modules.
 | Artifact declaration enforced | Conformance tests | Runtime cannot expose undeclared public artifacts |
 | Report metadata generic | Report contract tests | Report renders only declared public metadata/artifacts |
 | Failure schema enforced | Negative fixture tests | Unclassified adapter failures fail conformance |
+
+#### Current Phase 3 Landing Notes
+
+- Landed: `ProtocolAdapterDescriptor` is exposed through adapter instances and
+  concentrates built-in adapter data/runtime/readiness/failure subcontracts
+  behind protocol metadata.
+- Landed: `ADAPT-PROTOCOL-003` is active and validates data lifecycle operation
+  coverage, binding/descriptor alignment, declared capability ownership, and
+  negative mismatch cases.
+- Landed: `ADAPT-PROTOCOL-004` is active and validates runtime lifecycle
+  operation coverage, cleanup capability coupling, capability-specific
+  readiness probe coverage, and central failure mapping schema fields.
+- Not yet landed: artifact declaration/redaction conformance, generic report
+  metadata consumption, doctor readiness consumption, live runtime artifact
+  proof, and static no-branch enforcement.
 
 #### Exit Criteria
 
@@ -1285,8 +1306,8 @@ Minimum new selector families:
 |---|---|
 | `ADAPT-PROTOCOL-001` | Descriptor, identity, and protocol authority schema validation |
 | `ADAPT-PROTOCOL-002` | Registry conflict and binding resolution validation |
-| `ADAPT-PROTOCOL-003` | Data lifecycle black-box conformance |
-| `ADAPT-PROTOCOL-004` | Runtime lifecycle and failure taxonomy black-box conformance |
+| `ADAPT-PROTOCOL-003` | Data lifecycle protocol contract foundation |
+| `ADAPT-PROTOCOL-004` | Runtime lifecycle, readiness, and failure taxonomy contract foundation |
 | `ADAPT-PROTOCOL-005` | Artifact declaration, public/private boundary, and redaction conformance |
 | `ADAPT-PROTOCOL-006` | Replay authority old/new/mixed fixture conformance |
 | `ADAPT-PROTOCOL-007` | Generic doctor/readiness/report metadata conformance |
@@ -1366,3 +1387,4 @@ Minimum new selector families:
 | 0.7 | 2026-06-08 | Started Phase 2 implementation by adding protocol identity/authority types, built-in adapter protocol registry binding validation, and active `ADAPT-PROTOCOL-001/002` selector routes. |
 | 0.8 | 2026-06-11 | Extended Phase 2 implementation into runtime/replay authority binding: production adapters dual-write `TaskRuntimeBinding`, CLI preflight/execute/cleanup resolve by protocol `adapter_id`, external-runtime snapshots fingerprint `protocol_authority`, and `ADAPT-PROTOCOL-002` documentation is scoped to current registry validation while later artifact/redaction/report gates remain explicit. |
 | 0.9 | 2026-06-11 | Closed Phase 2 adversarial review after Round 5: accepted blockers from prior rounds are fixed and validated; remaining items are non-blocking Phase 3/4 work such as SWE protocol-only positive coverage and cleanup/report/doctor branch removal. |
+| 1.0 | 2026-06-11 | Started Phase 3 by adding protocol-facing adapter subcontracts and activating `ADAPT-PROTOCOL-003/004` for data lifecycle, runtime lifecycle, readiness probe, and central failure mapping contract foundation. |
