@@ -169,6 +169,7 @@ The boundary assertion covers:
 - `crates/harnesslab-adapters/src/lib.rs`
 - `crates/harnesslab-adapters/src/fake_patch.rs`
 - `crates/harnesslab-adapters/src/fake_terminal.rs`
+- `crates/harnesslab-adapters/src/protocol_registry.rs`
 - `crates/harnesslab-adapters/src/registry.rs`
 - `crates/harnesslab-adapters/src/swe_bench_pro.rs`
 - `crates/harnesslab-adapters/src/terminal_bench.rs`

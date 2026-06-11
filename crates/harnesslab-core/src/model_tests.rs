@@ -374,6 +374,7 @@ fn runtime_snapshot_for(plan: &crate::BenchmarkPlan, task_id: &str) -> crate::Ru
         instruction_hash: "fnv64:instruction".to_string(),
         task_plan_hash: "fnv64:task-plan".to_string(),
         external_runner: None,
+        runtime_binding: None,
         external_runtime_attempts: Vec::new(),
     }
 }
@@ -445,6 +446,7 @@ fn valid_plan() -> crate::BenchmarkPlan {
             },
             patch_spec: None,
             external_runner: None,
+            runtime_binding: None,
         }],
         task_runtime_snapshots: Vec::new(),
         run_config_overrides: crate::RunConfigOverrides {

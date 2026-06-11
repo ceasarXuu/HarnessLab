@@ -1,7 +1,7 @@
 use super::runtime_anchor::{AnchorProjection, anchor_attempt_snapshot};
 use crate::runner::store;
 use anyhow::Result;
-use harnesslab_core::{ExternalRunnerKind, redact_public_value};
+use harnesslab_core::{AdapterProtocolAuthority, ExternalRunnerKind, redact_public_value};
 use harnesslab_infra::{
     atomic_write_json, stable_checksum_bytes, stable_file_checksum, stable_path_checksum,
 };
@@ -17,6 +17,7 @@ pub(super) struct ExternalRuntimeSnapshotRequest<'a> {
     pub(super) task_id: &'a str,
     pub(super) attempt: u32,
     pub(super) runner_kind: ExternalRunnerKind,
+    pub(super) protocol_authority: Option<AdapterProtocolAuthority>,
     pub(super) adapter_version: &'a str,
     pub(super) network: harnesslab_core::NetworkPolicy,
     pub(super) timeout_sec: Option<u64>,
@@ -100,6 +101,7 @@ pub(super) fn write_external_runtime_snapshots(
         task_id: request.task_id.to_string(),
         attempt: request.attempt,
         runner_kind: request.runner_kind,
+        protocol_authority: request.protocol_authority.clone(),
         adapter_version: request.adapter_version.to_string(),
         runtime_policy: runtime_policy.clone(),
         dataset_path: request.dataset_path.display().to_string(),
@@ -119,6 +121,7 @@ pub(super) fn write_external_runtime_snapshots(
         task_id: request.task_id.to_string(),
         attempt: request.attempt,
         runner_kind: request.runner_kind,
+        protocol_authority: request.protocol_authority.clone(),
         adapter_version: request.adapter_version.to_string(),
         runtime_policy,
         commands: public_commands,
@@ -157,6 +160,7 @@ struct PrivateExternalRuntimeSnapshot {
     task_id: String,
     attempt: u32,
     runner_kind: ExternalRunnerKind,
+    protocol_authority: Option<AdapterProtocolAuthority>,
     adapter_version: String,
     runtime_policy: RuntimePolicySnapshot,
     dataset_path: String,
@@ -178,6 +182,7 @@ struct PublicExternalRuntimeSnapshot {
     task_id: String,
     attempt: u32,
     runner_kind: ExternalRunnerKind,
+    protocol_authority: Option<AdapterProtocolAuthority>,
     adapter_version: String,
     runtime_policy: RuntimePolicySnapshot,
     commands: Vec<PublicCommandSnapshot>,
@@ -391,6 +396,7 @@ fn runtime_fingerprint(
         "task_id": request.task_id,
         "attempt": request.attempt,
         "runner_kind": request.runner_kind,
+        "protocol_authority": &request.protocol_authority,
         "adapter_version": request.adapter_version,
         "runtime_policy": runtime_policy,
         "dataset_path": request.dataset_path.display().to_string(),
@@ -416,6 +422,7 @@ fn public_fingerprint(
         "task_id": request.task_id,
         "attempt": request.attempt,
         "runner_kind": request.runner_kind,
+        "protocol_authority": &request.protocol_authority,
         "adapter_version": request.adapter_version,
         "runtime_policy": runtime_policy,
         "commands": commands,

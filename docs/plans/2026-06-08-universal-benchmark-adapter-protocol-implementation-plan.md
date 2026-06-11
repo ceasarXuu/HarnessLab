@@ -1,7 +1,7 @@
 # Universal Benchmark Adapter Protocol Implementation Plan
 
 - Created: 2026-06-08
-- Updated: 2026-06-08
+- Updated: 2026-06-11
 - Version: 0.6
 - Status: In Progress
 - Owner / Responsible: implementation owner TBD
@@ -252,18 +252,19 @@ Dispatch must use one concrete binding object, not "`AdapterId` or
 
 Required binding fields:
 
-- `benchmark_id`
-- `adapter_id`
-- `protocol_version`
-- `adapter_version`
-- `selected_mode`
-- `capabilities`
-- `stability`
+- `authority`
+  - `benchmark_id`
+  - `adapter_id`
+  - `protocol_version`
+  - `adapter_version`
+  - `selected_mode`
+  - `capabilities`
+  - `stability`
+  - optional `legacy_runner_kind`
 - `dataset_ref`
 - `task_ref`
 - `artifact_contract_id`
 - `readiness_contract_id`
-- optional `legacy_runner_kind`
 
 Selection rule:
 
@@ -700,6 +701,25 @@ an explicit legacy mapping shim.
 - Add tests that legacy snapshots remain handled only through the shim.
 - Add old-only, new-only, dual-written, and mixed-authority replay fixtures.
 - Add duplicate/conflicting registry fixture tests.
+
+#### Current Phase 2 Landing Notes
+
+- Landed: validated protocol identity newtypes, nested
+  `TaskRuntimeBinding.authority`, built-in protocol registry validation,
+  explicit legacy shim authority, and active/frozen `ADAPT-PROTOCOL-001/002`.
+- Landed: production Terminal-Bench and SWE-bench Pro plans dual-write
+  `runtime_binding`; preflight, execute, cleanup discovery, internal-error
+  snapshot writing, and replay authority checks resolve through the task's
+  protocol binding when present.
+- Landed: runtime observability includes protocol adapter id, protocol version,
+  benchmark id, selected mode, stability, capabilities, and `legacy_shim_used`.
+- Landed: external-runtime private/public fingerprints include
+  `protocol_authority`, and replay fails closed on mismatched protocol authority
+  or adapter version drift.
+- Deliberately not claimed as complete in Phase 2: full artifact declaration,
+  redaction policy, detailed failure taxonomy, readiness probe content, generic
+  report metadata, and no-branch upper-layer enforcement. Those remain assigned
+  to `ADAPT-PROTOCOL-005/006/007/008/010/012` in later phases.
 
 #### Deliverables
 
@@ -1343,3 +1363,6 @@ Minimum new selector families:
 | 0.4 | 2026-06-08 | Added Phase 0 machine-enforced frozen selector lockfile and `xtask` guard; expanded inventory for integrations, serialized authority fields, registry dispatch classification, and readiness-owned label references. |
 | 0.5 | 2026-06-08 | Hardened Phase 0 frozen guard with independent selector id baseline, exact router case locking, and execution file content hashes for the shared selector executor and external proof scripts. |
 | 0.6 | 2026-06-08 | Started Phase 1 protocol specification with `docs/adapter-protocol.md` and registered `ADAPT-PROTOCOL-001..012` as planned requirement/test/selector gates. |
+| 0.7 | 2026-06-08 | Started Phase 2 implementation by adding protocol identity/authority types, built-in adapter protocol registry binding validation, and active `ADAPT-PROTOCOL-001/002` selector routes. |
+| 0.8 | 2026-06-11 | Extended Phase 2 implementation into runtime/replay authority binding: production adapters dual-write `TaskRuntimeBinding`, CLI preflight/execute/cleanup resolve by protocol `adapter_id`, external-runtime snapshots fingerprint `protocol_authority`, and `ADAPT-PROTOCOL-002` documentation is scoped to current registry validation while later artifact/redaction/report gates remain explicit. |
+| 0.9 | 2026-06-11 | Closed Phase 2 adversarial review after Round 5: accepted blockers from prior rounds are fixed and validated; remaining items are non-blocking Phase 3/4 work such as SWE protocol-only positive coverage and cleanup/report/doctor branch removal. |

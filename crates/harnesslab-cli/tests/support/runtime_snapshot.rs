@@ -145,6 +145,29 @@ pub fn rewrite_snapshot_adapter_version_with_authority(
     rewrite_benchmark_task_runtime_snapshot(benchmark_path, task_runtime_path);
 }
 
+pub fn rewrite_snapshot_protocol_authority(
+    private_path: &Path,
+    public_path: &Path,
+    task_runtime_path: &Path,
+    benchmark_path: &Path,
+    authority: serde_json::Value,
+) {
+    let mut private: serde_json::Value =
+        serde_json::from_slice(&fs::read(private_path).unwrap()).unwrap();
+    let mut public: serde_json::Value =
+        serde_json::from_slice(&fs::read(public_path).unwrap()).unwrap();
+    private["protocol_authority"] = authority.clone();
+    public["protocol_authority"] = authority;
+    let runtime_fingerprint = runtime_fingerprint_from_private(&private);
+    private["runtime_fingerprint"] = serde_json::json!(runtime_fingerprint);
+    public["runtime_fingerprint"] = private["runtime_fingerprint"].clone();
+    private["public_fingerprint"] = serde_json::json!(public_fingerprint_from_public(&public));
+    fs::write(private_path, serde_json::to_vec_pretty(&private).unwrap()).unwrap();
+    fs::write(public_path, serde_json::to_vec_pretty(&public).unwrap()).unwrap();
+    rewrite_task_runtime_anchor_for_attempt(task_runtime_path, private_path, public_path);
+    rewrite_benchmark_task_runtime_snapshot(benchmark_path, task_runtime_path);
+}
+
 pub fn stable_file_checksum(path: &Path) -> String {
     stable_checksum_bytes(&fs::read(path).unwrap())
 }
@@ -214,6 +237,7 @@ fn runtime_fingerprint_from_private(private: &serde_json::Value) -> String {
         "task_id": private["task_id"].clone(),
         "attempt": private["attempt"].clone(),
         "runner_kind": private["runner_kind"].clone(),
+        "protocol_authority": private["protocol_authority"].clone(),
         "adapter_version": private["adapter_version"].clone(),
         "runtime_policy": private["runtime_policy"].clone(),
         "dataset_path": private["dataset_path"].clone(),
@@ -233,6 +257,7 @@ fn public_fingerprint_from_public(public: &serde_json::Value) -> String {
         "task_id": public["task_id"].clone(),
         "attempt": public["attempt"].clone(),
         "runner_kind": public["runner_kind"].clone(),
+        "protocol_authority": public["protocol_authority"].clone(),
         "adapter_version": public["adapter_version"].clone(),
         "runtime_policy": public["runtime_policy"].clone(),
         "commands": public["commands"].clone(),

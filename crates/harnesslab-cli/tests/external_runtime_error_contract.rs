@@ -40,7 +40,7 @@ exit 0
     assert!(attempt_dir.join("internal-error.private.json").is_file());
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("\"event\":\"external_runner_internal_error\""));
-    assert!(events.contains("adapter_id=terminal-bench-runtime"));
+    assert!(events.contains("adapter_id=harnesslab.terminal-bench.runtime"));
     assert!(events.contains("adapter_phase=execute"));
     assert!(events.contains("adapter_subphase=post_execution_cleanup"));
     assert!(events.contains("failure_code=agent_cleanup_failed"));
@@ -66,7 +66,7 @@ exit 0
             .unwrap();
     assert_eq!(
         internal_error["internal_error"]["adapter_id"],
-        "terminal-bench-runtime"
+        "harnesslab.terminal-bench.runtime"
     );
     assert_eq!(internal_error["internal_error"]["phase"], "execute");
     assert_eq!(

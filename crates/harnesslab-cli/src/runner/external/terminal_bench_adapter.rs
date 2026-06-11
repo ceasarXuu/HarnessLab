@@ -18,7 +18,7 @@ use super::{
 };
 use crate::agent_registry::MaterializedAgentProfile;
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use harnesslab_core::{
     AgentKind, AgentProfile, ExternalRunnerKind, RunSpec, RuntimePreflightReport, TaskAttemptResult,
 };
@@ -30,7 +30,7 @@ use super::runtime_adapter::{
     RuntimeCleanupTarget, RuntimePreflightContext, preflight_report,
 };
 
-const ADAPTER_ID: &str = "terminal-bench-runtime";
+const ADAPTER_ID: &str = "harnesslab.terminal-bench.runtime";
 const IMPORT_AGENT_CLEANUP_GRACE_SEC: u64 = 30;
 
 pub(super) struct TerminalBenchRuntimeAdapter;
@@ -63,13 +63,9 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
     }
 
     fn execute(&self, ctx: &ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
-        let runner = ctx
-            .task
-            .external_runner
-            .as_ref()
-            .context("terminal-bench task missing runner spec")?;
         let compatibility = BenchmarkRuntimeCompatibility::from_profile(ctx.profile);
-        let dataset_path = Path::new(&runner.dataset_path);
+        let dataset_ref = super::runtime_dataset_ref(ctx.task)?;
+        let dataset_path = Path::new(dataset_ref);
         let attempt_root = fs::canonicalize(ctx.attempt_dir)?;
         let output_root = attempt_root.join("official/terminal-bench");
         let official_run_id = official_run_id(ctx.spec, ctx.task, ctx.attempt);

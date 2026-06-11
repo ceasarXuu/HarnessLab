@@ -25,6 +25,11 @@ pub(super) fn write_terminal_bench_runtime_snapshots(
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
         runner_kind: ExternalRunnerKind::TerminalBench,
+        protocol_authority: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.clone()),
         adapter_version: TERMINAL_BENCH_RUNTIME_ADAPTER_VERSION,
         network: ctx.spec.execution.network,
         timeout_sec: Some(prepared.process_timeout_sec),

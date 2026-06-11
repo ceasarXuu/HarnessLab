@@ -1,3 +1,4 @@
+pub mod adapter_protocol;
 pub mod agent_profile;
 pub mod agent_profile_reference;
 pub mod benchmark;
@@ -9,6 +10,7 @@ pub mod redaction;
 pub mod runtime;
 pub mod usage;
 
+pub use adapter_protocol::*;
 pub use agent_profile::*;
 pub use agent_profile_reference::*;
 pub use benchmark::*;

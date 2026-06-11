@@ -1,9 +1,11 @@
-use crate::{BenchmarkAdapter, prepared_with_identity, stable_file_checksum};
+use crate::{
+    BenchmarkAdapter, built_in_protocol_registry, prepared_with_identity, stable_file_checksum,
+};
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle,
-    DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PreparedBenchmark,
-    ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
-    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+    AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
+    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy,
+    PreparedBenchmark, ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor,
+    TaskPlan, TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
 
@@ -299,6 +301,23 @@ fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
             source_path: None,
             agent_timeout_sec: metadata.max_agent_timeout_sec,
         }),
+        runtime_binding: Some(terminal_bench_runtime_binding(task_id, dataset_dir)),
+    }
+}
+
+fn terminal_bench_runtime_binding(task_id: &str, dataset_dir: &Path) -> TaskRuntimeBinding {
+    TaskRuntimeBinding {
+        authority: built_in_protocol_registry()
+            .binding_for_adapter_id(
+                &AdapterId::new("harnesslab.terminal-bench.runtime")
+                    .expect("terminal-bench adapter id is valid"),
+            )
+            .expect("terminal-bench protocol binding is registered")
+            .authority(),
+        dataset_ref: dataset_dir.display().to_string(),
+        task_ref: task_id.to_string(),
+        artifact_contract_id: "artifact.basic.v1".to_string(),
+        readiness_contract_id: "readiness.basic.v1".to_string(),
     }
 }
 

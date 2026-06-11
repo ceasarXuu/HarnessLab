@@ -367,5 +367,6 @@ fn task_with_id(task_id: &str) -> TaskPlan {
         },
         patch_spec: None,
         external_runner: None,
+        runtime_binding: None,
     }
 }

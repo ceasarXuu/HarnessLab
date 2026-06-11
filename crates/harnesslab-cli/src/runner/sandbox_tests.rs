@@ -197,6 +197,7 @@ fn task() -> TaskPlan {
         },
         patch_spec: None,
         external_runner: None,
+        runtime_binding: None,
     }
 }
 

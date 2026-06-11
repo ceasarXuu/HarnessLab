@@ -386,7 +386,7 @@ fn assert_swe_runtime_artifacts(
 
     let events = fs::read_to_string(run_dir.join("events.jsonl")).unwrap();
     assert!(events.contains("\"event\":\"external_runner_preflight\""));
-    assert!(events.contains("adapter_id=swe-bench-pro-runtime"));
+    assert!(events.contains("adapter_id=harnesslab.swe-bench-pro.runtime"));
     assert!(events.contains("adapter_phase=preflight"));
     assert!(events.contains("runner_kind=SweBenchPro"));
     assert!(events.contains("agent_bridge_mode=swe-bench-pro-gold"));

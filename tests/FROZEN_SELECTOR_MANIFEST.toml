@@ -2,7 +2,7 @@ schema_version = 1
 
 [[execution_files]]
 path = "scripts/test-after-change.sh"
-hash = "fnv1a64:44383850d4edc5bd"
+hash = "fnv1a64:cb8e7e1310fff097"
 
 [[execution_files]]
 path = "scripts/verify-terminal-bench-python-adapter.sh"
@@ -53,6 +53,7 @@ file_patterns = [
     "crates/harnesslab-adapters/src/fake_patch.rs",
     "crates/harnesslab-adapters/src/fake_terminal.rs",
     "crates/harnesslab-adapters/src/lib.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
     "crates/harnesslab-adapters/src/registry.rs",
     "crates/harnesslab-adapters/src/swe_bench_pro.rs",
     "crates/harnesslab-adapters/src/terminal_bench.rs",
@@ -135,6 +136,42 @@ required_artifacts = []
 owning_contracts = ["BenchmarkDataAdapter"]
 
 [[selectors]]
+id = "ADAPT-PROTOCOL-001"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-001"
+router_case = 'ADAPT-PROTOCOL-001) package="harnesslab-core"; test_name="adapter_protocol::tests::adapt_protocol_001_identity_authority_and_legacy_shim_contract"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-core/src/adapter_protocol.rs",
+    "crates/harnesslab-core/src/lib.rs",
+    "docs/adapter-protocol.md",
+]
+required_artifacts = []
+owning_contracts = [
+    "AdapterProtocol",
+    "AdapterProtocolAuthority",
+]
+
+[[selectors]]
+id = "ADAPT-PROTOCOL-002"
+status = "active"
+command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-002"
+router_case = 'ADAPT-PROTOCOL-002) package="harnesslab-adapters"; test_name="protocol_registry::tests::adapt_protocol_002_registry_binding_resolution_and_conflicts_are_enforced"; test_target="lib" ;;'
+expected_test_count = 1
+expected_pass_threshold = "selected test runs exactly once and passes"
+file_patterns = [
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/lib.rs",
+    "docs/adapter-protocol.md",
+]
+required_artifacts = []
+owning_contracts = [
+    "TaskRuntimeBinding",
+    "AdapterRegistry",
+]
+
+[[selectors]]
 id = "ADAPT-RUNTIME-001"
 status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-001"
@@ -142,6 +179,7 @@ router_case = 'ADAPT-RUNTIME-001) package="harnesslab-cli"; test_name="runner::e
 expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
+    "crates/harnesslab-core/src/benchmark.rs",
     "crates/harnesslab-core/src/runtime.rs",
     "crates/harnesslab-cli/src/runtime_compatibility.rs",
     "crates/harnesslab-cli/src/runner/cleanup.rs",
@@ -178,6 +216,10 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+    "crates/harnesslab-cli/tests/support/runtime_snapshot.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-cli/src/runner/replay.rs",
+    "crates/harnesslab-cli/src/runner/external.rs",
     "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
     "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
     "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
@@ -1423,7 +1465,9 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/src/runner/replay.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+    "crates/harnesslab-cli/tests/support/runtime_snapshot.rs",
     "crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs",
 ]
 required_artifacts = [

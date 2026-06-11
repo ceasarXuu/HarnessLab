@@ -336,6 +336,7 @@ fn plan_with_image(image: &str) -> BenchmarkPlan {
             },
             patch_spec: None,
             external_runner: None,
+            runtime_binding: None,
         }],
         task_runtime_snapshots: Vec::new(),
         run_config_overrides: RunConfigOverrides {

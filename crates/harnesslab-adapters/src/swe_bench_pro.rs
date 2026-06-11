@@ -1,9 +1,12 @@
-use crate::{BenchmarkAdapter, prepared_with_identity, stable_checksum, stable_file_checksum};
+use crate::{
+    BenchmarkAdapter, built_in_protocol_registry, prepared_with_identity, stable_checksum,
+    stable_file_checksum,
+};
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle,
-    DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PatchSpec, PreparedBenchmark,
-    ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
-    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+    AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
+    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PatchSpec,
+    PreparedBenchmark, ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor,
+    TaskPlan, TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
 
@@ -364,6 +367,23 @@ fn swe_bench_pro_task(task_id: &str, dataset: &SweBenchProDataset) -> TaskPlan {
             source_path: Some(dataset.source_dir.display().to_string()),
             agent_timeout_sec: None,
         }),
+        runtime_binding: Some(swe_bench_pro_runtime_binding(dataset)),
+    }
+}
+
+fn swe_bench_pro_runtime_binding(dataset: &SweBenchProDataset) -> TaskRuntimeBinding {
+    TaskRuntimeBinding {
+        authority: built_in_protocol_registry()
+            .binding_for_adapter_id(
+                &AdapterId::new("harnesslab.swe-bench-pro.runtime")
+                    .expect("swe-bench-pro adapter id is valid"),
+            )
+            .expect("swe-bench-pro protocol binding is registered")
+            .authority(),
+        dataset_ref: dataset.dataset_dir.display().to_string(),
+        task_ref: dataset.source_dir.display().to_string(),
+        artifact_contract_id: "artifact.basic.v1".to_string(),
+        readiness_contract_id: "readiness.basic.v1".to_string(),
     }
 }
 

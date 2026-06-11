@@ -439,6 +439,7 @@ mod tests {
                 source_path: None,
                 agent_timeout_sec: Some(360),
             }),
+            runtime_binding: None,
         }
     }
 
