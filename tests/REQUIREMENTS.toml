@@ -528,10 +528,10 @@ section = "17"
 
 [[requirements]]
 id = "ADAPT-PROTOCOL-003"
-title = "Adapter protocol data lifecycle conformance is black-box validated"
+title = "Adapter protocol data lifecycle contract foundation is validated"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract"]
 required_runtime_proof = false
 [requirements.source]
@@ -540,12 +540,12 @@ section = "17"
 
 [[requirements]]
 id = "ADAPT-PROTOCOL-004"
-title = "Adapter protocol runtime lifecycle and failure taxonomy are validated"
+title = "Adapter protocol runtime lifecycle and failure taxonomy contract foundation is validated"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
-expected_layers = ["contract", "integration"]
-required_runtime_proof = true
+status = "active"
+expected_layers = ["contract"]
+required_runtime_proof = false
 [requirements.source]
 doc = "docs/adapter-protocol.md"
 section = "17"

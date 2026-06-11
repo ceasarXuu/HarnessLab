@@ -3,7 +3,7 @@
 - Created: 2026-06-08
 - Updated: 2026-06-11
 - Version: 0.1
-- Status: Phase 2 identity, registry, runtime authority, and replay authority foundation implemented; later conformance/report/doctor gates remain planned
+- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, and failure mapping schema gates implemented; live artifact/report/doctor/no-branch gates remain planned
 - Source plan: `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md`
 - Source PRD: `prd/2026-06-07-universal-benchmark-adapter-protocol.md`
 
@@ -359,7 +359,7 @@ Stable promotion evidence fields:
 |---|---|---:|---|
 | `AC-001` | `ADAPT-PROTOCOL-011` | 7 | Third adapter adds no generic runner/replay/report/doctor/selector behavior changes. |
 | `AC-002` | `ADAPT-PROTOCOL-003`, `ADAPT-PROTOCOL-004`, `ADAPT-PROTOCOL-005`, `ADAPT-PROTOCOL-007` | 3-5 | Conformance rejects missing lifecycle, unclassified failure, unsafe public artifact, and missing readiness contract. |
-| `AC-003` | `ADAPT-PROTOCOL-002`, `ADAPT-PROTOCOL-004` | 2-3 | Generic run resolves binding by ids and executes runtime lifecycle through adapter protocol. |
+| `AC-003` | `ADAPT-PROTOCOL-002`, `ADAPT-PROTOCOL-004`, `ADAPT-PROTOCOL-006`, `ADAPT-PROTOCOL-011` | 2-7 | Generic run resolves binding by ids; runtime lifecycle contract is declared in Phase 3 and live protocol execution proof remains required before final closure. |
 | `AC-004` | `ADAPT-PROTOCOL-006` | 4 | Replay validates adapter authority and material drift without concrete benchmark branch. |
 | `AC-005` | `ADAPT-PROTOCOL-007` | 4 | Doctor output is generated from adapter readiness probes. |
 | `AC-006` | `ADAPT-PROTOCOL-005`, `ADAPT-PROTOCOL-007` | 3-4 | Report renders only declared public artifacts and report metadata. |
@@ -373,8 +373,8 @@ Stable promotion evidence fields:
 |---|---|---:|---|
 | `ADAPT-PROTOCOL-001` | active | 2 | Descriptor, identity, and protocol authority schema validation. |
 | `ADAPT-PROTOCOL-002` | active | 2 | Registry conflict and binding resolution validation. |
-| `ADAPT-PROTOCOL-003` | planned | 3 | Data lifecycle black-box conformance. |
-| `ADAPT-PROTOCOL-004` | planned | 3 | Runtime lifecycle and failure taxonomy black-box conformance. |
+| `ADAPT-PROTOCOL-003` | active | 3 | Data lifecycle protocol contract foundation. |
+| `ADAPT-PROTOCOL-004` | active | 3 | Runtime lifecycle, readiness, and failure taxonomy contract foundation. |
 | `ADAPT-PROTOCOL-005` | planned | 3 | Artifact declaration, public/private, and redaction conformance. |
 | `ADAPT-PROTOCOL-006` | planned | 4 | Replay authority old/new/mixed fixture conformance. |
 | `ADAPT-PROTOCOL-007` | planned | 4 | Generic doctor/readiness/report metadata conformance. |

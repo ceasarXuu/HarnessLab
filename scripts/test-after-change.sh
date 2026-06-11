@@ -217,8 +217,8 @@ if [[ "${1:-}" == "--select" ]]; then
     SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;
     ADAPT-PROTOCOL-001) package="harnesslab-core"; test_name="adapter_protocol::tests::adapt_protocol_001_identity_authority_and_legacy_shim_contract"; test_target="lib" ;;
     ADAPT-PROTOCOL-002) package="harnesslab-adapters"; test_name="protocol_registry::tests::adapt_protocol_002_registry_binding_resolution_and_conflicts_are_enforced"; test_target="lib" ;;
-    ADAPT-PROTOCOL-003) planned_adapter_proof "$id" "Phase 3: data lifecycle black-box conformance" ;;
-    ADAPT-PROTOCOL-004) planned_adapter_proof "$id" "Phase 3: runtime lifecycle and failure taxonomy conformance" ;;
+    ADAPT-PROTOCOL-003) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_003_data_lifecycle_contract_foundation_is_validated"; test_target="lib" ;;
+    ADAPT-PROTOCOL-004) package="harnesslab-adapters"; test_name="protocol_contract_tests::adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated"; test_target="lib" ;;
     ADAPT-PROTOCOL-005) planned_adapter_proof "$id" "Phase 3: artifact declaration, public/private, and redaction conformance" ;;
     ADAPT-PROTOCOL-006) planned_adapter_proof "$id" "Phase 4: replay authority old/new/mixed fixture conformance" ;;
     ADAPT-PROTOCOL-007) planned_adapter_proof "$id" "Phase 4: generic doctor/readiness/report metadata conformance" ;;

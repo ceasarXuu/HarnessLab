@@ -1,6 +1,6 @@
 use crate::{
     BenchmarkAdapter, built_in_protocol_registry, prepared_with_identity, stable_checksum,
-    stable_file_checksum,
+    stable_file_checksum, swe_bench_pro_protocol_descriptor,
 };
 use harnesslab_core::{
     AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
@@ -59,6 +59,10 @@ impl BenchmarkAdapter for SweBenchProAdapter {
                 },
             ],
         }
+    }
+
+    fn protocol_descriptor(&self) -> Option<crate::ProtocolAdapterDescriptor> {
+        Some(swe_bench_pro_protocol_descriptor(self.descriptor()))
     }
 
     fn inspect_data(&self) -> BenchmarkDataState {
