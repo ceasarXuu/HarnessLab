@@ -2,8 +2,8 @@
 
 - Created: 2026-06-08
 - Updated: 2026-06-11
-- Version: 0.1
-- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, and failure mapping schema gates implemented; live artifact/report/doctor/no-branch gates remain planned
+- Version: 0.2
+- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, failure mapping schema, and artifact public/private declaration gates implemented; live doctor/no-branch gates remain planned
 - Source plan: `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md`
 - Source PRD: `prd/2026-06-07-universal-benchmark-adapter-protocol.md`
 
@@ -212,13 +212,29 @@ the migration checklist for `ADAPT-PROTOCOL-010`.
 | Field | Required | Allowed Values / Notes |
 |---|---|---|
 | `artifact_id` | yes | Stable id. |
-| `path` | yes | Relative attempt path. |
+| `scope` | yes | `attempt` or `run`. |
+| `path` | yes | Relative artifact path within the declared scope. |
 | `artifact_type` | yes | `runtime_snapshot`, `event_log`, `result`, `report_public`, `diagnostic_public`, `diagnostic_private`, or `adapter_custom`. |
 | `visibility` | yes | `public` or `private`. |
 | `producer_phase` | yes | Adapter phase/subphase. |
 | `required_for_replay` | yes | Boolean. |
 | `redaction_policy` | yes | `none`, `scan`, `structured`, or `private_only`. |
 | `schema_version` | yes | Artifact schema version. |
+
+`ADAPT-PROTOCOL-005` is a descriptor declaration conformance gate. It enforces
+these declaration rules for every built-in protocol adapter:
+
+- artifact ids are unique per adapter;
+- scoped paths are relative and cannot escape their declared scope;
+- every adapter declares both public and private runtime snapshots;
+- public artifacts cannot use `private_only` redaction policy;
+- private artifacts must use `private_only` redaction policy;
+- declared capabilities have their required artifact families;
+- report metadata can reference only declared public artifacts.
+
+It does not by itself prove that runtime writers and report renderers consume
+only the descriptor declarations. That live reconciliation remains a later
+runtime/report conformance gate.
 
 ### 9.3 FailureMapping
 
@@ -375,7 +391,7 @@ Stable promotion evidence fields:
 | `ADAPT-PROTOCOL-002` | active | 2 | Registry conflict and binding resolution validation. |
 | `ADAPT-PROTOCOL-003` | active | 3 | Data lifecycle protocol contract foundation. |
 | `ADAPT-PROTOCOL-004` | active | 3 | Runtime lifecycle, readiness, and failure taxonomy contract foundation. |
-| `ADAPT-PROTOCOL-005` | planned | 3 | Artifact declaration, public/private, and redaction conformance. |
+| `ADAPT-PROTOCOL-005` | active | 3 | Artifact descriptor declaration, public/private, and redaction policy conformance. |
 | `ADAPT-PROTOCOL-006` | planned | 4 | Replay authority old/new/mixed fixture conformance. |
 | `ADAPT-PROTOCOL-007` | planned | 4 | Generic doctor/readiness/report metadata conformance. |
 | `ADAPT-PROTOCOL-008` | planned | before Phase 4 exit | Static no-branch guard with bypass fixtures. |

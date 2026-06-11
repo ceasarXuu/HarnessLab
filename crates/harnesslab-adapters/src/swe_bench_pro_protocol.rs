@@ -1,7 +1,8 @@
 use crate::{
     ProtocolAdapterDescriptor, ProtocolDataLifecycleContract, ProtocolFailureMapping,
-    ProtocolOperation, ProtocolReadinessProbe, ProtocolRuntimeLifecycleContract,
-    built_in_protocol_registry,
+    ProtocolOperation, ProtocolReadinessProbe, ProtocolReportMetadata, ProtocolReportSection,
+    ProtocolRuntimeLifecycleContract, built_in_protocol_registry,
+    swe_bench_pro_artifacts::swe_bench_pro_artifacts,
 };
 use harnesslab_core::{
     AdapterId, BenchmarkDescriptor, CapabilityId, FailureClass, FailureCode, HealthImpact,
@@ -24,6 +25,8 @@ pub fn swe_bench_pro_protocol_descriptor(
         descriptor,
         data_lifecycle: data_lifecycle(),
         runtime_lifecycle: runtime_lifecycle(),
+        artifacts: swe_bench_pro_artifacts(),
+        report_metadata: report_metadata(),
     }
 }
 
@@ -180,6 +183,34 @@ fn failure_mappings() -> Vec<ProtocolFailureMapping> {
             "evaluator.private",
         ),
     ]
+}
+
+fn report_metadata() -> ProtocolReportMetadata {
+    ProtocolReportMetadata {
+        score_fields: vec!["resolved", "patch_applied"],
+        public_artifacts: vec![
+            "external_runtime_public",
+            "events",
+            "result",
+            "patch",
+            "prediction",
+            "prediction_eval",
+            "evaluator_result",
+            "verifier_stdout",
+            "verifier_stderr",
+        ],
+        summary_fields: vec!["state", "failure_class", "failure_code", "patch_status"],
+        detail_sections: vec![ProtocolReportSection {
+            section_id: "patch_evaluation",
+            public_artifact_refs: vec![
+                "external_runtime_public",
+                "patch",
+                "prediction",
+                "prediction_eval",
+                "evaluator_result",
+            ],
+        }],
+    }
 }
 
 fn operation(

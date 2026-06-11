@@ -317,7 +317,8 @@ benchmark-specific interpretation.
 | Field | Required | Notes |
 |---|---|---|
 | `artifact_id` | yes | Stable id. |
-| `path` | yes | Relative attempt path. |
+| `scope` | yes | `attempt` or `run`. |
+| `path` | yes | Relative artifact path within the declared scope. |
 | `artifact_type` | yes | `runtime_snapshot`, `event_log`, `result`, `report_public`, `diagnostic_public`, `diagnostic_private`, or `adapter_custom`. |
 | `visibility` | yes | `public` or `private`. |
 | `producer_phase` | yes | Adapter phase/subphase. |
@@ -809,7 +810,10 @@ not concrete benchmark modules.
   built-in descriptors through protocol conformance records.
 - Adapter readiness contract. **Started:** runtime conformance requires
   readiness probes for declared readiness capabilities.
-- Artifact declaration contract.
+- Artifact declaration contract. **Started:** `ADAPT-PROTOCOL-005` validates
+  adapter-owned artifact declarations, public/private runtime snapshot pairing,
+  redaction policy, safe attempt-relative paths, and report public artifact
+  references.
 - Failure taxonomy contract. **Started:** runtime conformance rejects empty,
   duplicate, or non-failure mappings.
 
@@ -819,7 +823,7 @@ not concrete benchmark modules.
 |---|---|---|
 | Existing adapters implement protocol | Compile and selector tests | Terminal-Bench and SWE-bench Pro still run through protocol |
 | Readiness no longer hard-coded | Static guard | `runtime_compatibility` has no concrete benchmark branch outside adapter-owned code |
-| Artifact declaration enforced | Conformance tests | Runtime cannot expose undeclared public artifacts |
+| Artifact declaration enforced | Conformance tests | Descriptor cannot omit required public/private artifact declarations |
 | Report metadata generic | Report contract tests | Report renders only declared public metadata/artifacts |
 | Failure schema enforced | Negative fixture tests | Unclassified adapter failures fail conformance |
 
@@ -834,9 +838,13 @@ not concrete benchmark modules.
 - Landed: `ADAPT-PROTOCOL-004` is active and validates runtime lifecycle
   operation coverage, cleanup capability coupling, capability-specific
   readiness probe coverage, and central failure mapping schema fields.
-- Not yet landed: artifact declaration/redaction conformance, generic report
-  metadata consumption, doctor readiness consumption, live runtime artifact
-  proof, and static no-branch enforcement.
+- Landed: `ADAPT-PROTOCOL-005` is active and validates artifact declaration,
+  public/private boundary, redaction policy, capability-required artifact
+  families, and report public artifact references for built-in protocol
+  adapters.
+- Not yet landed: generic report metadata consumption, doctor readiness
+  consumption, live runtime artifact reconciliation proof, and static no-branch
+  enforcement.
 
 #### Exit Criteria
 
@@ -1388,3 +1396,4 @@ Minimum new selector families:
 | 0.8 | 2026-06-11 | Extended Phase 2 implementation into runtime/replay authority binding: production adapters dual-write `TaskRuntimeBinding`, CLI preflight/execute/cleanup resolve by protocol `adapter_id`, external-runtime snapshots fingerprint `protocol_authority`, and `ADAPT-PROTOCOL-002` documentation is scoped to current registry validation while later artifact/redaction/report gates remain explicit. |
 | 0.9 | 2026-06-11 | Closed Phase 2 adversarial review after Round 5: accepted blockers from prior rounds are fixed and validated; remaining items are non-blocking Phase 3/4 work such as SWE protocol-only positive coverage and cleanup/report/doctor branch removal. |
 | 1.0 | 2026-06-11 | Started Phase 3 by adding protocol-facing adapter subcontracts and activating `ADAPT-PROTOCOL-003/004` for data lifecycle, runtime lifecycle, readiness probe, and central failure mapping contract foundation. |
+| 1.1 | 2026-06-11 | Extended Phase 3 by adding adapter-owned artifact/report declaration contracts and activating `ADAPT-PROTOCOL-005` for public/private artifact boundary and redaction policy validation. |

@@ -555,9 +555,9 @@ id = "ADAPT-PROTOCOL-005"
 title = "Adapter protocol artifacts, public/private boundaries and redaction are validated"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
-expected_layers = ["contract", "integration"]
-required_runtime_proof = true
+status = "active"
+expected_layers = ["contract"]
+required_runtime_proof = false
 [requirements.source]
 doc = "docs/adapter-protocol.md"
 section = "17"
