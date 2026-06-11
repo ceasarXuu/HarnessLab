@@ -591,7 +591,6 @@ id = "ADAPT-PROTOCOL-008"
 title = "Adapter protocol no-branch guard rejects generic-layer benchmark branches"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
 expected_layers = ["gate"]
 required_runtime_proof = false
 [requirements.source]

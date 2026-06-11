@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export TMPDIR="${HARNESSLAB_TMPDIR:-$PWD/target/tmp}"
+mkdir -p "$TMPDIR"
 
-selector_rows="$(cargo run -p xtask -- list-adapter-proof-selectors)"
+selector_rows_path="artifacts/adapter-selector-rows.tsv"
+mkdir -p artifacts
+cargo run -p xtask -- list-adapter-proof-selectors >"$selector_rows_path"
 planned_ids=()
 active_ids=()
 expected_active_ids=(
@@ -15,6 +19,7 @@ expected_active_ids=(
   ADAPT-PROTOCOL-003
   ADAPT-PROTOCOL-004
   ADAPT-PROTOCOL-005
+  ADAPT-PROTOCOL-008
   ADAPT-RUNTIME-001
   ADAPT-RUNTIME-002
   ADAPT-RUNTIME-003
@@ -31,7 +36,6 @@ expected_planned_ids=(
   ADAPT-DATA-000
   ADAPT-PROTOCOL-006
   ADAPT-PROTOCOL-007
-  ADAPT-PROTOCOL-008
   ADAPT-PROTOCOL-009
   ADAPT-PROTOCOL-010
   ADAPT-PROTOCOL-011
@@ -45,7 +49,7 @@ while IFS=$'\t' read -r status id; do
     planned) planned_ids+=("$id") ;;
     *) echo "adapter selector $id has unsupported status $status" >&2; exit 1 ;;
   esac
-done <<<"$selector_rows"
+done <"$selector_rows_path"
 
 if [[ "${#active_ids[@]}" -eq 0 ]]; then
   echo "no active adapter proof selectors found" >&2
@@ -81,7 +85,7 @@ for id in "${planned_ids[@]}"; do
     echo "planned adapter selector $id exited $status, expected 64" >&2
     exit 1
   fi
-  if ! grep -q "planned adapter proof is registered but not implemented yet: $id" <<<"$output"; then
+  if ! printf '%s\n' "$output" | grep -q "planned adapter proof is registered but not implemented yet: $id"; then
     echo "planned adapter selector $id did not print the planned-proof message" >&2
     exit 1
   fi

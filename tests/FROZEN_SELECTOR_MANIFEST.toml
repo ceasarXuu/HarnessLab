@@ -2,7 +2,7 @@ schema_version = 1
 
 [[execution_files]]
 path = "scripts/test-after-change.sh"
-hash = "fnv1a64:fc1f330dab3a15fb"
+hash = "fnv1a64:df908154bf13ba48"
 
 [[execution_files]]
 path = "scripts/verify-terminal-bench-python-adapter.sh"
@@ -27,6 +27,14 @@ hash = "fnv1a64:93742d3d75037bee"
 [[execution_files]]
 path = "scripts/verify-terminal-bench-import-timeout-cleanup.sh"
 hash = "fnv1a64:6d69db582e2fe71d"
+
+[[execution_files]]
+path = "scripts/verify-planned-adapter-selectors.sh"
+hash = "fnv1a64:9a9935308b491126"
+
+[[execution_files]]
+path = "xtask/src/no_branch_guard.rs"
+hash = "fnv1a64:89d780f3fdb7e4aa"
 
 [[selectors]]
 id = "ADAPT-DATA-000"
@@ -288,12 +296,17 @@ owning_contracts = [
 
 [[selectors]]
 id = "ADAPT-PROTOCOL-008"
-status = "planned"
+status = "active"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-008"
-router_case = 'ADAPT-PROTOCOL-008) planned_adapter_proof "$id" "Phase 4: static no-branch guard with bypass fixtures" ;;'
+router_case = "ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;"
 expected_pass_threshold = "selector command exits successfully"
-file_patterns = ["docs/adapter-protocol.md"]
-required_artifacts = []
+file_patterns = [
+    "xtask/src/no_branch_guard.rs",
+    "xtask/src/main.rs",
+    "scripts/test-after-change.sh",
+    "scripts/verify-planned-adapter-selectors.sh",
+]
+required_artifacts = ["artifacts/no-branch-guard.json"]
 owning_contracts = ["NoBranchGuard"]
 
 [[selectors]]
@@ -1566,6 +1579,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/tests/support/swe.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1585,6 +1599,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/tests/support/swe.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1604,6 +1619,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/tests/support/swe.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
@@ -1623,6 +1639,7 @@ expected_test_count = 1
 expected_pass_threshold = "selected test runs exactly once and passes"
 file_patterns = [
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/tests/support/swe.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",

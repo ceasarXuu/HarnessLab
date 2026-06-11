@@ -330,6 +330,7 @@ fn capture_prediction(
     let output = Command::new("git")
         .arg("diff")
         .current_dir(workspace)
+        .env("GIT_DIR", workspace.join(".git"))
         .output()?;
     atomic_write_json(
         &attempt_dir.join("git-diff.status.json"),

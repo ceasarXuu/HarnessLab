@@ -11,6 +11,7 @@ mod coverage;
 mod frozen_execution_files;
 mod frozen_selector_ids;
 mod frozen_selectors;
+mod no_branch_guard;
 mod runtime_artifacts;
 
 fn main() -> Result<()> {
@@ -20,6 +21,7 @@ fn main() -> Result<()> {
         Command::VerifyFrozenSelectorManifest => {
             frozen_selectors::verify_frozen_selector_manifest()
         }
+        Command::VerifyNoBranchGuard => no_branch_guard::verify_no_branch_guard(),
         Command::PrintFrozenSelectorManifest => frozen_selectors::print_frozen_selector_manifest(),
         Command::GenerateTestTraceability => generate_traceability(),
         Command::ListAdapterProofSelectors => list_adapter_proof_selectors(),
@@ -74,6 +76,7 @@ struct Cli {
 enum Command {
     VerifyTestRegistry,
     VerifyFrozenSelectorManifest,
+    VerifyNoBranchGuard,
     PrintFrozenSelectorManifest,
     GenerateTestTraceability,
     ListAdapterProofSelectors,
@@ -279,6 +282,7 @@ fn verify_test_registry() -> Result<()> {
         &selector_script,
     )?;
     runtime_artifacts::ensure_runtime_artifact_contracts(&registry)?;
+    no_branch_guard::verify_no_branch_guard()?;
     adapter_claims::write_adapter_proof_inventory(
         &claimed_adapter_ids,
         &claim_sources,

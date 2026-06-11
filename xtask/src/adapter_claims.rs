@@ -184,6 +184,30 @@ fn ensure_active_route_matches_claimed_id(
     if route.contains("planned_adapter_proof") {
         bail!("active adapter proof {id} must not route to planned_adapter_proof, got: {route}");
     }
+    if id == "ADAPT-PROTOCOL-008" {
+        let expected =
+            "ADAPT-PROTOCOL-008) exec cargo run -q -p xtask -- verify-no-branch-guard ;;";
+        if route != expected {
+            bail!("active adapter proof {id} route has {route}, expected {expected}");
+        }
+        for expected in [
+            "xtask/src/no_branch_guard.rs",
+            "xtask/src/main.rs",
+            "scripts/test-after-change.sh",
+            "scripts/verify-planned-adapter-selectors.sh",
+        ] {
+            if !entry
+                .file_patterns
+                .iter()
+                .any(|pattern| pattern == expected)
+            {
+                bail!(
+                    "active adapter proof {id} file_patterns missing expected selector file {expected}"
+                );
+            }
+        }
+        return Ok(());
+    }
     let spec = active_route_spec(id)
         .ok_or_else(|| anyhow::anyhow!("active adapter proof {id} has no expected route spec"))?;
     ensure_assignment(route, "package", spec.package, id)?;
@@ -275,53 +299,19 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             package: "harnesslab-adapters",
             test_name: "protocol_contract_tests::adapt_protocol_003_data_lifecycle_contract_foundation_is_validated",
             test_target: Some("lib"),
-            file_patterns: &[
-                "crates/harnesslab-adapters/src/protocol_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
-                "crates/harnesslab-adapters/src/registry.rs",
-                "crates/harnesslab-adapters/src/terminal_bench.rs",
-                "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
-            ],
+            file_patterns: PROTOCOL_CONTRACT_FILE_PATTERNS,
         }),
         "ADAPT-PROTOCOL-004" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "protocol_contract_tests::adapt_protocol_004_runtime_lifecycle_and_failure_taxonomy_are_validated",
             test_target: Some("lib"),
-            file_patterns: &[
-                "crates/harnesslab-adapters/src/protocol_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
-                "crates/harnesslab-adapters/src/registry.rs",
-                "crates/harnesslab-adapters/src/terminal_bench.rs",
-                "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
-            ],
+            file_patterns: PROTOCOL_CONTRACT_FILE_PATTERNS,
         }),
         "ADAPT-PROTOCOL-005" => Some(ActiveRouteSpec {
             package: "harnesslab-adapters",
             test_name: "protocol_contract_tests::adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated",
             test_target: Some("lib"),
-            file_patterns: &[
-                "crates/harnesslab-adapters/src/protocol_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
-                "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
-                "crates/harnesslab-adapters/src/protocol_registry.rs",
-                "crates/harnesslab-adapters/src/registry.rs",
-                "crates/harnesslab-adapters/src/terminal_bench.rs",
-                "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
-                "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
-            ],
+            file_patterns: PROTOCOL_CONTRACT_FILE_PATTERNS,
         }),
         "ADAPT-RUNTIME-001" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
@@ -421,8 +411,23 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
     }
 }
 
+const PROTOCOL_CONTRACT_FILE_PATTERNS: &[&str] = &[
+    "crates/harnesslab-adapters/src/protocol_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_artifact_contract.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_builtins.rs",
+    "crates/harnesslab-adapters/src/protocol_contract_tests.rs",
+    "crates/harnesslab-adapters/src/protocol_registry.rs",
+    "crates/harnesslab-adapters/src/registry.rs",
+    "crates/harnesslab-adapters/src/terminal_bench.rs",
+    "crates/harnesslab-adapters/src/terminal_bench_protocol.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_artifacts.rs",
+    "crates/harnesslab-adapters/src/swe_bench_pro_protocol.rs",
+];
+
 const SWE_PHASE_FILE_PATTERNS: &[&str] = &[
     "crates/harnesslab-cli/tests/swe_runtime_phase_contract.rs",
+    "crates/harnesslab-cli/tests/support/swe.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro_adapter.rs",
     "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",

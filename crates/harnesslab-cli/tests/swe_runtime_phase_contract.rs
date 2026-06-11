@@ -134,7 +134,7 @@ fn swepro_002_workspace_failure_is_classified_and_observable() {
 
 #[test]
 fn swepro_003_diff_capture_failure_and_empty_patch_are_distinct() {
-    let empty = run_fake_agent("true", 0);
+    let empty = run_fake_agent("git reset --hard -q HEAD && true", 0);
     assert_eq!(empty.results["tasks"][0]["failure_class"], "benchmark");
     assert_eq!(empty.results["tasks"][0]["failure_code"], "no_valid_diff");
     assert_eq!(empty.results["tasks"][0]["patch"]["status"], "empty");
