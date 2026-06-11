@@ -409,6 +409,154 @@ fn assert_blocked_preflight(
     );
 }
 
+#[test]
+fn adapt_protocol_007_adapter_compatibility_profiles_are_generic_and_complete() {
+    let terminal_import_profile = {
+        let mut profile = default_agent_profile("tb", AgentKind::Custom, "agent");
+        profile.labels.insert(
+            "terminal_bench_agent_import_path".to_string(),
+            "bench_agents.fake:Agent".to_string(),
+        );
+        profile
+    };
+    let terminal_sandbox_profile = {
+        let mut profile = default_agent_profile("tb", AgentKind::Custom, "agent");
+        profile.labels.insert(
+            "terminal_bench_agent".to_string(),
+            "claude-code".to_string(),
+        );
+        profile
+    };
+    let swe_gold_profile = {
+        let mut profile = default_agent_profile("swe", AgentKind::Custom, "agent");
+        profile
+            .labels
+            .insert("swe_bench_pro_agent".to_string(), "gold".to_string());
+        profile
+    };
+    let swe_sandbox_profile = default_agent_profile("swe", AgentKind::Custom, "agent");
+
+    let terminal_import_compats =
+        super::super::super::adapter_compatibility_profiles(&terminal_import_profile);
+    assert_eq!(terminal_import_compats.len(), 2, "all registered adapters must produce a profile");
+    let terminal_bench_compat = terminal_import_compats
+        .iter()
+        .find(|c| c.bridge_mode.starts_with("terminal-bench"))
+        .expect("terminal-bench profile must be present");
+    assert_eq!(
+        terminal_bench_compat.host_execution_reason,
+        Some("terminal-bench import agent host path")
+    );
+    assert_eq!(terminal_bench_compat.bridge_mode, "terminal-bench-import-path");
+    assert!(
+        terminal_bench_compat
+            .consumed_label_keys
+            .contains(&"terminal_bench_agent_import_path")
+    );
+
+    let swe_gold_compats =
+        super::super::super::adapter_compatibility_profiles(&swe_gold_profile);
+    let swe_bench_compat = swe_gold_compats
+        .iter()
+        .find(|c| c.bridge_mode.starts_with("swe-bench-pro"))
+        .expect("swe-bench-pro profile must be present");
+    assert_eq!(
+        swe_bench_compat.host_execution_reason,
+        Some("swe-bench-pro gold host path")
+    );
+    assert_eq!(swe_bench_compat.bridge_mode, "swe-bench-pro-gold");
+    assert!(
+        swe_bench_compat
+            .consumed_label_keys
+            .contains(&"swe_bench_pro_agent")
+    );
+
+    let terminal_sandbox_compats =
+        super::super::super::adapter_compatibility_profiles(&terminal_sandbox_profile);
+    let terminal_sandbox_compat = terminal_sandbox_compats
+        .iter()
+        .find(|c| c.bridge_mode.starts_with("terminal-bench"))
+        .unwrap();
+    assert_eq!(terminal_sandbox_compat.host_execution_reason, None);
+    assert_eq!(
+        terminal_sandbox_compat.bridge_mode,
+        "terminal-bench-official-agent"
+    );
+
+    let swe_sandbox_compats =
+        super::super::super::adapter_compatibility_profiles(&swe_sandbox_profile);
+    let swe_sandbox_compat = swe_sandbox_compats
+        .iter()
+        .find(|c| c.bridge_mode.starts_with("swe-bench-pro"))
+        .unwrap();
+    assert_eq!(swe_sandbox_compat.host_execution_reason, None);
+    assert_eq!(
+        swe_sandbox_compat.bridge_mode,
+        "swe-bench-pro-sandbox-agent"
+    );
+}
+
+#[test]
+fn adapt_protocol_007_doctor_run_as_consumes_profiles_without_benchmark_branching() {
+    let doctor_run_as_source = include_str!("../../doctor_run_as.rs");
+    let runner_source = include_str!("../../runner.rs");
+
+    assert!(
+        !doctor_run_as_source.contains("ExternalRunnerKind::TerminalBench"),
+        "doctor_run_as.rs must not branch on ExternalRunnerKind::TerminalBench"
+    );
+    assert!(
+        !doctor_run_as_source.contains("ExternalRunnerKind::SweBenchPro"),
+        "doctor_run_as.rs must not branch on ExternalRunnerKind::SweBenchPro"
+    );
+    assert!(
+        doctor_run_as_source.contains("adapter_compatibility_profiles"),
+        "doctor_run_as.rs must consume adapter_compatibility_profiles"
+    );
+    assert!(
+        !runner_source.contains("ExternalRunnerKind::TerminalBench"),
+        "runner.rs adapter_compatibility_profiles must not branch on ExternalRunnerKind::TerminalBench"
+    );
+    assert!(
+        !runner_source.contains("ExternalRunnerKind::SweBenchPro"),
+        "runner.rs adapter_compatibility_profiles must not branch on ExternalRunnerKind::SweBenchPro"
+    );
+    assert!(
+        runner_source.contains("runtime_adapters()"),
+        "runner.rs must enumerate adapters dynamically via runtime_adapters()"
+    );
+
+    let mut terminal_import_profile = default_agent_profile("tb", AgentKind::Custom, "agent");
+    terminal_import_profile.labels.insert(
+        "terminal_bench_agent_import_path".to_string(),
+        "bench_agents.fake:Agent".to_string(),
+    );
+    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&terminal_import_profile)
+        .into_iter()
+        .filter_map(|compat| compat.host_execution_reason)
+        .collect();
+    assert_eq!(host_reasons.len(), 1);
+    assert_eq!(host_reasons[0], "terminal-bench import agent host path");
+
+    let mut swe_gold_profile = default_agent_profile("swe", AgentKind::Custom, "agent");
+    swe_gold_profile
+        .labels
+        .insert("swe_bench_pro_agent".to_string(), "gold".to_string());
+    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&swe_gold_profile)
+        .into_iter()
+        .filter_map(|compat| compat.host_execution_reason)
+        .collect();
+    assert_eq!(host_reasons.len(), 1);
+    assert_eq!(host_reasons[0], "swe-bench-pro gold host path");
+
+    let sandbox_profile = default_agent_profile("sandbox", AgentKind::Custom, "agent");
+    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&sandbox_profile)
+        .into_iter()
+        .filter_map(|compat| compat.host_execution_reason)
+        .collect();
+    assert!(host_reasons.is_empty(), "sandbox profiles must not produce host_execution_reason");
+}
+
 fn assert_runtime_label_access_is_allowlisted() {
     let sources = [
         include_str!("runtime_adapter.rs"),
