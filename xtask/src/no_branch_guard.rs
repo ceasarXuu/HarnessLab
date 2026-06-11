@@ -70,6 +70,7 @@ const LEGACY_SHIM_FILES: &[&str] = &[
 
 const METADATA_FILES: &[&str] = &[
     "xtask/src/adapter_claims.rs",
+    "xtask/src/forbidden_diff_guard.rs",
     "xtask/src/frozen_execution_files.rs",
     "xtask/src/frozen_selector_ids.rs",
     "xtask/src/frozen_selectors.rs",
@@ -438,6 +439,7 @@ fn by_benchmark(benchmark_id: &str, adapter_id: &str) {
             METADATA_FILES,
             &[
                 "xtask/src/adapter_claims.rs",
+                "xtask/src/forbidden_diff_guard.rs",
                 "xtask/src/frozen_execution_files.rs",
                 "xtask/src/frozen_selector_ids.rs",
                 "xtask/src/frozen_selectors.rs",
