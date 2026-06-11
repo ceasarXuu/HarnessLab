@@ -1333,6 +1333,7 @@ file_patterns = [
   "crates/harnesslab-adapters/src/fake_patch.rs",
   "crates/harnesslab-adapters/src/fake_terminal.rs",
   "crates/harnesslab-adapters/src/lib.rs",
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
   "crates/harnesslab-adapters/src/registry.rs",
   "crates/harnesslab-adapters/src/swe_bench_pro.rs",
   "crates/harnesslab-adapters/src/terminal_bench.rs",
@@ -1447,6 +1448,7 @@ layer = "contract"
 owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-001"
 file_patterns = [
+  "crates/harnesslab-core/src/benchmark.rs",
   "crates/harnesslab-core/src/runtime.rs",
   "crates/harnesslab-cli/src/runtime_compatibility.rs",
   "crates/harnesslab-cli/src/runner/cleanup.rs",
@@ -1493,6 +1495,10 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select ADAPT-RUNTIME-003"
 file_patterns = [
   "crates/harnesslab-cli/tests/external_runtime_snapshot_contract.rs",
+  "crates/harnesslab-cli/tests/support/runtime_snapshot.rs",
+  "crates/harnesslab-adapters/src/terminal_bench.rs",
+  "crates/harnesslab-cli/src/runner/replay.rs",
+  "crates/harnesslab-cli/src/runner/external.rs",
   "crates/harnesslab-cli/src/runner/external/runtime_snapshot.rs",
   "crates/harnesslab-cli/src/runner/external/terminal_bench_runtime_snapshot.rs",
   "crates/harnesslab-cli/src/runner/external/terminal_bench_adapter.rs",
@@ -1665,7 +1671,9 @@ owner_module = "harnesslab-cli"
 command = "scripts/test-after-change.sh --select SWEPRO-005"
 file_patterns = [
   "crates/harnesslab-cli/src/runner/replay.rs",
+  "crates/harnesslab-adapters/src/swe_bench_pro.rs",
   "crates/harnesslab-cli/src/runner/external/swe_bench_pro/runtime_snapshot.rs",
+  "crates/harnesslab-cli/tests/support/runtime_snapshot.rs",
   "crates/harnesslab-cli/tests/swe_runtime_snapshot_contract.rs",
 ]
 required_artifacts = [
@@ -3324,9 +3332,13 @@ title = "Protocol descriptor, identity and authority schema validation"
 layer = "gate"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-001"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-core/src/adapter_protocol.rs",
+  "crates/harnesslab-core/src/lib.rs",
+  "docs/adapter-protocol.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"
@@ -3341,9 +3353,13 @@ title = "Protocol registry conflict and binding resolution validation"
 layer = "gate"
 owner_module = "xtask"
 command = "scripts/test-after-change.sh --select ADAPT-PROTOCOL-002"
-file_patterns = ["docs/adapter-protocol.md"]
+file_patterns = [
+  "crates/harnesslab-adapters/src/protocol_registry.rs",
+  "crates/harnesslab-adapters/src/lib.rs",
+  "docs/adapter-protocol.md",
+]
 required_artifacts = []
-status = "planned"
+status = "active"
 labels = ["infrastructure"]
 [tests.source]
 doc = "docs/adapter-protocol.md"

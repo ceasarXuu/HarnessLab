@@ -77,6 +77,7 @@ fn snapshot_from_task_plan(
         instruction_hash: stable_checksum(&task_plan.instruction),
         task_plan_hash: stable_task_plan_hash(task_plan)?,
         external_runner: task_plan.external_runner.clone(),
+        runtime_binding: task_plan.runtime_binding.clone(),
         external_runtime_attempts: Vec::new(),
     })
 }

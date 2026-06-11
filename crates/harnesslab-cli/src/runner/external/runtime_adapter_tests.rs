@@ -1,41 +1,125 @@
 use super::*;
+#[path = "runtime_adapter_test_support.rs"]
+mod support;
 use harnesslab_core::{
-    AgentKind, ArtifactSpec, AttemptProvenance, BenchmarkIdentity, BenchmarkPlan, BenchmarkRef,
-    ExecutionConfig, ExternalRunnerSpec, NetworkPolicy, ResourceHint, RunConfigOverrides, RunPaths,
-    RunSpec, RuntimePreflightReport, RuntimeTaskSnapshot, SandboxSpec, SourceRef, TaskPlan,
-    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType, default_agent_profile,
+    AgentKind, AttemptProvenance, BenchmarkId, BenchmarkIdentity, BenchmarkPlan,
+    ExternalRunnerSpec, RunConfigOverrides, RuntimePreflightReport, RuntimeTaskSnapshot, SourceRef,
+    TaskPlan, TaskRuntimeBinding, default_agent_profile,
 };
+use support::{external_task, protocol_bound_terminal_task, registry_authority, run_spec};
 
 #[test]
 fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
-    assert_eq!(
-        runtime_adapter_for(ExternalRunnerKind::TerminalBench).kind(),
-        ExternalRunnerKind::TerminalBench
-    );
-    assert_eq!(
-        runtime_adapter_for(ExternalRunnerKind::SweBenchPro).kind(),
-        ExternalRunnerKind::SweBenchPro
-    );
-
     let external_entrypoint = include_str!("../external.rs");
+    let runtime_adapter_entrypoint = include_str!("runtime_adapter.rs");
     let runner_entrypoint = include_str!("../../runner.rs");
     let cleanup_entrypoint = include_str!("../cleanup.rs");
 
-    assert!(!external_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
-    assert!(!external_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
     assert!(!runner_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
     assert!(!runner_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
     assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
     assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
     assert!(external_entrypoint.contains("preflight_external_task(profile, task)?"));
-    assert!(external_entrypoint.contains("let adapter = runtime_adapter_for(runner.kind)"));
+    assert!(runtime_adapter_entrypoint.contains("runtime_adapter_for_adapter_id"));
+    assert!(external_entrypoint.contains("runtime_adapter_for_task(ctx.task)?"));
+    assert!(external_entrypoint.contains("runtime_snapshot_source_ref("));
     assert!(external_entrypoint.contains("adapter.execute(&ctx)"));
+    assert!(!external_entrypoint.contains("runtime_adapter_for(ExternalRunnerKind"));
     assert!(!cleanup_entrypoint.contains("terminal_bench"));
     assert!(!cleanup_entrypoint.contains("compose_cleanup"));
     assert!(!external_entrypoint.contains("terminal_bench::execute"));
     assert!(!external_entrypoint.contains("swe_bench_pro::execute"));
     assert!(!external_entrypoint.contains("terminal_bench::validate_profile"));
     assert_runtime_label_access_is_allowlisted();
+
+    let mut terminal_profile = default_agent_profile("tb", AgentKind::Custom, "agent");
+    terminal_profile.labels.insert(
+        "terminal_bench_agent".to_string(),
+        "claude-code".to_string(),
+    );
+    let protocol_report =
+        preflight_external_task(&terminal_profile, &protocol_bound_terminal_task()).unwrap();
+    assert_eq!(
+        protocol_report.runner_kind,
+        ExternalRunnerKind::TerminalBench
+    );
+    assert_eq!(
+        protocol_report.protocol_adapter_id.as_deref(),
+        Some("harnesslab.terminal-bench.runtime")
+    );
+    assert_eq!(protocol_report.protocol_version.as_deref(), Some("1"));
+    assert!(!protocol_report.legacy_shim_used);
+
+    let run_dir = tempfile::tempdir().unwrap();
+    let attempt_dir = run_dir.path().join("tasks/tb-protocol-task/attempts/1");
+    std::fs::create_dir_all(&attempt_dir).unwrap();
+    let spec = run_spec(run_dir.path());
+    let profile = default_agent_profile("tb", AgentKind::Custom, "agent");
+    let materialized = crate::agent_registry::materialize_profile(&profile).unwrap();
+    let protocol_task = protocol_bound_terminal_task();
+    write_runtime_authority(run_dir.path(), &protocol_task);
+    let result = super::super::execute_external_task(super::super::ExternalTaskExecution {
+        run_dir: run_dir.path(),
+        spec: &spec,
+        profile: &profile,
+        report_profile: &profile,
+        materialized_profile: &materialized,
+        report_materialized_profile: &materialized,
+        task: &protocol_task,
+        attempt: 1,
+        provenance: AttemptProvenance::Original,
+        attempt_dir: &attempt_dir,
+        started: std::time::Instant::now(),
+    })
+    .expect("protocol-bound task reaches runtime adapter execution");
+    assert_eq!(
+        result.failure_code,
+        Some(harnesslab_core::FailureCode::ExternalRunnerSetupFailed)
+    );
+
+    let mut mismatched_task = protocol_bound_terminal_task();
+    mismatched_task
+        .runtime_binding
+        .as_mut()
+        .unwrap()
+        .authority
+        .benchmark_id = BenchmarkId::new("swe-bench-pro").unwrap();
+    let error = preflight_external_task(&terminal_profile, &mismatched_task)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("invalid protocol runtime binding"));
+    assert!(error.contains("protocol_authority_mismatch"));
+
+    let mut mismatched_refs = protocol_bound_terminal_task();
+    mismatched_refs.external_runner = Some(ExternalRunnerSpec {
+        kind: ExternalRunnerKind::TerminalBench,
+        dataset_path: "legacy-dataset".to_string(),
+        source_path: None,
+        agent_timeout_sec: None,
+    });
+    let error = super::super::runtime_dataset_ref(&mismatched_refs)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("dataset_ref mismatch"));
+
+    let mut missing_source_ref =
+        external_task("swe-protocol-task", ExternalRunnerKind::SweBenchPro);
+    missing_source_ref.runtime_binding = Some(TaskRuntimeBinding {
+        authority: registry_authority("harnesslab.swe-bench-pro.runtime"),
+        dataset_ref: "dataset".to_string(),
+        task_ref: "source".to_string(),
+        artifact_contract_id: "artifact.basic.v1".to_string(),
+        readiness_contract_id: "readiness.basic.v1".to_string(),
+    });
+    missing_source_ref
+        .external_runner
+        .as_mut()
+        .unwrap()
+        .source_path = None;
+    let error = super::super::runtime_source_ref(&missing_source_ref)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("task_ref mismatch"));
 }
 
 #[test]
@@ -90,7 +174,7 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     .unwrap_err()
     .to_string();
     assert!(terminal_blocked_error.contains("runtime preflight blocked"));
-    assert!(terminal_blocked_error.contains("terminal-bench-runtime"));
+    assert!(terminal_blocked_error.contains("harnesslab.terminal-bench.runtime"));
     assert!(terminal_blocked_error.contains("task=tb-task"));
     assert!(terminal_blocked_error.contains("adapter_phase=preflight"));
     assert!(terminal_blocked_error.contains("readiness_status=blocked"));
@@ -157,7 +241,7 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     .unwrap();
     let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
     assert!(events.contains("\"event\":\"external_runner_preflight\""));
-    assert!(events.contains("adapter_id=terminal-bench-runtime"));
+    assert!(events.contains("adapter_id=harnesslab.terminal-bench.runtime"));
     assert!(events.contains("adapter_phase=preflight"));
     assert!(events.contains("runner_kind=TerminalBench"));
     assert!(events.contains("agent_bridge_mode=terminal-bench-official-agent"));
@@ -251,6 +335,7 @@ fn write_runtime_authority(run_dir: &std::path::Path, task: &TaskPlan) {
         instruction_hash: "fixture".to_string(),
         task_plan_hash: "fixture".to_string(),
         external_runner: task.external_runner.clone(),
+        runtime_binding: task.runtime_binding.clone(),
         external_runtime_attempts: Vec::new(),
     };
     let task_dir = run_dir.join("tasks").join(&task.task_id);
@@ -339,73 +424,5 @@ fn assert_runtime_label_access_is_allowlisted() {
             !source.contains(".labels"),
             "benchmark runtime label reads must go through runtime_compatibility.rs"
         );
-    }
-}
-
-fn run_spec(run_dir: &std::path::Path) -> RunSpec {
-    RunSpec {
-        schema_version: 1,
-        run_id: "runtime-preflight-test".to_string(),
-        created_at: "2026-06-05T00:00:00Z".to_string(),
-        agent_profile_ref: "agent".to_string(),
-        benchmark: BenchmarkRef {
-            name: "fixture".to_string(),
-            version: "1".to_string(),
-            split: "smoke".to_string(),
-        },
-        execution: ExecutionConfig {
-            concurrency: 1,
-            attempts: 1,
-            network: NetworkPolicy::None,
-            timeout_sec: None,
-        },
-        paths: RunPaths {
-            run_dir: run_dir.display().to_string(),
-        },
-        replay_source_run_id: None,
-    }
-}
-
-fn external_task(task_id: &str, kind: ExternalRunnerKind) -> TaskPlan {
-    TaskPlan {
-        task_id: task_id.to_string(),
-        instruction: "solve".to_string(),
-        workspace_spec: WorkspaceSpec {
-            workspace_type: WorkspaceType::GitRepo,
-            target_path: "workspace".to_string(),
-            clean: true,
-        },
-        sandbox_spec: SandboxSpec {
-            image: "ubuntu:latest".to_string(),
-            mounts: Vec::new(),
-            env_vars: Vec::new(),
-            network: NetworkPolicy::None,
-            privileged: false,
-            resource_limits: ResourceHint {
-                cpu_cores: 1,
-                memory_mb: 512,
-            },
-        },
-        verifier_spec: VerifierSpec {
-            command: "true".to_string(),
-            working_dir: ".".to_string(),
-            timeout_sec: 60,
-            expected_exit_codes: vec![0],
-            environment_mode: VerifierEnvironment::HostProcess,
-            output_parser: "exit_code".to_string(),
-        },
-        artifact_spec: ArtifactSpec {
-            base_dir: ".".to_string(),
-            globs: Vec::new(),
-            required_paths: Vec::new(),
-            max_size_bytes: 1024,
-        },
-        patch_spec: None,
-        external_runner: Some(ExternalRunnerSpec {
-            kind,
-            dataset_path: "dataset".to_string(),
-            source_path: (kind == ExternalRunnerKind::SweBenchPro).then_some("source".to_string()),
-            agent_timeout_sec: None,
-        }),
     }
 }

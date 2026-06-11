@@ -36,6 +36,11 @@ pub(super) fn write_swe_runtime_snapshots(
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
         runner_kind: ExternalRunnerKind::SweBenchPro,
+        protocol_authority: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.clone()),
         adapter_version: SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION,
         network: ctx.spec.execution.network,
         timeout_sec: ctx.spec.execution.timeout_sec.or(Some(7200)),
@@ -78,6 +83,11 @@ pub(in crate::runner::external) fn write_swe_setup_failure_snapshots(
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
         runner_kind: ExternalRunnerKind::SweBenchPro,
+        protocol_authority: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.clone()),
         adapter_version: SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION,
         network: ctx.spec.execution.network,
         timeout_sec: ctx.spec.execution.timeout_sec.or(Some(7200)),

@@ -410,5 +410,6 @@ fn task(task_id: &str) -> TaskPlan {
         },
         patch_spec: None,
         external_runner: None,
+        runtime_binding: None,
     }
 }

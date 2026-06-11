@@ -80,7 +80,7 @@ to one of the dispositions below.
 | `scripts/test-after-change.sh` | Selector routing hard-codes current benchmark proof ids and behavior selectors. | Keep as test registry executor but add protocol selector routing and prevent selector weakening. |
 | `scripts/verify-planned-adapter-selectors.sh` | Hard-codes active `ADAPT-*` / `SWEPRO-*` inventory. | Extend or replace with protocol selector inventory guard. |
 | `tests/FROZEN_SELECTOR_MANIFEST.toml` | Locks current benchmark selector commands, artifacts, contracts, file patterns, and expected counts. | Keep as Phase 0 weakening guard until protocol selectors supersede each row. |
-| `xtask/src/frozen_selector_ids.rs` | Locks the independent 84-id baseline for frozen selector guard coverage. | Keep as guard-owned baseline; changes require review because registry/manifest co-deletion must not pass. |
+| `xtask/src/frozen_selector_ids.rs` | Locks the independent 86-id baseline for frozen selector guard coverage, including the first active protocol selectors. | Keep as guard-owned baseline; changes require review because registry/manifest co-deletion must not pass. |
 | `xtask/src/adapter_claims.rs` | Hard-codes adapter proof prefixes, routes, and file patterns. | Add `ADAPT-PROTOCOL-*` claim extraction and protocol route validation. |
 | `xtask/src/frozen_selectors.rs` | Machine-enforces the Phase 0 frozen selector manifest. | Extend manifest families when protocol rows are introduced; do not weaken without equivalent replacement. |
 | `xtask/src/adapter_claims_tests.rs` | Tests current hard-coded claim behavior. | Add protocol claim positive/negative tests. |

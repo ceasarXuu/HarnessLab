@@ -154,6 +154,7 @@ fn terminal_task(
         },
         patch_spec: None,
         external_runner: None,
+        runtime_binding: None,
     }
 }
 

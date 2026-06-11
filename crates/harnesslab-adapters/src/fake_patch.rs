@@ -136,6 +136,7 @@ fn patch_task(id: &str, instruction: &str, verifier: &str) -> TaskPlan {
             prediction_path: "prediction.jsonl".to_string(),
         }),
         external_runner: None,
+        runtime_binding: None,
     }
 }
 

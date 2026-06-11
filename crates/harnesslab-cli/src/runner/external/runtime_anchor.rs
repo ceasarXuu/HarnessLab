@@ -318,6 +318,7 @@ mod tests {
             instruction_hash: "instruction".to_string(),
             task_plan_hash: "task-plan".to_string(),
             external_runner: Some(external_runner()),
+            runtime_binding: None,
             external_runtime_attempts: Vec::new(),
         }
     }
@@ -358,6 +359,7 @@ mod tests {
             },
             patch_spec: None,
             external_runner: Some(external_runner()),
+            runtime_binding: None,
         }
     }
 

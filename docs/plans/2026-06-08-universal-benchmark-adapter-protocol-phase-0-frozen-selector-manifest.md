@@ -21,7 +21,7 @@ continuing.
 | Adapter proof selector inventory | `CARGO_INCREMENTAL=0 scripts/verify-planned-adapter-selectors.sh` | passed; `adapter selectors ok: active=16 planned=1` |
 | Frozen registry source | `tests/TEST_REGISTRY.toml` | current id/title/command/artifact/contract rows are locked by `tests/FROZEN_SELECTOR_MANIFEST.toml` |
 | Frozen command router | `scripts/test-after-change.sh --select <id>` | every frozen selector must remain routed or be replaced by an equivalent-or-stronger registered selector |
-| Machine guard | `cargo run -p xtask -- verify-frozen-selector-manifest` | passed; `frozen selector manifest ok: total=84 execution_files=7 ADAPT-DATA=6 ADAPT-RUNTIME=6 AGT-REG-005=1 AGT-REG-012=1 C-BENCH=10 DOC-004=1 INT=41 PY-TB-001=1 SEC=1 SWEPRO=5 TB=11` |
+| Machine guard | `cargo run -p xtask -- verify-frozen-selector-manifest` | passed; `frozen selector manifest ok: total=86 execution_files=7 ADAPT-DATA=6 ADAPT-PROTOCOL-001=1 ADAPT-PROTOCOL-002=1 ADAPT-RUNTIME=6 AGT-REG-005=1 AGT-REG-012=1 C-BENCH=10 DOC-004=1 INT=41 PY-TB-001=1 SEC=1 SWEPRO=5 TB=11` |
 
 ## 3. Weakening Rules
 

@@ -6,8 +6,9 @@ use std::path::Path;
 use support::runtime_snapshot::{
     assert_json_array_has_name, assert_material_scope, material_path,
     rewrite_snapshot_adapter_version_with_authority, rewrite_snapshot_pair_for_material,
-    rewrite_snapshot_scope_with_authority, rewrite_task_runtime_anchor_for_attempt, run_ids,
-    shell_quote, stable_file_checksum, task_runtime_path,
+    rewrite_snapshot_protocol_authority, rewrite_snapshot_scope_with_authority,
+    rewrite_task_runtime_anchor_for_attempt, run_ids, shell_quote, stable_file_checksum,
+    task_runtime_path,
 };
 use support::swe::{
     fake_swe_tools, init_home, path_with, run_swe_json, swe_bench_root, swe_bench_root_with_prefix,
@@ -139,6 +140,24 @@ fn swepro_005_replay_requires_stored_swe_runtime_materials() {
         "external-runtime snapshot mismatch",
     );
     fs::write(&private_path, &private_original).unwrap();
+
+    rewrite_snapshot_protocol_authority(
+        &private_path,
+        &public_path,
+        &task_runtime_path,
+        &benchmark_path,
+        serde_json::Value::Null,
+    );
+    assert_replay_blocker(
+        home.path(),
+        bin.path(),
+        &run_dir,
+        "field=protocol_authority",
+    );
+    fs::write(&private_path, &private_original).unwrap();
+    fs::write(&public_path, &public_original).unwrap();
+    fs::write(&task_runtime_path, &task_runtime_original).unwrap();
+    fs::write(&benchmark_path, &benchmark_original).unwrap();
 
     let parquet_path = material_path(&private_path, "parquet");
     let parquet_original = fs::read(&parquet_path).unwrap();
@@ -360,6 +379,20 @@ fn assert_swe_external_runtime_snapshots(
     assert_eq!(private["task_id"], task_id);
     assert_eq!(public["runner_kind"], "swe_bench_pro");
     assert_eq!(private["runner_kind"], "swe_bench_pro");
+    assert_eq!(public["protocol_authority"], private["protocol_authority"]);
+    assert_eq!(
+        public["protocol_authority"]["benchmark_id"],
+        "swe-bench-pro"
+    );
+    assert_eq!(
+        public["protocol_authority"]["adapter_id"],
+        "harnesslab.swe-bench-pro.runtime"
+    );
+    assert_eq!(
+        public["protocol_authority"]["adapter_version"],
+        "swe-bench-pro-runtime.v1"
+    );
+    assert_eq!(public["protocol_authority"]["stability"], "experimental");
     assert!(public.get("redaction_basis").is_none());
     assert!(
         public["runtime_fingerprint"]
@@ -475,7 +508,11 @@ fn assert_replay_blocker(home: &Path, bin: &Path, run_dir: &Path, message: &str)
         .get_output()
         .stderr
         .clone();
-    assert!(String::from_utf8(stderr).unwrap().contains(message));
+    let stderr = String::from_utf8(stderr).unwrap();
+    assert!(
+        stderr.contains(message),
+        "expected replay stderr to contain {message:?}, got {stderr:?}"
+    );
     assert_eq!(run_ids(home), runs_before);
 }
 

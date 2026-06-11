@@ -1,7 +1,7 @@
 use crate::agent_registry::{MaterializedAgentProfile, run_as_requires_sandbox};
 use crate::runner::external::runtime_adapter::{
-    RuntimeCleanupContext, cleanup_runtime_target, preflight_external_task, runtime_adapter_for,
-    runtime_cleanup_targets,
+    RuntimeCleanupContext, cleanup_runtime_target, preflight_external_task,
+    runtime_adapter_for_task, runtime_cleanup_targets,
 };
 use crate::runner::external::runtime_snapshot::{
     ExternalRuntimeSnapshotRequest, RuntimePhaseCommand, write_external_runtime_snapshots,
@@ -22,6 +22,7 @@ use std::path::Path;
 mod log_scan;
 mod runtime_adapter;
 mod runtime_anchor;
+mod runtime_authority;
 mod runtime_snapshot;
 mod swe_bench_pro;
 mod swe_bench_pro_adapter;
@@ -35,9 +36,12 @@ mod terminal_bench_runtime_snapshot;
 mod terminal_bench_timeout;
 
 pub(super) use runtime_adapter::{RuntimeCleanupPhase, RuntimeCleanupReport, RuntimeCleanupTarget};
+pub(super) use runtime_authority::{
+    runtime_dataset_ref, runtime_snapshot_source_ref, runtime_source_ref,
+};
 
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {
-    task.external_runner.is_some()
+    task.external_runner.is_some() || task.runtime_binding.is_some()
 }
 
 pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
@@ -54,8 +58,15 @@ pub(super) fn emit_runtime_preflight_reports(
 ) -> Result<()> {
     for (task, report) in collect_runtime_preflight_reports(profile, tasks)? {
         let message = format!(
-            "adapter_id={} adapter_phase=preflight runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
+            "adapter_id={} protocol_adapter_id={} protocol_version={} protocol_benchmark_id={} protocol_selected_mode={} protocol_stability={} protocol_capabilities={} legacy_shim_used={} adapter_phase=preflight runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
             report.adapter_id,
+            report.protocol_adapter_id.as_deref().unwrap_or("none"),
+            report.protocol_version.as_deref().unwrap_or("none"),
+            report.protocol_benchmark_id.as_deref().unwrap_or("none"),
+            report.protocol_selected_mode.as_deref().unwrap_or("none"),
+            report.protocol_stability.as_deref().unwrap_or("none"),
+            report.protocol_capabilities.join(","),
+            report.legacy_shim_used,
             report.runner_kind,
             report.agent_bridge_mode,
             report.readiness_status,
@@ -98,8 +109,12 @@ pub(super) fn cleanup_runtime_resources(
     cleanup_runtime_target(target)
 }
 
-pub(super) fn runtime_adapter_version(kind: ExternalRunnerKind) -> &'static str {
-    runtime_adapter_for(kind).adapter_version()
+pub(super) fn runtime_adapter_version_for_task(task: &TaskPlan) -> Result<&'static str> {
+    Ok(runtime_adapter_for_task(task)?.adapter_version())
+}
+
+pub(super) fn runtime_runner_kind_for_task(task: &TaskPlan) -> Result<ExternalRunnerKind> {
+    Ok(runtime_adapter_for_task(task)?.kind())
 }
 
 #[derive(Debug)]
@@ -146,7 +161,7 @@ fn collect_runtime_preflight_reports<'a>(
 ) -> Result<Vec<(&'a TaskPlan, RuntimePreflightReport)>> {
     let mut reports = Vec::new();
     for task in tasks {
-        if task.external_runner.is_some() {
+        if is_external_task(task) {
             reports.push((task, preflight_external_task(profile, task)?));
         }
     }
@@ -230,10 +245,7 @@ pub(super) struct ExternalTaskExecution<'a> {
 }
 
 pub(super) fn execute_external_task(ctx: ExternalTaskExecution<'_>) -> Result<TaskAttemptResult> {
-    let Some(runner) = &ctx.task.external_runner else {
-        bail!("external task missing runner spec");
-    };
-    let adapter = runtime_adapter_for(runner.kind);
+    let adapter = runtime_adapter_for_task(ctx.task)?;
     match adapter.execute(&ctx) {
         Ok(result) => Ok(result),
         Err(error) => internal_error_result(&ctx, adapter, error),
@@ -350,18 +362,20 @@ fn write_internal_error_snapshot(
     {
         return Ok(());
     }
-    let runner = ctx
-        .task
-        .external_runner
-        .as_ref()
-        .expect("external task runner checked before adapter execution");
+    let dataset_ref = runtime_dataset_ref(ctx.task)?;
+    let source_ref = runtime_snapshot_source_ref(ctx.task, adapter.kind())?;
     write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
         run_id: &ctx.spec.run_id,
         attempt_dir: ctx.attempt_dir,
         benchmark: adapter.benchmark_name(),
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
-        runner_kind: runner.kind,
+        runner_kind: adapter.kind(),
+        protocol_authority: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.clone()),
         adapter_version: adapter.adapter_version(),
         network: ctx.spec.execution.network,
         timeout_sec: ctx
@@ -370,8 +384,8 @@ fn write_internal_error_snapshot(
             .timeout_sec
             .or(Some(ctx.profile.timeout_sec)),
         profile: ctx.profile,
-        dataset_path: Path::new(&runner.dataset_path),
-        source_path: runner.source_path.as_deref().map(Path::new),
+        dataset_path: Path::new(dataset_ref),
+        source_path: source_ref.map(Path::new),
         commands: vec![RuntimePhaseCommand {
             phase: adapter_subphase,
             command: format!("{} internal error", adapter.adapter_id()),
@@ -401,6 +415,10 @@ fn event_redaction_refs(ctx: &ExternalTaskExecution<'_>) -> Vec<String> {
         if let Some(source_path) = &runner.source_path {
             refs.push(source_path.clone());
         }
+    }
+    if let Some(binding) = &ctx.task.runtime_binding {
+        refs.push(binding.dataset_ref.clone());
+        refs.push(binding.task_ref.clone());
     }
     refs
 }

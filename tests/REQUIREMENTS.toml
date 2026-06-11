@@ -507,7 +507,7 @@ id = "ADAPT-PROTOCOL-001"
 title = "Adapter protocol descriptor, identity and authority schemas are validated"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract", "gate"]
 required_runtime_proof = false
 [requirements.source]
@@ -519,7 +519,7 @@ id = "ADAPT-PROTOCOL-002"
 title = "Adapter protocol registry rejects binding conflicts"
 area = "adapter-protocol"
 risk = "critical"
-status = "planned"
+status = "active"
 expected_layers = ["contract", "gate"]
 required_runtime_proof = false
 [requirements.source]

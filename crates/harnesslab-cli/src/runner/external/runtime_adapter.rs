@@ -1,6 +1,7 @@
 use super::{ExternalTaskExecution, swe_bench_pro_adapter, terminal_bench_adapter};
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::{Context, Result};
+use harnesslab_adapters::built_in_protocol_registry;
 use harnesslab_core::{
     AgentProfile, BenchmarkPlan, ExternalRunnerKind, RunSpec, RuntimePreflightReport,
     TaskAttemptResult, TaskPlan,
@@ -74,16 +75,55 @@ pub(super) fn runtime_adapter_for(
     }
 }
 
-pub(super) fn preflight_external_task(
-    profile: &AgentProfile,
+pub(super) fn runtime_adapter_for_adapter_id(
+    adapter_id: &str,
+) -> Result<&'static dyn BenchmarkRuntimeAdapter> {
+    runtime_adapters()
+        .iter()
+        .copied()
+        .find(|adapter| adapter.adapter_id() == adapter_id)
+        .with_context(|| format!("unknown runtime adapter_id {adapter_id}"))
+}
+
+fn runtime_adapters() -> [&'static dyn BenchmarkRuntimeAdapter; 2] {
+    [
+        &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER,
+        &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
+    ]
+}
+
+pub(super) fn runtime_adapter_for_task(
     task: &TaskPlan,
-) -> Result<RuntimePreflightReport> {
+) -> Result<&'static dyn BenchmarkRuntimeAdapter> {
+    if let Some(binding) = &task.runtime_binding {
+        built_in_protocol_registry()
+            .validate_authority(&binding.authority)
+            .map_err(|error| anyhow::anyhow!("invalid protocol runtime binding: {error}"))?;
+        let adapter = runtime_adapter_for_adapter_id(binding.authority.adapter_id.as_str())?;
+        if let Some(runner) = &task.external_runner {
+            if adapter.kind() != runner.kind {
+                anyhow::bail!(
+                    "protocol binding adapter_id {} does not match external runner {:?}",
+                    binding.authority.adapter_id,
+                    runner.kind
+                );
+            }
+        }
+        return Ok(adapter);
+    }
     let runner = task
         .external_runner
         .as_ref()
         .context("external task missing runner spec")?;
+    Ok(runtime_adapter_for(runner.kind))
+}
+
+pub(super) fn preflight_external_task(
+    profile: &AgentProfile,
+    task: &TaskPlan,
+) -> Result<RuntimePreflightReport> {
     Ok(
-        runtime_adapter_for(runner.kind).preflight(RuntimePreflightContext {
+        runtime_adapter_for_task(task)?.preflight(RuntimePreflightContext {
             profile,
             compatibility: BenchmarkRuntimeCompatibility::from_profile(profile),
             task,
@@ -95,14 +135,14 @@ pub(super) fn runtime_cleanup_targets(ctx: RuntimeCleanupContext<'_>) -> Vec<Run
     let mut seen = Vec::new();
     let mut targets = Vec::new();
     for task in &ctx.plan.tasks {
-        let Some(runner) = &task.external_runner else {
+        let Ok(adapter) = runtime_adapter_for_task(task) else {
             continue;
         };
-        if seen.contains(&runner.kind) {
+        if seen.contains(&adapter.kind()) {
             continue;
         }
-        seen.push(runner.kind);
-        targets.extend(runtime_adapter_for(runner.kind).cleanup_targets(ctx));
+        seen.push(adapter.kind());
+        targets.extend(adapter.cleanup_targets(ctx));
     }
     targets.sort_by(|left, right| {
         left.adapter_id
@@ -131,6 +171,45 @@ pub(super) fn preflight_report(
         task_id: ctx.task.task_id.clone(),
         runner_kind: adapter.kind(),
         adapter_id: adapter.adapter_id().to_string(),
+        protocol_adapter_id: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.adapter_id.to_string()),
+        protocol_version: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.protocol_version.to_string()),
+        protocol_benchmark_id: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.benchmark_id.to_string()),
+        protocol_selected_mode: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| binding.authority.selected_mode.to_string()),
+        protocol_stability: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| format!("{:?}", binding.authority.stability)),
+        protocol_capabilities: ctx
+            .task
+            .runtime_binding
+            .as_ref()
+            .map(|binding| {
+                binding
+                    .authority
+                    .capabilities
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect()
+            })
+            .unwrap_or_default(),
+        legacy_shim_used: ctx.task.runtime_binding.is_none(),
         agent_bridge_mode: ctx
             .compatibility
             .agent_bridge_mode(adapter.kind())

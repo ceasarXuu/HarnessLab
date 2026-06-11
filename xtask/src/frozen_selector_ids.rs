@@ -5,6 +5,8 @@ pub(crate) const REQUIRED_FROZEN_IDS: &[&str] = &[
     "ADAPT-DATA-003",
     "ADAPT-DATA-004",
     "ADAPT-DATA-005",
+    "ADAPT-PROTOCOL-001",
+    "ADAPT-PROTOCOL-002",
     "ADAPT-RUNTIME-001",
     "ADAPT-RUNTIME-002",
     "ADAPT-RUNTIME-003",

@@ -215,8 +215,8 @@ if [[ "${1:-}" == "--select" ]]; then
     SWEPRO-003) package="harnesslab-cli"; test_name="swepro_003_diff_capture_failure_and_empty_patch_are_distinct"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-004) package="harnesslab-cli"; test_name="swepro_004_evaluator_parse_corruption_is_not_patch_failure"; test_target="test:swe_runtime_phase_contract" ;;
     SWEPRO-005) package="harnesslab-cli"; test_name="swepro_005_replay_requires_stored_swe_runtime_materials"; test_target="test:swe_runtime_snapshot_contract" ;;
-    ADAPT-PROTOCOL-001) planned_adapter_proof "$id" "Phase 2: descriptor, identity, and protocol authority schema validation" ;;
-    ADAPT-PROTOCOL-002) planned_adapter_proof "$id" "Phase 2: registry conflict and binding resolution validation" ;;
+    ADAPT-PROTOCOL-001) package="harnesslab-core"; test_name="adapter_protocol::tests::adapt_protocol_001_identity_authority_and_legacy_shim_contract"; test_target="lib" ;;
+    ADAPT-PROTOCOL-002) package="harnesslab-adapters"; test_name="protocol_registry::tests::adapt_protocol_002_registry_binding_resolution_and_conflicts_are_enforced"; test_target="lib" ;;
     ADAPT-PROTOCOL-003) planned_adapter_proof "$id" "Phase 3: data lifecycle black-box conformance" ;;
     ADAPT-PROTOCOL-004) planned_adapter_proof "$id" "Phase 3: runtime lifecycle and failure taxonomy conformance" ;;
     ADAPT-PROTOCOL-005) planned_adapter_proof "$id" "Phase 3: artifact declaration, public/private, and redaction conformance" ;;

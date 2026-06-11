@@ -109,6 +109,8 @@ pub struct RuntimeTaskSnapshot {
     pub task_plan_hash: String,
     #[serde(default)]
     pub external_runner: Option<ExternalRunnerSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_binding: Option<crate::TaskRuntimeBinding>,
     #[serde(default)]
     pub external_runtime_attempts: Vec<ExternalRuntimeAttemptSnapshot>,
 }
@@ -159,6 +161,8 @@ pub struct TaskPlan {
     pub patch_spec: Option<PatchSpec>,
     #[serde(default)]
     pub external_runner: Option<ExternalRunnerSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_binding: Option<crate::TaskRuntimeBinding>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

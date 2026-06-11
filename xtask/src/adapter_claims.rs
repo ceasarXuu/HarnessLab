@@ -254,6 +254,18 @@ fn active_route_spec(id: &str) -> Option<ActiveRouteSpec> {
             test_target: Some("lib"),
             file_patterns: &["crates/harnesslab-adapters/src/data_contract_tests.rs"],
         }),
+        "ADAPT-PROTOCOL-001" => Some(ActiveRouteSpec {
+            package: "harnesslab-core",
+            test_name: "adapter_protocol::tests::adapt_protocol_001_identity_authority_and_legacy_shim_contract",
+            test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-core/src/adapter_protocol.rs"],
+        }),
+        "ADAPT-PROTOCOL-002" => Some(ActiveRouteSpec {
+            package: "harnesslab-adapters",
+            test_name: "protocol_registry::tests::adapt_protocol_002_registry_binding_resolution_and_conflicts_are_enforced",
+            test_target: Some("lib"),
+            file_patterns: &["crates/harnesslab-adapters/src/protocol_registry.rs"],
+        }),
         "ADAPT-RUNTIME-001" => Some(ActiveRouteSpec {
             package: "harnesslab-cli",
             test_name: "runner::external::runtime_adapter::tests::adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry",

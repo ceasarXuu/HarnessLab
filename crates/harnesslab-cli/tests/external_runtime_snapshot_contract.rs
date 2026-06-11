@@ -41,6 +41,20 @@ fn adapt_runtime_003_external_runtime_snapshots_are_written_and_redacted() {
     assert_eq!(private["benchmark"], "terminal-bench");
     assert_eq!(public["runner_kind"], "terminal_bench");
     assert_eq!(private["runner_kind"], "terminal_bench");
+    assert_eq!(public["protocol_authority"], private["protocol_authority"]);
+    assert_eq!(
+        public["protocol_authority"]["benchmark_id"],
+        "terminal-bench"
+    );
+    assert_eq!(
+        public["protocol_authority"]["adapter_id"],
+        "harnesslab.terminal-bench.runtime"
+    );
+    assert_eq!(
+        public["protocol_authority"]["adapter_version"],
+        "terminal-bench-runtime.v1"
+    );
+    assert_eq!(public["protocol_authority"]["stability"], "experimental");
     assert_eq!(public["adapter_version"], "terminal-bench-runtime.v1");
     assert_eq!(private["adapter_version"], "terminal-bench-runtime.v1");
     assert_eq!(

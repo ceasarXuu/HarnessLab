@@ -1,9 +1,9 @@
 # Universal Benchmark Adapter Protocol
 
 - Created: 2026-06-08
-- Updated: 2026-06-08
+- Updated: 2026-06-11
 - Version: 0.1
-- Status: Phase 1 specification
+- Status: Phase 2 identity, registry, runtime authority, and replay authority foundation implemented; later conformance/report/doctor gates remain planned
 - Source plan: `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md`
 - Source PRD: `prd/2026-06-07-universal-benchmark-adapter-protocol.md`
 
@@ -69,18 +69,19 @@ paths.
 
 Required fields:
 
-- `benchmark_id`
-- `adapter_id`
-- `protocol_version`
-- `adapter_version`
-- `selected_mode`
-- `capabilities`
-- `stability`
+- `authority`
+  - `benchmark_id`
+  - `adapter_id`
+  - `protocol_version`
+  - `adapter_version`
+  - `selected_mode`
+  - `capabilities`
+  - `stability`
+  - optional `legacy_runner_kind`
 - `dataset_ref`
 - `task_ref`
 - `artifact_contract_id`
 - `readiness_contract_id`
-- optional `legacy_runner_kind`
 
 Selection rule:
 
@@ -129,17 +130,25 @@ fixtures before stable promotion.
 
 The registry must validate selected mode against capabilities before binding.
 
-| Selected Mode | Required Capabilities | Forbidden / Invalid Combinations | Registry Failure |
+| Selected Mode | Registry-required Capabilities | Registry-rejected Combinations | Deferred Conformance Gate |
 |---|---|---|---|
-| `deterministic-sample` | `descriptor`, `data.lifecycle`, `readiness.basic`, `artifacts.basic`, `failure.mapping`, `replay.authority`, `report.metadata` | `official.runner` marked stable without official evidence | `mode_capability_mismatch` |
-| `official-runner` | core capabilities plus `official.runner` and at least one execution capability: `host.agent_execution`, `docker.orchestration`, or `sandbox.runner` | missing official proof for stable adapter; no execution capability; cleanup override without cleanup contract | `mode_capability_mismatch` |
-| `patch-evaluator` | core capabilities plus `patch.evaluator` and artifact declarations for `patch.diff`, `prediction.jsonl`, and evaluator result when produced | patch artifacts public without redaction policy; evaluator failure not mapped | `mode_capability_mismatch` |
-| `cleanup-sensitive-runner` | core capabilities plus `cleanup.verdict_override` and one execution capability | cleanup report undeclared or no cleanup failure mapping | `mode_capability_mismatch` |
-| `custom-report` | core capabilities plus `custom.report_panel` | report section references undeclared public artifact | `mode_capability_mismatch` |
+| `deterministic-sample` | core capabilities only | optional execution/report extension capabilities on a deterministic-only binding | stable promotion evidence in `ADAPT-PROTOCOL-012` |
+| `official-runner` | core capabilities plus `official.runner` and at least one execution capability: `host.agent_execution`, `docker.orchestration`, or `sandbox.runner` | no execution capability; stable without promotion evidence | official proof and artifact archive in `ADAPT-PROTOCOL-010` / `ADAPT-PROTOCOL-012` |
+| `patch-evaluator` | core capabilities plus `patch.evaluator` and `host.agent_execution` | missing patch evaluator capability; missing host execution capability | patch artifact/redaction declarations in `ADAPT-PROTOCOL-005`; failure mapping in `ADAPT-PROTOCOL-006` |
+| `cleanup-sensitive-runner` | core capabilities plus `cleanup.verdict_override` and one execution capability | cleanup override without an execution capability | cleanup report declaration in `ADAPT-PROTOCOL-005`; cleanup failure mapping in `ADAPT-PROTOCOL-006` |
+| `custom-report` | core capabilities plus `custom.report_panel` | custom report mode without custom report capability | public report artifact metadata in `ADAPT-PROTOCOL-007` |
 
-These rules are the normative input for `ADAPT-PROTOCOL-002`. Adding a new
-mode requires a row here, registry conflict fixtures, and readiness/report
-coverage.
+The registry-level rules above are the normative input for
+`ADAPT-PROTOCOL-002`: duplicate adapter/default rejection, protocol version
+rejection, capability/mode compatibility, legacy shim consistency, and stable
+promotion evidence presence. Artifact schemas, redaction policy, detailed
+failure mapping, readiness probe content, and report metadata are normative
+protocol requirements, but they are enforced by later conformance gates listed
+in the deferred column.
+
+Adding a new mode requires a row here, registry conflict fixtures for the
+registry-level constraints, and separate readiness/artifact/report coverage in
+the relevant later gate.
 
 ## 7. Optional Capability Contracts
 
@@ -362,8 +371,8 @@ Stable promotion evidence fields:
 
 | Selector | Status At Phase 1 | Activation Phase | Required Proof |
 |---|---|---:|---|
-| `ADAPT-PROTOCOL-001` | planned | 2 | Descriptor, identity, and protocol authority schema validation. |
-| `ADAPT-PROTOCOL-002` | planned | 2 | Registry conflict and binding resolution validation. |
+| `ADAPT-PROTOCOL-001` | active | 2 | Descriptor, identity, and protocol authority schema validation. |
+| `ADAPT-PROTOCOL-002` | active | 2 | Registry conflict and binding resolution validation. |
 | `ADAPT-PROTOCOL-003` | planned | 3 | Data lifecycle black-box conformance. |
 | `ADAPT-PROTOCOL-004` | planned | 3 | Runtime lifecycle and failure taxonomy black-box conformance. |
 | `ADAPT-PROTOCOL-005` | planned | 3 | Artifact declaration, public/private, and redaction conformance. |

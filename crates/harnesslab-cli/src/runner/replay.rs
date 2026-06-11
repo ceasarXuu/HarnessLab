@@ -37,8 +37,10 @@ pub(super) fn validate_replay_task_runtime_snapshots(
 ) -> Result<()> {
     let requires_task_runtime_snapshot = plan.tasks.iter().any(|task| {
         task.external_runner.is_some()
+            || task.runtime_binding.is_some()
             || plan.task_runtime_snapshots.iter().any(|snapshot| {
-                snapshot.task_id == task.task_id && snapshot.external_runner.is_some()
+                snapshot.task_id == task.task_id
+                    && (snapshot.external_runner.is_some() || snapshot.runtime_binding.is_some())
             })
     });
     if !requires_task_runtime_snapshot {
@@ -59,7 +61,17 @@ pub(super) fn validate_replay_task_runtime_snapshots(
                 task.task_id
             );
         }
-        if task.external_runner.is_none() && expected.external_runner.is_none() {
+        if task.runtime_binding != expected.runtime_binding {
+            bail!(
+                "replay blocker: task runtime_binding mismatch for task {}; cannot safely replay external benchmark task with divergent protocol authority",
+                task.task_id
+            );
+        }
+        if task.external_runner.is_none()
+            && expected.external_runner.is_none()
+            && task.runtime_binding.is_none()
+            && expected.runtime_binding.is_none()
+        {
             continue;
         }
         let snapshot_path = source
@@ -88,7 +100,7 @@ fn validate_external_runtime_snapshots(source: &Path, plan: &BenchmarkPlan) -> R
     for task in plan
         .tasks
         .iter()
-        .filter(|task| task.external_runner.is_some())
+        .filter(|task| task.external_runner.is_some() || task.runtime_binding.is_some())
     {
         let attempts_dir = source
             .join("tasks")
@@ -163,38 +175,33 @@ fn validate_external_runtime_snapshot_pair(
             task.task_id
         )
     })?;
-    let Some(runner) = task.external_runner.as_ref() else {
-        return Ok(());
-    };
     let attempt = attempt_number(attempt_dir)?;
-    let runner_kind = serde_json::to_value(runner.kind)?;
-    if private["schema_version"] != 1
-        || public["schema_version"] != 1
-        || private["visibility"] != "private"
-        || public["visibility"] != "public"
-        || private["benchmark"] != plan.benchmark.name
-        || public["benchmark"] != plan.benchmark.name
-        || private["task_id"] != task.task_id
-        || public["task_id"] != task.task_id
-        || private["attempt"] != attempt
-        || public["attempt"] != attempt
-        || private["runner_kind"] != runner_kind
-        || public["runner_kind"] != runner_kind
-        || private["adapter_version"] != public["adapter_version"]
-        || private["runtime_policy"] != public["runtime_policy"]
-        || private["public_artifacts"] != public["public_artifacts"]
-        || private["dataset_path"] != runner.dataset_path
-        || private["source_path"] != serde_json::to_value(&runner.source_path)?
-        || public.get("dataset_path").is_some()
-        || public.get("source_path").is_some()
-        || public.get("redaction_basis").is_some()
-    {
+    let runtime_kind = super::external::runtime_runner_kind_for_task(task)?;
+    let runner_kind = serde_json::to_value(runtime_kind)?;
+    let dataset_ref = super::external::runtime_dataset_ref(task)?;
+    let source_ref = super::external::runtime_snapshot_source_ref(task, runtime_kind)?;
+    let protocol_authority = serde_json::to_value(
+        task.runtime_binding
+            .as_ref()
+            .map(|binding| &binding.authority),
+    )?;
+    if let Some(field) = external_runtime_snapshot_mismatch_field(
+        &private,
+        &public,
+        plan,
+        task,
+        attempt,
+        &runner_kind,
+        &protocol_authority,
+        dataset_ref,
+        &serde_json::to_value(source_ref)?,
+    ) {
         bail!(
-            "replay blocker: external-runtime snapshot mismatch for task {}; cannot safely replay external benchmark task with divergent attempt materials",
+            "replay blocker: external-runtime snapshot mismatch for task {}; field={field}; cannot safely replay external benchmark task with divergent attempt materials",
             task.task_id
         );
     }
-    let expected_adapter_version = super::external::runtime_adapter_version(runner.kind);
+    let expected_adapter_version = super::external::runtime_adapter_version_for_task(task)?;
     if private["adapter_version"].as_str() != Some(expected_adapter_version) {
         bail!(
             "replay blocker: external-runtime adapter version drift for task {}; stored={} current={expected_adapter_version}; cannot safely replay external benchmark task with changed runtime adapter semantics",
@@ -223,6 +230,68 @@ fn validate_external_runtime_snapshot_pair(
     )?;
     validate_live_materials(&private, task)?;
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn external_runtime_snapshot_mismatch_field(
+    private: &Value,
+    public: &Value,
+    plan: &BenchmarkPlan,
+    task: &harnesslab_core::TaskPlan,
+    attempt: u64,
+    runner_kind: &Value,
+    protocol_authority: &Value,
+    dataset_ref: &str,
+    source_ref: &Value,
+) -> Option<&'static str> {
+    if private["schema_version"] != 1 || public["schema_version"] != 1 {
+        return Some("schema_version");
+    }
+    if private["visibility"] != "private" || public["visibility"] != "public" {
+        return Some("visibility");
+    }
+    if private["benchmark"] != plan.benchmark.name || public["benchmark"] != plan.benchmark.name {
+        return Some("benchmark");
+    }
+    if private["task_id"] != task.task_id || public["task_id"] != task.task_id {
+        return Some("task_id");
+    }
+    if private["attempt"] != attempt || public["attempt"] != attempt {
+        return Some("attempt");
+    }
+    if private["runner_kind"] != *runner_kind || public["runner_kind"] != *runner_kind {
+        return Some("runner_kind");
+    }
+    if private["protocol_authority"] != *protocol_authority
+        || public["protocol_authority"] != *protocol_authority
+    {
+        return Some("protocol_authority");
+    }
+    if private["adapter_version"] != public["adapter_version"] {
+        return Some("adapter_version");
+    }
+    if private["runtime_policy"] != public["runtime_policy"] {
+        return Some("runtime_policy");
+    }
+    if private["public_artifacts"] != public["public_artifacts"] {
+        return Some("public_artifacts");
+    }
+    if private["dataset_path"] != dataset_ref {
+        return Some("dataset_path");
+    }
+    if private["source_path"] != *source_ref {
+        return Some("source_path");
+    }
+    if public.get("dataset_path").is_some() {
+        return Some("public_dataset_path");
+    }
+    if public.get("source_path").is_some() {
+        return Some("public_source_path");
+    }
+    if public.get("redaction_basis").is_some() {
+        return Some("public_redaction_basis");
+    }
+    None
 }
 
 fn validate_live_materials(private: &Value, task: &harnesslab_core::TaskPlan) -> Result<()> {
@@ -353,6 +422,7 @@ fn runtime_fingerprint_from_private(private: &Value) -> Result<String> {
         "task_id": private["task_id"].clone(),
         "attempt": private["attempt"].clone(),
         "runner_kind": private["runner_kind"].clone(),
+        "protocol_authority": private["protocol_authority"].clone(),
         "adapter_version": private["adapter_version"].clone(),
         "runtime_policy": private["runtime_policy"].clone(),
         "dataset_path": private["dataset_path"].clone(),
@@ -363,7 +433,6 @@ fn runtime_fingerprint_from_private(private: &Value) -> Result<String> {
         "runtime_diagnostics": private["runtime_diagnostics"].clone(),
     }))
 }
-
 fn public_fingerprint_from_public(public: &Value) -> Result<String> {
     stable_json_checksum(&serde_json::json!({
         "schema_version": public["schema_version"].clone(),
@@ -372,6 +441,7 @@ fn public_fingerprint_from_public(public: &Value) -> Result<String> {
         "task_id": public["task_id"].clone(),
         "attempt": public["attempt"].clone(),
         "runner_kind": public["runner_kind"].clone(),
+        "protocol_authority": public["protocol_authority"].clone(),
         "adapter_version": public["adapter_version"].clone(),
         "runtime_policy": public["runtime_policy"].clone(),
         "commands": public["commands"].clone(),
@@ -381,11 +451,9 @@ fn public_fingerprint_from_public(public: &Value) -> Result<String> {
         "runtime_fingerprint": public["runtime_fingerprint"].clone(),
     }))
 }
-
 fn stable_json_checksum(value: &Value) -> Result<String> {
     Ok(stable_checksum_bytes(&serde_json::to_vec(value)?))
 }
-
 fn stable_checksum_bytes(bytes: &[u8]) -> String {
     let mut hash = 0xcbf29ce484222325u64;
     for byte in bytes {
@@ -394,14 +462,12 @@ fn stable_checksum_bytes(bytes: &[u8]) -> String {
     }
     format!("fnv64:{hash:016x}")
 }
-
 fn stable_file_checksum(path: &Path) -> String {
     match fs::read(path) {
         Ok(bytes) => stable_checksum_bytes(&bytes),
         Err(_) => stable_checksum_bytes(format!("missing:{}", path.display()).as_bytes()),
     }
 }
-
 fn task_runtime_snapshot_artifact(source: &Path, task_id: &str) -> Result<RuntimeTaskSnapshot> {
     read_json(
         &source
@@ -410,14 +476,12 @@ fn task_runtime_snapshot_artifact(source: &Path, task_id: &str) -> Result<Runtim
             .join("task-runtime.snapshot.json"),
     )
 }
-
 fn attempt_relative_path(path: &Path, task_dir: &Path) -> String {
     path.strip_prefix(task_dir)
         .unwrap_or(path)
         .display()
         .to_string()
 }
-
 fn task_runtime_snapshot_for<'a>(
     plan: &'a BenchmarkPlan,
     task_id: &str,
