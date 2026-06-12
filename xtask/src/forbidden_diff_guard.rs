@@ -13,11 +13,8 @@ const GENERIC_BEHAVIOR_FILES: &[&str] = &[
     "crates/harnesslab-cli/src/runner.rs",
 ];
 
-const FORBIDDEN_IMPORT_PATTERNS: &[&str] = &[
-    "terminal_bench",
-    "swe_bench_pro",
-    "scaffold_golden_adapter",
-];
+const FORBIDDEN_IMPORT_PATTERNS: &[&str] =
+    &["terminal_bench", "swe_bench_pro", "scaffold_golden_adapter"];
 
 pub fn verify_forbidden_diff() -> Result<()> {
     let violations = check_files(GENERIC_BEHAVIOR_FILES, FORBIDDEN_IMPORT_PATTERNS)?;
@@ -32,7 +29,10 @@ pub fn verify_forbidden_diff() -> Result<()> {
         );
     }
 
-    println!("forbidden-diff guard passed: {} generic behavior files are adapter-free", GENERIC_BEHAVIOR_FILES.len());
+    println!(
+        "forbidden-diff guard passed: {} generic behavior files are adapter-free",
+        GENERIC_BEHAVIOR_FILES.len()
+    );
     Ok(())
 }
 
@@ -40,8 +40,7 @@ fn check_files(files: &[&str], patterns: &[&str]) -> Result<Vec<String>> {
     let mut violations = Vec::new();
 
     for &path in files {
-        let content = fs::read_to_string(path)
-            .with_context(|| format!("read {}", path))?;
+        let content = fs::read_to_string(path).with_context(|| format!("read {}", path))?;
 
         for pattern in patterns {
             if content.contains(pattern) {
@@ -89,6 +88,10 @@ mod tests {
 
         let path = good_file.to_str().unwrap();
         let violations = check_files(&[path], FORBIDDEN_IMPORT_PATTERNS).unwrap();
-        assert!(violations.is_empty(), "expected no violations, got: {:?}", violations);
+        assert!(
+            violations.is_empty(),
+            "expected no violations, got: {:?}",
+            violations
+        );
     }
 }

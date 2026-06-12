@@ -1,6 +1,6 @@
 use crate::{
-    BenchmarkAdapter, DeterministicSampleAdapter, ProtocolAdapterDescriptor,
-    SweBenchProAdapter, TerminalBenchAdapter,
+    BenchmarkAdapter, DeterministicSampleAdapter, ProtocolAdapterDescriptor, SweBenchProAdapter,
+    TerminalBenchAdapter,
 };
 
 pub fn built_in_protocol_adapter_descriptors() -> Vec<ProtocolAdapterDescriptor> {

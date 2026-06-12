@@ -44,8 +44,6 @@ pub struct AdapterProtocolAuthority {
     pub selected_mode: SelectedMode,
     pub capabilities: Vec<CapabilityId>,
     pub stability: AdapterStability,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub legacy_runner_kind: Option<crate::ExternalRunnerKind>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,13 +163,7 @@ impl AdapterProtocolAuthority {
             selected_mode,
             capabilities,
             stability,
-            legacy_runner_kind: None,
         }
-    }
-
-    pub fn with_legacy_runner_kind(mut self, kind: crate::ExternalRunnerKind) -> Self {
-        self.legacy_runner_kind = Some(kind);
-        self
     }
 }
 
@@ -189,8 +181,6 @@ impl<'de> Deserialize<'de> for AdapterProtocolAuthority {
             selected_mode: SelectedMode,
             capabilities: Vec<CapabilityId>,
             stability: AdapterStability,
-            #[serde(default)]
-            legacy_runner_kind: Option<crate::ExternalRunnerKind>,
         }
 
         let wire = AuthorityWire::deserialize(deserializer)?;
@@ -200,71 +190,15 @@ impl<'de> Deserialize<'de> for AdapterProtocolAuthority {
                 wire.protocol_version
             )));
         }
-        let mut authority = AdapterProtocolAuthority::new(
+        Ok(AdapterProtocolAuthority::new(
             wire.benchmark_id,
             wire.adapter_id,
             wire.adapter_version,
             wire.selected_mode,
             wire.capabilities,
             wire.stability,
-        );
-        authority.legacy_runner_kind = wire.legacy_runner_kind;
-        Ok(authority)
+        ))
     }
-}
-
-pub fn legacy_runner_kind_authority(
-    kind: crate::ExternalRunnerKind,
-) -> Result<AdapterProtocolAuthority, AdapterProtocolIdError> {
-    let (benchmark, adapter, mode, capabilities) = match kind {
-        crate::ExternalRunnerKind::TerminalBench => (
-            "terminal-bench",
-            "harnesslab.terminal-bench.runtime",
-            "official-runner",
-            vec![
-                "descriptor",
-                "data.lifecycle",
-                "readiness.basic",
-                "artifacts.basic",
-                "failure.mapping",
-                "replay.authority",
-                "report.metadata",
-                "official.runner",
-                "docker.orchestration",
-                "cleanup.verdict_override",
-                "host.agent_execution",
-                "run_as.readiness",
-            ],
-        ),
-        crate::ExternalRunnerKind::SweBenchPro => (
-            "swe-bench-pro",
-            "harnesslab.swe-bench-pro.runtime",
-            "patch-evaluator",
-            vec![
-                "descriptor",
-                "data.lifecycle",
-                "readiness.basic",
-                "failure.mapping",
-                "report.metadata",
-                "patch.evaluator",
-                "host.agent_execution",
-                "artifacts.basic",
-                "replay.authority",
-            ],
-        ),
-    };
-    Ok(AdapterProtocolAuthority::new(
-        BenchmarkId::new(benchmark)?,
-        AdapterId::new(adapter)?,
-        AdapterVersion::new("legacy")?,
-        SelectedMode::new(mode)?,
-        capabilities
-            .into_iter()
-            .map(CapabilityId::new)
-            .collect::<Result<Vec<_>, _>>()?,
-        AdapterStability::Legacy,
-    )
-    .with_legacy_runner_kind(kind))
 }
 
 #[cfg(test)]
@@ -330,21 +264,15 @@ mod tests {
             .is_err()
         );
 
-        let legacy_authority =
-            legacy_runner_kind_authority(crate::ExternalRunnerKind::SweBenchPro).unwrap();
-
-        assert_eq!(legacy_authority.benchmark_id.as_str(), "swe-bench-pro");
-        assert_eq!(
-            legacy_authority.adapter_id.as_str(),
-            "harnesslab.swe-bench-pro.runtime"
-        );
-        assert_eq!(
-            legacy_authority.legacy_runner_kind,
-            Some(crate::ExternalRunnerKind::SweBenchPro)
-        );
-
         let binding = TaskRuntimeBinding {
-            authority: legacy_authority,
+            authority: AdapterProtocolAuthority::new(
+                BenchmarkId::new("swe-bench-pro").unwrap(),
+                AdapterId::new("harnesslab.swe-bench-pro.runtime").unwrap(),
+                AdapterVersion::new("swe-bench-pro-runtime.v1").unwrap(),
+                SelectedMode::new("patch-evaluator").unwrap(),
+                vec![CapabilityId::new("descriptor").unwrap()],
+                AdapterStability::Experimental,
+            ),
             dataset_ref: "dataset://swe-bench-pro/smoke".to_string(),
             task_ref: "task://swe-bench-pro/smoke/1".to_string(),
             artifact_contract_id: "artifact.basic.v1".to_string(),

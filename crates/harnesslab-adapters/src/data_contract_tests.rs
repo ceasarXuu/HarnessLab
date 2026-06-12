@@ -2,7 +2,7 @@ use crate::{
     BenchmarkAdapter, FakePatchAdapter, FakeTerminalAdapter, SweBenchProAdapter,
     TerminalBenchAdapter, stable_file_checksum,
 };
-use harnesslab_core::{DataState, ExternalRunnerKind};
+use harnesslab_core::DataState;
 use std::path::Path;
 
 #[test]
@@ -170,8 +170,14 @@ fn adapt_data_004_snapshot_task_captures_replay_sufficient_identity() {
     assert!(roundtrip.instruction_hash.starts_with("fnv64:"));
     assert!(roundtrip.task_plan_hash.starts_with("fnv64:"));
     assert_eq!(
-        roundtrip.external_runner.as_ref().unwrap().kind,
-        ExternalRunnerKind::TerminalBench
+        roundtrip
+            .runtime_binding
+            .as_ref()
+            .unwrap()
+            .authority
+            .adapter_id
+            .as_str(),
+        "harnesslab.terminal-bench.runtime"
     );
 
     let fake_prepared = FakePatchAdapter.prepare("success").unwrap();
@@ -216,8 +222,14 @@ fn adapt_data_004_snapshot_task_captures_replay_sufficient_identity() {
     let task = swe.list_tasks(&prepared).unwrap().remove(0);
     let snapshot = swe.snapshot_task(&prepared, &task).unwrap();
     assert_eq!(
-        snapshot.external_runner.as_ref().unwrap().kind,
-        ExternalRunnerKind::SweBenchPro
+        snapshot
+            .runtime_binding
+            .as_ref()
+            .unwrap()
+            .authority
+            .adapter_id
+            .as_str(),
+        "harnesslab.swe-bench-pro.runtime"
     );
     let original_hash = snapshot.upstream_metadata_hash;
     std::fs::write(

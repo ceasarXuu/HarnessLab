@@ -1,10 +1,8 @@
-use crate::ExternalRunnerKind;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RuntimePreflightReport {
     pub task_id: String,
-    pub runner_kind: ExternalRunnerKind,
     pub adapter_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub protocol_adapter_id: Option<String>,

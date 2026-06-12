@@ -1,8 +1,8 @@
 use super::*;
 use harnesslab_core::{
-    ArtifactSpec, BenchmarkIdentity, BenchmarkRef, ExecutionConfig, ExternalRunnerKind,
-    ExternalRunnerSpec, NetworkPolicy, ResourceHint, RunConfigOverrides, RunPaths, SandboxSpec,
-    TaskPlan, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+    AdapterId, ArtifactSpec, BenchmarkIdentity, BenchmarkRef, ExecutionConfig, ExternalRunnerSpec,
+    NetworkPolicy, ResourceHint, RunConfigOverrides, RunPaths, SandboxSpec, TaskPlan,
+    TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 
 #[test]
@@ -350,10 +350,19 @@ fn plan_with_image(image: &str) -> BenchmarkPlan {
 fn terminal_bench_plan() -> BenchmarkPlan {
     let mut plan = plan_with_image("terminal-bench-official");
     plan.tasks[0].external_runner = Some(ExternalRunnerSpec {
-        kind: ExternalRunnerKind::TerminalBench,
         dataset_path: "/tmp/terminal-bench".to_string(),
         source_path: None,
         agent_timeout_sec: None,
+    });
+    plan.tasks[0].runtime_binding = Some(TaskRuntimeBinding {
+        authority: harnesslab_adapters::built_in_protocol_registry()
+            .binding_for_adapter_id(&AdapterId::new("harnesslab.terminal-bench.runtime").unwrap())
+            .unwrap()
+            .authority(),
+        dataset_ref: "/tmp/terminal-bench".to_string(),
+        task_ref: "task".to_string(),
+        artifact_contract_id: "artifact.basic.v1".to_string(),
+        readiness_contract_id: "readiness.basic.v1".to_string(),
     });
     plan
 }

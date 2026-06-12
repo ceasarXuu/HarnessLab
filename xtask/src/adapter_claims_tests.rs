@@ -199,7 +199,7 @@ fn registry_013_claimed_active_id_requires_registry_file_pattern_for_selector_ta
     .to_string();
 
     assert!(error.contains("file_patterns missing expected selector file"));
-    assert!(error.contains("crates/harnesslab-adapters/src/data_contract_tests.rs"));
+    assert!(error.contains("crates/harnesslab-adapters/src/data_boundary_contract.rs"));
 }
 
 #[test]
@@ -321,7 +321,22 @@ fn registry_doc(id: &str, status: &str) -> RegistryDoc {
 
 fn file_patterns_for(id: &str) -> Vec<String> {
     match id {
-        ACTIVE_DATA_ID => vec!["crates/harnesslab-adapters/src/data_contract_tests.rs".to_string()],
+        ACTIVE_DATA_ID => vec![
+            "crates/harnesslab-adapters/Cargo.toml".to_string(),
+            "crates/harnesslab-adapters/src/data_boundary_contract.rs".to_string(),
+            "crates/harnesslab-adapters/src/data_boundary_rule_sets.rs".to_string(),
+            "crates/harnesslab-adapters/src/data_boundary_scan.rs".to_string(),
+            "crates/harnesslab-adapters/src/data_contract_tests.rs".to_string(),
+            "crates/harnesslab-adapters/src/fake_patch.rs".to_string(),
+            "crates/harnesslab-adapters/src/fake_terminal.rs".to_string(),
+            "crates/harnesslab-adapters/src/lib.rs".to_string(),
+            "crates/harnesslab-adapters/src/protocol_registry.rs".to_string(),
+            "crates/harnesslab-adapters/src/registry.rs".to_string(),
+            "crates/harnesslab-adapters/src/swe_bench_pro.rs".to_string(),
+            "crates/harnesslab-adapters/src/terminal_bench.rs".to_string(),
+            "docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md".to_string(),
+            "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md".to_string(),
+        ],
         ACTIVE_RUNTIME_ID | "ADAPT-RUNTIME-002" => {
             vec!["crates/harnesslab-cli/src/runner/external/runtime_adapter_tests.rs".to_string()]
         }

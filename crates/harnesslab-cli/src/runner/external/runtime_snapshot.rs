@@ -1,7 +1,7 @@
 use super::runtime_anchor::{AnchorProjection, anchor_attempt_snapshot};
 use crate::runner::store;
 use anyhow::Result;
-use harnesslab_core::{AdapterProtocolAuthority, ExternalRunnerKind, redact_public_value};
+use harnesslab_core::{AdapterProtocolAuthority, redact_public_value};
 use harnesslab_infra::{
     atomic_write_json, stable_checksum_bytes, stable_file_checksum, stable_path_checksum,
 };
@@ -16,7 +16,7 @@ pub(super) struct ExternalRuntimeSnapshotRequest<'a> {
     pub(super) benchmark: &'a str,
     pub(super) task_id: &'a str,
     pub(super) attempt: u32,
-    pub(super) runner_kind: ExternalRunnerKind,
+    pub(super) adapter_id: &'a str,
     pub(super) protocol_authority: Option<AdapterProtocolAuthority>,
     pub(super) adapter_version: &'a str,
     pub(super) network: harnesslab_core::NetworkPolicy,
@@ -100,7 +100,7 @@ pub(super) fn write_external_runtime_snapshots(
         benchmark: request.benchmark.to_string(),
         task_id: request.task_id.to_string(),
         attempt: request.attempt,
-        runner_kind: request.runner_kind,
+        adapter_id: request.adapter_id.to_string(),
         protocol_authority: request.protocol_authority.clone(),
         adapter_version: request.adapter_version.to_string(),
         runtime_policy: runtime_policy.clone(),
@@ -120,7 +120,7 @@ pub(super) fn write_external_runtime_snapshots(
         benchmark: request.benchmark.to_string(),
         task_id: request.task_id.to_string(),
         attempt: request.attempt,
-        runner_kind: request.runner_kind,
+        adapter_id: request.adapter_id.to_string(),
         protocol_authority: request.protocol_authority.clone(),
         adapter_version: request.adapter_version.to_string(),
         runtime_policy,
@@ -159,7 +159,7 @@ struct PrivateExternalRuntimeSnapshot {
     benchmark: String,
     task_id: String,
     attempt: u32,
-    runner_kind: ExternalRunnerKind,
+    adapter_id: String,
     protocol_authority: Option<AdapterProtocolAuthority>,
     adapter_version: String,
     runtime_policy: RuntimePolicySnapshot,
@@ -181,7 +181,7 @@ struct PublicExternalRuntimeSnapshot {
     benchmark: String,
     task_id: String,
     attempt: u32,
-    runner_kind: ExternalRunnerKind,
+    adapter_id: String,
     protocol_authority: Option<AdapterProtocolAuthority>,
     adapter_version: String,
     runtime_policy: RuntimePolicySnapshot,
@@ -395,7 +395,7 @@ fn runtime_fingerprint(
         "benchmark": request.benchmark,
         "task_id": request.task_id,
         "attempt": request.attempt,
-        "runner_kind": request.runner_kind,
+        "adapter_id": request.adapter_id,
         "protocol_authority": &request.protocol_authority,
         "adapter_version": request.adapter_version,
         "runtime_policy": runtime_policy,
@@ -421,7 +421,7 @@ fn public_fingerprint(
         "benchmark": request.benchmark,
         "task_id": request.task_id,
         "attempt": request.attempt,
-        "runner_kind": request.runner_kind,
+        "adapter_id": request.adapter_id,
         "protocol_authority": &request.protocol_authority,
         "adapter_version": request.adapter_version,
         "runtime_policy": runtime_policy,

@@ -4,9 +4,9 @@ use crate::{
 };
 use harnesslab_core::{
     AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
-    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy, PatchSpec,
-    PreparedBenchmark, ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor,
-    TaskPlan, TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+    BenchmarkStyle, DataState, ExternalRunnerSpec, NetworkPolicy, PatchSpec, PreparedBenchmark,
+    ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan,
+    TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
 
@@ -366,7 +366,6 @@ fn swe_bench_pro_task(task_id: &str, dataset: &SweBenchProDataset) -> TaskPlan {
             prediction_path: "prediction.jsonl".to_string(),
         }),
         external_runner: Some(ExternalRunnerSpec {
-            kind: ExternalRunnerKind::SweBenchPro,
             dataset_path: dataset.dataset_dir.display().to_string(),
             source_path: Some(dataset.source_dir.display().to_string()),
             agent_timeout_sec: None,

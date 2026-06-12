@@ -388,7 +388,6 @@ fn assert_swe_runtime_artifacts(
     assert!(events.contains("\"event\":\"external_runner_preflight\""));
     assert!(events.contains("adapter_id=harnesslab.swe-bench-pro.runtime"));
     assert!(events.contains("adapter_phase=preflight"));
-    assert!(events.contains("runner_kind=SweBenchPro"));
     assert!(events.contains("agent_bridge_mode=swe-bench-pro-gold"));
     assert!(events.contains("readiness_status=ready"));
     assert!(events.contains("host_execution_reason=swe-bench-pro gold host path"));

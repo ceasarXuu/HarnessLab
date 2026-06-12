@@ -2,11 +2,7 @@ use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::Path;
 
-pub fn scaffold_adapter(
-    benchmark_id: &str,
-    adapter_id: &str,
-    output_dir: &Path,
-) -> Result<()> {
+pub fn scaffold_adapter(benchmark_id: &str, adapter_id: &str, output_dir: &Path) -> Result<()> {
     validate_id(benchmark_id, "benchmark-id")?;
     validate_id(adapter_id, "adapter-id")?;
 
@@ -24,14 +20,13 @@ pub fn scaffold_adapter(
         .with_context(|| format!("write scaffold test {}", test_file.display()))?;
 
     let binding_file = output_dir.join("registry_binding.rs");
-    fs::write(&binding_file, generate_registry_binding(benchmark_id, adapter_id))
-        .with_context(|| format!("write registry binding snippet {}", binding_file.display()))?;
+    fs::write(
+        &binding_file,
+        generate_registry_binding(benchmark_id, adapter_id),
+    )
+    .with_context(|| format!("write registry binding snippet {}", binding_file.display()))?;
 
-    println!(
-        "scaffold ok: {} -> {}",
-        benchmark_id,
-        output_dir.display()
-    );
+    println!("scaffold ok: {} -> {}", benchmark_id, output_dir.display());
     println!("next step: copy the binding from registry_binding.rs into protocol_registry.rs");
     Ok(())
 }
@@ -44,11 +39,13 @@ fn validate_id(value: &str, name: &str) -> Result<()> {
         .chars()
         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.')
     {
-        bail!(
-            "{name} must contain only lowercase ascii letters, digits, hyphens, and dots"
-        );
+        bail!("{name} must contain only lowercase ascii letters, digits, hyphens, and dots");
     }
-    if value.starts_with('-') || value.ends_with('-') || value.starts_with('.') || value.ends_with('.') {
+    if value.starts_with('-')
+        || value.ends_with('-')
+        || value.starts_with('.')
+        || value.ends_with('.')
+    {
         bail!("{name} must not start or end with a hyphen or dot");
     }
     Ok(())

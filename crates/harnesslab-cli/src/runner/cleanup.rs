@@ -77,9 +77,9 @@ impl RunSandboxCleanup {
         for target in self.runtime_cleanup_targets_for_phase(phase) {
             let message = match (self.cleanup_runtime)(target) {
                 Ok(result) => format!(
-                    "{} {phase}: runner_kind={:?} tokens_count={} projects_count={} snapshot_projects={} matched_projects={} removed_count={} has_error=false",
+                    "{} {phase}: adapter_id={} tokens_count={} projects_count={} snapshot_projects={} matched_projects={} removed_count={} has_error=false",
                     target.message_prefix,
-                    target.runner_kind,
+                    target.adapter_id,
                     result.tokens.len(),
                     result.projects.len(),
                     result.snapshot_projects,
@@ -87,8 +87,8 @@ impl RunSandboxCleanup {
                     result.removed.len(),
                 ),
                 Err(_) => format!(
-                    "{} {phase} warning: runner_kind={:?} has_error=true",
-                    target.message_prefix, target.runner_kind
+                    "{} {phase} warning: adapter_id={} has_error=true",
+                    target.message_prefix, target.adapter_id
                 ),
             };
             let _ = append_event(

@@ -4,9 +4,9 @@ use crate::{
 };
 use harnesslab_core::{
     AdapterId, ArtifactSpec, BenchmarkDataState, BenchmarkDescriptor, BenchmarkSplit,
-    BenchmarkStyle, DataState, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy,
-    PreparedBenchmark, ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor,
-    TaskPlan, TaskRuntimeBinding, VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
+    BenchmarkStyle, DataState, ExternalRunnerSpec, NetworkPolicy, PreparedBenchmark, ResourceHint,
+    RunConfigOverrides, SandboxSpec, SourceRef, TaskDescriptor, TaskPlan, TaskRuntimeBinding,
+    VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::{Path, PathBuf};
 
@@ -301,7 +301,6 @@ fn terminal_bench_task(task_id: &str, dataset_dir: &Path) -> TaskPlan {
         },
         patch_spec: None,
         external_runner: Some(ExternalRunnerSpec {
-            kind: ExternalRunnerKind::TerminalBench,
             dataset_path: dataset_dir.display().to_string(),
             source_path: None,
             agent_timeout_sec: metadata.max_agent_timeout_sec,

@@ -377,8 +377,8 @@ fn assert_swe_external_runtime_snapshots(
     assert_eq!(private["benchmark"], "swe-bench-pro");
     assert_eq!(public["task_id"], task_id);
     assert_eq!(private["task_id"], task_id);
-    assert_eq!(public["runner_kind"], "swe_bench_pro");
-    assert_eq!(private["runner_kind"], "swe_bench_pro");
+    assert_eq!(public["adapter_id"], "harnesslab.swe-bench-pro.runtime");
+    assert_eq!(private["adapter_id"], "harnesslab.swe-bench-pro.runtime");
     assert_eq!(public["protocol_authority"], private["protocol_authority"]);
     assert_eq!(
         public["protocol_authority"]["benchmark_id"],
@@ -392,7 +392,10 @@ fn assert_swe_external_runtime_snapshots(
         public["protocol_authority"]["adapter_version"],
         "swe-bench-pro-runtime.v1"
     );
-    assert_eq!(public["protocol_authority"]["stability"], "conditional-stable-blocked");
+    assert_eq!(
+        public["protocol_authority"]["stability"],
+        "conditional-stable-blocked"
+    );
     assert!(public.get("redaction_basis").is_none());
     assert!(
         public["runtime_fingerprint"]

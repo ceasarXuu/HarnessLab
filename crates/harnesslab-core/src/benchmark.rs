@@ -167,19 +167,11 @@ pub struct TaskPlan {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExternalRunnerSpec {
-    pub kind: ExternalRunnerKind,
     pub dataset_path: String,
     #[serde(default)]
     pub source_path: Option<String>,
     #[serde(default)]
     pub agent_timeout_sec: Option<u64>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ExternalRunnerKind {
-    TerminalBench,
-    SweBenchPro,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

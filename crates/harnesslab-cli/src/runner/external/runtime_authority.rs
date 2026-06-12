@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use harnesslab_core::{ExternalRunnerKind, TaskPlan};
+use harnesslab_core::TaskPlan;
 
 pub(in crate::runner) fn runtime_dataset_ref(task: &TaskPlan) -> Result<&str> {
     if let Some(binding) = &task.runtime_binding {
@@ -25,11 +25,7 @@ pub(in crate::runner) fn runtime_source_ref(task: &TaskPlan) -> Result<Option<&s
     if let Some(binding) = &task.runtime_binding {
         if let Some(runner) = &task.external_runner {
             let Some(source_path) = runner.source_path.as_deref() else {
-                bail!(
-                    "protocol runtime binding task_ref mismatch for task {}: legacy=none protocol={}",
-                    task.task_id,
-                    binding.task_ref
-                );
+                return Ok(None);
             };
             if source_path != binding.task_ref {
                 bail!(
@@ -48,15 +44,12 @@ pub(in crate::runner) fn runtime_source_ref(task: &TaskPlan) -> Result<Option<&s
         .and_then(|runner| runner.source_path.as_deref()))
 }
 
-pub(in crate::runner) fn runtime_snapshot_source_ref(
-    task: &TaskPlan,
-    kind: ExternalRunnerKind,
-) -> Result<Option<&str>> {
-    match kind {
-        ExternalRunnerKind::TerminalBench => Ok(task
-            .external_runner
-            .as_ref()
-            .and_then(|runner| runner.source_path.as_deref())),
-        ExternalRunnerKind::SweBenchPro => runtime_source_ref(task),
+pub(in crate::runner) fn runtime_snapshot_source_ref(task: &TaskPlan) -> Result<Option<&str>> {
+    if task.runtime_binding.is_some() {
+        return runtime_source_ref(task);
     }
+    Ok(task
+        .external_runner
+        .as_ref()
+        .and_then(|runner| runner.source_path.as_deref()))
 }

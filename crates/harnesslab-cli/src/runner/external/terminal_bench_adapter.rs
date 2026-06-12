@@ -18,13 +18,13 @@ use super::{
 };
 use crate::agent_registry::MaterializedAgentProfile;
 use crate::runtime_compatibility::{
-    AdapterCompatibilityProfile, BenchmarkRuntimeCompatibility, push_if_some,
-    TERMINAL_BENCH_AGENT_LABEL, TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL,
-    TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL, TERMINAL_BENCH_MODEL_LABEL,
+    AdapterCompatibilityProfile, BenchmarkRuntimeCompatibility,
+    TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL, TERMINAL_BENCH_AGENT_LABEL,
+    TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL, TERMINAL_BENCH_MODEL_LABEL, push_if_some,
 };
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentKind, AgentProfile, ExternalRunnerKind, RunSpec, RuntimePreflightReport, TaskAttemptResult,
+    AgentKind, AgentProfile, RunSpec, RuntimePreflightReport, TaskAttemptResult,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -55,14 +55,7 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
         "terminal-bench"
     }
 
-    fn kind(&self) -> ExternalRunnerKind {
-        ExternalRunnerKind::TerminalBench
-    }
-
-    fn compatibility_profile(
-        &self,
-        profile: &AgentProfile,
-    ) -> AdapterCompatibilityProfile {
+    fn compatibility_profile(&self, profile: &AgentProfile) -> AdapterCompatibilityProfile {
         let compat = BenchmarkRuntimeCompatibility::from_profile(profile);
         let host_execution_reason = if compat.terminal_bench_agent_import_path.is_some() {
             Some("terminal-bench import agent host path")
@@ -75,10 +68,26 @@ impl BenchmarkRuntimeAdapter for TerminalBenchRuntimeAdapter {
             "terminal-bench-official-agent"
         };
         let mut consumed_label_keys = Vec::new();
-        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_LABEL, &compat.terminal_bench_agent);
-        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL, &compat.terminal_bench_agent_import_path);
-        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL, &compat.terminal_bench_agent_pythonpath);
-        push_if_some(&mut consumed_label_keys, TERMINAL_BENCH_MODEL_LABEL, &compat.terminal_bench_model);
+        push_if_some(
+            &mut consumed_label_keys,
+            TERMINAL_BENCH_AGENT_LABEL,
+            &compat.terminal_bench_agent,
+        );
+        push_if_some(
+            &mut consumed_label_keys,
+            TERMINAL_BENCH_AGENT_IMPORT_PATH_LABEL,
+            &compat.terminal_bench_agent_import_path,
+        );
+        push_if_some(
+            &mut consumed_label_keys,
+            TERMINAL_BENCH_AGENT_PYTHONPATH_LABEL,
+            &compat.terminal_bench_agent_pythonpath,
+        );
+        push_if_some(
+            &mut consumed_label_keys,
+            TERMINAL_BENCH_MODEL_LABEL,
+            &compat.terminal_bench_model,
+        );
         AdapterCompatibilityProfile {
             host_execution_reason,
             bridge_mode,
@@ -478,7 +487,6 @@ fn terminal_bench_runtime_cleanup_target(
     scan_run_id: String,
 ) -> RuntimeCleanupTarget {
     RuntimeCleanupTarget {
-        runner_kind: ExternalRunnerKind::TerminalBench,
         adapter_id: ADAPTER_ID,
         event_name: "terminal_bench_docker_cleanup",
         message_prefix: "terminal-bench docker cleanup",

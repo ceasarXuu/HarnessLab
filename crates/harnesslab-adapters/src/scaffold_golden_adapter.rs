@@ -1,9 +1,8 @@
 use crate::{
     BenchmarkAdapter, ProtocolAdapterDescriptor, ProtocolArtifactDeclaration,
     ProtocolDataLifecycleContract, ProtocolFailureMapping, ProtocolOperation,
-    ProtocolReadinessProbe, ProtocolReportMetadata,
-    ProtocolRuntimeLifecycleContract, built_in_protocol_registry,
-    prepared_from_descriptor, stable_checksum,
+    ProtocolReadinessProbe, ProtocolReportMetadata, ProtocolRuntimeLifecycleContract,
+    built_in_protocol_registry, prepared_from_descriptor, stable_checksum,
 };
 use harnesslab_core::{
     AdapterId, ArtifactSpec, BenchmarkDescriptor, BenchmarkSplit, BenchmarkStyle, CapabilityId,
@@ -141,7 +140,12 @@ fn split(name: &str) -> BenchmarkSplit {
 
 fn data_lifecycle() -> ProtocolDataLifecycleContract {
     ProtocolDataLifecycleContract {
-        inspect_data: operation("inspect_data", "data.lifecycle", "benchmark.root", "data.state"),
+        inspect_data: operation(
+            "inspect_data",
+            "data.lifecycle",
+            "benchmark.root",
+            "data.state",
+        ),
         prepare: operation("prepare", "data.lifecycle", "split", "prepared.benchmark"),
         list_tasks: operation(
             "list_tasks",

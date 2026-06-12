@@ -9,8 +9,8 @@ use crate::runner::external::runtime_snapshot::{
 use crate::runner::store;
 use anyhow::{Result, bail};
 use harnesslab_core::{
-    AgentProfile, AttemptProvenance, ExternalRunnerKind, FailureClass, FailureCode, Outcome,
-    RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan, TaskState, UsageRecord,
+    AgentProfile, AttemptProvenance, FailureClass, FailureCode, Outcome, RunSpec,
+    RuntimePreflightReport, TaskAttemptResult, TaskPlan, TaskState, UsageRecord,
     health_impact_for_failure, redact_public_value,
 };
 use harnesslab_infra::{append_event, atomic_write_json, event};
@@ -41,7 +41,7 @@ pub(super) use runtime_authority::{
 };
 
 pub(super) fn is_external_task(task: &TaskPlan) -> bool {
-    task.external_runner.is_some() || task.runtime_binding.is_some()
+    task.runtime_binding.is_some()
 }
 
 pub(super) fn validate_profile_for_plan(profile: &AgentProfile, tasks: &[TaskPlan]) -> Result<()> {
@@ -58,7 +58,7 @@ pub(super) fn emit_runtime_preflight_reports(
 ) -> Result<()> {
     for (task, report) in collect_runtime_preflight_reports(profile, tasks)? {
         let message = format!(
-            "adapter_id={} protocol_adapter_id={} protocol_version={} protocol_benchmark_id={} protocol_selected_mode={} protocol_stability={} protocol_capabilities={} legacy_shim_used={} adapter_phase=preflight runner_kind={:?} agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
+            "adapter_id={} protocol_adapter_id={} protocol_version={} protocol_benchmark_id={} protocol_selected_mode={} protocol_stability={} protocol_capabilities={} legacy_shim_used={} adapter_phase=preflight agent_bridge_mode={} readiness_status={} host_execution_reason={} blocking_reason={} compatibility_exception={} compatibility_label_keys={}",
             report.adapter_id,
             report.protocol_adapter_id.as_deref().unwrap_or("none"),
             report.protocol_version.as_deref().unwrap_or("none"),
@@ -67,7 +67,6 @@ pub(super) fn emit_runtime_preflight_reports(
             report.protocol_stability.as_deref().unwrap_or("none"),
             report.protocol_capabilities.join(","),
             report.legacy_shim_used,
-            report.runner_kind,
             report.agent_bridge_mode,
             report.readiness_status,
             report.host_execution_reason.as_deref().unwrap_or("none"),
@@ -113,8 +112,8 @@ pub(super) fn runtime_adapter_version_for_task(task: &TaskPlan) -> Result<&'stat
     Ok(runtime_adapter_for_task(task)?.adapter_version())
 }
 
-pub(super) fn runtime_runner_kind_for_task(task: &TaskPlan) -> Result<ExternalRunnerKind> {
-    Ok(runtime_adapter_for_task(task)?.kind())
+pub(super) fn runtime_adapter_id_for_task(task: &TaskPlan) -> Result<&'static str> {
+    Ok(runtime_adapter_for_task(task)?.adapter_id())
 }
 
 #[derive(Debug)]
@@ -265,16 +264,18 @@ fn internal_error_result(
         .map(AdapterInternalError::failure_code)
         .unwrap_or(FailureCode::ExternalRunnerSetupFailed);
     let public_message = format!(
-        "adapter_id={} adapter_phase=execute adapter_subphase={} runner_kind={:?} failure_class=execution failure_code={} public_diagnostics=internal-error.public.json private_diagnostics=internal-error.private.json",
+        "adapter_id={} adapter_phase=execute adapter_subphase={} failure_class=execution failure_code={} public_diagnostics=internal-error.public.json private_diagnostics=internal-error.private.json",
         adapter.adapter_id(),
         adapter_subphase,
-        adapter.kind(),
         failure_code_event_label(failure_code)
     );
     let private_message = format!(
         "{} error={error}",
         public_message.replace("private_diagnostics=internal-error.private.json", "")
     );
+    // Write redacted private diagnostics to stderr so the error is visible
+    // in terminal output without leaking sensitive paths or secrets.
+    eprintln!("{private_message}");
     let redaction_refs = event_redaction_refs(ctx);
     let secret_refs = redaction_refs
         .iter()
@@ -363,14 +364,14 @@ fn write_internal_error_snapshot(
         return Ok(());
     }
     let dataset_ref = runtime_dataset_ref(ctx.task)?;
-    let source_ref = runtime_snapshot_source_ref(ctx.task, adapter.kind())?;
+    let source_ref = runtime_snapshot_source_ref(ctx.task)?;
     write_external_runtime_snapshots(ExternalRuntimeSnapshotRequest {
         run_id: &ctx.spec.run_id,
         attempt_dir: ctx.attempt_dir,
         benchmark: adapter.benchmark_name(),
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
-        runner_kind: adapter.kind(),
+        adapter_id: adapter.adapter_id(),
         protocol_authority: ctx
             .task
             .runtime_binding

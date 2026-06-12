@@ -64,7 +64,11 @@ pub(crate) fn non_empty_label(profile: &AgentProfile, key: &str) -> Option<Strin
         .cloned()
 }
 
-pub(crate) fn push_if_some(keys: &mut Vec<&'static str>, key: &'static str, value: &Option<String>) {
+pub(crate) fn push_if_some(
+    keys: &mut Vec<&'static str>,
+    key: &'static str,
+    value: &Option<String>,
+) {
     if value.is_some() && !keys.contains(&key) {
         keys.push(key);
     }
