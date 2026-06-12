@@ -139,9 +139,9 @@ fn attempt_relative_path(path: &Path, task_dir: &Path) -> String {
 mod tests {
     use super::*;
     use harnesslab_core::{
-        ArtifactSpec, BenchmarkIdentity, ExternalRunnerKind, ExternalRunnerSpec, NetworkPolicy,
-        ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskPlan, VerifierEnvironment,
-        VerifierSpec, WorkspaceSpec, WorkspaceType,
+        AdapterId, ArtifactSpec, BenchmarkIdentity, ExternalRunnerSpec, NetworkPolicy,
+        ResourceHint, RunConfigOverrides, SandboxSpec, SourceRef, TaskPlan, TaskRuntimeBinding,
+        VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
     };
     use harnesslab_infra::{Event, read_json, stable_file_checksum};
     use std::fs;
@@ -318,7 +318,7 @@ mod tests {
             instruction_hash: "instruction".to_string(),
             task_plan_hash: "task-plan".to_string(),
             external_runner: Some(external_runner()),
-            runtime_binding: None,
+            runtime_binding: Some(runtime_binding()),
             external_runtime_attempts: Vec::new(),
         }
     }
@@ -359,16 +359,30 @@ mod tests {
             },
             patch_spec: None,
             external_runner: Some(external_runner()),
-            runtime_binding: None,
+            runtime_binding: Some(runtime_binding()),
         }
     }
 
     fn external_runner() -> ExternalRunnerSpec {
         ExternalRunnerSpec {
-            kind: ExternalRunnerKind::SweBenchPro,
             dataset_path: "dataset.parquet".to_string(),
             source_path: Some("source".to_string()),
             agent_timeout_sec: None,
+        }
+    }
+
+    fn runtime_binding() -> TaskRuntimeBinding {
+        TaskRuntimeBinding {
+            authority: harnesslab_adapters::built_in_protocol_registry()
+                .binding_for_adapter_id(
+                    &AdapterId::new("harnesslab.swe-bench-pro.runtime").unwrap(),
+                )
+                .unwrap()
+                .authority(),
+            dataset_ref: "dataset.parquet".to_string(),
+            task_ref: "source".to_string(),
+            artifact_contract_id: "artifact.basic.v1".to_string(),
+            readiness_contract_id: "readiness.basic.v1".to_string(),
         }
     }
 

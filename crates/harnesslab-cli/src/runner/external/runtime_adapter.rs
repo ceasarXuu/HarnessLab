@@ -3,8 +3,7 @@ use crate::runtime_compatibility::{AdapterCompatibilityProfile, BenchmarkRuntime
 use anyhow::{Context, Result};
 use harnesslab_adapters::built_in_protocol_registry;
 use harnesslab_core::{
-    AgentProfile, BenchmarkPlan, ExternalRunnerKind, RunSpec, RuntimePreflightReport,
-    TaskAttemptResult, TaskPlan,
+    AgentProfile, BenchmarkPlan, RunSpec, RuntimePreflightReport, TaskAttemptResult, TaskPlan,
 };
 use std::path::{Path, PathBuf};
 
@@ -12,7 +11,6 @@ pub(crate) trait BenchmarkRuntimeAdapter: Sync {
     fn adapter_id(&self) -> &'static str;
     fn adapter_version(&self) -> &'static str;
     fn benchmark_name(&self) -> &'static str;
-    fn kind(&self) -> ExternalRunnerKind;
     fn preflight(&self, ctx: RuntimePreflightContext<'_>) -> RuntimePreflightReport;
     fn execute(&self, ctx: &ExternalTaskExecution<'_>) -> Result<TaskAttemptResult>;
     fn cleanup_targets(&self, _ctx: RuntimeCleanupContext<'_>) -> Vec<RuntimeCleanupTarget> {
@@ -24,10 +22,7 @@ pub(crate) trait BenchmarkRuntimeAdapter: Sync {
     ) -> Result<RuntimeCleanupReport, String>;
     /// Adapter-local compatibility profile. Generic layers must not branch on
     /// benchmark id; they consume this profile opaquely.
-    fn compatibility_profile(
-        &self,
-        profile: &AgentProfile,
-    ) -> AdapterCompatibilityProfile;
+    fn compatibility_profile(&self, profile: &AgentProfile) -> AdapterCompatibilityProfile;
 }
 
 #[derive(Clone)]
@@ -53,7 +48,6 @@ pub(crate) struct RuntimeCleanupContext<'a> {
 
 #[derive(Debug, Clone)]
 pub(in crate::runner) struct RuntimeCleanupTarget {
-    pub(in crate::runner) runner_kind: ExternalRunnerKind,
     pub(in crate::runner) adapter_id: &'static str,
     pub(in crate::runner) event_name: &'static str,
     pub(in crate::runner) message_prefix: &'static str,
@@ -70,17 +64,6 @@ pub(in crate::runner) struct RuntimeCleanupReport {
     pub(in crate::runner) matched_projects: usize,
 }
 
-pub(super) fn runtime_adapter_for(
-    kind: ExternalRunnerKind,
-) -> &'static dyn BenchmarkRuntimeAdapter {
-    match kind {
-        ExternalRunnerKind::TerminalBench => {
-            &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER
-        }
-        ExternalRunnerKind::SweBenchPro => &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
-    }
-}
-
 pub(super) fn runtime_adapter_for_adapter_id(
     adapter_id: &str,
 ) -> Result<&'static dyn BenchmarkRuntimeAdapter> {
@@ -92,6 +75,9 @@ pub(super) fn runtime_adapter_for_adapter_id(
 }
 
 pub(in crate::runner) fn runtime_adapters() -> Vec<&'static dyn BenchmarkRuntimeAdapter> {
+    // NOTE: deterministic-sample is intentionally excluded — it is a scaffold
+    // golden-path adapter with no runtime execution capability. Only adapters
+    // capable of actually running benchmarks are listed here.
     vec![
         &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER,
         &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
@@ -101,27 +87,14 @@ pub(in crate::runner) fn runtime_adapters() -> Vec<&'static dyn BenchmarkRuntime
 pub(super) fn runtime_adapter_for_task(
     task: &TaskPlan,
 ) -> Result<&'static dyn BenchmarkRuntimeAdapter> {
-    if let Some(binding) = &task.runtime_binding {
-        built_in_protocol_registry()
-            .validate_authority(&binding.authority)
-            .map_err(|error| anyhow::anyhow!("invalid protocol runtime binding: {error}"))?;
-        let adapter = runtime_adapter_for_adapter_id(binding.authority.adapter_id.as_str())?;
-        if let Some(runner) = &task.external_runner {
-            if adapter.kind() != runner.kind {
-                anyhow::bail!(
-                    "protocol binding adapter_id {} does not match external runner {:?}",
-                    binding.authority.adapter_id,
-                    runner.kind
-                );
-            }
-        }
-        return Ok(adapter);
-    }
-    let runner = task
-        .external_runner
+    let binding = task
+        .runtime_binding
         .as_ref()
-        .context("external task missing runner spec")?;
-    Ok(runtime_adapter_for(runner.kind))
+        .context("external task missing runtime binding")?;
+    built_in_protocol_registry()
+        .validate_authority(&binding.authority)
+        .map_err(|error| anyhow::anyhow!("invalid protocol runtime binding: {error}"))?;
+    runtime_adapter_for_adapter_id(binding.authority.adapter_id.as_str())
 }
 
 pub(super) fn preflight_external_task(
@@ -143,10 +116,10 @@ pub(super) fn runtime_cleanup_targets(ctx: RuntimeCleanupContext<'_>) -> Vec<Run
     for task in &ctx.plan.tasks {
         match runtime_adapter_for_task(task) {
             Ok(adapter) => {
-                if seen.contains(&adapter.kind()) {
+                if seen.contains(&adapter.adapter_id()) {
                     continue;
                 }
-                seen.push(adapter.kind());
+                seen.push(adapter.adapter_id());
                 targets.extend(adapter.cleanup_targets(ctx));
             }
             Err(error) => {
@@ -168,7 +141,9 @@ pub(super) fn runtime_cleanup_targets(ctx: RuntimeCleanupContext<'_>) -> Vec<Run
 pub(super) fn cleanup_runtime_target(
     target: &RuntimeCleanupTarget,
 ) -> Result<RuntimeCleanupReport, String> {
-    runtime_adapter_for(target.runner_kind).cleanup_target_resources(target)
+    runtime_adapter_for_adapter_id(target.adapter_id)
+        .map_err(|error| error.to_string())?
+        .cleanup_target_resources(target)
 }
 
 pub(super) fn preflight_report(
@@ -180,7 +155,6 @@ pub(super) fn preflight_report(
     let host_execution_reason = compat.host_execution_reason.map(str::to_string);
     RuntimePreflightReport {
         task_id: ctx.task.task_id.clone(),
-        runner_kind: adapter.kind(),
         adapter_id: adapter.adapter_id().to_string(),
         protocol_adapter_id: ctx
             .task
@@ -220,7 +194,7 @@ pub(super) fn preflight_report(
                     .collect()
             })
             .unwrap_or_default(),
-        legacy_shim_used: ctx.task.runtime_binding.is_none(),
+        legacy_shim_used: false,
         agent_bridge_mode: compat.bridge_mode.to_string(),
         readiness_status: if blocking_reason.is_some() {
             "blocked".to_string()

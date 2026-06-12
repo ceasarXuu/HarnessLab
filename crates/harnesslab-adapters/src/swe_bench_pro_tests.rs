@@ -164,8 +164,13 @@ fn c_bench_006_swe_bench_pro_task_uses_external_runner() {
     let task = swe_bench_pro_task("instance_demo", &dataset);
 
     assert_eq!(
-        task.external_runner.as_ref().unwrap().kind,
-        ExternalRunnerKind::SweBenchPro
+        task.runtime_binding
+            .as_ref()
+            .unwrap()
+            .authority
+            .adapter_id
+            .as_str(),
+        "harnesslab.swe-bench-pro.runtime"
     );
     assert!(task.patch_spec.is_some());
 }

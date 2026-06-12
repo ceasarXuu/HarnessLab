@@ -1,6 +1,6 @@
 use harnesslab_core::{
     AdapterId, AdapterProtocolAuthority, AdapterProtocolVersion, AdapterStability, AdapterVersion,
-    BenchmarkId, CapabilityId, ExternalRunnerKind, SelectedMode, legacy_runner_kind_authority,
+    BenchmarkId, CapabilityId, SelectedMode,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -13,7 +13,6 @@ pub struct AdapterBindingDescriptor {
     pub default_mode: SelectedMode,
     pub capabilities: Vec<CapabilityId>,
     pub stability: AdapterStability,
-    pub legacy_runner_kind: Option<ExternalRunnerKind>,
     pub enabled: bool,
 }
 
@@ -90,12 +89,6 @@ impl AdapterRegistry {
                 authority.adapter_id, binding.stability, authority.stability
             ));
         }
-        if binding.legacy_runner_kind != authority.legacy_runner_kind {
-            return Err(format!(
-                "protocol_authority_mismatch: adapter {} registered for legacy {:?}, got {:?}",
-                authority.adapter_id, binding.legacy_runner_kind, authority.legacy_runner_kind
-            ));
-        }
         if capability_set(&binding.capabilities) != capability_set(&authority.capabilities) {
             return Err(format!(
                 "protocol_authority_mismatch: adapter {} capability set differs from registry",
@@ -110,10 +103,8 @@ impl AdapterRegistry {
             default_mode: authority.selected_mode.clone(),
             capabilities: authority.capabilities.clone(),
             stability: authority.stability.clone(),
-            legacy_runner_kind: authority.legacy_runner_kind,
             enabled: true,
         };
-        ensure_legacy_mapping(&authority_binding)?;
         ensure_mode_capabilities(&authority_binding)?;
         Ok(binding)
     }
@@ -121,18 +112,14 @@ impl AdapterRegistry {
 
 impl AdapterBindingDescriptor {
     pub fn authority(&self) -> AdapterProtocolAuthority {
-        let authority = AdapterProtocolAuthority::new(
+        AdapterProtocolAuthority::new(
             self.benchmark_id.clone(),
             self.adapter_id.clone(),
             self.adapter_version.clone(),
             self.default_mode.clone(),
             self.capabilities.clone(),
             self.stability.clone(),
-        );
-        match self.legacy_runner_kind {
-            Some(kind) => authority.with_legacy_runner_kind(kind),
-            None => authority,
-        }
+        )
     }
 }
 
@@ -143,7 +130,6 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
             "harnesslab.terminal-bench.runtime",
             "terminal-bench-runtime.v1",
             "official-runner",
-            Some(ExternalRunnerKind::TerminalBench),
             &[
                 "descriptor",
                 "data.lifecycle",
@@ -165,7 +151,6 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
             "harnesslab.swe-bench-pro.runtime",
             "swe-bench-pro-runtime.v1",
             "patch-evaluator",
-            Some(ExternalRunnerKind::SweBenchPro),
             &[
                 "descriptor",
                 "data.lifecycle",
@@ -184,7 +169,6 @@ pub fn built_in_protocol_registry() -> AdapterRegistry {
             "harnesslab.deterministic-sample.runtime",
             "deterministic-sample-runtime.v1",
             "deterministic-sample",
-            None,
             &[
                 "descriptor",
                 "data.lifecycle",
@@ -205,7 +189,6 @@ fn binding(
     adapter_id: &str,
     adapter_version: &str,
     mode: &str,
-    legacy_runner_kind: Option<ExternalRunnerKind>,
     capabilities: &[&str],
     stability: AdapterStability,
 ) -> AdapterBindingDescriptor {
@@ -220,16 +203,12 @@ fn binding(
             .map(|capability| CapabilityId::new(*capability).expect("valid capability id"))
             .collect(),
         stability,
-        legacy_runner_kind,
         enabled: true,
     }
 }
 
 fn stable_promotion_evidence_exists(adapter_id: &AdapterId) -> bool {
-    matches!(
-        adapter_id.as_str(),
-        "harnesslab.terminal-bench.runtime"
-    )
+    matches!(adapter_id.as_str(), "harnesslab.terminal-bench.runtime")
 }
 
 fn validate_bindings(bindings: &[AdapterBindingDescriptor]) -> Result<(), String> {
@@ -264,26 +243,7 @@ fn validate_bindings(bindings: &[AdapterBindingDescriptor]) -> Result<(), String
                 binding.adapter_id
             ));
         }
-        ensure_legacy_mapping(binding)?;
         ensure_mode_capabilities(binding)?;
-    }
-    Ok(())
-}
-
-fn ensure_legacy_mapping(binding: &AdapterBindingDescriptor) -> Result<(), String> {
-    let Some(kind) = binding.legacy_runner_kind else {
-        return Ok(());
-    };
-    let expected = legacy_runner_kind_authority(kind)
-        .map_err(|error| format!("invalid legacy runner kind mapping: {error}"))?;
-    if expected.benchmark_id != binding.benchmark_id
-        || expected.adapter_id != binding.adapter_id
-        || expected.selected_mode != binding.default_mode
-    {
-        return Err(format!(
-            "legacy_runner_kind_mismatch: adapter {} mode {} does not match {:?}",
-            binding.adapter_id, binding.default_mode, kind
-        ));
     }
     Ok(())
 }
@@ -392,10 +352,6 @@ mod tests {
             terminal.adapter_id.as_str(),
             "harnesslab.terminal-bench.runtime"
         );
-        assert_eq!(
-            terminal.authority().legacy_runner_kind,
-            Some(ExternalRunnerKind::TerminalBench)
-        );
         assert_eq!(registry.bindings().len(), 3);
 
         let mut duplicate_adapter = registry.bindings().to_vec();
@@ -443,28 +399,22 @@ mod tests {
         let error = AdapterRegistry::new(no_execution_capability).unwrap_err();
         assert!(error.contains("missing execution capability"));
 
-        let mut mismatched_legacy = registry.bindings().to_vec();
-        mismatched_legacy[0].legacy_runner_kind = Some(ExternalRunnerKind::SweBenchPro);
-        let error = AdapterRegistry::new(mismatched_legacy).unwrap_err();
-        assert!(error.contains("legacy_runner_kind_mismatch"));
-
         let mut stable_without_evidence = registry.bindings().to_vec();
         stable_without_evidence[0].stability = AdapterStability::Stable;
-        stable_without_evidence[0].adapter_id = AdapterId::new("harnesslab.unknown.runtime").unwrap();
+        stable_without_evidence[0].adapter_id =
+            AdapterId::new("harnesslab.unknown.runtime").unwrap();
         let error = AdapterRegistry::new(stable_without_evidence).unwrap_err();
         assert!(error.contains("stable_promotion_evidence_missing"));
 
         let mut deterministic_with_official = registry.bindings().to_vec();
         deterministic_with_official[0].default_mode =
             SelectedMode::new("deterministic-sample").unwrap();
-        deterministic_with_official[0].legacy_runner_kind = None;
         let error = AdapterRegistry::new(deterministic_with_official).unwrap_err();
         assert!(error.contains("incompatible optional capability"));
 
         let mut deterministic_with_execution = registry.bindings().to_vec();
         deterministic_with_execution[1].default_mode =
             SelectedMode::new("deterministic-sample").unwrap();
-        deterministic_with_execution[1].legacy_runner_kind = None;
         deterministic_with_execution[1]
             .capabilities
             .retain(|capability| capability.as_str() != "patch.evaluator");
@@ -501,12 +451,5 @@ mod tests {
             .validate_authority(&mismatched_capabilities)
             .unwrap_err();
         assert!(error.contains("capability set differs"));
-
-        let mut mismatched_legacy_authority = registry.bindings()[0].authority();
-        mismatched_legacy_authority.legacy_runner_kind = None;
-        let error = registry
-            .validate_authority(&mismatched_legacy_authority)
-            .unwrap_err();
-        assert!(error.contains("registered for legacy"));
     }
 }

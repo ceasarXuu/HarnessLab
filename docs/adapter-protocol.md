@@ -1,9 +1,9 @@
 # Universal Benchmark Adapter Protocol
 
 - Created: 2026-06-08
-- Updated: 2026-06-11
-- Version: 0.2
-- Status: Phase 3 contract foundations started; identity, registry, runtime authority, replay authority, data lifecycle contract, runtime lifecycle contract, readiness schema, failure mapping schema, artifact public/private declaration gates, and static no-branch guard implemented; live doctor/report gates remain planned
+- Updated: 2026-06-12
+- Version: 0.3
+- Status: Phase 3 contract foundations implemented with protocol-id runtime dispatch; legacy runner-kind compatibility fields removed from live protocol authority and runtime snapshots
 - Source plan: `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md`
 - Source PRD: `prd/2026-06-07-universal-benchmark-adapter-protocol.md`
 
@@ -49,7 +49,6 @@ protocol paths.
 | `selected_mode` | yes | Mode selected by registry/user configuration. |
 | `capabilities` | yes | Sorted capability ids declared by the adapter. |
 | `stability` | yes | Governance status. |
-| `legacy_runner_kind` | compatibility-only | Present only while reading or dual-writing old `ExternalRunnerKind` authority. |
 
 Canonical read/write rules:
 
@@ -77,7 +76,6 @@ Required fields:
   - `selected_mode`
   - `capabilities`
   - `stability`
-  - optional `legacy_runner_kind`
 - `dataset_ref`
 - `task_ref`
 - `artifact_contract_id`

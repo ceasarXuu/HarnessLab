@@ -6,7 +6,7 @@ use super::terminal_bench_cleanup::TaskCleanupOutcome;
 use super::{ExternalTaskExecution, terminal_bench_runtime::TerminalBenchRuntimeAttempt};
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::Result;
-use harnesslab_core::{ExternalRunnerKind, FailureClass, FailureCode};
+use harnesslab_core::{FailureClass, FailureCode};
 use serde_json::Value;
 use std::path::Path;
 
@@ -24,7 +24,7 @@ pub(super) fn write_terminal_bench_runtime_snapshots(
         benchmark: "terminal-bench",
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
-        runner_kind: ExternalRunnerKind::TerminalBench,
+        adapter_id: "harnesslab.terminal-bench.runtime",
         protocol_authority: ctx
             .task
             .runtime_binding

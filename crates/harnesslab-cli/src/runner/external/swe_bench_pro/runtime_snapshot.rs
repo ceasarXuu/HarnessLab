@@ -7,7 +7,6 @@ use crate::runner::external::runtime_snapshot::{
 };
 use crate::runtime_compatibility::BenchmarkRuntimeCompatibility;
 use anyhow::Result;
-use harnesslab_core::ExternalRunnerKind;
 use std::path::Path;
 
 pub(in crate::runner::external) const SWE_BENCH_PRO_RUNTIME_ADAPTER_VERSION: &str =
@@ -35,7 +34,7 @@ pub(super) fn write_swe_runtime_snapshots(
         benchmark: "swe-bench-pro",
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
-        runner_kind: ExternalRunnerKind::SweBenchPro,
+        adapter_id: "harnesslab.swe-bench-pro.runtime",
         protocol_authority: ctx
             .task
             .runtime_binding
@@ -82,7 +81,7 @@ pub(in crate::runner::external) fn write_swe_setup_failure_snapshots(
         benchmark: "swe-bench-pro",
         task_id: &ctx.task.task_id,
         attempt: ctx.attempt,
-        runner_kind: ExternalRunnerKind::SweBenchPro,
+        adapter_id: "harnesslab.swe-bench-pro.runtime",
         protocol_authority: ctx
             .task
             .runtime_binding
@@ -338,7 +337,11 @@ fn setup_failure_public_artifacts(phase: SweSetupFailurePhase) -> Vec<String> {
 }
 
 fn agent_execution_command(ctx: &ExternalTaskExecution<'_>, instance: &SweInstance) -> String {
-    if BenchmarkRuntimeCompatibility::from_profile(ctx.profile).swe_bench_pro_agent.as_deref() == Some("gold") {
+    if BenchmarkRuntimeCompatibility::from_profile(ctx.profile)
+        .swe_bench_pro_agent
+        .as_deref()
+        == Some("gold")
+    {
         "git apply -".to_string()
     } else {
         format!(

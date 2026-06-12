@@ -6,7 +6,10 @@ use harnesslab_core::{
     ExternalRunnerSpec, RunConfigOverrides, RuntimePreflightReport, RuntimeTaskSnapshot, SourceRef,
     TaskPlan, TaskRuntimeBinding, default_agent_profile,
 };
-use support::{external_task, protocol_bound_terminal_task, registry_authority, run_spec};
+use support::{
+    SWE_BENCH_PRO_ADAPTER_ID, TERMINAL_BENCH_ADAPTER_ID, external_task,
+    protocol_bound_terminal_task, registry_authority, run_spec,
+};
 
 #[test]
 fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
@@ -15,16 +18,16 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
     let runner_entrypoint = include_str!("../../runner.rs");
     let cleanup_entrypoint = include_str!("../cleanup.rs");
 
-    assert!(!runner_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
-    assert!(!runner_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
-    assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::TerminalBench"));
-    assert!(!cleanup_entrypoint.contains("ExternalRunnerKind::SweBenchPro"));
+    assert!(!runner_entrypoint.contains("runtime_adapter_for_adapter_id(\"terminal-bench"));
+    assert!(!runner_entrypoint.contains("runtime_adapter_for_adapter_id(\"swe-bench-pro"));
+    assert!(!cleanup_entrypoint.contains("runtime_adapter_for_adapter_id(\"terminal-bench"));
+    assert!(!cleanup_entrypoint.contains("runtime_adapter_for_adapter_id(\"swe-bench-pro"));
     assert!(external_entrypoint.contains("preflight_external_task(profile, task)?"));
     assert!(runtime_adapter_entrypoint.contains("runtime_adapter_for_adapter_id"));
     assert!(external_entrypoint.contains("runtime_adapter_for_task(ctx.task)?"));
     assert!(external_entrypoint.contains("runtime_snapshot_source_ref("));
     assert!(external_entrypoint.contains("adapter.execute(&ctx)"));
-    assert!(!external_entrypoint.contains("runtime_adapter_for(ExternalRunnerKind"));
+    assert!(!external_entrypoint.contains("runtime_adapter_for_adapter_id(\"terminal-bench"));
     assert!(!cleanup_entrypoint.contains("terminal_bench"));
     assert!(!cleanup_entrypoint.contains("compose_cleanup"));
     assert!(!external_entrypoint.contains("terminal_bench::execute"));
@@ -39,10 +42,7 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
     );
     let protocol_report =
         preflight_external_task(&terminal_profile, &protocol_bound_terminal_task()).unwrap();
-    assert_eq!(
-        protocol_report.runner_kind,
-        ExternalRunnerKind::TerminalBench
-    );
+    assert_eq!(protocol_report.adapter_id, TERMINAL_BENCH_ADAPTER_ID);
     assert_eq!(
         protocol_report.protocol_adapter_id.as_deref(),
         Some("harnesslab.terminal-bench.runtime")
@@ -92,7 +92,6 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
 
     let mut mismatched_refs = protocol_bound_terminal_task();
     mismatched_refs.external_runner = Some(ExternalRunnerSpec {
-        kind: ExternalRunnerKind::TerminalBench,
         dataset_path: "legacy-dataset".to_string(),
         source_path: None,
         agent_timeout_sec: None,
@@ -102,8 +101,7 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
         .to_string();
     assert!(error.contains("dataset_ref mismatch"));
 
-    let mut missing_source_ref =
-        external_task("swe-protocol-task", ExternalRunnerKind::SweBenchPro);
+    let mut missing_source_ref = external_task("swe-protocol-task", SWE_BENCH_PRO_ADAPTER_ID);
     missing_source_ref.runtime_binding = Some(TaskRuntimeBinding {
         authority: registry_authority("harnesslab.swe-bench-pro.runtime"),
         dataset_ref: "dataset".to_string(),
@@ -115,7 +113,7 @@ fn adapt_runtime_001_external_entrypoints_delegate_to_runtime_registry() {
         .external_runner
         .as_mut()
         .unwrap()
-        .source_path = None;
+        .source_path = Some("legacy-source".to_string());
     let error = super::super::runtime_source_ref(&missing_source_ref)
         .unwrap_err()
         .to_string();
@@ -131,12 +129,12 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     );
     let terminal_report = preflight_external_task(
         &terminal_profile,
-        &external_task("tb-task", ExternalRunnerKind::TerminalBench),
+        &external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID),
     )
     .unwrap();
     assert_preflight(
         terminal_report,
-        ExternalRunnerKind::TerminalBench,
+        TERMINAL_BENCH_ADAPTER_ID,
         Some("terminal-bench import agent host path"),
     );
 
@@ -147,29 +145,25 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
     );
     let terminal_sandbox_report = preflight_external_task(
         &terminal_sandbox_profile,
-        &external_task("tb-task", ExternalRunnerKind::TerminalBench),
+        &external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID),
     )
     .unwrap();
-    assert_preflight(
-        terminal_sandbox_report,
-        ExternalRunnerKind::TerminalBench,
-        None,
-    );
+    assert_preflight(terminal_sandbox_report, TERMINAL_BENCH_ADAPTER_ID, None);
 
     let invalid_terminal_profile = default_agent_profile("tb", AgentKind::Custom, "agent");
     let terminal_blocked_report = preflight_external_task(
         &invalid_terminal_profile,
-        &external_task("tb-task", ExternalRunnerKind::TerminalBench),
+        &external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID),
     )
     .unwrap();
     assert_blocked_preflight(
         terminal_blocked_report,
-        ExternalRunnerKind::TerminalBench,
+        TERMINAL_BENCH_ADAPTER_ID,
         "terminal_bench_agent",
     );
     let terminal_blocked_error = super::super::validate_profile_for_plan(
         &invalid_terminal_profile,
-        &[external_task("tb-task", ExternalRunnerKind::TerminalBench)],
+        &[external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID)],
     )
     .unwrap_err()
     .to_string();
@@ -188,24 +182,24 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
         .insert("swe_bench_pro_agent".to_string(), "gold".to_string());
     let swe_report = preflight_external_task(
         &swe_profile,
-        &external_task("swe-task", ExternalRunnerKind::SweBenchPro),
+        &external_task("swe-task", SWE_BENCH_PRO_ADAPTER_ID),
     )
     .unwrap();
     assert_preflight(
         swe_report,
-        ExternalRunnerKind::SweBenchPro,
+        SWE_BENCH_PRO_ADAPTER_ID,
         Some("swe-bench-pro gold host path"),
     );
 
     let swe_sandbox_profile = default_agent_profile("swe", AgentKind::Custom, "agent");
     let swe_sandbox_report = preflight_external_task(
         &swe_sandbox_profile,
-        &external_task("swe-task", ExternalRunnerKind::SweBenchPro),
+        &external_task("swe-task", SWE_BENCH_PRO_ADAPTER_ID),
     )
     .unwrap();
-    assert_preflight(swe_sandbox_report, ExternalRunnerKind::SweBenchPro, None);
+    assert_preflight(swe_sandbox_report, SWE_BENCH_PRO_ADAPTER_ID, None);
 
-    let mut swe_missing_source = external_task("swe-task", ExternalRunnerKind::SweBenchPro);
+    let mut swe_missing_source = external_task("swe-task", SWE_BENCH_PRO_ADAPTER_ID);
     swe_missing_source
         .external_runner
         .as_mut()
@@ -215,13 +209,13 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
         preflight_external_task(&swe_sandbox_profile, &swe_missing_source).unwrap();
     assert_blocked_preflight(
         swe_missing_source_report,
-        ExternalRunnerKind::SweBenchPro,
+        SWE_BENCH_PRO_ADAPTER_ID,
         "source_path",
     );
 
     let error = super::super::validate_profile_for_plan(
         &terminal_profile,
-        &[external_task("tb-task", ExternalRunnerKind::TerminalBench)],
+        &[external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID)],
     )
     .unwrap_err()
     .to_string();
@@ -236,14 +230,13 @@ fn adapt_runtime_002_preflight_reports_and_enforces_current_compatibility() {
         run_dir.path(),
         &spec,
         &terminal_sandbox_profile,
-        &[external_task("tb-task", ExternalRunnerKind::TerminalBench)],
+        &[external_task("tb-task", TERMINAL_BENCH_ADAPTER_ID)],
     )
     .unwrap();
     let events = std::fs::read_to_string(run_dir.path().join("events.jsonl")).unwrap();
     assert!(events.contains("\"event\":\"external_runner_preflight\""));
     assert!(events.contains("adapter_id=harnesslab.terminal-bench.runtime"));
     assert!(events.contains("adapter_phase=preflight"));
-    assert!(events.contains("runner_kind=TerminalBench"));
     assert!(events.contains("agent_bridge_mode=terminal-bench-official-agent"));
     assert!(events.contains("readiness_status=ready"));
     assert!(events.contains("host_execution_reason=none"));
@@ -260,12 +253,13 @@ fn adapt_runtime_002_swe_source_path_failure_snapshot_is_phase_accurate() {
     let spec = run_spec(run_dir.path());
     let profile = default_agent_profile("agent", AgentKind::Fake, "true");
     let materialized = crate::agent_registry::materialize_profile(&profile).unwrap();
-    let mut task = external_task("swe-task", ExternalRunnerKind::SweBenchPro);
+    let mut task = external_task("swe-task", SWE_BENCH_PRO_ADAPTER_ID);
     let dataset_dir = run_dir.path().join("dataset");
     std::fs::create_dir_all(&dataset_dir).unwrap();
     let runner = task.external_runner.as_mut().unwrap();
     runner.dataset_path = dataset_dir.display().to_string();
     runner.source_path = None;
+    task.runtime_binding = None;
     write_runtime_authority(run_dir.path(), &task);
     let ctx = super::super::ExternalTaskExecution {
         run_dir: run_dir.path(),
@@ -281,7 +275,8 @@ fn adapt_runtime_002_swe_source_path_failure_snapshot_is_phase_accurate() {
         started: std::time::Instant::now(),
     };
 
-    let result = runtime_adapter_for(ExternalRunnerKind::SweBenchPro)
+    let result = runtime_adapter_for_adapter_id(SWE_BENCH_PRO_ADAPTER_ID)
+        .unwrap()
         .execute(&ctx)
         .expect("source path failure is structured");
 
@@ -365,11 +360,11 @@ fn write_runtime_authority(run_dir: &std::path::Path, task: &TaskPlan) {
 
 fn assert_preflight(
     report: RuntimePreflightReport,
-    runner_kind: ExternalRunnerKind,
+    adapter_id: &str,
     host_execution_reason: Option<&str>,
 ) {
     assert!(!report.task_id.is_empty());
-    assert_eq!(report.runner_kind, runner_kind);
+    assert_eq!(report.adapter_id, adapter_id);
     assert!(!report.adapter_id.is_empty());
     assert!(!report.agent_bridge_mode.is_empty());
     assert_eq!(report.readiness_status, "ready");
@@ -393,11 +388,11 @@ fn assert_preflight(
 
 fn assert_blocked_preflight(
     report: RuntimePreflightReport,
-    runner_kind: ExternalRunnerKind,
+    adapter_id: &str,
     blocking_reason: &str,
 ) {
     assert!(!report.task_id.is_empty());
-    assert_eq!(report.runner_kind, runner_kind);
+    assert_eq!(report.adapter_id, adapter_id);
     assert_eq!(report.readiness_status, "blocked");
     assert!(report.host_execution_reason.is_none());
     assert!(report.compatibility_exception.is_none());
@@ -438,7 +433,11 @@ fn adapt_protocol_007_adapter_compatibility_profiles_are_generic_and_complete() 
 
     let terminal_import_compats =
         super::super::super::adapter_compatibility_profiles(&terminal_import_profile);
-    assert_eq!(terminal_import_compats.len(), 2, "all registered adapters must produce a profile");
+    assert_eq!(
+        terminal_import_compats.len(),
+        2,
+        "all registered adapters must produce a profile"
+    );
     let terminal_bench_compat = terminal_import_compats
         .iter()
         .find(|c| c.bridge_mode.starts_with("terminal-bench"))
@@ -447,15 +446,17 @@ fn adapt_protocol_007_adapter_compatibility_profiles_are_generic_and_complete() 
         terminal_bench_compat.host_execution_reason,
         Some("terminal-bench import agent host path")
     );
-    assert_eq!(terminal_bench_compat.bridge_mode, "terminal-bench-import-path");
+    assert_eq!(
+        terminal_bench_compat.bridge_mode,
+        "terminal-bench-import-path"
+    );
     assert!(
         terminal_bench_compat
             .consumed_label_keys
             .contains(&"terminal_bench_agent_import_path")
     );
 
-    let swe_gold_compats =
-        super::super::super::adapter_compatibility_profiles(&swe_gold_profile);
+    let swe_gold_compats = super::super::super::adapter_compatibility_profiles(&swe_gold_profile);
     let swe_bench_compat = swe_gold_compats
         .iter()
         .find(|c| c.bridge_mode.starts_with("swe-bench-pro"))
@@ -502,24 +503,24 @@ fn adapt_protocol_007_doctor_run_as_consumes_profiles_without_benchmark_branchin
     let runner_source = include_str!("../../runner.rs");
 
     assert!(
-        !doctor_run_as_source.contains("ExternalRunnerKind::TerminalBench"),
-        "doctor_run_as.rs must not branch on ExternalRunnerKind::TerminalBench"
+        !doctor_run_as_source.contains("harnesslab.terminal-bench.runtime"),
+        "doctor_run_as.rs must not branch on terminal-bench adapter_id"
     );
     assert!(
-        !doctor_run_as_source.contains("ExternalRunnerKind::SweBenchPro"),
-        "doctor_run_as.rs must not branch on ExternalRunnerKind::SweBenchPro"
+        !doctor_run_as_source.contains("harnesslab.swe-bench-pro.runtime"),
+        "doctor_run_as.rs must not branch on swe-bench-pro adapter_id"
     );
     assert!(
         doctor_run_as_source.contains("adapter_compatibility_profiles"),
         "doctor_run_as.rs must consume adapter_compatibility_profiles"
     );
     assert!(
-        !runner_source.contains("ExternalRunnerKind::TerminalBench"),
-        "runner.rs adapter_compatibility_profiles must not branch on ExternalRunnerKind::TerminalBench"
+        !runner_source.contains("harnesslab.terminal-bench.runtime"),
+        "runner.rs adapter_compatibility_profiles must not branch on terminal-bench adapter_id"
     );
     assert!(
-        !runner_source.contains("ExternalRunnerKind::SweBenchPro"),
-        "runner.rs adapter_compatibility_profiles must not branch on ExternalRunnerKind::SweBenchPro"
+        !runner_source.contains("harnesslab.swe-bench-pro.runtime"),
+        "runner.rs adapter_compatibility_profiles must not branch on swe-bench-pro adapter_id"
     );
     assert!(
         runner_source.contains("runtime_adapters()"),
@@ -531,10 +532,11 @@ fn adapt_protocol_007_doctor_run_as_consumes_profiles_without_benchmark_branchin
         "terminal_bench_agent_import_path".to_string(),
         "bench_agents.fake:Agent".to_string(),
     );
-    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&terminal_import_profile)
-        .into_iter()
-        .filter_map(|compat| compat.host_execution_reason)
-        .collect();
+    let host_reasons: Vec<_> =
+        super::super::super::adapter_compatibility_profiles(&terminal_import_profile)
+            .into_iter()
+            .filter_map(|compat| compat.host_execution_reason)
+            .collect();
     assert_eq!(host_reasons.len(), 1);
     assert_eq!(host_reasons[0], "terminal-bench import agent host path");
 
@@ -542,19 +544,24 @@ fn adapt_protocol_007_doctor_run_as_consumes_profiles_without_benchmark_branchin
     swe_gold_profile
         .labels
         .insert("swe_bench_pro_agent".to_string(), "gold".to_string());
-    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&swe_gold_profile)
-        .into_iter()
-        .filter_map(|compat| compat.host_execution_reason)
-        .collect();
+    let host_reasons: Vec<_> =
+        super::super::super::adapter_compatibility_profiles(&swe_gold_profile)
+            .into_iter()
+            .filter_map(|compat| compat.host_execution_reason)
+            .collect();
     assert_eq!(host_reasons.len(), 1);
     assert_eq!(host_reasons[0], "swe-bench-pro gold host path");
 
     let sandbox_profile = default_agent_profile("sandbox", AgentKind::Custom, "agent");
-    let host_reasons: Vec<_> = super::super::super::adapter_compatibility_profiles(&sandbox_profile)
-        .into_iter()
-        .filter_map(|compat| compat.host_execution_reason)
-        .collect();
-    assert!(host_reasons.is_empty(), "sandbox profiles must not produce host_execution_reason");
+    let host_reasons: Vec<_> =
+        super::super::super::adapter_compatibility_profiles(&sandbox_profile)
+            .into_iter()
+            .filter_map(|compat| compat.host_execution_reason)
+            .collect();
+    assert!(
+        host_reasons.is_empty(),
+        "sandbox profiles must not produce host_execution_reason"
+    );
 }
 
 fn assert_runtime_label_access_is_allowlisted() {

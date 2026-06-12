@@ -24,7 +24,10 @@ fn adapt_protocol_006_replay_blocks_when_protocol_authority_incomplete() {
     let mut public: serde_json::Value =
         serde_json::from_slice(&fs::read(&public_path).unwrap()).unwrap();
 
-    private.as_object_mut().unwrap().remove("protocol_authority");
+    private
+        .as_object_mut()
+        .unwrap()
+        .remove("protocol_authority");
     public.as_object_mut().unwrap().remove("protocol_authority");
 
     fs::write(&private_path, serde_json::to_vec_pretty(&private).unwrap()).unwrap();

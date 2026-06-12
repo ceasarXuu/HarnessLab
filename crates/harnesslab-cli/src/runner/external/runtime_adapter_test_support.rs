@@ -1,10 +1,13 @@
 use harnesslab_adapters::built_in_protocol_registry;
 use harnesslab_core::{
-    AdapterId, ArtifactSpec, BenchmarkRef, ExecutionConfig, ExternalRunnerKind, ExternalRunnerSpec,
-    NetworkPolicy, ResourceHint, RunPaths, RunSpec, SandboxSpec, TaskPlan, TaskRuntimeBinding,
+    AdapterId, ArtifactSpec, BenchmarkRef, ExecutionConfig, ExternalRunnerSpec, NetworkPolicy,
+    ResourceHint, RunPaths, RunSpec, SandboxSpec, TaskPlan, TaskRuntimeBinding,
     VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType,
 };
 use std::path::Path;
+
+pub(super) const TERMINAL_BENCH_ADAPTER_ID: &str = "harnesslab.terminal-bench.runtime";
+pub(super) const SWE_BENCH_PRO_ADAPTER_ID: &str = "harnesslab.swe-bench-pro.runtime";
 
 pub(super) fn run_spec(run_dir: &Path) -> RunSpec {
     RunSpec {
@@ -30,7 +33,8 @@ pub(super) fn run_spec(run_dir: &Path) -> RunSpec {
     }
 }
 
-pub(super) fn external_task(task_id: &str, kind: ExternalRunnerKind) -> TaskPlan {
+pub(super) fn external_task(task_id: &str, adapter_id: &str) -> TaskPlan {
+    let source_path = (adapter_id == SWE_BENCH_PRO_ADAPTER_ID).then_some("source".to_string());
     TaskPlan {
         task_id: task_id.to_string(),
         instruction: "solve".to_string(),
@@ -66,20 +70,29 @@ pub(super) fn external_task(task_id: &str, kind: ExternalRunnerKind) -> TaskPlan
         },
         patch_spec: None,
         external_runner: Some(ExternalRunnerSpec {
-            kind,
             dataset_path: "dataset".to_string(),
-            source_path: (kind == ExternalRunnerKind::SweBenchPro).then_some("source".to_string()),
+            source_path,
             agent_timeout_sec: None,
         }),
-        runtime_binding: None,
+        runtime_binding: Some(TaskRuntimeBinding {
+            authority: registry_authority(adapter_id),
+            dataset_ref: "dataset".to_string(),
+            task_ref: if adapter_id == SWE_BENCH_PRO_ADAPTER_ID {
+                "source".to_string()
+            } else {
+                task_id.to_string()
+            },
+            artifact_contract_id: "artifact.basic.v1".to_string(),
+            readiness_contract_id: "readiness.basic.v1".to_string(),
+        }),
     }
 }
 
 pub(super) fn protocol_bound_terminal_task() -> TaskPlan {
-    let mut task = external_task("tb-protocol-task", ExternalRunnerKind::TerminalBench);
+    let mut task = external_task("tb-protocol-task", TERMINAL_BENCH_ADAPTER_ID);
     task.external_runner = None;
     task.runtime_binding = Some(TaskRuntimeBinding {
-        authority: registry_authority("harnesslab.terminal-bench.runtime"),
+        authority: registry_authority(TERMINAL_BENCH_ADAPTER_ID),
         dataset_ref: "dataset://terminal-bench/smoke".to_string(),
         task_ref: "task://terminal-bench/smoke/tb-protocol-task".to_string(),
         artifact_contract_id: "artifact.basic.v1".to_string(),

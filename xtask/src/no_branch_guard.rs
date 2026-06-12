@@ -8,7 +8,6 @@ const FORBIDDEN_TOKENS: &[&str] = &[
     "use harnesslab_adapters::SweBenchProAdapter",
     "harnesslab_adapters::TerminalBenchAdapter",
     "harnesslab_adapters::SweBenchProAdapter",
-    "ExternalRunnerKind",
     "TerminalBench",
     "SweBenchPro",
     "terminal-bench",
@@ -224,7 +223,7 @@ mod tests {
         write_file(
             root.path(),
             "crates/harnesslab-cli/src/runner/generic_dispatch.rs",
-            r#"fn run(kind: ExternalRunnerKind) { let _ = "terminal-bench"; }"#,
+            r#"fn run() { let _ = "terminal-bench"; }"#,
         );
 
         let mut scanned_files = 0;
@@ -236,7 +235,7 @@ mod tests {
             violations[0].path,
             "crates/harnesslab-cli/src/runner/generic_dispatch.rs"
         );
-        assert_eq!(violations[0].token, "ExternalRunnerKind");
+        assert_eq!(violations[0].token, "terminal-bench");
     }
 
     #[test]
@@ -374,7 +373,7 @@ fn by_benchmark(benchmark_id: &str, adapter_id: &str) {
         write_file(
             root.path(),
             "crates/harnesslab-cli/src/runtime_compatibility.rs",
-            "fn legacy(kind: ExternalRunnerKind) {}",
+            r#"fn protocol_compatibility() { let _ = "terminal-bench"; }"#,
         );
         write_file(
             root.path(),

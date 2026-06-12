@@ -231,9 +231,9 @@ fn patch_native_arm64_cross_x86(original: &str) -> String {
 mod tests {
     use super::*;
     use harnesslab_core::{
-        AgentKind, ArtifactSpec, AttemptProvenance, BenchmarkRef, ExecutionConfig,
-        ExternalRunnerKind, ExternalRunnerSpec, FailureClass, FailureCode, HealthImpact,
-        NetworkPolicy, Outcome, ResourceHint, RunPaths, RunSpec, SandboxSpec, TaskPlan, TaskState,
+        AdapterId, AgentKind, ArtifactSpec, AttemptProvenance, BenchmarkRef, ExecutionConfig,
+        ExternalRunnerSpec, FailureClass, FailureCode, HealthImpact, NetworkPolicy, Outcome,
+        ResourceHint, RunPaths, RunSpec, SandboxSpec, TaskPlan, TaskRuntimeBinding, TaskState,
         VerifierEnvironment, VerifierSpec, WorkspaceSpec, WorkspaceType, default_agent_profile,
         task_dir_name,
     };
@@ -346,10 +346,12 @@ mod tests {
             started: Instant::now(),
         };
 
-        let result =
-            super::super::runtime_adapter::runtime_adapter_for(ExternalRunnerKind::TerminalBench)
-                .execute(&ctx)
-                .unwrap();
+        let result = super::super::runtime_adapter::runtime_adapter_for_adapter_id(
+            "harnesslab.terminal-bench.runtime",
+        )
+        .unwrap()
+        .execute(&ctx)
+        .unwrap();
 
         assert_eq!(result.state, TaskState::Failure);
         assert_eq!(result.outcome, Outcome::Failure);
@@ -434,12 +436,22 @@ mod tests {
             },
             patch_spec: None,
             external_runner: Some(ExternalRunnerSpec {
-                kind: ExternalRunnerKind::TerminalBench,
                 dataset_path: dataset_path.display().to_string(),
                 source_path: None,
                 agent_timeout_sec: Some(360),
             }),
-            runtime_binding: None,
+            runtime_binding: Some(TaskRuntimeBinding {
+                authority: harnesslab_adapters::built_in_protocol_registry()
+                    .binding_for_adapter_id(
+                        &AdapterId::new("harnesslab.terminal-bench.runtime").unwrap(),
+                    )
+                    .unwrap()
+                    .authority(),
+                dataset_ref: dataset_path.display().to_string(),
+                task_ref: "build-initramfs-qemu".to_string(),
+                artifact_contract_id: "artifact.basic.v1".to_string(),
+                readiness_contract_id: "readiness.basic.v1".to_string(),
+            }),
         }
     }
 

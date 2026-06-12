@@ -174,8 +174,8 @@ fn validate_external_runtime_snapshot_pair(
         )
     })?;
     let attempt = attempt_number(attempt_dir)?;
-    let snapshot_has_protocol_authority = private.get("protocol_authority").is_some()
-        || public.get("protocol_authority").is_some();
+    let snapshot_has_protocol_authority =
+        private.get("protocol_authority").is_some() || public.get("protocol_authority").is_some();
     let task_has_protocol_authority = task.runtime_binding.is_some();
     if snapshot_has_protocol_authority && !task_has_protocol_authority {
         bail!(
@@ -189,10 +189,9 @@ fn validate_external_runtime_snapshot_pair(
             task.task_id
         );
     }
-    let runtime_kind = super::external::runtime_runner_kind_for_task(task)?;
-    let runner_kind = serde_json::to_value(runtime_kind)?;
+    let adapter_id = super::external::runtime_adapter_id_for_task(task)?;
     let dataset_ref = super::external::runtime_dataset_ref(task)?;
-    let source_ref = super::external::runtime_snapshot_source_ref(task, runtime_kind)?;
+    let source_ref = super::external::runtime_snapshot_source_ref(task)?;
     let protocol_authority = serde_json::to_value(
         task.runtime_binding
             .as_ref()
@@ -204,7 +203,7 @@ fn validate_external_runtime_snapshot_pair(
         plan,
         task,
         attempt,
-        &runner_kind,
+        adapter_id,
         &protocol_authority,
         dataset_ref,
         &serde_json::to_value(source_ref)?,
@@ -252,7 +251,7 @@ fn external_runtime_snapshot_mismatch_field(
     plan: &BenchmarkPlan,
     task: &harnesslab_core::TaskPlan,
     attempt: u64,
-    runner_kind: &Value,
+    adapter_id: &str,
     protocol_authority: &Value,
     dataset_ref: &str,
     source_ref: &Value,
@@ -279,8 +278,10 @@ fn external_runtime_snapshot_mismatch_field(
     if private["attempt"] != attempt || public["attempt"] != attempt {
         return Some("attempt");
     }
-    if private["runner_kind"] != *runner_kind || public["runner_kind"] != *runner_kind {
-        return Some("runner_kind");
+    if private["adapter_id"].as_str() != Some(adapter_id)
+        || public["adapter_id"].as_str() != Some(adapter_id)
+    {
+        return Some("adapter_id");
     }
     if private["protocol_authority"] != *protocol_authority
         || public["protocol_authority"] != *protocol_authority
@@ -441,7 +442,7 @@ fn runtime_fingerprint_from_private(private: &Value) -> Result<String> {
         "benchmark": private["benchmark"].clone(),
         "task_id": private["task_id"].clone(),
         "attempt": private["attempt"].clone(),
-        "runner_kind": private["runner_kind"].clone(),
+        "adapter_id": private["adapter_id"].clone(),
         "protocol_authority": private["protocol_authority"].clone(),
         "adapter_version": private["adapter_version"].clone(),
         "runtime_policy": private["runtime_policy"].clone(),
@@ -460,7 +461,7 @@ fn public_fingerprint_from_public(public: &Value) -> Result<String> {
         "benchmark": public["benchmark"].clone(),
         "task_id": public["task_id"].clone(),
         "attempt": public["attempt"].clone(),
-        "runner_kind": public["runner_kind"].clone(),
+        "adapter_id": public["adapter_id"].clone(),
         "protocol_authority": public["protocol_authority"].clone(),
         "adapter_version": public["adapter_version"].clone(),
         "runtime_policy": public["runtime_policy"].clone(),

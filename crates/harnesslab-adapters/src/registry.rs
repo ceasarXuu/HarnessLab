@@ -245,8 +245,14 @@ mod tests {
 
         assert_eq!(terminal.tasks.len(), 1);
         assert_eq!(
-            terminal.tasks[0].external_runner.as_ref().unwrap().kind,
-            harnesslab_core::ExternalRunnerKind::TerminalBench
+            terminal.tasks[0]
+                .runtime_binding
+                .as_ref()
+                .unwrap()
+                .authority
+                .adapter_id
+                .as_str(),
+            "harnesslab.terminal-bench.runtime"
         );
         assert!(terminal.tasks[0].patch_spec.is_none());
         assert_eq!(swe.name, "swe-bench-pro");

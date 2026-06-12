@@ -272,16 +272,18 @@ fn adapt_protocol_005_artifact_boundary_and_redaction_contracts_are_validated() 
 #[test]
 fn adapt_protocol_009_scaffold_golden_adapter_compiles_and_passes_conformance() {
     let adapter = DeterministicSampleAdapter;
-    let descriptor = adapter.protocol_descriptor().expect(
-        "scaffold golden adapter must expose a protocol descriptor"
-    );
+    let descriptor = adapter
+        .protocol_descriptor()
+        .expect("scaffold golden adapter must expose a protocol descriptor");
     assert_eq!(descriptor.descriptor.name, "deterministic-sample");
     assert_eq!(
         descriptor.binding.adapter_id.as_str(),
         "harnesslab.deterministic-sample.runtime"
     );
-    assert_eq!(descriptor.binding.default_mode.as_str(), "deterministic-sample");
-    assert!(descriptor.binding.legacy_runner_kind.is_none());
+    assert_eq!(
+        descriptor.binding.default_mode.as_str(),
+        "deterministic-sample"
+    );
 
     let descriptors = vec![descriptor.clone()];
     validate_data_lifecycle_contracts(&descriptors).unwrap();
@@ -292,20 +294,14 @@ fn adapt_protocol_009_scaffold_golden_adapter_compiles_and_passes_conformance() 
     assert_eq!(descriptor.readiness.len(), 2);
     assert_eq!(descriptor.failure_mapping.len(), 1);
     assert_eq!(descriptor.artifacts.len(), 5);
-    assert!(
-        descriptor.artifacts.iter().any(|a| {
-            a.artifact_type == "runtime_snapshot"
-                && a.visibility == "public"
-                && a.required_for_replay
-        })
-    );
-    assert!(
-        descriptor.artifacts.iter().any(|a| {
-            a.artifact_type == "runtime_snapshot"
-                && a.visibility == "private"
-                && a.redaction_policy == "private_only"
-        })
-    );
+    assert!(descriptor.artifacts.iter().any(|a| {
+        a.artifact_type == "runtime_snapshot" && a.visibility == "public" && a.required_for_replay
+    }));
+    assert!(descriptor.artifacts.iter().any(|a| {
+        a.artifact_type == "runtime_snapshot"
+            && a.visibility == "private"
+            && a.redaction_policy == "private_only"
+    }));
 
     let mut missing_failure = descriptors.clone();
     missing_failure[0].failure_mapping.clear();
@@ -326,7 +322,7 @@ fn adapt_protocol_009_scaffold_golden_adapter_compiles_and_passes_conformance() 
 }
 
 #[test]
-fn adapt_protocol_010_existing_adapters_have_protocol_descriptors_and_legacy_bindings() {
+fn adapt_protocol_010_existing_adapters_have_protocol_descriptors_and_protocol_bindings() {
     let registry = crate::built_in_protocol_registry();
     let bindings = registry.bindings();
     assert!(
@@ -341,9 +337,9 @@ fn adapt_protocol_010_existing_adapters_have_protocol_descriptors_and_legacy_bin
     validate_data_lifecycle_contracts(&[tb_descriptor.clone()]).unwrap();
     validate_runtime_lifecycle_contracts(&[tb_descriptor.clone()]).unwrap();
     validate_artifact_contracts(&[tb_descriptor.clone()]).unwrap();
-    assert!(
-        tb_descriptor.binding.legacy_runner_kind.is_some(),
-        "Terminal-Bench binding must preserve legacy runner kind"
+    assert_eq!(
+        tb_descriptor.binding.adapter_id.as_str(),
+        "harnesslab.terminal-bench.runtime"
     );
 
     let swe = SweBenchProAdapter::new();
@@ -353,16 +349,10 @@ fn adapt_protocol_010_existing_adapters_have_protocol_descriptors_and_legacy_bin
     validate_data_lifecycle_contracts(&[swe_descriptor.clone()]).unwrap();
     validate_runtime_lifecycle_contracts(&[swe_descriptor.clone()]).unwrap();
     validate_artifact_contracts(&[swe_descriptor.clone()]).unwrap();
-    assert!(
-        swe_descriptor.binding.legacy_runner_kind.is_some(),
-        "SWE-bench Pro binding must preserve legacy runner kind"
+    assert_eq!(
+        swe_descriptor.binding.adapter_id.as_str(),
+        "harnesslab.swe-bench-pro.runtime"
     );
-
-    let legacy_count = bindings
-        .iter()
-        .filter(|b| b.legacy_runner_kind.is_some())
-        .count();
-    assert_eq!(legacy_count, 2, "exactly two built-in bindings must have legacy runner kinds");
 }
 
 #[test]
@@ -378,10 +368,6 @@ fn adapt_protocol_011_third_adapter_horizontal_extension_requires_no_legacy_kind
         .iter()
         .find(|b| b.benchmark_id.as_str() == "deterministic-sample")
         .expect("deterministic-sample binding must exist");
-    assert!(
-        third.legacy_runner_kind.is_none(),
-        "third adapter must not require legacy runner kind"
-    );
     assert_eq!(
         third.stability,
         harnesslab_core::AdapterStability::Experimental,
