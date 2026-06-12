@@ -9,7 +9,7 @@ use harnesslab_core::{CapabilityId, FailureClass, FailureCode};
 fn adapt_protocol_003_data_lifecycle_contract_foundation_is_validated() {
     let descriptors = built_in_protocol_adapter_descriptors();
     validate_data_lifecycle_contracts(&descriptors).unwrap();
-    assert_eq!(descriptors.len(), 2);
+    assert_eq!(descriptors.len(), 3);
     assert_eq!(
         TerminalBenchAdapter::new()
             .protocol_descriptor()
