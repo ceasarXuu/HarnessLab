@@ -104,7 +104,10 @@ fn declared_file_modules(source: &str) -> Vec<String> {
         if line.is_empty() {
             continue;
         }
-        if line.starts_with("#[cfg(test") || line.starts_with("#[cfg(any(test") {
+        if line.starts_with("#[cfg(test")
+            || line.starts_with("#[cfg(any(test")
+            || line.starts_with("#[cfg(all(test")
+        {
             cfg_test_next = true;
             continue;
         }

@@ -91,8 +91,8 @@ pub(super) fn runtime_adapter_for_adapter_id(
         .with_context(|| format!("unknown runtime adapter_id {adapter_id}"))
 }
 
-pub(in crate::runner) fn runtime_adapters() -> [&'static dyn BenchmarkRuntimeAdapter; 2] {
-    [
+pub(in crate::runner) fn runtime_adapters() -> Vec<&'static dyn BenchmarkRuntimeAdapter> {
+    vec![
         &terminal_bench_adapter::TERMINAL_BENCH_RUNTIME_ADAPTER,
         &swe_bench_pro_adapter::SWE_BENCH_PRO_RUNTIME_ADAPTER,
     ]
@@ -141,14 +141,21 @@ pub(super) fn runtime_cleanup_targets(ctx: RuntimeCleanupContext<'_>) -> Vec<Run
     let mut seen = Vec::new();
     let mut targets = Vec::new();
     for task in &ctx.plan.tasks {
-        let Ok(adapter) = runtime_adapter_for_task(task) else {
-            continue;
-        };
-        if seen.contains(&adapter.kind()) {
-            continue;
+        match runtime_adapter_for_task(task) {
+            Ok(adapter) => {
+                if seen.contains(&adapter.kind()) {
+                    continue;
+                }
+                seen.push(adapter.kind());
+                targets.extend(adapter.cleanup_targets(ctx));
+            }
+            Err(error) => {
+                eprintln!(
+                    "WARNING: skipping cleanup targets for task {} due to adapter resolution failure: {error}",
+                    task.task_id
+                );
+            }
         }
-        seen.push(adapter.kind());
-        targets.extend(adapter.cleanup_targets(ctx));
     }
     targets.sort_by(|left, right| {
         left.adapter_id

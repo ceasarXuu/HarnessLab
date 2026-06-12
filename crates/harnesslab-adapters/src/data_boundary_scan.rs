@@ -76,6 +76,13 @@ pub(crate) fn assert_boundary_scanner_regressions() {
     let stripped = crate::data_boundary_rule_sets::strip_artifact_declaration_calls(artifact_probe);
     assert!(!stripped.contains("\"attempt\""));
     assert!(stripped.contains("let leaked = \"events.jsonl\""));
+
+    let cfg_all_test_probe = r#"
+        #[cfg(all(test, feature = "integration"))]
+        mod integration_tests;
+    "#;
+    let stripped = strip_cfg_test_items(cfg_all_test_probe);
+    assert!(!stripped.contains("mod integration_tests"));
 }
 
 fn use_statements(source: &str) -> Vec<String> {
@@ -380,7 +387,10 @@ pub(crate) fn strip_cfg_test_items(source: &str) -> String {
             }
             continue;
         }
-        if trimmed.starts_with("#[cfg(test") || trimmed.starts_with("#[cfg(any(test") {
+        if trimmed.starts_with("#[cfg(test")
+            || trimmed.starts_with("#[cfg(any(test")
+            || trimmed.starts_with("#[cfg(all(test")
+        {
             skip_next_item = true;
             output.push('\n');
             continue;
