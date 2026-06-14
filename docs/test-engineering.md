@@ -18,6 +18,8 @@ Current rewrite gates are Python/Web first:
   verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by
   `HARNESSLAB_REAL_HARBOR=1`;
+- managed Harbor subprocess tests that verify `harbor.config.json` execution,
+  `job.log` capture, and `harbor.cleanup.json` after task cancellation;
 - ruff and pyright for Python static gates;
 - Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
   smoke tests for the frontend;

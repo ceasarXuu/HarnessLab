@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from harnesslab.models.harbor import HarborCapabilitySnapshot, HarborJobConfigView
+from harnesslab.services.harbor_subprocess import ManagedSubprocessHarborRunner
 from harnesslab.settings import Settings
 from harnesslab.storage.paths import atomic_write_text
 
@@ -100,10 +101,12 @@ class HarborEngine:
             lifecycle_mode=self.mode,
             environment_backend="docker",
             config_format="harbor.models.job.config.JobConfig",
-            supports_cancel=False,
+            supports_cancel=self.mode == "subprocess",
         )
 
     async def run(self, config: HarborJobConfigView) -> dict:
+        if self.mode == "subprocess":
+            return await ManagedSubprocessHarborRunner().run(config)
         if self.mode == "python-api":
             return await PythonApiHarborRunner().run(config)
         return await FakeHarborRunner().run(config)
@@ -163,10 +166,12 @@ def _normalize_mode(mode: str | None) -> str:
         "python": "python-api",
         "python-api": "python-api",
         "real": "python-api",
+        "cli": "subprocess",
+        "subprocess": "subprocess",
     }
     if normalized not in aliases:
         raise ValueError(
-            "HARNESSLAB_HARBOR_ENGINE must be one of fake, python-api, or real"
+            "HARNESSLAB_HARBOR_ENGINE must be one of fake, python-api, subprocess, or real"
         )
     return aliases[normalized]
 
