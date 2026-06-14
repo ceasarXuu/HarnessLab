@@ -318,11 +318,11 @@ HarnessLab 当前是一个 Rust CLI 工具，用于评估 CLI coding agent 在 b
 
 ## 11. Review Checklist And Sign-off Questions
 
-- [ ] 前端框架选择：React 还是 Vue？（当前无明确偏好，需决策）
-- [ ] 是否保留 Rust CLI 作为 `harnesslab web` 的启动器，还是改为纯 Node.js/Python 启动？
+- [x] 前端框架选择：Vue（简单优先）
+- [x] 是否保留 Rust CLI：不保留，纯 Python 后端启动
+- [x] Agent 模板库数量：7 个模板（claude-code, codex, opencode, pi-coding-agent, aider, openhands, custom）
 - [ ] Harbor 报告格式是否需要任何 UI 包装，还是直接 iframe/内嵌展示？
 - [ ] 榜单需要支持多少历史数据？（全量 vs 最近 N 次）
-- [ ] Agent 模板库需要预设多少模板？（MVP 建议 5-8 个主流 agent）
 
 ## 12. Clarification Decision Log
 
@@ -348,9 +348,12 @@ HarnessLab 当前是一个 Rust CLI 工具，用于评估 CLI coding agent 在 b
 ## 13. Open Questions And Risks
 
 ### Open Questions
-1. 前端框架未定（React vs Vue）
-2. 榜单历史数据保留策略（全量 vs 最近 N 次）
-3. Agent 模板库预设数量（建议 5-8 个）
+1. 榜单历史数据保留策略（全量 vs 最近 N 次）
+
+### 已决策 (Resolved)
+- **前端框架**：Vue，简单优先，不做过度工程化
+- **启动器**：不保留 Rust CLI，纯 Python 后端启动（FastAPI + uvicorn）
+- **Agent 模板库**：预设 7 个模板（claude-code, codex, opencode, pi-coding-agent, aider, openhands, custom）
 
 ### Risks
 | Risk | Impact | Mitigation |
@@ -361,14 +364,6 @@ HarnessLab 当前是一个 Rust CLI 工具，用于评估 CLI coding agent 在 b
 
 ## 14. Implementation Notes
 
-- 技术栈：React/Vue + FastAPI + Harbor (Python)
-- 数据存储：`~/.harnesslab/` 目录结构
-  - `agents/` — agent 配置文件 (TOML)
-  - `experiments/` — 实验配置和结果 (JSON)
-  - `templates/` — 实验模板 (JSON)
-  - `reports/` — 生成的 HTML 报告
-  - `logs/` — 运行日志
-- 前端通过 HTTP API 与 FastAPI 后端通信
-- 后端通过 Harbor Python API 管理实验执行
-- 实时日志通过 WebSocket 推送
-- 启动命令：`harnesslab web [--port 3000]`
+- 技术栈：Vue 3 + FastAPI + Harbor (Python)
+- 启动方式：`python -m harnesslab web`（FastAPI + uvicorn, 自动打开浏览器）
+- 前端：Vue 3 + Vite，简单组件结构，不过度工程化
