@@ -18,9 +18,18 @@ summaries, and leaderboard views.
 ## Current Status
 
 This repository still contains the previous Rust workspace and npm reservation
-package materials. They are legacy/reference assets while the Harbor WebUI
-redesign is planned and implemented. Do not use the Rust CLI architecture docs
-or archived 2026-06-15 drafts as implementation source of truth.
+package materials. They are legacy/reference assets. The active implementation
+path is the new Python/FastAPI backend and Vue frontend.
+
+Implemented rewrite foundation:
+
+- `harnesslab web` / `python -m harnesslab web` backend entrypoint
+- `/api/system/status`, agents, experiments, events, benchmarks, leaderboard
+- SQLite migration and local `~/.harnesslab` data directory initialization
+- AgentProfile v2 validation and Harbor agent config compilation
+- fake HarborEngine path for deterministic local tests
+- Vue operations-console scaffold under `frontend/`
+- Python/Web gate script: `scripts/test-after-change-web.sh`
 
 ## Planned Local App
 
@@ -33,10 +42,11 @@ The intended MVP stack is:
 - Harbor `0.13.x` as the execution engine
 - Server-Sent Events for status and log streams
 
-Planned launch command:
+Development launch command:
 
 ```bash
-harnesslab web
+uv sync --group dev
+uv run harnesslab web
 ```
 
 ## Existing npm Reservation Package

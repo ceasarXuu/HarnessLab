@@ -389,6 +389,6 @@ HarnessLab 当前是一个 Rust CLI 工具，用于评估 CLI coding agent 在 b
 ## 14. Implementation Notes
 
 - 技术栈：Vue 3 + TypeScript + FastAPI + Harbor (Python) + SQLite
-- 启动方式：`python -m harnesslab web`（FastAPI + uvicorn, 自动打开浏览器）
+- 启动方式：`harnesslab web` / `python -m harnesslab web`（FastAPI + uvicorn；开发环境使用 `uv run harnesslab web`）
 - 前端：Vue 3 + Vite + Pinia + Storybook，简单组件结构，不过度工程化
 - 实时通信：SSE 用于状态和日志流；运行、取消、删除等命令走 HTTP

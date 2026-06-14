@@ -13,8 +13,12 @@ struct DocFieldRow {
 }
 
 pub fn assert_schema_docs_match(json: &serde_json::Value) {
-    let reference_doc = read_repo_file("docs/agent-profile-reference.md");
-    let guide_doc = read_repo_file("docs/agent-registration-guide.md");
+    let reference_doc = read_repo_file(
+        "docs/archive/2026-06-15-pre-harbor-webui-redesign/agent-profile-reference.md",
+    );
+    let guide_doc = read_repo_file(
+        "docs/archive/2026-06-15-pre-harbor-webui-redesign/agent-registration-guide.md",
+    );
     let reference_rows = parse_doc_field_rows(&reference_doc);
     let guide_rows = parse_doc_field_rows(&guide_doc);
 

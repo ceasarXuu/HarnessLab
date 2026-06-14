@@ -320,8 +320,9 @@ fn adapt_data_005_create_task_plan_is_stable_and_plan_is_wrapper() {
 }
 
 fn assert_phase1_coverage_matrix_is_explicit() {
-    let coverage =
-        include_str!("../../../docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md");
+    let coverage = include_str!(
+        "../../../docs/archive/2026-06-15-pre-harbor-webui-redesign/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md"
+    );
     let rows: Vec<(&str, Vec<&str>)> = vec![
         (
             "ADAPT-DATA-001",

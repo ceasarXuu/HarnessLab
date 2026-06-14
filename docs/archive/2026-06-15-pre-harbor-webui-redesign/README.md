@@ -18,6 +18,20 @@ used as implementation source of truth.
 | `docs/architecture.md` | `architecture.md` | Self-owned run orchestrator architecture |
 | `docs/technology-decisions.md` | `technology-decisions.md` | Rust single-binary technology decision |
 | `docs/adapter-protocol.md` | `adapter-protocol.md` | Self-owned benchmark adapter/runtime protocol |
+| `docs/agent-registration-guide.md` | `agent-registration-guide.md` | CLI-first AgentProfile v1 registration flow |
+| `docs/agent-profile-reference.md` | `agent-profile-reference.md` | CLI-first AgentProfile v1 schema reference |
+| `docs/development-operations.md` | `development-operations.md` | Rust CLI operation notes |
+| `docs/test-engineering.md` | `test-engineering.md` | Rust/Cargo test-engineering system |
+| `docs/playbooks/terminal-bench-claude-ds.md` | `playbooks/terminal-bench-claude-ds.md` | CLI Terminal-Bench user flow |
+| `docs/reviews/2026-05-27-docker-runner-review-3.md` | `reviews/2026-05-27-docker-runner-review-3.md` | Legacy Docker runner review |
+| `docs/plans/2026-06-03-agent-registration-gap-completion.md` | `plans/2026-06-03-agent-registration-gap-completion.md` | Rust Agent Registry closure plan |
+| `docs/plans/2026-06-03-agent-registration-registry.md` | `plans/2026-06-03-agent-registration-registry.md` | Rust Agent Registry implementation plan |
+| `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md` | `plans/2026-06-04-benchmark-adapter-architecture-design.md` | Rust adapter architecture plan |
+| `docs/plans/2026-06-04-benchmark-adapter-phase-*.md` | `plans/2026-06-04-benchmark-adapter-phase-*.md` | Rust adapter phase artifacts |
+| `docs/plans/2026-06-05-benchmark-adapter-phase-2-inventory.md` | `plans/2026-06-05-benchmark-adapter-phase-2-inventory.md` | Rust adapter phase artifact |
+| `docs/plans/2026-06-06-benchmark-adapter-phase-*.md` | `plans/2026-06-06-benchmark-adapter-phase-*.md` | Rust adapter runtime phase artifacts |
+| `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-*.md` | `plans/2026-06-08-universal-benchmark-adapter-protocol-*.md` | Universal adapter protocol artifacts |
+| `docs/plans/2026-06-12-remove-external-runner-kind-plan.md` | `plans/2026-06-12-remove-external-runner-kind-plan.md` | Legacy runner-kind cleanup plan |
 | `docs/plans/2026-06-15-harbor-integration-engineering-plan.md` | `plans/2026-06-15-harbor-integration-engineering-plan.md` | Rust + Python Bridge plan |
 | `docs/plans/2026-06-15-harnesslab-webui-engineering-plan.md` | `plans/2026-06-15-harnesslab-webui-engineering-plan.md` | First WebUI pivot draft superseded by v3 plan |
 | `docs/architecture/benchmark-compatibility-strategy.md` | `architecture/benchmark-compatibility-strategy.md` | Self-owned benchmark runtime strategy |
