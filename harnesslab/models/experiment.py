@@ -47,6 +47,7 @@ class RunView(BaseModel):
     n_concurrent: int
     job_dir: str | None = None
     report_path: str | None = None
+    score: float | None = None
     failure_class: str | None = None
     failure_code: str | None = None
 

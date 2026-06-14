@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from harnesslab.api import agents, benchmarks, experiments, leaderboard, system
+from harnesslab.api import agents, benchmarks, experiments, leaderboard, runs, system
 from harnesslab.settings import Settings
 from harnesslab.storage import sqlite
 
@@ -18,5 +18,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(agents.router)
     app.include_router(benchmarks.router)
     app.include_router(experiments.router)
+    app.include_router(runs.router)
     app.include_router(leaderboard.router)
     return app

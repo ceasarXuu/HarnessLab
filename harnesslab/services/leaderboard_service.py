@@ -10,7 +10,7 @@ class LeaderboardService:
 
     def list(self, benchmark: str | None = None) -> list[dict]:
         query = (
-            "SELECT id, agent_id, benchmark_name, benchmark_version, split, finished_at, "
+            "SELECT id, agent_id, benchmark_name, benchmark_version, split, finished_at, score, "
             "comparability_key, report_path FROM runs "
             "WHERE status = 'completed' AND leaderboard_eligible = 1"
         )
@@ -18,6 +18,6 @@ class LeaderboardService:
         if benchmark:
             query += " AND benchmark_name = ?"
             params = (benchmark,)
-        query += " ORDER BY finished_at DESC"
+        query += " ORDER BY score DESC, finished_at DESC"
         with sqlite.connect(self.settings) as conn:
             return sqlite.rows(conn, query, params)
