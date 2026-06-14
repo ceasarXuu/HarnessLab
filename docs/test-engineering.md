@@ -8,8 +8,10 @@ The Rust CLI test-engineering document was archived on 2026-06-15.
 Current rewrite gates are Python/Web first:
 
 - pytest for backend units and integration tests;
-- fake HarborEngine tests for deterministic queue, recovery, and failure paths;
-- optional Docker-marked Harbor smoke tests;
+- fake HarborEngine tests for deterministic queue, recovery, config-artifact, and
+  failure paths;
+- optional Docker-marked Harbor Python API smoke tests gated by
+  `HARNESSLAB_REAL_HARBOR=1`;
 - ruff and pyright for Python static gates;
 - Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
   smoke tests for the frontend;

@@ -37,3 +37,18 @@ kind = "python-integration"
 id = "WEB-TPL-001"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
+
+[[test]]
+id = "WEB-HBR-001"
+path = "tests/python/test_harbor_config.py"
+kind = "python-unit"
+
+[[test]]
+id = "WEB-HBR-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-HBR-001"
+path = "tests/python/test_harbor_real_smoke.py"
+kind = "optional-docker-smoke"

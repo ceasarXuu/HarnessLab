@@ -1123,4 +1123,33 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Harbor Lifecycle Adapter Pass
+
+Landed the first Phase 3 real-execution boundary:
+
+- `HarborEngine` now selects a deterministic `fake` adapter by default or a real
+  `python-api` adapter when `HARNESSLAB_HARBOR_ENGINE=python-api` is set.
+- Every run writes `harbor.config.json` in Harbor `JobConfig` shape before the
+  run is marked `running`, plus `harbor.capability.json` for auditability.
+- Experiment execution now resolves each agent through AgentProfile compilation
+  instead of passing only `agent_id`.
+- Fake runs write `result.json`, preserving the same artifact contract as the
+  Python API runner.
+- Real Harbor smoke coverage is available as an opt-in Docker test via
+  `HARNESSLAB_REAL_HARBOR=1`.
+
+Known remaining Phase 3 blockers:
+
+- Harbor `Job` exposes `create` and `run` but no public cancel API in the
+  inspected 0.13.x surface, so hard running-job cancellation remains
+  unsupported until a process/plugin boundary is introduced.
+- The default queue is still request-bound; background workers, restart recovery,
+  and orphan cleanup remain separate hardening work.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`
 - `npm --prefix frontend run typecheck`

@@ -45,3 +45,9 @@ id = "WEB-TPL-001"
 area = "templates"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Experiment templates can be created, listed, saved from experiments, and soft-deleted."
+
+[[requirement]]
+id = "WEB-HBR-001"
+area = "harbor"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Runs persist Harbor JobConfig artifacts and can select fake or Python API execution adapters."
