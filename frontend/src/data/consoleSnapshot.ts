@@ -1,0 +1,146 @@
+import type { ConsoleSnapshot } from '@/types/console'
+
+export const buildConsoleSnapshot = (): ConsoleSnapshot => ({
+  headline: 'Operations Dashboard',
+  metrics: [
+    {
+      label: 'Active evaluations',
+      value: '42',
+      delta: '+6 since 02:00',
+      trend: 'up',
+      description: 'Cross-benchmark runs currently executing.',
+    },
+    {
+      label: 'Agent success rate',
+      value: '91.8%',
+      delta: '+1.4% vs last window',
+      trend: 'up',
+      description: 'Rolling success rate across the last 250 scored jobs.',
+    },
+    {
+      label: 'Blocked queues',
+      value: '2',
+      delta: 'Needs triage',
+      trend: 'down',
+      description: 'Queues with stalled capacity or unresolved dependency issues.',
+    },
+    {
+      label: 'Mean turnaround',
+      value: '18m',
+      delta: '-3m improvement',
+      trend: 'up',
+      description: 'Median job completion time for the current operating window.',
+    },
+  ],
+  alerts: [
+    {
+      title: 'Nightly swe-bench batch lagging in us-east',
+      detail: 'Queue depth breached 120 jobs after runner image churn. Triage before next hourly wave.',
+      severity: 'high',
+    },
+    {
+      title: 'Benchmark cache hit rate softening',
+      detail: 'Cold-starts increased on experiment replay jobs after adapter refresh.',
+      severity: 'medium',
+    },
+    {
+      title: 'Leaderboard export ready',
+      detail: 'The weekly score pack is complete and waiting for review sign-off.',
+      severity: 'low',
+    },
+  ],
+  agents: [
+    {
+      name: 'Aegis',
+      owner: 'Core Evaluation',
+      queue: 'swe-bench',
+      health: 'healthy',
+      activeRuns: 11,
+      lastHeartbeat: '36s ago',
+      successRate: '93.0%',
+    },
+    {
+      name: 'Beacon',
+      owner: 'Adapters',
+      queue: 'terminal-bench',
+      health: 'healthy',
+      activeRuns: 8,
+      lastHeartbeat: '58s ago',
+      successRate: '91.1%',
+    },
+    {
+      name: 'Cypher',
+      owner: 'Infra',
+      queue: 'cache-warm',
+      health: 'warming',
+      activeRuns: 4,
+      lastHeartbeat: '2m ago',
+      successRate: '88.4%',
+    },
+    {
+      name: 'Delta',
+      owner: 'Reliability',
+      queue: 'nightly-regression',
+      health: 'blocked',
+      activeRuns: 1,
+      lastHeartbeat: '7m ago',
+      successRate: '84.7%',
+    },
+  ],
+  experiments: [
+    {
+      id: 'EXP-1042',
+      name: 'Adapter protocol phase-1 soak',
+      owner: 'Adapters',
+      state: 'running',
+      target: 'terminal-bench',
+      updatedAt: '2 minutes ago',
+      successRate: '89.7%',
+    },
+    {
+      id: 'EXP-1041',
+      name: 'Agent retry policy audit',
+      owner: 'Reliability',
+      state: 'queued',
+      target: 'swe-bench',
+      updatedAt: '11 minutes ago',
+      successRate: 'Pending',
+    },
+    {
+      id: 'EXP-1038',
+      name: 'Runner cold-start regression',
+      owner: 'Infra',
+      state: 'complete',
+      target: 'nightly-regression',
+      updatedAt: '35 minutes ago',
+      successRate: '94.2%',
+    },
+  ],
+  leaderboard: [
+    {
+      agent: 'Aegis',
+      score: 91,
+      successRate: 0.93,
+      experiments: 21,
+    },
+    {
+      agent: 'Beacon',
+      score: 89,
+      successRate: 0.91,
+      experiments: 19,
+    },
+    {
+      agent: 'Cypher',
+      score: 84,
+      successRate: 0.88,
+      experiments: 14,
+    },
+    {
+      agent: 'Delta',
+      score: 78,
+      successRate: 0.85,
+      experiments: 12,
+    },
+  ],
+})
+
