@@ -1235,3 +1235,33 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Active Worker Task Cancellation Pass
+
+Landed the first app-level execution cancellation hook:
+
+- `QueueWorkerService` now tracks the active asyncio task for each running run;
+- `POST /api/runs/{run_id}/cancel` and experiment cancellation notify the worker
+  to cancel the active task after SQLite records the terminal cancellation;
+- `ExperimentService` catches `asyncio.CancelledError` from the execution
+  boundary and preserves `cancelled` when the database already records user
+  cancellation;
+- unexpected worker task cancellation is marked `interrupted` with
+  `worker_lifecycle/worker_task_cancelled` rather than leaving a run as
+  `running`;
+- TestClient fixtures now use context-manager lifespan semantics so background
+  worker tests run on a stable event loop;
+- fake slow-run tests prove active task cancellation prevents the fake engine
+  from writing a late `result.json`.
+
+Known remaining Phase 3 blockers:
+
+- real Harbor hard cancellation still needs a managed subprocess/plugin boundary
+  and Docker/process cleanup evidence;
+- orphan Docker/process cleanup still needs a real Harbor lifecycle proof.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`

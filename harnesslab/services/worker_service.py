@@ -11,6 +11,7 @@ class QueueWorkerService:
     def __init__(self, settings: Settings):
         self.settings = settings
         self._task: asyncio.Task[None] | None = None
+        self._active_runs: dict[str, asyncio.Task[None]] = {}
         self._lock: asyncio.Lock | None = None
         self._lock_loop: asyncio.AbstractEventLoop | None = None
         self.last_error: str | None = None
@@ -24,6 +25,13 @@ class QueueWorkerService:
     @property
     def is_running(self) -> bool:
         return self._task is not None and not self._task.done()
+
+    def cancel_run(self, run_id: str) -> bool:
+        task = self._active_runs.get(run_id)
+        if task is None or task.done():
+            return False
+        task.cancel()
+        return True
 
     async def wait_until_idle(self) -> None:
         task = self._task
@@ -54,7 +62,12 @@ class QueueWorkerService:
             if run is None:
                 return processed
             processed += 1
-            await service.execute_dequeued_run(run)
+            task = asyncio.create_task(service.execute_dequeued_run(run))
+            self._active_runs[run["id"]] = task
+            try:
+                await task
+            finally:
+                self._active_runs.pop(run["id"], None)
 
     def _loop_lock(self) -> asyncio.Lock:
         loop = asyncio.get_running_loop()

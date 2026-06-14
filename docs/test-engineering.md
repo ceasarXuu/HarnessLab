@@ -35,3 +35,8 @@ Operational note: API tests that need deterministic terminal results should call
 `POST /api/experiments/{id}/run?wait=true`. Product-style tests should use the
 default `wait=false` path and then observe state through queue, run, event, or
 SSE APIs.
+
+Operational note: TestClient-based tests must use the context-manager fixture so
+FastAPI lifespan and app-level worker tasks share a stable event loop. Creating a
+bare TestClient can let request-scoped event loop cleanup cancel background work
+and produce false `interrupted` states.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import hashlib
+import asyncio
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +8,12 @@ from harnesslab.models.agent import AgentProfile
 from harnesslab.models.experiment import ExperimentCreate
 from harnesslab.services.clock import now_iso
 from harnesslab.services.event_service import EventService
+from harnesslab.services.experiment_utils import (
+    derive_experiment_status,
+    experiment_kind,
+    stable_hash,
+    unique_preserving_order,
+)
 from harnesslab.services.failure_classifier import classify_exception
 from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
 from harnesslab.services.profile_compiler import ProfileCompiler
@@ -37,7 +43,7 @@ class ExperimentService:
             for agent_id in request.agent_ids
             for benchmark in request.benchmark_names
         ]
-        kind = _kind(len(request.agent_ids), len(request.benchmark_names))
+        kind = experiment_kind(len(request.agent_ids), len(request.benchmark_names))
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "INSERT INTO experiments VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -67,18 +73,20 @@ class ExperimentService:
                         "draft",
                         index,
                         agent_id,
-                        _hash(agent_id),
+                        stable_hash(agent_id),
                         benchmark_name,
                         request.benchmark_version,
                         request.split,
-                        _hash(str(request.n_tasks)),
+                        stable_hash(str(request.n_tasks)),
                         request.n_tasks,
                         request.n_attempts,
                         request.n_concurrent,
                         now,
                         now,
                         0 if request.n_tasks == 1 else 1,
-                        _hash(f"{benchmark_name}:{request.benchmark_version}:{request.split}"),
+                        stable_hash(
+                            f"{benchmark_name}:{request.benchmark_version}:{request.split}"
+                        ),
                     ),
                 )
         self.events.append(
@@ -145,7 +153,7 @@ class ExperimentService:
         statuses = {run["status"] for run in state["runs"]}
         if statuses.intersection({"draft", "queued", "running"}):
             return
-        status = self._derive_experiment_status(experiment_id)
+        status = derive_experiment_status(run["status"] for run in state["runs"])
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
@@ -219,8 +227,8 @@ class ExperimentService:
             raise RuntimeError("experiment has no runs to clone")
         request = ExperimentCreate(
             name=f"{state['experiment']['name']} copy",
-            agent_ids=_unique([run["agent_id"] for run in runs]),
-            benchmark_names=_unique([run["benchmark_name"] for run in runs]),
+            agent_ids=unique_preserving_order(run["agent_id"] for run in runs),
+            benchmark_names=unique_preserving_order(run["benchmark_name"] for run in runs),
             benchmark_version=runs[0]["benchmark_version"],
             split=runs[0]["split"],
             n_tasks=runs[0]["n_tasks"],
@@ -243,8 +251,8 @@ class ExperimentService:
         if not runs:
             raise RuntimeError("experiment has no runs to save")
         config = {
-            "agent_ids": _unique([run["agent_id"] for run in runs]),
-            "benchmark_names": _unique([run["benchmark_name"] for run in runs]),
+            "agent_ids": unique_preserving_order(run["agent_id"] for run in runs),
+            "benchmark_names": unique_preserving_order(run["benchmark_name"] for run in runs),
             "benchmark_version": runs[0]["benchmark_version"],
             "split": runs[0]["split"],
             "n_tasks": runs[0]["n_tasks"],
@@ -310,6 +318,22 @@ class ExperimentService:
         )
         try:
             result = await self.engine.run(config)
+        except asyncio.CancelledError:
+            if self._is_run_cancelled(run["id"]):
+                self.events.append(
+                    "run",
+                    run["id"],
+                    "harbor.job.cancelled",
+                    {"source": "cancelled_during_engine_task_cancel"},
+                )
+                return
+            await self._mark_run_interrupted(
+                run,
+                job_dir,
+                "worker_task_cancelled",
+                "worker task was cancelled before Harbor returned",
+            )
+            return
         except Exception as exc:
             if self._is_run_cancelled(run["id"]):
                 self.events.append(
@@ -404,6 +428,48 @@ class ExperimentService:
         self.queue.finish(run["id"], "failed")
         self.events.append("run", run["id"], "harbor.job.failed", failure, severity="error")
 
+    async def _mark_run_interrupted(
+        self,
+        run: dict,
+        job_dir: str,
+        failure_code: str,
+        summary: str,
+    ) -> None:
+        report_path = self.reports.write_summary(
+            run["id"],
+            "interrupted",
+            job_dir,
+            None,
+            "worker_lifecycle",
+            failure_code,
+        )
+        now = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE runs SET status = ?, finished_at = ?, job_dir = ?, report_path = ?, "
+                "failure_class = ?, failure_code = ?, failure_summary = ?, updated_at = ? "
+                "WHERE id = ?",
+                (
+                    "interrupted",
+                    now,
+                    job_dir,
+                    report_path,
+                    "worker_lifecycle",
+                    failure_code,
+                    summary,
+                    now,
+                    run["id"],
+                ),
+            )
+        self.queue.finish(run["id"], "interrupted")
+        self.events.append(
+            "run",
+            run["id"],
+            "experiment.interrupted",
+            {"failure_code": failure_code, "failure_summary": summary},
+            severity="warning",
+        )
+
     def _agent_config(self, agent_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(conn, "SELECT profile_path FROM agents WHERE id = ?", (agent_id,))
@@ -414,45 +480,3 @@ class ExperimentService:
 
     def _is_run_cancelled(self, run_id: str) -> bool:
         return self.get_run(run_id)["status"] == "cancelled"
-
-    def _derive_experiment_status(self, experiment_id: str) -> str:
-        runs = self.get(experiment_id)["runs"]
-        statuses = {run["status"] for run in runs}
-        if statuses == {"completed"}:
-            return "completed"
-        if "completed" in statuses and "failed" in statuses:
-            return "partially_failed"
-        if "failed" in statuses:
-            return "failed"
-        if "cancelled" in statuses:
-            return "cancelled"
-        if "interrupted" in statuses:
-            return "interrupted"
-        if "running" in statuses:
-            return "running"
-        if "draft" in statuses:
-            return "draft"
-        return "queued"
-
-
-def _kind(agent_count: int, benchmark_count: int) -> str:
-    if agent_count > 1:
-        return "comparison"
-    if benchmark_count > 1:
-        return "batch"
-    return "single"
-
-
-def _hash(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
-
-
-def _unique(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
