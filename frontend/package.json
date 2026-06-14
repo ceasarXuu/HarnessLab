@@ -1,0 +1,46 @@
+{
+  "name": "@ceasarxuu/harnesslab-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "e2e": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4174 --strictPort\" http://127.0.0.1:4174 \"playwright test\"",
+    "storybook": "storybook dev -p 6006",
+    "storybook:test": "storybook dev --ci --smoke-test -p 6006"
+  },
+  "dependencies": {
+    "vue": "^3.5.38",
+    "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
+    "@storybook/vue3-vite": "^10.4.4",
+    "@types/node": "^25.9.3",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.8.0",
+    "@vue/test-utils": "^2.4.11",
+    "eslint": "^10.5.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.60.0",
+    "start-server-and-test": "^3.0.11",
+    "storybook": "^10.4.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8",
+    "vue-tsc": "^3.3.5"
+  }
+}
