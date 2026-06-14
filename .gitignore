@@ -1,6 +1,7 @@
 /target/
 /coverage/
 /artifacts/
+/jobs/
 /.nextest/
 /.benchmarks/
 __pycache__/
