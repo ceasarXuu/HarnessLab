@@ -12,6 +12,8 @@ Current rewrite gates are Python/Web first:
   failure paths;
 - app-level worker tests that enqueue runs, call `QueueWorkerService.start()`,
   and wait for idle without coupling execution to a request handler;
+- cancellation tests that cancel a fake running worker job and verify the worker
+  cannot overwrite `cancelled` with a late fake-engine result;
 - startup recovery tests that recreate the app with persisted `running` rows and
   verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by

@@ -158,21 +158,32 @@ class ExperimentService:
         if run["status"] in {"completed", "failed", "cancelled", "interrupted"}:
             return run
         now = now_iso()
+        report_path = None
+        if run["status"] == "running":
+            job_dir = run["job_dir"] or str(self.settings.experiments_dir / run_id / "harbor-job")
+            report_path = self.reports.write_summary(run_id, "cancelled", job_dir, None)
         with sqlite.connect(self.settings) as conn:
             conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, updated_at = ? WHERE id = ?",
-                ("cancelled", now, now, run_id),
+                "UPDATE runs SET status = ?, finished_at = ?, "
+                "report_path = COALESCE(?, report_path), updated_at = ? WHERE id = ?",
+                ("cancelled", now, report_path, now, run_id),
             )
             conn.execute(
                 "UPDATE queue_items SET state = ?, finished_at = ? WHERE run_id = ?",
                 ("cancelled", now, run_id),
             )
+        event_type = (
+            "experiment.cancel_requested"
+            if run["status"] == "running"
+            else "experiment.cancelled"
+        )
         self.events.append(
             "run",
             run_id,
-            "experiment.cancelled",
+            event_type,
             {"previous_status": run["status"]},
         )
+        self.finalize_experiment_if_terminal(run["experiment_id"])
         return self.get_run(run_id)
 
     def cancel_experiment(self, experiment_id: str) -> dict:
@@ -300,7 +311,23 @@ class ExperimentService:
         try:
             result = await self.engine.run(config)
         except Exception as exc:
+            if self._is_run_cancelled(run["id"]):
+                self.events.append(
+                    "run",
+                    run["id"],
+                    "harbor.job.cancelled",
+                    {"source": "cancelled_during_engine_failure"},
+                )
+                return
             await self._mark_run_failed(run, job_dir, exc)
+            return
+        if self._is_run_cancelled(run["id"]):
+            self.events.append(
+                "run",
+                run["id"],
+                "harbor.job.cancelled",
+                {"source": "cancelled_during_engine_run"},
+            )
             return
         report_path = self.reports.write_summary(
             run["id"],
@@ -384,6 +411,9 @@ class ExperimentService:
             raise KeyError(agent_id)
         profile = AgentProfile.model_validate_json(Path(rows[0]["profile_path"]).read_text())
         return self.compiler.compile(profile)["agent_config"]
+
+    def _is_run_cancelled(self, run_id: str) -> bool:
+        return self.get_run(run_id)["status"] == "cancelled"
 
     def _derive_experiment_status(self, experiment_id: str) -> str:
         runs = self.get(experiment_id)["runs"]

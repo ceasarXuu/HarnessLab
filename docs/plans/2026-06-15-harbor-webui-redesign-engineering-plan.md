@@ -1206,3 +1206,32 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Running Cancellation Guard Pass
+
+Landed a Phase 3 cancellation correctness guard for the fake/worker path:
+
+- fake Harbor runner supports `fake-slow-cancel` to create a deterministic
+  running window for cancellation tests;
+- cancelling a running run writes a cancellation report and emits
+  `experiment.cancel_requested`;
+- if the engine returns or fails after the run was cancelled, the worker now
+  preserves the existing `cancelled` terminal state instead of overwriting it
+  with a late completed/failed result;
+- cancelled runs finalize their parent experiment when all child runs are
+  terminal;
+- worker cancellation tests prove the final status does not return to
+  `running` or `completed`.
+
+Known remaining Phase 3 blockers:
+
+- hard cancellation of actively running real Harbor work still requires a
+  managed process or plugin boundary because Harbor 0.13.x has no public
+  `Job.cancel()`;
+- orphan Docker/process cleanup still needs a real Harbor lifecycle proof.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`

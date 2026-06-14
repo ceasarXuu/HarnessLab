@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from importlib import import_module, metadata
@@ -112,6 +113,9 @@ class FakeHarborRunner:
     async def run(self, config: HarborJobConfigView) -> dict:
         if config.dataset["name"] == "fake-docker-failure":
             raise RuntimeError("docker compose returned code -9")
+        if config.dataset["name"] == "fake-slow-cancel":
+            for _ in range(20):
+                await asyncio.sleep(0.01)
         result = {
             "status": "completed",
             "score": 1.0,
