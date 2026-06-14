@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from importlib import metadata
 
+from harnesslab.services.recovery_service import RunRecoveryService
 from harnesslab.settings import Settings
 from harnesslab.storage import sqlite
 
@@ -22,6 +23,7 @@ class DoctorService:
             "data_dir": str(self.settings.home),
             "db_path": str(self.settings.db_path),
             "db_schema_version": schema_version,
+            "stale_running_runs": RunRecoveryService(self.settings).stale_running_count(),
             "warnings": self._warnings(),
         }
 
@@ -33,6 +35,8 @@ class DoctorService:
             warnings.append("docker_cli_missing")
         if self._package_version("harbor") is None:
             warnings.append("harbor_package_missing")
+        if RunRecoveryService(self.settings).stale_running_count() > 0:
+            warnings.append("stale_running_runs")
         return warnings
 
     @staticmethod

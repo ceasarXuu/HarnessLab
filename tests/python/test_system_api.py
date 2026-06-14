@@ -5,5 +5,6 @@ def test_system_status_reports_core_fields(client):
     payload = response.json()
     assert payload["db_schema_version"] == 3
     assert payload["data_dir"]
+    assert payload["stale_running_runs"] == 0
     assert "docker" in payload
     assert "harbor_version" in payload

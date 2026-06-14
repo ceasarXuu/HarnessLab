@@ -1152,4 +1152,30 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Startup Recovery Pass
+
+Landed the first Phase 3 restart-recovery boundary:
+
+- backend startup now reconciles persisted `running` runs before serving routes;
+- if a Harbor `result.json` artifact exists, the run is marked terminal from
+  that artifact and a report is generated;
+- if no result artifact exists, the stale run is marked `interrupted` with
+  `harbor_recovery/stale_running_without_result`;
+- queue item state is moved to the same terminal status as the recovered run;
+- experiment status is re-derived after recovery;
+- `system/status` now exposes `stale_running_runs` as a doctor signal;
+- recovery decisions emit durable run and experiment events.
+
+Known remaining Phase 3 blockers:
+
+- the run queue is still request-bound rather than a background worker;
+- hard cancellation of actively running Harbor work still requires a managed
+  process or plugin boundary because Harbor 0.13.x has no public `Job.cancel()`.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`
 - `npm --prefix frontend run typecheck`
