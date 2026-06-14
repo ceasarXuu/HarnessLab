@@ -6,7 +6,9 @@ from uuid import uuid4
 from harnesslab.models.experiment import ExperimentCreate
 from harnesslab.services.clock import now_iso
 from harnesslab.services.event_service import EventService
+from harnesslab.services.failure_classifier import classify_exception
 from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from harnesslab.services.queue_service import QueueService
 from harnesslab.services.report_service import ReportService
 from harnesslab.settings import Settings
 from harnesslab.storage import sqlite
@@ -18,6 +20,7 @@ class ExperimentService:
         self.events = EventService(settings)
         self.builder = HarborConfigBuilder(settings)
         self.engine = HarborEngine()
+        self.queue = QueueService(settings)
         self.reports = ReportService(settings)
 
     def create(self, request: ExperimentCreate) -> dict:
@@ -96,17 +99,51 @@ class ExperimentService:
         with sqlite.connect(self.settings) as conn:
             return sqlite.rows(conn, "SELECT * FROM experiments ORDER BY created_at DESC")
 
+    def get_run(self, run_id: str) -> dict:
+        with sqlite.connect(self.settings) as conn:
+            runs = sqlite.rows(conn, "SELECT * FROM runs WHERE id = ?", (run_id,))
+        if not runs:
+            raise KeyError(run_id)
+        return runs[0]
+
     async def run(self, experiment_id: str) -> dict:
-        state = self.get(experiment_id)
-        for run in state["runs"]:
+        self.queue.enqueue_experiment(experiment_id)
+        self.events.append("experiment", experiment_id, "experiment.queued", {})
+        while True:
+            run = self.queue.dequeue_next(experiment_id)
+            if run is None:
+                break
             await self._run_one(run)
+        status = self._derive_experiment_status(experiment_id)
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
-                ("completed", now_iso(), experiment_id),
+                (status, now_iso(), experiment_id),
             )
-        self.events.append("experiment", experiment_id, "experiment.completed", {})
+        self.events.append("experiment", experiment_id, f"experiment.{status}", {})
         return self.get(experiment_id)
+
+    def cancel_run(self, run_id: str) -> dict:
+        run = self.get_run(run_id)
+        if run["status"] in {"completed", "failed", "cancelled", "interrupted"}:
+            return run
+        now = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE runs SET status = ?, finished_at = ?, updated_at = ? WHERE id = ?",
+                ("cancelled", now, now, run_id),
+            )
+            conn.execute(
+                "UPDATE queue_items SET state = ?, finished_at = ? WHERE run_id = ?",
+                ("cancelled", now, run_id),
+            )
+        self.events.append(
+            "run",
+            run_id,
+            "experiment.cancelled",
+            {"previous_status": run["status"]},
+        )
+        return self.get_run(run_id)
 
     async def _run_one(self, run: dict) -> None:
         now = now_iso()
@@ -120,35 +157,87 @@ class ExperimentService:
             run["n_concurrent"],
             job_dir,
         )
+        self._mark_run_running(run, job_dir, now)
+        self.events.append("run", run["id"], "harbor.job.running", config.model_dump())
+        try:
+            result = await self.engine.run(config)
+        except Exception as exc:
+            await self._mark_run_failed(run, job_dir, exc)
+            return
+        report_path = self.reports.write_summary(
+            run["id"],
+            result["status"],
+            job_dir,
+            result.get("score"),
+        )
+        finished = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE runs SET status = ?, finished_at = ?, result_path = ?, report_path = ?, "
+                "score = ?, updated_at = ? WHERE id = ?",
+                (
+                    result["status"],
+                    finished,
+                    result["result_path"],
+                    report_path,
+                    result.get("score"),
+                    finished,
+                    run["id"],
+                ),
+            )
+        self.queue.finish(run["id"], result["status"])
+        self.events.append("run", run["id"], "harbor.job.completed", result)
+
+    def _mark_run_running(self, run: dict, job_dir: str, now: str) -> None:
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, updated_at = ? "
                 "WHERE id = ?",
                 ("running", now, job_dir, now, run["id"]),
             )
-        self.events.append("run", run["id"], "harbor.job.running", config.model_dump())
-        result = await self.engine.run(config)
-        report_path = self.reports.write_summary(
-            run_id=run["id"],
-            status=result["status"],
-            job_dir=job_dir,
-            score=result.get("score"),
-        )
-        finished = now_iso()
+            conn.execute(
+                "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, run["experiment_id"]),
+            )
+
+    async def _mark_run_failed(self, run: dict, job_dir: str, exc: Exception) -> None:
+        failure = classify_exception(exc)
+        report_path = self.reports.write_summary(run["id"], "failed", job_dir, None)
+        now = now_iso()
         with sqlite.connect(self.settings) as conn:
             conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, result_path = ?, report_path = ?, "
-                "updated_at = ? WHERE id = ?",
+                "UPDATE runs SET status = ?, finished_at = ?, job_dir = ?, report_path = ?, "
+                "failure_class = ?, failure_code = ?, failure_summary = ?, updated_at = ? "
+                "WHERE id = ?",
                 (
-                    result["status"],
-                    finished,
-                    result["result_path"],
+                    "failed",
+                    now,
+                    job_dir,
                     report_path,
-                    finished,
+                    failure["failure_class"],
+                    failure["failure_code"],
+                    failure["failure_summary"],
+                    now,
                     run["id"],
                 ),
             )
-        self.events.append("run", run["id"], "harbor.job.completed", result)
+        self.queue.finish(run["id"], "failed")
+        self.events.append("run", run["id"], "harbor.job.failed", failure, severity="error")
+
+    def _derive_experiment_status(self, experiment_id: str) -> str:
+        runs = self.get(experiment_id)["runs"]
+        statuses = {run["status"] for run in runs}
+        if statuses == {"completed"}:
+            return "completed"
+        if "completed" in statuses and "failed" in statuses:
+            return "partially_failed"
+        if "failed" in statuses:
+            return "failed"
+        if "cancelled" in statuses:
+            return "cancelled"
+        if "interrupted" in statuses:
+            return "interrupted"
+        return "queued"
 
 
 def _kind(agent_count: int, benchmark_count: int) -> str:

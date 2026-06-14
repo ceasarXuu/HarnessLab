@@ -15,3 +15,15 @@ id = "WEB-EXP-001"
 area = "experiments"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Experiments create immutable runs and can complete through a fake engine."
+
+[[requirement]]
+id = "WEB-EXP-002"
+area = "experiments"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Run queueing, cancellation, and failure classification produce terminal states."
+
+[[requirement]]
+id = "WEB-LB-001"
+area = "leaderboard"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Default leaderboard excludes smoke runs and ranks comparable completed runs."

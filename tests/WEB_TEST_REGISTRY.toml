@@ -12,3 +12,13 @@ kind = "python-unit"
 id = "WEB-EXP-001"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
+
+[[test]]
+id = "WEB-EXP-002"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-LB-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"

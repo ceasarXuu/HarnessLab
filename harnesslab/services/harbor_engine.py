@@ -43,6 +43,8 @@ class HarborEngine:
         )
 
     async def run(self, config: HarborJobConfigView) -> dict:
+        if config.dataset["name"] == "fake-docker-failure":
+            raise RuntimeError("docker compose returned code -9")
         return {
             "status": "completed",
             "score": 1.0,

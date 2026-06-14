@@ -1088,3 +1088,21 @@ Validation evidence:
 - `scripts/test-after-change-web.sh`
 - `uv run harnesslab --version`
 - `uv run harnesslab doctor`
+
+### 2026-06-15 Queue And Result Pass
+
+Landed additional Phase 3/5 backend behavior:
+
+- persisted queue service with `queued -> running -> terminal` transitions;
+- run-level API routes under `/api/runs/{run_id}`;
+- idempotent queued/draft run cancellation;
+- fake Docker resource failure classification into `docker_resource_failure`;
+- report generation for failed and completed fake-engine runs;
+- leaderboard score field and default smoke-run exclusion evidence;
+- frontend API client types for experiments, runs, cancellation, and leaderboard.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`

@@ -54,3 +54,8 @@ async def event_stream(experiment_id: str, request: Request, after: int = 0) -> 
         await asyncio.sleep(0.01)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@router.get("/{experiment_id}/runs")
+def list_experiment_runs(experiment_id: str, request: Request) -> list[dict]:
+    return get_experiment(experiment_id, request)["runs"]
