@@ -62,3 +62,13 @@ kind = "python-integration"
 id = "WEB-RCV-001"
 path = "tests/python/test_system_api.py"
 kind = "python-integration"
+
+[[test]]
+id = "WEB-WRK-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-WRK-001"
+path = "tests/python/test_worker_service.py"
+kind = "python-integration"

@@ -57,3 +57,9 @@ id = "WEB-RCV-001"
 area = "recovery"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Backend startup reconciles stale running runs from persisted artifacts or marks them interrupted."
+
+[[requirement]]
+id = "WEB-WRK-001"
+area = "queue"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Experiment runs enqueue by default and are drained by an app-level background worker."

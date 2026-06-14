@@ -1144,8 +1144,8 @@ Known remaining Phase 3 blockers:
 - Harbor `Job` exposes `create` and `run` but no public cancel API in the
   inspected 0.13.x surface, so hard running-job cancellation remains
   unsupported until a process/plugin boundary is introduced.
-- The default queue is still request-bound; background workers, restart recovery,
-  and orphan cleanup remain separate hardening work.
+- Background workers, restart recovery, and orphan cleanup remain separate
+  hardening work.
 
 Validation evidence:
 
@@ -1169,9 +1169,9 @@ Landed the first Phase 3 restart-recovery boundary:
 
 Known remaining Phase 3 blockers:
 
-- the run queue is still request-bound rather than a background worker;
 - hard cancellation of actively running Harbor work still requires a managed
   process or plugin boundary because Harbor 0.13.x has no public `Job.cancel()`.
+- orphan Docker/process cleanup still needs a real Harbor lifecycle proof.
 
 Validation evidence:
 
@@ -1179,3 +1179,30 @@ Validation evidence:
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
 - `npm --prefix frontend run typecheck`
+
+### 2026-06-15 Queue Worker Pass
+
+Landed the first Phase 3 background-worker boundary:
+
+- `POST /api/experiments/{id}/run` now enqueues and starts the app-level worker
+  by default instead of blocking the request until completion;
+- deterministic tests and scripts can call
+  `POST /api/experiments/{id}/run?wait=true`;
+- `QueueWorkerService` drains persisted FIFO queue rows with one active worker
+  task and one active run at a time;
+- app startup starts the worker when persisted queued rows already exist;
+- worker drain uses the same `ExperimentService.execute_dequeued_run` path as
+  blocking tests, keeping result/report/failure behavior single-sourced;
+- queue worker start/idle events are mirrored for diagnostics.
+
+Known remaining Phase 3 blockers:
+
+- hard cancellation of actively running Harbor work still requires a managed
+  process or plugin boundary because Harbor 0.13.x has no public `Job.cancel()`;
+- orphan Docker/process cleanup still needs a real Harbor lifecycle proof.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`

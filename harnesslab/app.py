@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from harnesslab.api import agents, benchmarks, experiments, leaderboard, runs, system, templates
+from harnesslab.services.queue_service import QueueService
 from harnesslab.services.recovery_service import RunRecoveryService
+from harnesslab.services.worker_service import QueueWorkerService
 from harnesslab.settings import Settings
 from harnesslab.storage import sqlite
 
@@ -14,9 +18,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     sqlite.initialize(active_settings)
     startup_recovery = RunRecoveryService(active_settings).reconcile_startup()
 
-    app = FastAPI(title="HarnessLab", version="0.2.0")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if QueueService(active_settings).queued_count() > 0:
+            app.state.worker.start()
+        yield
+
+    app = FastAPI(title="HarnessLab", version="0.2.0", lifespan=lifespan)
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
+    app.state.worker = QueueWorkerService(active_settings)
     app.include_router(system.router)
     app.include_router(agents.router)
     app.include_router(benchmarks.router)

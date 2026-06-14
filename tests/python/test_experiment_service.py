@@ -31,7 +31,7 @@ def test_experiment_create_and_fake_run(client):
     assert created.status_code == 200
     experiment_id = created.json()["experiment"]["id"]
 
-    run = client.post(f"/api/experiments/{experiment_id}/run")
+    run = client.post(f"/api/experiments/{experiment_id}/run?wait=true")
 
     assert run.status_code == 200
     state = run.json()
@@ -64,12 +64,33 @@ def test_experiment_run_uses_persisted_queue(client):
     )
     experiment_id = created.json()["experiment"]["id"]
 
-    run = client.post(f"/api/experiments/{experiment_id}/run")
+    run = client.post(f"/api/experiments/{experiment_id}/run?wait=true")
 
     assert run.status_code == 200
     state = run.json()
     assert state["experiment"]["status"] == "completed"
     assert [item["status"] for item in state["runs"]] == ["completed", "completed"]
+
+
+def test_experiment_run_defaults_to_background_enqueue(client):
+    _create_agent(client)
+    created = client.post(
+        "/api/experiments",
+        json={
+            "name": "Background",
+            "agent_ids": ["oracle"],
+            "benchmark_names": ["terminal-bench"],
+            "n_tasks": 1,
+        },
+    )
+    experiment_id = created.json()["experiment"]["id"]
+
+    response = client.post(f"/api/experiments/{experiment_id}/run")
+
+    assert response.status_code == 200
+    state = response.json()
+    assert state["experiment"]["status"] == "queued"
+    assert state["runs"][0]["status"] == "queued"
 
 
 def test_run_cancel_marks_queued_run_terminal(client):
@@ -104,7 +125,7 @@ def test_failure_classification_writes_report_and_failed_status(client):
     )
     experiment_id = created.json()["experiment"]["id"]
 
-    result = client.post(f"/api/experiments/{experiment_id}/run").json()
+    result = client.post(f"/api/experiments/{experiment_id}/run?wait=true").json()
 
     assert result["experiment"]["status"] == "failed"
     assert result["runs"][0]["status"] == "failed"
@@ -142,8 +163,8 @@ def test_leaderboard_excludes_smoke_and_includes_comparable_run(client):
         },
     ).json()
 
-    client.post(f"/api/experiments/{smoke['experiment']['id']}/run")
-    client.post(f"/api/experiments/{full['experiment']['id']}/run")
+    client.post(f"/api/experiments/{smoke['experiment']['id']}/run?wait=true")
+    client.post(f"/api/experiments/{full['experiment']['id']}/run?wait=true")
     leaderboard = client.get("/api/leaderboard?benchmark=terminal-bench").json()
 
     assert [entry["id"] for entry in leaderboard] == [full["runs"][0]["id"]]
