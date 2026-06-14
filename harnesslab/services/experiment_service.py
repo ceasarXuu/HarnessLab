@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 from uuid import uuid4
 
+from harnesslab.models.agent import AgentProfile
 from harnesslab.models.experiment import ExperimentCreate
 from harnesslab.services.clock import now_iso
 from harnesslab.services.event_service import EventService
 from harnesslab.services.failure_classifier import classify_exception
 from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from harnesslab.services.profile_compiler import ProfileCompiler
 from harnesslab.services.queue_service import QueueService
 from harnesslab.services.report_service import ReportService
 from harnesslab.services.template_service import TemplateService
@@ -21,6 +24,7 @@ class ExperimentService:
         self.events = EventService(settings)
         self.builder = HarborConfigBuilder(settings)
         self.engine = HarborEngine()
+        self.compiler = ProfileCompiler(settings)
         self.queue = QueueService(settings)
         self.reports = ReportService(settings)
         self.templates = TemplateService(settings)
@@ -245,17 +249,33 @@ class ExperimentService:
     async def _run_one(self, run: dict) -> None:
         now = now_iso()
         job_dir = str(self.settings.experiments_dir / run["id"] / "harbor-job")
-        config = self.builder.build(
-            {"name": run["agent_id"]},
-            run["benchmark_name"],
-            run["benchmark_version"],
-            run["n_tasks"],
-            run["n_attempts"],
-            run["n_concurrent"],
-            job_dir,
+        try:
+            config = self.builder.build(
+                self._agent_config(run["agent_id"]),
+                run["benchmark_name"],
+                run["benchmark_version"],
+                run["n_tasks"],
+                run["n_attempts"],
+                run["n_concurrent"],
+                job_dir,
+                job_name=run["id"],
+            )
+            snapshot = self.engine.capability_snapshot()
+            artifact_paths = self.builder.write_run_artifacts(config, snapshot)
+        except Exception as exc:
+            await self._mark_run_failed(run, job_dir, exc)
+            return
+        self._mark_run_running(run, job_dir, config.job_name, now)
+        self.events.append(
+            "run",
+            run["id"],
+            "harbor.job.running",
+            {
+                "config": config.model_dump(),
+                "capability": snapshot.model_dump(),
+                "artifacts": artifact_paths,
+            },
         )
-        self._mark_run_running(run, job_dir, now)
-        self.events.append("run", run["id"], "harbor.job.running", config.model_dump())
         try:
             result = await self.engine.run(config)
         except Exception as exc:
@@ -271,13 +291,14 @@ class ExperimentService:
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "UPDATE runs SET status = ?, finished_at = ?, result_path = ?, report_path = ?, "
-                "score = ?, updated_at = ? WHERE id = ?",
+                "score = ?, harbor_job_id = ?, updated_at = ? WHERE id = ?",
                 (
                     result["status"],
                     finished,
                     result["result_path"],
                     report_path,
                     result.get("score"),
+                    result.get("harbor_job_id"),
                     finished,
                     run["id"],
                 ),
@@ -285,12 +306,19 @@ class ExperimentService:
         self.queue.finish(run["id"], result["status"])
         self.events.append("run", run["id"], "harbor.job.completed", result)
 
-    def _mark_run_running(self, run: dict, job_dir: str, now: str) -> None:
+    def _mark_run_running(
+        self,
+        run: dict,
+        job_dir: str,
+        harbor_job_name: str,
+        now: str,
+    ) -> None:
         with sqlite.connect(self.settings) as conn:
             conn.execute(
-                "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, updated_at = ? "
+                "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, "
+                "harbor_job_name = ?, updated_at = ? "
                 "WHERE id = ?",
-                ("running", now, job_dir, now, run["id"]),
+                ("running", now, job_dir, harbor_job_name, now, run["id"]),
             )
             conn.execute(
                 "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
@@ -327,6 +355,14 @@ class ExperimentService:
             )
         self.queue.finish(run["id"], "failed")
         self.events.append("run", run["id"], "harbor.job.failed", failure, severity="error")
+
+    def _agent_config(self, agent_id: str) -> dict:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(conn, "SELECT profile_path FROM agents WHERE id = ?", (agent_id,))
+        if not rows:
+            raise KeyError(agent_id)
+        profile = AgentProfile.model_validate_json(Path(rows[0]["profile_path"]).read_text())
+        return self.compiler.compile(profile)["agent_config"]
 
     def _derive_experiment_status(self, experiment_id: str) -> str:
         runs = self.get(experiment_id)["runs"]

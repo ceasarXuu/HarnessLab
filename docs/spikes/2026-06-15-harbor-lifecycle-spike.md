@@ -10,6 +10,11 @@ Local API introspection confirms Harbor `Job.create(config)` and `Job.run()` are
 async coroutine functions. The inspected `Job` class does not expose a stable
 top-level `cancel()` method in Harbor `0.13.2`.
 
+`harbor run --help` also confirms `--config PATH` accepts JSON/YAML matching
+`harbor.models.job.config:JobConfig`, so HarnessLab can persist one canonical
+`harbor.config.json` artifact and use it for both Python API and future CLI or
+subprocess execution boundaries.
+
 This closes the Phase 1 API-shape question but keeps the product cancellation
 contract in best-effort mode until real Docker cancellation and restart tests
 prove cleanup behavior.
@@ -51,8 +56,16 @@ Observed:
 ## Decision
 
 Phase 3 must keep `HarborEngine` isolated behind a lifecycle adapter and must
-not promise hard cancellation until `tests/python/test_real_harbor_cancel_recovery.py`
-proves the following against Docker:
+persist Harbor `JobConfig` before execution. The landed first adapter pass uses:
+
+- default `fake` adapter for deterministic local tests;
+- opt-in `python-api` adapter via `HARNESSLAB_HARBOR_ENGINE=python-api`;
+- opt-in real Docker smoke via `HARNESSLAB_REAL_HARBOR=1`;
+- explicit `supports_cancel=false` in capability snapshots.
+
+Phase 3 must not promise hard cancellation until
+`tests/python/test_real_harbor_cancel_recovery.py` proves the following against
+Docker:
 
 - cancelling the backend task stops Harbor work or marks it `interrupted`;
 - orphan Docker resources are discovered and cleaned up after restart;

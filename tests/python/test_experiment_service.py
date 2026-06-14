@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+
+
 def _create_agent(client):
     response = client.post(
         "/api/agents",
@@ -35,6 +39,15 @@ def test_experiment_create_and_fake_run(client):
     assert state["runs"][0]["status"] == "completed"
     assert state["runs"][0]["report_path"].endswith("index.html")
     assert state["runs"][0]["score"] == 1.0
+    job_dir = Path(state["runs"][0]["job_dir"])
+    harbor_config = json.loads((job_dir / "harbor.config.json").read_text())
+    capability = json.loads((job_dir / "harbor.capability.json").read_text())
+    result = json.loads((job_dir / "result.json").read_text())
+    assert harbor_config["job_name"] == state["runs"][0]["id"]
+    assert harbor_config["agents"][0]["name"] == "oracle"
+    assert harbor_config["datasets"][0]["name"] == "terminal-bench"
+    assert capability["lifecycle_mode"] == "fake"
+    assert result["status"] == "completed"
 
 
 def test_experiment_run_uses_persisted_queue(client):
