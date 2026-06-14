@@ -10,6 +10,8 @@ Current rewrite gates are Python/Web first:
 - pytest for backend units and integration tests;
 - fake HarborEngine tests for deterministic queue, recovery, config-artifact, and
   failure paths;
+- app-level worker tests that enqueue runs, call `QueueWorkerService.start()`,
+  and wait for idle without coupling execution to a request handler;
 - startup recovery tests that recreate the app with persisted `running` rows and
   verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by
@@ -26,3 +28,8 @@ Operational note: backend restart tests should build state through public APIs,
 then mutate only the persisted crash boundary under test. Do not trust in-memory
 worker state after restart; SQLite run status plus Harbor artifacts are the
 authoritative recovery inputs.
+
+Operational note: API tests that need deterministic terminal results should call
+`POST /api/experiments/{id}/run?wait=true`. Product-style tests should use the
+default `wait=false` path and then observe state through queue, run, event, or
+SSE APIs.

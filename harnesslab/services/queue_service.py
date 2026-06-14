@@ -74,6 +74,11 @@ class QueueService:
         with sqlite.connect(self.settings) as conn:
             return sqlite.rows(conn, "SELECT * FROM queue_items ORDER BY queue_position")
 
+    def queued_count(self) -> int:
+        with sqlite.connect(self.settings) as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM queue_items WHERE state = 'queued'")
+            return int(row.fetchone()["count"])
+
     @staticmethod
     def _next_position(conn) -> int:
         row = conn.execute("SELECT COALESCE(MAX(queue_position), 0) + 1 AS next FROM queue_items")

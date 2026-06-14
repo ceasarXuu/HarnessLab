@@ -31,9 +31,20 @@ def get_experiment(experiment_id: str, request: Request) -> dict:
 
 
 @router.post("/{experiment_id}/run")
-async def run_experiment(experiment_id: str, request: Request) -> dict:
+async def run_experiment(
+    experiment_id: str,
+    request: Request,
+    wait: bool = False,
+) -> dict:
     try:
-        return await ExperimentService(request.app.state.settings).run(experiment_id)
+        service = ExperimentService(request.app.state.settings)
+        service.enqueue(experiment_id)
+        worker = request.app.state.worker
+        if wait:
+            await worker.wait_until_idle()
+        else:
+            worker.start()
+        return service.get(experiment_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="experiment not found") from exc
 

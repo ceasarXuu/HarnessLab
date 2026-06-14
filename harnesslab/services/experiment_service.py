@@ -116,13 +116,35 @@ class ExperimentService:
         return runs[0]
 
     async def run(self, experiment_id: str) -> dict:
-        self.queue.enqueue_experiment(experiment_id)
+        self.enqueue(experiment_id)
+        await self.run_queued_until_idle(experiment_id)
+        return self.get(experiment_id)
+
+    def enqueue(self, experiment_id: str) -> dict:
+        self.get(experiment_id)
+        queued = self.queue.enqueue_experiment(experiment_id)
         self.events.append("experiment", experiment_id, "experiment.queued", {})
+        return {"experiment": self.get(experiment_id)["experiment"], "queue": queued}
+
+    def dequeue_next_run(self) -> dict | None:
+        return self.queue.dequeue_next()
+
+    async def run_queued_until_idle(self, experiment_id: str | None = None) -> None:
         while True:
             run = self.queue.dequeue_next(experiment_id)
             if run is None:
                 break
-            await self._run_one(run)
+            await self.execute_dequeued_run(run)
+
+    async def execute_dequeued_run(self, run: dict) -> None:
+        await self._run_one(run)
+        self.finalize_experiment_if_terminal(run["experiment_id"])
+
+    def finalize_experiment_if_terminal(self, experiment_id: str) -> None:
+        state = self.get(experiment_id)
+        statuses = {run["status"] for run in state["runs"]}
+        if statuses.intersection({"draft", "queued", "running"}):
+            return
         status = self._derive_experiment_status(experiment_id)
         with sqlite.connect(self.settings) as conn:
             conn.execute(
@@ -130,7 +152,6 @@ class ExperimentService:
                 (status, now_iso(), experiment_id),
             )
         self.events.append("experiment", experiment_id, f"experiment.{status}", {})
-        return self.get(experiment_id)
 
     def cancel_run(self, run_id: str) -> dict:
         run = self.get_run(run_id)
@@ -377,6 +398,10 @@ class ExperimentService:
             return "cancelled"
         if "interrupted" in statuses:
             return "interrupted"
+        if "running" in statuses:
+            return "running"
+        if "draft" in statuses:
+            return "draft"
         return "queued"
 
 
