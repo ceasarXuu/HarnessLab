@@ -41,6 +41,11 @@ pub(super) fn terminal_bench_agent_env(
     .into_iter()
     .map(|(name, value)| format!("export {name}={}", shell_quote(value)))
     .collect::<Vec<_>>();
+    for env_name in &profile.auth.inherit_env {
+        if let Ok(value) = std::env::var(env_name) {
+            exports.push(format!("export {env_name}={}", shell_quote(&value)));
+        }
+    }
     if let Some(path) = &compatibility.terminal_bench_agent_pythonpath {
         exports.push(format!(
             "export PYTHONPATH={}${{PYTHONPATH:+:$PYTHONPATH}}",
