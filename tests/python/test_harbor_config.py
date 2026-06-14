@@ -64,3 +64,12 @@ def test_capability_snapshot_can_select_python_api_adapter(monkeypatch):
     snapshot = HarborEngine().capability_snapshot()
 
     assert snapshot.lifecycle_mode == "python-api"
+
+
+def test_subprocess_capability_snapshot_records_cancel_support(monkeypatch):
+    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
+
+    snapshot = HarborEngine().capability_snapshot()
+
+    assert snapshot.lifecycle_mode == "subprocess"
+    assert snapshot.supports_cancel is True

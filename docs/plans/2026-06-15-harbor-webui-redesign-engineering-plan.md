@@ -1265,3 +1265,32 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Managed Subprocess Harbor Runner Pass
+
+Landed the first process-owned Harbor execution boundary:
+
+- `HARNESSLAB_HARBOR_ENGINE=subprocess` selects a managed subprocess runner;
+- the runner invokes `harbor run --config <harbor.config.json>` by default and
+  supports `HARNESSLAB_HARBOR_SUBPROCESS_COMMAND` for explicit command override;
+- stdout/stderr are mirrored to `job.log`;
+- successful subprocess execution reads or writes `result.json` so report
+  generation has a stable artifact contract;
+- task cancellation terminates the subprocess process group, escalates to kill
+  after a grace period, and writes `harbor.cleanup.json`;
+- capability snapshots now report `supports_cancel=true` for subprocess mode;
+- subprocess tests prove config-file execution, log capture, and cleanup JSON on
+  task cancellation without requiring Docker.
+
+Known remaining Phase 3 blockers:
+
+- real Harbor subprocess smoke must still prove `harbor run --config` produces
+  expected Harbor artifacts for a real benchmark;
+- Docker/process orphan cleanup still needs the real Harbor cancel-recovery
+  proof described in `tests/python/test_real_harbor_cancel_recovery.py`.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`
