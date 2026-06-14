@@ -60,6 +60,38 @@ export interface LeaderboardEntryResponse {
   report_path: string | null
 }
 
+export interface TemplateResponse {
+  id: string
+  name: string
+  config: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  deleted_at?: string | null
+}
+
+export interface ReportSummaryResponse {
+  run_id: string
+  status: string
+  score: number | null
+  failure_class: string | null
+  failure_code: string | null
+  artifact_links: string[]
+}
+
+export interface RunReportResponse {
+  run: ExperimentRun
+  summary: ReportSummaryResponse
+}
+
+export interface ExperimentReportResponse {
+  experiment: Experiment
+  reports: Array<{
+    run_id: string
+    report_path: string
+    summary: ReportSummaryResponse
+  }>
+}
+
 const joinPath = (basePath: string, path: string) => {
   const normalizedBase = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
@@ -106,11 +138,34 @@ export const harnessLabApi = {
     `/experiments/${id}/run`,
     {},
   ),
+  cancelExperiment: (id: string) => apiClient.post<Record<string, never>, ExperimentStateResponse>(
+    `/experiments/${id}/cancel`,
+    {},
+  ),
+  cloneExperiment: (id: string) => apiClient.post<Record<string, never>, ExperimentStateResponse>(
+    `/experiments/${id}/clone`,
+    {},
+  ),
+  saveExperimentTemplate: (id: string, name: string) =>
+    apiClient.post<{ name: string }, TemplateResponse>(
+      `/experiments/${id}/save-template`,
+      { name },
+    ),
+  experimentReport: (id: string) => apiClient.get<ExperimentReportResponse>(
+    `/experiments/${id}/report`,
+  ),
   run: (id: string) => apiClient.get<ExperimentRun>(`/runs/${id}`),
   cancelRun: (id: string) => apiClient.post<Record<string, never>, ExperimentRun>(
     `/runs/${id}/cancel`,
     {},
   ),
+  runReport: (id: string) => apiClient.get<RunReportResponse>(`/runs/${id}/report`),
+  templates: () => apiClient.get<TemplateResponse[]>('/templates'),
+  createTemplate: (name: string, config: Record<string, unknown>) =>
+    apiClient.post<{ name: string; config: Record<string, unknown> }, TemplateResponse>(
+      '/templates',
+      { name, config },
+    ),
   leaderboard: (benchmark?: string) => {
     const suffix = benchmark ? `?benchmark=${encodeURIComponent(benchmark)}` : ''
     return apiClient.get<LeaderboardEntryResponse[]>(`/leaderboard${suffix}`)

@@ -27,3 +27,21 @@ id = "WEB-LB-001"
 area = "leaderboard"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Default leaderboard excludes smoke runs and ranks comparable completed runs."
+
+[[requirement]]
+id = "WEB-AGT-002"
+area = "agents"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Agent update and soft-delete preserve auditability and block active usage."
+
+[[requirement]]
+id = "WEB-RPT-001"
+area = "reports"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Run and experiment report APIs expose generated summaries and failure metadata."
+
+[[requirement]]
+id = "WEB-TPL-001"
+area = "templates"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Experiment templates can be created, listed, saved from experiments, and soft-deleted."

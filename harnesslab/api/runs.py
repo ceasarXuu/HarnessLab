@@ -28,3 +28,16 @@ def cancel_run(run_id: str, request: Request) -> dict:
 def list_run_events(run_id: str, request: Request, after: int = 0) -> list[dict]:
     service = EventService(request.app.state.settings)
     return [event.model_dump() for event in service.list_after(run_id, after)]
+
+
+@router.get("/{run_id}/report")
+def get_run_report(run_id: str, request: Request) -> dict:
+    service = ExperimentService(request.app.state.settings)
+    try:
+        run = service.get_run(run_id)
+        return {
+            "run": run,
+            "summary": service.reports.read_summary(run["report_path"]),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="run report not found") from exc

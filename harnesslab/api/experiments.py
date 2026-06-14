@@ -38,6 +38,51 @@ async def run_experiment(experiment_id: str, request: Request) -> dict:
         raise HTTPException(status_code=404, detail="experiment not found") from exc
 
 
+@router.post("/{experiment_id}/cancel")
+def cancel_experiment(experiment_id: str, request: Request) -> dict:
+    try:
+        return ExperimentService(request.app.state.settings).cancel_experiment(experiment_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="experiment not found") from exc
+
+
+@router.delete("/{experiment_id}")
+def delete_experiment(experiment_id: str, request: Request) -> dict:
+    try:
+        return ExperimentService(request.app.state.settings).soft_delete(experiment_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="experiment not found") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/{experiment_id}/clone")
+def clone_experiment(experiment_id: str, request: Request) -> dict:
+    try:
+        return ExperimentService(request.app.state.settings).clone(experiment_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="experiment not found") from exc
+
+
+@router.post("/{experiment_id}/save-template")
+def save_template(experiment_id: str, payload: dict, request: Request) -> dict:
+    try:
+        return ExperimentService(request.app.state.settings).save_template(
+            experiment_id,
+            payload.get("name"),
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="experiment not found") from exc
+
+
+@router.get("/{experiment_id}/report")
+def get_experiment_report(experiment_id: str, request: Request) -> dict:
+    try:
+        return ExperimentService(request.app.state.settings).report(experiment_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="experiment report not found") from exc
+
+
 @router.get("/{experiment_id}/events")
 def list_events(experiment_id: str, request: Request, after: int = 0) -> list[dict]:
     service = EventService(request.app.state.settings)
