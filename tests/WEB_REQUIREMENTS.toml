@@ -51,3 +51,9 @@ id = "WEB-HBR-001"
 area = "harbor"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Runs persist Harbor JobConfig artifacts and can select fake or Python API execution adapters."
+
+[[requirement]]
+id = "WEB-RCV-001"
+area = "recovery"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Backend startup reconciles stale running runs from persisted artifacts or marks them interrupted."

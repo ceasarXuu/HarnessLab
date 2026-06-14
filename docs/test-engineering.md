@@ -10,6 +10,8 @@ Current rewrite gates are Python/Web first:
 - pytest for backend units and integration tests;
 - fake HarborEngine tests for deterministic queue, recovery, config-artifact, and
   failure paths;
+- startup recovery tests that recreate the app with persisted `running` rows and
+  verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by
   `HARNESSLAB_REAL_HARBOR=1`;
 - ruff and pyright for Python static gates;
@@ -19,3 +21,8 @@ Current rewrite gates are Python/Web first:
 
 The old Cargo registry remains a legacy reference until Phase 1 creates the
 `WEB-*` registry and `scripts/test-after-change-web.sh`.
+
+Operational note: backend restart tests should build state through public APIs,
+then mutate only the persisted crash boundary under test. Do not trust in-memory
+worker state after restart; SQLite run status plus Harbor artifacts are the
+authoritative recovery inputs.

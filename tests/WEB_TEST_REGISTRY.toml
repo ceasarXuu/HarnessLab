@@ -52,3 +52,13 @@ kind = "python-integration"
 id = "WEB-HBR-001"
 path = "tests/python/test_harbor_real_smoke.py"
 kind = "optional-docker-smoke"
+
+[[test]]
+id = "WEB-RCV-001"
+path = "tests/python/test_recovery_service.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-RCV-001"
+path = "tests/python/test_system_api.py"
+kind = "python-integration"
