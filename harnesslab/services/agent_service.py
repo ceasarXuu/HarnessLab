@@ -48,7 +48,10 @@ class AgentService:
 
     def list(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
-            return sqlite.rows(conn, "SELECT * FROM agents ORDER BY created_at DESC")
+            return sqlite.rows(
+                conn,
+                "SELECT * FROM agents WHERE status != 'deleted' ORDER BY created_at DESC",
+            )
 
     def get(self, agent_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
@@ -73,6 +76,46 @@ class AgentService:
             )
         self.events.append("agent", agent_id, "agent.compiled", {"mode": result["mode"]})
         return result
+
+    def update(self, agent_id: str, payload: dict) -> dict:
+        existing = self.get(agent_id)
+        profile = AgentProfile.model_validate({**payload, "id": agent_id})
+        path = Path(existing["profile_path"])
+        atomic_write_text(path, json.dumps(profile.model_dump(), indent=2, sort_keys=True))
+        now = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE agents SET name = ?, kind = ?, harbor_agent_name = ?, "
+                "model_name = ?, status = ?, updated_at = ? WHERE id = ?",
+                (
+                    profile.name,
+                    profile.kind,
+                    profile.harbor.agent,
+                    profile.harbor.model,
+                    "draft",
+                    now,
+                    agent_id,
+                ),
+            )
+        self.events.append("agent", agent_id, "agent.updated", {"name": profile.name})
+        return self.get(agent_id)
+
+    def soft_delete(self, agent_id: str) -> dict:
+        agent = self.get(agent_id)
+        with sqlite.connect(self.settings) as conn:
+            active = sqlite.rows(
+                conn,
+                "SELECT id FROM runs WHERE agent_id = ? AND status IN ('queued', 'running')",
+                (agent_id,),
+            )
+            if active:
+                raise RuntimeError("agent has queued or running runs")
+            conn.execute(
+                "UPDATE agents SET status = ?, updated_at = ? WHERE id = ?",
+                ("deleted", now_iso(), agent_id),
+            )
+        self.events.append("agent", agent_id, "agent.deleted", {})
+        return agent
 
     def validate(self, payload: dict) -> dict:
         try:

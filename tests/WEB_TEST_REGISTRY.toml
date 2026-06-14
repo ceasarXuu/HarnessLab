@@ -22,3 +22,18 @@ kind = "python-integration"
 id = "WEB-LB-001"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
+
+[[test]]
+id = "WEB-AGT-002"
+path = "tests/python/test_agent_api.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-RPT-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-TPL-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"

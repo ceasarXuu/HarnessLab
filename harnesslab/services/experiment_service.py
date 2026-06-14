@@ -10,6 +10,7 @@ from harnesslab.services.failure_classifier import classify_exception
 from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
 from harnesslab.services.queue_service import QueueService
 from harnesslab.services.report_service import ReportService
+from harnesslab.services.template_service import TemplateService
 from harnesslab.settings import Settings
 from harnesslab.storage import sqlite
 
@@ -22,6 +23,7 @@ class ExperimentService:
         self.engine = HarborEngine()
         self.queue = QueueService(settings)
         self.reports = ReportService(settings)
+        self.templates = TemplateService(settings)
 
     def create(self, request: ExperimentCreate) -> dict:
         experiment_id = f"exp-{uuid4().hex[:12]}"
@@ -97,7 +99,10 @@ class ExperimentService:
 
     def list(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
-            return sqlite.rows(conn, "SELECT * FROM experiments ORDER BY created_at DESC")
+            return sqlite.rows(
+                conn,
+                "SELECT * FROM experiments WHERE status != 'deleted' ORDER BY created_at DESC",
+            )
 
     def get_run(self, run_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
@@ -144,6 +149,98 @@ class ExperimentService:
             {"previous_status": run["status"]},
         )
         return self.get_run(run_id)
+
+    def cancel_experiment(self, experiment_id: str) -> dict:
+        state = self.get(experiment_id)
+        for run in state["runs"]:
+            if run["status"] not in {"completed", "failed", "cancelled", "interrupted"}:
+                self.cancel_run(run["id"])
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
+                ("cancelled", now_iso(), experiment_id),
+            )
+        self.events.append("experiment", experiment_id, "experiment.cancelled", {})
+        return self.get(experiment_id)
+
+    def soft_delete(self, experiment_id: str) -> dict:
+        state = self.get(experiment_id)
+        active = [run for run in state["runs"] if run["status"] in {"queued", "running"}]
+        if active:
+            raise RuntimeError("experiment has queued or running runs")
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
+                ("deleted", now_iso(), experiment_id),
+            )
+        self.events.append("experiment", experiment_id, "experiment.deleted", {})
+        return state
+
+    def clone(self, experiment_id: str) -> dict:
+        state = self.get(experiment_id)
+        runs = state["runs"]
+        if not runs:
+            raise RuntimeError("experiment has no runs to clone")
+        request = ExperimentCreate(
+            name=f"{state['experiment']['name']} copy",
+            agent_ids=_unique([run["agent_id"] for run in runs]),
+            benchmark_names=_unique([run["benchmark_name"] for run in runs]),
+            benchmark_version=runs[0]["benchmark_version"],
+            split=runs[0]["split"],
+            n_tasks=runs[0]["n_tasks"],
+            n_attempts=runs[0]["n_attempts"],
+            n_concurrent=runs[0]["n_concurrent"],
+            mode="clone",
+        )
+        cloned = self.create(request)
+        self.events.append(
+            "experiment",
+            cloned["experiment"]["id"],
+            "experiment.cloned",
+            {"source_experiment_id": experiment_id},
+        )
+        return cloned
+
+    def save_template(self, experiment_id: str, name: str | None = None) -> dict:
+        state = self.get(experiment_id)
+        runs = state["runs"]
+        if not runs:
+            raise RuntimeError("experiment has no runs to save")
+        config = {
+            "agent_ids": _unique([run["agent_id"] for run in runs]),
+            "benchmark_names": _unique([run["benchmark_name"] for run in runs]),
+            "benchmark_version": runs[0]["benchmark_version"],
+            "split": runs[0]["split"],
+            "n_tasks": runs[0]["n_tasks"],
+            "n_attempts": runs[0]["n_attempts"],
+            "n_concurrent": runs[0]["n_concurrent"],
+            "source_experiment_id": experiment_id,
+        }
+        template = self.templates.create(name or state["experiment"]["name"], config)
+        self.events.append(
+            "experiment",
+            experiment_id,
+            "experiment.template_saved",
+            {"template_id": template["id"]},
+        )
+        return template
+
+    def report(self, experiment_id: str) -> dict:
+        state = self.get(experiment_id)
+        reports = []
+        for run in state["runs"]:
+            if run["report_path"] is None:
+                continue
+            reports.append(
+                {
+                    "run_id": run["id"],
+                    "report_path": run["report_path"],
+                    "summary": self.reports.read_summary(run["report_path"]),
+                }
+            )
+        if not reports:
+            raise KeyError("experiment has no reports")
+        return {"experiment": state["experiment"], "reports": reports}
 
     async def _run_one(self, run: dict) -> None:
         now = now_iso()
@@ -202,7 +299,14 @@ class ExperimentService:
 
     async def _mark_run_failed(self, run: dict, job_dir: str, exc: Exception) -> None:
         failure = classify_exception(exc)
-        report_path = self.reports.write_summary(run["id"], "failed", job_dir, None)
+        report_path = self.reports.write_summary(
+            run["id"],
+            "failed",
+            job_dir,
+            None,
+            failure["failure_class"],
+            failure["failure_code"],
+        )
         now = now_iso()
         with sqlite.connect(self.settings) as conn:
             conn.execute(
@@ -250,3 +354,14 @@ def _kind(agent_count: int, benchmark_count: int) -> str:
 
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+def _unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result

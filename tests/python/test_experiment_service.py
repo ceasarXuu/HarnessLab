@@ -98,6 +98,15 @@ def test_failure_classification_writes_report_and_failed_status(client):
     assert result["runs"][0]["failure_class"] == "docker_resource_failure"
     assert result["runs"][0]["report_path"].endswith("index.html")
 
+    run_id = result["runs"][0]["id"]
+    run_report = client.get(f"/api/runs/{run_id}/report")
+    assert run_report.status_code == 200
+    assert run_report.json()["summary"]["failure_class"] == "docker_resource_failure"
+
+    experiment_report = client.get(f"/api/experiments/{experiment_id}/report")
+    assert experiment_report.status_code == 200
+    assert experiment_report.json()["reports"][0]["run_id"] == run_id
+
 
 def test_leaderboard_excludes_smoke_and_includes_comparable_run(client):
     _create_agent(client)
@@ -144,3 +153,70 @@ def test_sse_event_replay_returns_event_ids(client):
 
     assert events.status_code == 200
     assert events.json()[0]["event_type"] == "experiment.created"
+
+
+def test_experiment_cancel_and_soft_delete(client):
+    _create_agent(client)
+    created = client.post(
+        "/api/experiments",
+        json={
+            "name": "Draft",
+            "agent_ids": ["oracle"],
+            "benchmark_names": ["terminal-bench"],
+        },
+    )
+    experiment_id = created.json()["experiment"]["id"]
+
+    cancelled = client.post(f"/api/experiments/{experiment_id}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["experiment"]["status"] == "cancelled"
+
+    deleted = client.delete(f"/api/experiments/{experiment_id}")
+    assert deleted.status_code == 200
+    assert all(item["id"] != experiment_id for item in client.get("/api/experiments").json())
+
+
+def test_experiment_clone_and_template_api(client):
+    _create_agent(client)
+    created = client.post(
+        "/api/experiments",
+        json={
+            "name": "Reusable",
+            "agent_ids": ["oracle"],
+            "benchmark_names": ["terminal-bench"],
+            "n_tasks": 2,
+        },
+    )
+    experiment_id = created.json()["experiment"]["id"]
+
+    cloned = client.post(f"/api/experiments/{experiment_id}/clone")
+    assert cloned.status_code == 200
+    assert cloned.json()["experiment"]["mode"] == "clone"
+    assert cloned.json()["runs"][0]["n_tasks"] == 2
+
+    saved = client.post(
+        f"/api/experiments/{experiment_id}/save-template",
+        json={"name": "Reusable template"},
+    )
+    assert saved.status_code == 200
+    template_id = saved.json()["id"]
+    assert saved.json()["config"]["agent_ids"] == ["oracle"]
+
+    templates = client.get("/api/templates").json()
+    assert templates[0]["id"] == template_id
+
+    deleted = client.delete(f"/api/templates/{template_id}")
+    assert deleted.status_code == 200
+    assert client.get("/api/templates").json() == []
+
+
+def test_direct_template_api(client):
+    created = client.post(
+        "/api/templates",
+        json={
+            "name": "Direct template",
+            "config": {"agent_ids": ["oracle"], "benchmark_names": ["terminal-bench"]},
+        },
+    )
+    assert created.status_code == 200
+    assert created.json()["config"]["benchmark_names"] == ["terminal-bench"]

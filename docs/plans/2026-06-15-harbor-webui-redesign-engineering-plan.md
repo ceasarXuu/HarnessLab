@@ -1106,3 +1106,21 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 CRUD Template Report Pass
+
+Landed more Phase 2/3/5 product-loop behavior:
+
+- agent update and soft-delete with queued/running run protection;
+- experiment cancel, soft-delete, clone, and save-as-template APIs;
+- template create/list/soft-delete APIs;
+- run and experiment report summary APIs;
+- failed report summaries now retain failure class/code;
+- frontend API client types for templates and report endpoints.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`
+- `npm --prefix frontend run typecheck`
