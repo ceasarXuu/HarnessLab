@@ -50,9 +50,13 @@ async def run_experiment(
 
 
 @router.post("/{experiment_id}/cancel")
-def cancel_experiment(experiment_id: str, request: Request) -> dict:
+async def cancel_experiment(experiment_id: str, request: Request) -> dict:
     try:
-        return ExperimentService(request.app.state.settings).cancel_experiment(experiment_id)
+        result = ExperimentService(request.app.state.settings).cancel_experiment(experiment_id)
+        for run in result["runs"]:
+            if run["status"] == "cancelled":
+                request.app.state.worker.cancel_run(run["id"])
+        return result
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="experiment not found") from exc
 

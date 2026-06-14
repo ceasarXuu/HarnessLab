@@ -22,5 +22,6 @@ def settings(tmp_path) -> Iterator[Settings]:
 
 
 @pytest.fixture
-def client(settings: Settings) -> TestClient:
-    return TestClient(create_app(settings))
+def client(settings: Settings) -> Iterator[TestClient]:
+    with TestClient(create_app(settings)) as active_client:
+        yield active_client

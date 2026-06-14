@@ -17,9 +17,11 @@ def get_run(run_id: str, request: Request) -> dict:
 
 
 @router.post("/{run_id}/cancel")
-def cancel_run(run_id: str, request: Request) -> dict:
+async def cancel_run(run_id: str, request: Request) -> dict:
     try:
-        return ExperimentService(request.app.state.settings).cancel_run(run_id)
+        result = ExperimentService(request.app.state.settings).cancel_run(run_id)
+        request.app.state.worker.cancel_run(run_id)
+        return result
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="run not found") from exc
 

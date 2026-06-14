@@ -77,3 +77,8 @@ kind = "python-integration"
 id = "WEB-WRK-001"
 path = "tests/python/test_worker_service.py"
 kind = "python-integration"
+
+[[test]]
+id = "WEB-CAN-001"
+path = "tests/python/test_worker_service.py"
+kind = "python-integration"
