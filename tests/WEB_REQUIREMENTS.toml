@@ -1,0 +1,17 @@
+[[requirement]]
+id = "WEB-SYS-001"
+area = "system"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "System status exposes Harbor, Docker, data directory, and schema state."
+
+[[requirement]]
+id = "WEB-AGT-001"
+area = "agents"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "AgentProfile v2 validates and compiles built-in and custom-command agents."
+
+[[requirement]]
+id = "WEB-EXP-001"
+area = "experiments"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Experiments create immutable runs and can complete through a fake engine."

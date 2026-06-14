@@ -2,9 +2,16 @@
 /coverage/
 /artifacts/
 /jobs/
+/.venv/
+/.pytest_cache/
+/.ruff_cache/
+/.playwright-mcp/
 /.nextest/
 /.benchmarks/
 __pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
 *.profraw
 .env
 .env.local

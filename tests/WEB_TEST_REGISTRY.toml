@@ -1,0 +1,14 @@
+[[test]]
+id = "WEB-SYS-001"
+path = "tests/python/test_system_api.py"
+kind = "python-integration"
+
+[[test]]
+id = "WEB-AGT-001"
+path = "tests/python/test_profile_compiler.py"
+kind = "python-unit"
+
+[[test]]
+id = "WEB-EXP-001"
+path = "tests/python/test_experiment_service.py"
+kind = "python-integration"
