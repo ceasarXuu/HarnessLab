@@ -3,9 +3,10 @@
 - Created: 2026-06-15
 - Updated: 2026-06-15
 - Version: 3.0
-- Status: Ready for phased implementation after VS review closure
+- Status: Phase 1-4 foundation landed; real Harbor execution and hardening remain phased
 - Owner: HarnessLab team
 - Source PRD: `prd/2026-06-15-harnesslab-webui-prd.md`
+- Harbor lifecycle spike: `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Supersedes:
   - `docs/plans/2026-06-15-harbor-integration-engineering-plan.md`
   - `docs/plans/2026-06-15-harnesslab-webui-engineering-plan.md`
@@ -1066,3 +1067,24 @@ Build HarnessLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates bench
 - Rewrite architecture and technology decision docs after Phase 1 proves the skeleton.
 - Decide Rust crate archival in Phase 6.
 - Add explicit Harbor upgrade procedure before any dependency bump.
+
+## 13. Implementation Ledger
+
+### 2026-06-15 Foundation Pass
+
+Landed initial rewrite scaffolding:
+
+- Python package with `harnesslab web`, `harnesslab doctor`, and `harnesslab version`.
+- FastAPI app with system, agent, benchmark, experiment, event, and leaderboard endpoints.
+- SQLite migration for agents, experiments, runs, queue items, events, and templates.
+- AgentProfile v2 Pydantic model plus built-in Harbor agent config compilation and
+  custom-command materialization with manifest hashes.
+- Fake HarborEngine path, report summary writer, and leaderboard query service.
+- Vue 3 + TypeScript operations-console scaffold under `frontend/`.
+- Python/Web test registry skeleton and `scripts/test-after-change-web.sh`.
+
+Validation evidence:
+
+- `scripts/test-after-change-web.sh`
+- `uv run harnesslab --version`
+- `uv run harnesslab doctor`

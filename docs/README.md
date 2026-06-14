@@ -4,6 +4,7 @@ Start here for the active Harbor WebUI redesign.
 
 - Current PRD: `../prd/2026-06-15-harnesslab-webui-prd.md`
 - Current engineering plan: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+- Harbor lifecycle spike: `spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Legacy archive: `archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
 ## Current Direction
@@ -14,9 +15,15 @@ diagnostics, report summaries, and leaderboard views.
 
 ## Superseded Documents
 
-Root-level architecture, technology, adapter protocol, original PRD, and MVP
-spec files are now short stubs that point to the active plan or the archive.
-The previous `prd/2026-06-07-universal-benchmark-adapter-protocol.md` file is
-also a stub; its full content is preserved in the archive.
-Those stubs exist to keep old references resolvable while preventing stale
-Rust-runtime guidance from being read as current direction.
+Legacy Rust CLI/runtime guides, adapter plans, old playbooks, and historical
+reviews have been moved to `archive/2026-06-15-pre-harbor-webui-redesign/`.
+Old paths that remain under `docs/` are short supersession stubs only. They
+exist to keep old references resolvable while preventing stale Rust-runtime
+guidance from being read as current direction.
+
+## Current Implementation Entrypoints
+
+- Backend package: `../harnesslab/`
+- Frontend package: `../frontend/`
+- Web gate: `../scripts/test-after-change-web.sh`
+- Web test registry: `../tests/WEB_TEST_REGISTRY.toml`

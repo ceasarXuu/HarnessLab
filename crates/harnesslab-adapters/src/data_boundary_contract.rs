@@ -169,8 +169,9 @@ fn assert_dependency_boundary() {
 }
 
 fn assert_documented_boundary_artifact(sources: &[BoundarySource]) {
-    let artifact =
-        include_str!("../../../docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md");
+    let artifact = include_str!(
+        "../../../docs/archive/2026-06-15-pre-harbor-webui-redesign/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md"
+    );
     for required in [
         "Allowed production dependencies",
         "Forbidden imports",
