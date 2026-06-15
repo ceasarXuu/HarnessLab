@@ -36,10 +36,9 @@ command and points users back to the HarnessLab repository while the native CLI
 distribution strategy was still being prepared.
 
 `ornnlab` was later published with the same reservation-package pattern at
-version `0.1.0`, owning the `ornnlab` command. The prepared `ornnlab@0.1.1`
-package is the active npm launcher for the OrnnLab Harbor WebUI source
-workflow once publish succeeds. The product name for that active path is
-OrnnLab.
+version `0.1.0`, owning the `ornnlab` command. `ornnlab@0.1.1` is now the
+active npm launcher for the OrnnLab Harbor WebUI source workflow. The product
+name for that active path is OrnnLab.
 
 ## Preflight
 
@@ -90,10 +89,29 @@ Expected signals:
 
 ## Publish Active `ornnlab` Package
 
-Preferred path when npm requires 2FA:
+The publishing account uses npm WebAuthn / local machine security-key
+verification for write actions. Do not assume a TOTP code exists, and do not
+try to solve this path with the old ignored `.env.local` access token. The
+operator must complete npm web login and approve the publish with the local
+security key.
+
+First refresh the npm web login:
 
 ```bash
-npm publish --access public --otp=<current-otp>
+npm login --auth-type=web
+```
+
+Open the generated npm login URL if the CLI does not launch the browser
+automatically. The command should finish with:
+
+```text
+Logged in on https://registry.npmjs.org/.
+```
+
+Then publish with web-based write authentication:
+
+```bash
+npm publish --access public --auth-type=web
 npm view ornnlab name version bin --json
 curl -s https://api.npmjs.org/downloads/point/last-month/ornnlab
 tmpdir=$(mktemp -d)
@@ -111,6 +129,18 @@ Expected signals:
 - Clean-directory `npx ornnlab` executes the `ornnlab` bin from the registry
   package.
 
+Observed `ornnlab@0.1.1` release behavior on 2026-06-16:
+
+- Plain `npm publish --access public` failed with `EOTP`.
+- The account did not have a usable 6-digit TOTP code; its 2FA factor was the
+  local machine security key / passkey.
+- An ignored `.env.local` token did not bypass publish-time 2FA.
+- `npm login --auth-type=web` refreshed the npm session for user `ceasarxuu`.
+- `npm publish --access public --auth-type=web` printed an npm auth URL, the
+  operator approved it with the local security key, and the publish completed.
+- After publish, `npm view ornnlab name version bin --json` and
+  clean-directory `npx --yes ornnlab --help` confirmed the live package.
+
 If `npm publish --access public` returns success but `npm view` and the registry
 still return `404`, check npm's staged package flow:
 
@@ -124,16 +154,18 @@ select **Staged Packages**, review the staged `@ceasarxuu/harnesslab` package,
 and click **Approve**. Approval requires 2FA / passkey verification. After
 approval, rerun the registry and `npx` checks above.
 
-If npm returns `E403` with a two-factor authentication message, the current
-token is authenticated but cannot bypass 2FA. Retry with one of:
+If npm returns `EOTP` or `E403` with a two-factor authentication message, do not
+ask for a TOTP code unless the operator explicitly says this account has one.
+Retry with web authentication so the operator can approve the write using the
+local security key:
 
 ```bash
-npm publish --access public --otp=<current-otp>
+npm publish --access public --auth-type=web
 ```
 
-If a granular token with bypass 2FA is explicitly needed, do not paste the token
-into a shell command, committed file, screenshot, or shared log. Store it only
-in ignored local state or read it interactively:
+If a future granular token with bypass 2FA is explicitly created for automation,
+do not paste the token into a shell command, committed file, screenshot, or
+shared log. Store it only in ignored local state or read it interactively:
 
 ```bash
 read -rsp "NODE_AUTH_TOKEN: " NODE_AUTH_TOKEN
@@ -144,9 +176,10 @@ unset NODE_AUTH_TOKEN
 ```
 
 For this repository, `.env.local` may temporarily contain `npm_access_token`
-only as a last resort and only because `.env.local` is ignored. Prefer OTP for
-normal publishes. If a temporary token is already present, load it without
-printing the value:
+only as a last resort and only because `.env.local` is ignored. The token seen
+during the `ornnlab@0.1.1` release did not bypass publish 2FA, so prefer the
+WebAuthn path above for normal publishes. If a temporary token is already
+present, load it without printing the value:
 
 ```bash
 set -a
@@ -177,7 +210,7 @@ manifest:
 ```bash
 npm run smoke:harnesslab-transition
 cd npm/harnesslab-transition
-npm publish --access public --otp=<current-otp>
+npm publish --access public --auth-type=web
 npm view @ceasarxuu/harnesslab name version bin --json
 npx --yes @ceasarxuu/harnesslab --help
 npx --yes ornnlab --help
@@ -192,6 +225,9 @@ Expected signals:
 - The transition publish must use a new version. `@ceasarxuu/harnesslab@0.1.1`
   is already live with the older reservation message, so the staging manifest
   starts at `0.1.2`.
+- `@ceasarxuu/harnesslab@0.1.2` published successfully immediately after
+  `ornnlab@0.1.1` using the same refreshed npm session. Keep using
+  `--auth-type=web` so npm can trigger local security-key approval if required.
 
 ## Additional Brand Reservations
 
