@@ -4,6 +4,10 @@ Start here for the active Harbor WebUI redesign.
 
 - Current PRD: `../prd/2026-06-15-harnesslab-webui-prd.md`
 - Current engineering plan: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+- Install quickstart: `install-quickstart.md`
+- Release and rollback checklist: `release-checklist.md`
+- Harbor upgrade procedure: `harbor-upgrade-procedure.md`
+- Rust legacy workspace decision: `rust-legacy-fate.md`
 - Harbor lifecycle spike: `spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Legacy archive: `archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
@@ -27,3 +31,4 @@ guidance from being read as current direction.
 - Frontend package: `../frontend/`
 - Web gate: `../scripts/test-after-change-web.sh`
 - Web test registry: `../tests/WEB_TEST_REGISTRY.toml`
+- Release gate: `release-checklist.md`
