@@ -52,7 +52,7 @@ This procedure applies to changes in:
    - `result.json`
    - `job.log`
    - trial artifact directories
-8. Update `docs/technology-decisions.md`, this procedure, and the engineering
+8. Update `docs/current/technology-decisions.md`, this procedure, and the engineering
    plan ledger with the new Harbor version and evidence.
 
 ## Failure Policy

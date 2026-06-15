@@ -69,9 +69,9 @@ Scope:
 
 Acceptance:
 
-- `docs/README.md` points to `docs/v0.1.3/README.md` as the active version
+- `docs/index/README.md` points to `docs/v0.1.3/README.md` as the active version
   documentation entrypoint.
-- `docs/version-governance.md` defines the version-folder contract.
+- `docs/current/version-governance.md` defines the version-folder contract.
 - `scripts/verify-ornnlab-rebrand.py` checks the required version documents.
 
 ## Validation Commands

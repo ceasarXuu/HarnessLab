@@ -12,16 +12,16 @@ used as implementation source of truth.
 
 | Original path | Archived path | Why archived |
 |---|---|---|
-| `docs/prd.md` | `prd.md` | CLI-first product direction |
+| `docs/legacy/prd.md` | `prd.md` | CLI-first product direction |
 | `prd/2026-06-07-universal-benchmark-adapter-protocol.md` | `prd/2026-06-07-universal-benchmark-adapter-protocol.md` | Universal adapter protocol PRD superseded by Harbor engine ownership |
-| `docs/mvp-development-spec.md` | `mvp-development-spec.md` | Rust runtime MVP execution spec |
-| `docs/architecture.md` | `architecture.md` | Self-owned run orchestrator architecture |
-| `docs/technology-decisions.md` | `technology-decisions.md` | Rust single-binary technology decision |
-| `docs/adapter-protocol.md` | `adapter-protocol.md` | Self-owned benchmark adapter/runtime protocol |
-| `docs/agent-registration-guide.md` | `agent-registration-guide.md` | CLI-first AgentProfile v1 registration flow |
-| `docs/agent-profile-reference.md` | `agent-profile-reference.md` | CLI-first AgentProfile v1 schema reference |
-| `docs/development-operations.md` | `development-operations.md` | Rust CLI operation notes |
-| `docs/test-engineering.md` | `test-engineering.md` | Rust/Cargo test-engineering system |
+| `docs/legacy/mvp-development-spec.md` | `mvp-development-spec.md` | Rust runtime MVP execution spec |
+| `docs/legacy/architecture.md` | `architecture.md` | Self-owned run orchestrator architecture |
+| `docs/current/technology-decisions.md` | `technology-decisions.md` | Rust single-binary technology decision |
+| `docs/legacy/adapter-protocol.md` | `adapter-protocol.md` | Self-owned benchmark adapter/runtime protocol |
+| `docs/legacy/agent-registration-guide.md` | `agent-registration-guide.md` | CLI-first AgentProfile v1 registration flow |
+| `docs/legacy/agent-profile-reference.md` | `agent-profile-reference.md` | CLI-first AgentProfile v1 schema reference |
+| `docs/current/development-operations.md` | `development-operations.md` | Rust CLI operation notes |
+| `docs/current/test-engineering.md` | `test-engineering.md` | Rust/Cargo test-engineering system |
 | `docs/playbooks/terminal-bench-claude-ds.md` | `playbooks/terminal-bench-claude-ds.md` | CLI Terminal-Bench user flow |
 | `docs/reviews/2026-05-27-docker-runner-review-3.md` | `reviews/2026-05-27-docker-runner-review-3.md` | Legacy Docker runner review |
 | `docs/plans/2026-06-03-agent-registration-gap-completion.md` | `plans/2026-06-03-agent-registration-gap-completion.md` | Rust Agent Registry closure plan |
@@ -38,5 +38,5 @@ used as implementation source of truth.
 | `docs/architecture/harnesslab-vs-harbor.md` | `architecture/harnesslab-vs-harbor.md` | Intermediate comparison that still proposed HarnessLab runtime ownership |
 
 Original paths now contain stubs that point to the current plan or this archive.
-The repository root `README.md` and `docs/README.md` also point readers to the
+The repository root `README.md` and `docs/index/README.md` also point readers to the
 active Harbor WebUI redesign.

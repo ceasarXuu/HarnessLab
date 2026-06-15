@@ -6,11 +6,11 @@
 
 | 文档 | 作用 |
 |---|---|
-| `docs/prd.md` | 定义产品方向、用户体验、MVP 边界。 |
-| `docs/architecture.md` | 定义核心架构、模块边界、关键 contract。 |
-| `docs/mvp-development-spec.md` | 定义具体开发切片、测试矩阵、通过标准和交付 gate。 |
-| `docs/test-engineering.md` | 定义防止测试丢失、跑偏和自欺的测试工程、registry、traceability、runtime proof 和 meta-test 体系。 |
-| `docs/technology-decisions.md` | 定义开发与测试工程关键技术选型、文件格式、依赖预算和 CI 工具。 |
+| `docs/legacy/prd.md` | 定义产品方向、用户体验、MVP 边界。 |
+| `docs/legacy/architecture.md` | 定义核心架构、模块边界、关键 contract。 |
+| `docs/legacy/mvp-development-spec.md` | 定义具体开发切片、测试矩阵、通过标准和交付 gate。 |
+| `docs/current/test-engineering.md` | 定义防止测试丢失、跑偏和自欺的测试工程、registry、traceability、runtime proof 和 meta-test 体系。 |
+| `docs/current/technology-decisions.md` | 定义开发与测试工程关键技术选型、文件格式、依赖预算和 CI 工具。 |
 
 本文不重新讨论产品取舍。默认所有产品决策以 PRD 为准，所有模块边界以 architecture 为准。
 
@@ -29,7 +29,7 @@ MVP 只有在以下条件全部满足时才算完成：
 9. `replay` 能基于快照创建新 run，并在数据缺失时给出明确 blocker。
 10. 单文件 HTML 报告能离线打开，首屏和 task 明细满足 PRD。
 11. 测试覆盖率满足硬性 coverage gate：生产代码整体 line、branch、function/method coverage 均不低于 95%；若所选工具无法原生统计 function/method coverage，则按 Section 14.1 的替代规则执行更高 line/branch 阈值。
-12. `docs/test-engineering.md` 定义的 test registry、traceability、runtime proof、meta-test 和 secret scan gate 全部通过。
+12. `docs/current/test-engineering.md` 定义的 test registry、traceability、runtime proof、meta-test 和 secret scan gate 全部通过。
 13. 所有测试 gate 通过，工作区无未提交变更。
 
 ## 3. 开发切片
@@ -97,7 +97,7 @@ flowchart TB
 
 ## 4. Repository Layout Target
 
-MVP 使用 `docs/technology-decisions.md` 锁定的 Rust workspace。目录按模块边界拆分，禁止把 CLI、core、infra、adapter 和 report 混在同一 crate。
+MVP 使用 `docs/current/technology-decisions.md` 锁定的 Rust workspace。目录按模块边界拆分，禁止把 CLI、core、infra、adapter 和 report 混在同一 crate。
 
 ```text
 crates/
@@ -959,7 +959,7 @@ Minimum responsibilities:
 
 Docker-dependent tests must be included in the default gate once Docker provider exists. Before then, the script must print `SKIP` with a concrete reason, not silently omit them.
 
-`docs/test-engineering.md` is the source of truth for the concrete test project layout, registry schema, anti-self-deception rules, meta-tests, and M0 acceptance criteria.
+`docs/current/test-engineering.md` is the source of truth for the concrete test project layout, registry schema, anti-self-deception rules, meta-tests, and M0 acceptance criteria.
 
 ### 14.1 Coverage Gate
 
@@ -1215,7 +1215,7 @@ Every implementation PR must answer:
 4. Were docs updated if contract changed?
 5. Are artifacts and logs redacted?
 6. Does resume/replay behavior remain valid?
-7. Does the change preserve `docs/architecture.md` dependency direction?
+7. Does the change preserve `docs/legacy/architecture.md` dependency direction?
 8. Attach or reference the `scripts/test-after-change.sh` output showing the coverage summary.
 9. If any metric dropped, what tests were added or what documented exclusion explains it?
 10. If any file is excluded from coverage, what is the checked-in exclusion reason?
@@ -1229,7 +1229,7 @@ No PR should be accepted with only static tests if it changes runtime behavior. 
 
 Recommended first tasks:
 
-1. Create the testing project skeleton and pass the M0 acceptance criteria in `docs/test-engineering.md`.
+1. Create the testing project skeleton and pass the M0 acceptance criteria in `docs/current/test-engineering.md`.
 2. Create CLI/project skeleton and wire it into the already guarded local test gate.
 3. Implement schema validation for `RunSpec`, `AgentProfile`, `TaskPlan`, `TaskAttemptResult`.
 4. Implement artifact store with atomic JSON write and event append.

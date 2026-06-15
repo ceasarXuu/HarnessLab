@@ -9,7 +9,7 @@
 
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
-- Archived copy: `archive/2026-06-15-pre-harbor-webui-redesign/test-engineering.md`
+- Archived copy: `../archive/2026-06-15-pre-harbor-webui-redesign/test-engineering.md`
 - Current test strategy: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md#8-testing-strategy`
 
 Current rewrite gates are Python/Web first:

@@ -10,7 +10,7 @@
 The previous Rust single-binary technology decision record was archived on
 2026-06-15.
 
-- Archived copy: `docs/archive/2026-06-15-pre-harbor-webui-redesign/technology-decisions.md`
+- Archived copy: `../archive/2026-06-15-pre-harbor-webui-redesign/technology-decisions.md`
 - Canonical engineering plan: `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
 
 ## Active Decisions

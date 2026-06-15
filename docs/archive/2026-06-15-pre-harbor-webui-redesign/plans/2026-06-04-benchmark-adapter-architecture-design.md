@@ -21,8 +21,8 @@
 - Related Links: `vs_review/2026-06-04-benchmark-adapter-architecture-review.md`,
   `vs_review/2026-06-07-benchmark-adapter-remaining-closure-review.md`,
   `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`,
-  `docs/architecture.md`, `docs/mvp-development-spec.md`,
-  `docs/development-operations.md`, `docs/test-engineering.md`.
+  `docs/legacy/architecture.md`, `docs/legacy/mvp-development-spec.md`,
+  `docs/current/development-operations.md`, `docs/current/test-engineering.md`.
 - Risk Level: High
 - Plan Type: Full
 - Scope: benchmark data adapters, runtime adapters, execution/result contracts,
@@ -683,7 +683,7 @@ Concrete initial IDs:
 `int_011_*` cases into separate registry IDs/selectors, or route `INT-011`
 through a counted grouped selector that proves every intended `int_011_*` test
 ran. Required artifacts for external runtime proofs must match
-`docs/test-engineering.md`: run metadata, command snapshot, profile/runtime
+`docs/current/test-engineering.md`: run metadata, command snapshot, profile/runtime
 snapshots, `events.jsonl`, per-attempt `result.json`, logs, patch artifacts for
 patch-style tasks, and report artifacts.
 
@@ -794,7 +794,7 @@ umbrella selectors, or zero-test passes as evidence.
 
 #### Implementation Tasks
 
-- Compare `docs/architecture.md`, `docs/mvp-development-spec.md`, and current
+- Compare `docs/legacy/architecture.md`, `docs/legacy/mvp-development-spec.md`, and current
   code contracts.
 - Add an active gap sentinel that proves the current `BenchmarkAdapter` does
   not expose `inspect_data/prepare/list_tasks/create_task_plan/snapshot_task`
@@ -1797,8 +1797,8 @@ Optional fourth reviewer:
 Design review navigation packet must point reviewers to:
 
 - `docs/plans/2026-06-04-benchmark-adapter-architecture-design.md`
-- `docs/architecture.md`, section 6
-- `docs/mvp-development-spec.md`, section 7
+- `docs/legacy/architecture.md`, section 6
+- `docs/legacy/mvp-development-spec.md`, section 7
 - `crates/harnesslab-adapters/src/registry.rs`
 - `crates/harnesslab-cli/src/runner/external.rs`
 - `crates/harnesslab-cli/src/runner/external/terminal_bench.rs`
