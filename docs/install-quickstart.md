@@ -2,6 +2,25 @@
 
 This is the current developer quickstart for the Harbor WebUI rewrite.
 
+## npm Launcher Install
+
+After `ornnlab@0.1.1` is published:
+
+```bash
+npm install -g ornnlab
+ornnlab setup
+ornnlab dev
+```
+
+The launcher checks out the source repository under `~/.ornnlab/HarnessLab` by
+default, installs backend and frontend dependencies, then starts the current
+FastAPI backend and Vue frontend development servers.
+
+Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
+
+If the npm registry still serves `ornnlab@0.1.0`, that is the older reservation
+package and does not yet contain the WebUI launcher.
+
 ## Requirements
 
 - Python 3.12 available through `uv`

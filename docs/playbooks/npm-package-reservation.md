@@ -1,9 +1,8 @@
 # npm Package Reservation Playbook
 
 This playbook records the steps used to reserve the public
-`@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names.
-It also records the additional brand-name reservations `harnessrig` and
-`harnessyard`, plus the later `ornnlab` reservation.
+`@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names, plus the
+later `ornnlab` distribution package.
 
 ## Goal And Current Outcome
 
@@ -17,6 +16,7 @@ Current outcome:
 - npm package name achieved: scoped fallback `@ceasarxuu/harnesslab`
 - CLI command name achieved after install: `harnesslab`
 - npm package name not achieved: unscoped `harnesslab`
+- active npm distribution package: `ornnlab`
 - additional package names achieved: `harnessrig`, `harnessyard`, `ornnlab`
 - additional CLI command names achieved after install: `harnessrig`,
   `harnessyard`, `ornnlab`
@@ -36,7 +36,9 @@ command and points users back to the HarnessLab repository while the native CLI
 distribution strategy is prepared.
 
 `ornnlab` was later published with the same reservation-package pattern at
-version `0.1.0`, owning the `ornnlab` command.
+version `0.1.0`, owning the `ornnlab` command. The prepared `ornnlab@0.1.1`
+package is the active npm launcher for the HarnessLab Harbor WebUI source
+workflow once publish succeeds.
 
 ## Preflight
 
@@ -66,7 +68,7 @@ Expected signals:
 - For the blocked unscoped name, registry HTTP status should remain `404` for
   `harnesslab` unless npm support changes the similarity decision.
 
-## Local Validation
+## Local Validation For Active `ornnlab` Package
 
 ```bash
 npm run smoke:npm-bin
@@ -74,38 +76,38 @@ npm pack --dry-run
 tmpdir=$(mktemp -d)
 tarball=$(npm pack --pack-destination "$tmpdir" --silent)
 npm install --prefix "$tmpdir/install" "$tmpdir/$tarball"
-"$tmpdir/install/node_modules/.bin/harnesslab" --version
-"$tmpdir/install/node_modules/.bin/harnesslab" --help
+"$tmpdir/install/node_modules/.bin/ornnlab" --version
+"$tmpdir/install/node_modules/.bin/ornnlab" --help
 ```
 
 Expected signals:
 
-- `harnesslab --version` prints the package version.
-- `harnesslab --help` explains that the npm package is a reservation package.
+- `ornnlab --version` prints the package version.
+- `ornnlab --help` explains setup and launch commands.
 - The tarball contents are limited by `package.json` `files`.
 
-## Publish
+## Publish Active `ornnlab` Package
 
 Preferred path when npm requires 2FA:
 
 ```bash
 npm publish --access public --otp=<current-otp>
-npm view @ceasarxuu/harnesslab name version bin --json
-curl -s https://api.npmjs.org/downloads/point/last-month/%40ceasarxuu%2Fharnesslab
+npm view ornnlab name version bin --json
+curl -s https://api.npmjs.org/downloads/point/last-month/ornnlab
 tmpdir=$(mktemp -d)
 cd "$tmpdir"
-npx --yes @ceasarxuu/harnesslab --version
-npx --yes @ceasarxuu/harnesslab --help
+npx --yes ornnlab --version
+npx --yes ornnlab --help
 ```
 
 Expected signals:
 
-- `npm publish` publishes the current `@ceasarxuu/harnesslab` version from
+- `npm publish` publishes the current `ornnlab` version from
   `package.json`.
-- `npm view` returns `name = @ceasarxuu/harnesslab` and `bin.harnesslab`.
+- `npm view` returns `name = ornnlab` and `bin.ornnlab`.
 - Downloads API returns a package record instead of `package not found`.
-- Clean-directory `npx @ceasarxuu/harnesslab` executes the `harnesslab` bin from
-  the registry package.
+- Clean-directory `npx ornnlab` executes the `ornnlab` bin from the registry
+  package.
 
 If `npm publish --access public` returns success but `npm view` and the registry
 still return `404`, check npm's staged package flow:
@@ -153,13 +155,12 @@ NODE_AUTH_TOKEN="$npm_access_token" npm publish --access public
 unset npm_access_token
 ```
 
-Record sanitized evidence for the release:
+Record sanitized evidence for the active `ornnlab` release:
 
 ```bash
 npm pack --dry-run --json
-npm view @ceasarxuu/harnesslab name version bin --json
-curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/@ceasarxuu%2Fharnesslab
-curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/harnesslab
+npm view ornnlab name version bin --json
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/ornnlab
 npm run smoke:npm-registry
 ```
 
