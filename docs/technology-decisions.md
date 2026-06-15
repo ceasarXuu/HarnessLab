@@ -68,6 +68,17 @@ silent fallbacks:
 Cleanup plans are not executed automatically because container removal is not
 recoverable. Any automatic cleanup command needs a product decision and tests.
 
+## Backup Policy
+
+`harnesslab backup export` writes a local `.tar.gz` archive of `~/.harnesslab`.
+The export excludes `exports/` so backups do not recursively include earlier
+backups, checkpoints SQLite before archiving, and includes a manifest with the
+HarnessLab version and file count.
+
+`harnesslab backup import <archive>` restores only into an empty HarnessLab home.
+It rejects absolute paths, `..` path traversal, links, and device files. The
+import command does not delete or overwrite existing user data.
+
 ## Quality Gate Policy
 
 Every code change should pass `scripts/test-after-change-web.sh` unless the

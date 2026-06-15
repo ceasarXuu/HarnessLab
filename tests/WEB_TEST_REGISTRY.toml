@@ -89,6 +89,16 @@ path = "tests/python/test_system_api.py"
 kind = "python-integration"
 
 [[test]]
+id = "WEB-OPS-003"
+path = "tests/python/test_backup_service.py"
+kind = "python-unit"
+
+[[test]]
+id = "WEB-OPS-003"
+path = "tests/python/test_cli.py"
+kind = "python-integration"
+
+[[test]]
 id = "WEB-RCV-001"
 path = "tests/python/test_recovery_service.py"
 kind = "python-integration"

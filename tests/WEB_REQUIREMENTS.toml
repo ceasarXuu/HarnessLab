@@ -87,3 +87,9 @@ id = "WEB-OPS-002"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Doctor --logs reports latest failed run log paths and remediation actions."
+
+[[requirement]]
+id = "WEB-OPS-003"
+area = "operations"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Local backups export and safely import HarnessLab home archives."
