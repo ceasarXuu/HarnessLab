@@ -1311,8 +1311,6 @@ Landed the opt-in real Harbor subprocess verification gate:
 
 Known remaining Phase 3 blockers:
 
-- the real Docker gate still must be executed on a Docker-capable machine before
-  claiming real Harbor cancellation/recovery complete;
 - Docker orphan scans beyond process-group cleanup remain a hardening follow-up.
 
 Validation evidence:
@@ -1320,3 +1318,21 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Real Harbor Subprocess Gate Verification
+
+Verified the opt-in real Harbor subprocess gate on a Docker-capable Colima
+environment:
+
+- `HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_smoke -vv`
+  passed in 115.85 seconds;
+- `HARNESSLAB_REAL_HARBOR=1 HARNESSLAB_REAL_HARBOR_CANCEL_DELAY=1.0 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_cancel_writes_cleanup_evidence -vv`
+  passed in 1.11 seconds;
+- post-run Docker scans found no Harbor/HarnessLab/Terminal-Bench matching
+  containers, no `harnesslab.run_id` labelled containers, and no compose
+  projects.
+
+Known remaining Phase 3 hardening:
+
+- add a first-class Docker orphan scan/cleanup service instead of relying only on
+  process-group cleanup and manual post-run Docker inspection.
