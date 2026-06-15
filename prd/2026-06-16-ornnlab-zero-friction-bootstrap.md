@@ -1,5 +1,13 @@
 # PRD: OrnnLab Zero-Friction Bootstrap
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | `ornnlab` npm `0.1.2` | 2026-06-16 | Defined blank-machine bootstrap, install, update, and uninstall product behavior. |
+| 1.1 | `ornnlab` npm `0.1.3` | 2026-06-16 | Added core-only Docker policy, state versioning, and dependency integrity checks. |
+| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked bootstrap requirements to document version governance. |
+
 - Status: Ready for implementation
 - Created: 2026-06-16
 - Updated: 2026-06-16

@@ -1,5 +1,13 @@
 # OrnnLab Version And Documentation Governance
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Defined version authorities, release ledger, and document/version drift rules. |
+| 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required document version tables and engineering-version linkage for active PRD and technical docs. |
+| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Expanded document-control coverage to operations, test strategy, and Harbor spike docs. |
+
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
 
@@ -55,6 +63,36 @@ another still said `ornnlab@0.1.2`.
 - Archived docs may retain old version references; active gates should ignore
   `docs/archive/`.
 
+## Document Version Tables
+
+Every active PRD, technical design, release, bootstrap, install, and packaging
+document must keep a `Document Control` section immediately below the top-level
+title.
+
+Required table:
+
+```markdown
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Initial governed version. |
+```
+
+Rules:
+
+- `Document Version` tracks document content, not package release versions.
+- Increment minor document versions for clarifications, policy additions, or
+  scope changes.
+- Increment major document versions when the document changes direction or
+  invalidates previous acceptance criteria.
+- `Engineering Version(s)` must name the affected artifact versions or say
+  `policy only` when no artifact version is affected.
+- `Updated` must be an exact date.
+- `Change` must summarize the reason a reviewer should care.
+- Historical release facts remain in `docs/releases/`; active PRDs and technical
+  docs should link to release ledgers rather than duplicating long histories.
+
 ## Release Ledger
 
 Create or update `docs/releases/` for each public release that changes a
@@ -107,6 +145,8 @@ Local gates should detect:
 - npm launcher package version mismatching `ornnlab --version`.
 - Python package version mismatching `uv run ornnlab --version`.
 - package tarball contents drifting from the intended npm surface.
+- required active PRD and technical docs missing a top-level `Document Control`
+  table.
 
 Recommended commands:
 
@@ -117,14 +157,16 @@ uv run python scripts/verify-ornnlab-rebrand.py
 git diff --check
 ```
 
-Future guard:
+Future dedicated guard:
 
 ```bash
 uv run python scripts/verify-version-governance.py
 ```
 
-That guard should parse authoritative version files and scan active docs for
-unapproved literal version references.
+The current `scripts/verify-ornnlab-rebrand.py` already checks the required
+`Document Control` table presence. A future dedicated guard should additionally
+parse authoritative version files and scan active docs for unapproved literal
+version references.
 
 ## Active Documentation Index
 
@@ -135,7 +177,14 @@ The active version-governed documents are:
 - `docs/releases/*.md`
 - `docs/install-quickstart.md`
 - `docs/release-checklist.md`
+- `docs/development-operations.md`
+- `docs/technology-decisions.md`
+- `docs/harbor-upgrade-procedure.md`
+- `docs/test-engineering.md`
+- `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - `docs/playbooks/npm-package-reservation.md`
+- `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+- `prd/2026-06-15-ornnlab-webui-prd.md`
 - `prd/2026-06-15-ornnlab-npm-distribution.md`
 - `prd/2026-06-16-ornnlab-zero-friction-bootstrap.md`
 

@@ -1,5 +1,13 @@
 # PRD: OrnnLab npm Distribution
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | `ornnlab` npm `0.1.1` | 2026-06-15 | Defined source-based npm launcher distribution. |
+| 1.1 | `ornnlab` npm `0.1.2` | 2026-06-16 | Added explicit install, update, and uninstall command semantics. |
+| 1.2 | `ornnlab` npm `0.1.3` | 2026-06-16 | Linked npm distribution behavior to version/document governance. |
+
 - Status: Ready for implementation
 - Created: 2026-06-15
 - Updated: 2026-06-16
