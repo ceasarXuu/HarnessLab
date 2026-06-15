@@ -1065,7 +1065,8 @@ Build HarnessLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates bench
 
 ### Follow-ups
 
-- Rewrite architecture and technology decision docs after Phase 1 proves the skeleton.
+- Keep architecture and technology decision docs synchronized with the
+  implemented Harbor WebUI boundary.
 - Decide Rust crate archival in Phase 6.
 - Add explicit Harbor upgrade procedure before any dependency bump.
 
@@ -1359,3 +1360,23 @@ Validation evidence:
 - `uv run pytest tests/python/test_docker_orphan_service.py tests/python/test_system_api.py -vv`
 - `uv run ruff check harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
 - `uv run pyright harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
+
+### 2026-06-15 Docs Convergence Pass
+
+Expanded Phase 6 documentation after the backend skeleton and execution
+hardening had landed:
+
+- `docs/architecture.md` now describes the active Harbor WebUI system boundary,
+  ownership split, runtime modes, recovery behavior, API surface, and artifact
+  layout instead of deferring to a future rewrite;
+- `docs/technology-decisions.md` now records active stack, execution mode,
+  diagnostics, and quality-gate decisions;
+- `docs/test-engineering.md` now points to the active `WEB-*` traceability files
+  and records Playwright/Vitest operational fixes;
+- README implemented-status bullets now mention managed subprocess execution
+  and Docker orphan doctor scans.
+
+Validation evidence:
+
+- `git diff --check`
+- search for stale Phase 1 rewrite placeholders in active docs

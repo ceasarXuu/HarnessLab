@@ -28,6 +28,8 @@ Implemented rewrite foundation:
 - SQLite migration and local `~/.harnesslab` data directory initialization
 - AgentProfile v2 validation and Harbor agent config compilation
 - fake HarborEngine path for deterministic local tests
+- managed Harbor subprocess execution with cancellation cleanup evidence
+- Docker orphan doctor scan with dry-run cleanup plans
 - Vue operations-console scaffold under `frontend/`
 - Python/Web gate script: `scripts/test-after-change-web.sh`
 

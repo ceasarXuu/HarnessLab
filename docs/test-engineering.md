@@ -31,8 +31,9 @@ Current rewrite gates are Python/Web first:
   smoke tests for the frontend;
 - a line-count gate that fails when production source files exceed 500 lines.
 
-The old Cargo registry remains a legacy reference until Phase 1 creates the
-`WEB-*` registry and `scripts/test-after-change-web.sh`.
+The old Cargo registry remains a legacy reference. Current rewrite traceability
+lives in `tests/WEB_REQUIREMENTS.toml`, `tests/WEB_TEST_REGISTRY.toml`, and
+`scripts/test-after-change-web.sh`.
 
 Operational note: backend restart tests should build state through public APIs,
 then mutate only the persisted crash boundary under test. Do not trust in-memory
