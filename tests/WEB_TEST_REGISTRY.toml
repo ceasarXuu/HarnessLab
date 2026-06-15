@@ -64,6 +64,11 @@ path = "tests/python/test_harbor_subprocess.py"
 kind = "python-unit"
 
 [[test]]
+id = "WEB-HBR-002"
+path = "tests/python/test_real_harbor_cancel_recovery.py"
+kind = "optional-docker-smoke"
+
+[[test]]
 id = "WEB-RCV-001"
 path = "tests/python/test_recovery_service.py"
 kind = "python-integration"

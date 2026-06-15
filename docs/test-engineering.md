@@ -20,6 +20,9 @@ Current rewrite gates are Python/Web first:
   `HARNESSLAB_REAL_HARBOR=1`;
 - managed Harbor subprocess tests that verify `harbor.config.json` execution,
   `job.log` capture, and `harbor.cleanup.json` after task cancellation;
+- opt-in real Harbor subprocess smoke and cancel-recovery tests in
+  `tests/python/test_real_harbor_cancel_recovery.py`, gated by
+  `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
 - ruff and pyright for Python static gates;
 - Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
   smoke tests for the frontend;
@@ -42,3 +45,7 @@ Operational note: TestClient-based tests must use the context-manager fixture so
 FastAPI lifespan and app-level worker tasks share a stable event loop. Creating a
 bare TestClient can let request-scoped event loop cleanup cancel background work
 and produce false `interrupted` states.
+
+Operational note: Real Harbor subprocess validation is intentionally opt-in.
+Run it on a Docker-capable machine with
+`HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
