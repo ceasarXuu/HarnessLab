@@ -20,7 +20,8 @@ def main(argv: list[str] | None = None) -> int:
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
 
-    sub.add_parser("doctor", help="Print local system status")
+    doctor = sub.add_parser("doctor", help="Print local system status")
+    doctor.add_argument("--logs", action="store_true", help="Include failed run log paths")
     sub.add_parser("version", help="Print HarnessLab version")
 
     args = parser.parse_args(argv)
@@ -28,7 +29,13 @@ def main(argv: list[str] | None = None) -> int:
         print(__version__)
         return 0
     if args.command == "doctor":
-        print(json.dumps(DoctorService(Settings.from_env()).status(), indent=2, sort_keys=True))
+        print(
+            json.dumps(
+                DoctorService(Settings.from_env()).status(include_logs=args.logs),
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0
     if args.command == "web":
         settings = Settings.from_env()

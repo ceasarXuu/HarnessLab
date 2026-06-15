@@ -81,3 +81,9 @@ id = "WEB-OPS-001"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Doctor scans HarnessLab-labelled Docker orphans and returns dry-run cleanup plans."
+
+[[requirement]]
+id = "WEB-OPS-002"
+area = "operations"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Doctor --logs reports latest failed run log paths and remediation actions."

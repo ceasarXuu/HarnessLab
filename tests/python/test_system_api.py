@@ -70,3 +70,34 @@ def test_system_docker_orphans_endpoint_returns_cleanup_plan(client, monkeypatch
     assert payload["count"] == 1
     assert payload["cleanup_plan"][0]["dry_run"] is True
     assert payload["cleanup_plan"][0]["manual_review_required"] is True
+
+
+def test_system_doctor_logs_reports_latest_failed_run(client):
+    client.post(
+        "/api/agents",
+        json={
+            "schema_version": 2,
+            "id": "oracle",
+            "name": "Oracle",
+            "kind": "oracle",
+            "harbor": {"agent": "oracle"},
+        },
+    )
+    created = client.post(
+        "/api/experiments",
+        json={
+            "name": "Failure",
+            "agent_ids": ["oracle"],
+            "benchmark_names": ["fake-docker-failure"],
+        },
+    ).json()
+    client.post(f"/api/experiments/{created['experiment']['id']}/run?wait=true")
+
+    response = client.post("/api/system/doctor?logs=true")
+
+    assert response.status_code == 200
+    logs = response.json()["logs"]
+    assert logs["latest_failed_run"]["experiment_name"] == "Failure"
+    assert logs["latest_failed_run"]["failure_class"] == "docker_resource_failure"
+    assert logs["latest_failed_run"]["paths"]["job_log"].endswith("job.log")
+    assert "check_docker_resources" in logs["remediation"]

@@ -62,6 +62,8 @@ silent fallbacks:
 - labelled HarnessLab container survivors report `docker_orphans_detected` and a
   dry-run cleanup plan;
 - stale SQLite `running` rows report `stale_running_runs`.
+- `harnesslab doctor --logs` includes the latest failed or interrupted run,
+  relevant result/report/job log paths, and remediation actions.
 
 Cleanup plans are not executed automatically because container removal is not
 recoverable. Any automatic cleanup command needs a product decision and tests.

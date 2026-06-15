@@ -23,6 +23,8 @@ Current rewrite gates are Python/Web first:
 - Docker orphan doctor tests that use a fake Docker CLI to verify
   `harnesslab.run_id` label scans, scan failure diagnostics, and dry-run
   cleanup plans;
+- doctor logs tests that verify `harnesslab doctor --logs` and
+  `/api/system/doctor?logs=true` expose failed-run paths and remediation;
 - opt-in real Harbor subprocess smoke and cancel-recovery tests in
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
