@@ -15,3 +15,8 @@ def status(request: Request) -> dict:
 @router.post("/doctor")
 def doctor(request: Request) -> dict:
     return DoctorService(request.app.state.settings).status()
+
+
+@router.get("/docker-orphans")
+def docker_orphans(request: Request) -> dict:
+    return DoctorService(request.app.state.settings).docker_orphans()

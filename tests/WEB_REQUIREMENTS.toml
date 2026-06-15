@@ -75,3 +75,9 @@ id = "WEB-HBR-002"
 area = "harbor"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Managed Harbor subprocess execution records logs and cleanup evidence for task cancellation."
+
+[[requirement]]
+id = "WEB-OPS-001"
+area = "operations"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Doctor scans HarnessLab-labelled Docker orphans and returns dry-run cleanup plans."

@@ -20,6 +20,9 @@ Current rewrite gates are Python/Web first:
   `HARNESSLAB_REAL_HARBOR=1`;
 - managed Harbor subprocess tests that verify `harbor.config.json` execution,
   `job.log` capture, and `harbor.cleanup.json` after task cancellation;
+- Docker orphan doctor tests that use a fake Docker CLI to verify
+  `harnesslab.run_id` label scans, scan failure diagnostics, and dry-run
+  cleanup plans;
 - opt-in real Harbor subprocess smoke and cancel-recovery tests in
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
@@ -49,3 +52,19 @@ and produce false `interrupted` states.
 Operational note: Real Harbor subprocess validation is intentionally opt-in.
 Run it on a Docker-capable machine with
 `HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
+
+Operational note: Docker orphan cleanup starts as a doctor/reporting gate, not
+an automatic remover. The WebUI scans labelled `harnesslab.run_id` containers
+and returns dry-run `docker rm -f` cleanup plans for manual review; execution
+needs a separate product decision because container removal is not recoverable.
+
+Operational note: Playwright e2e requires the browser cache for the installed
+frontend Playwright version. If `npm --prefix frontend run e2e` fails with a
+missing `chromium_headless_shell-*` executable, refresh the local browser cache
+with `npm --prefix frontend exec playwright install chromium` and rerun the
+full gate.
+
+Operational note: Vitest should run with `--pool threads --maxWorkers=1` for the
+current small frontend suite. The default fork pool can time out while starting
+workers on this local environment before any test file runs, which makes the
+gate flaky without increasing coverage.
