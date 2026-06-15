@@ -16,6 +16,7 @@ node bin/ornnlab.js --help | grep -q 'ornnlab setup              Alias for insta
 node bin/ornnlab.js --help | grep -q 'ORNNLAB_FRONTEND_PORT'
 node bin/ornnlab.js --help | grep -q 'ORNNLAB_INSTALL_DOCKER'
 node bin/ornnlab.js --help | grep -q 'Required tools are git, uv, Node.js, and npm'
+node bin/ornnlab.js --help | grep -q 'does not'
 node bin/ornnlab.js --help | grep -q 'Frontend: http://'
 node bin/ornnlab.js path >/dev/null
 

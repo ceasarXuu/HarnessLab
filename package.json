@@ -1,6 +1,6 @@
 {
   "name": "ornnlab",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "OrnnLab npm launcher for the Harbor-powered local agent evaluation WebUI.",
   "license": "MIT",
   "repository": {
