@@ -4,40 +4,98 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      real_harbor_smoke:
+        description: Run opt-in real Harbor Docker smoke tests
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  required:
-    name: required
+  python-web:
+    name: Python Web Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: astral-sh/setup-uv@v5
         with:
-          toolchain: 1.95.0
-          components: clippy,rustfmt
-      - uses: dtolnay/rust-toolchain@nightly-2026-05-26
-        with:
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo tools
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --group dev
+      - name: Ruff
+        run: uv run ruff check harnesslab tests/python
+      - name: Pyright
+        run: uv run pyright
+      - name: Pytest
+        run: uv run pytest tests/python
+      - name: Python line-count gate
         run: |
-          cargo install cargo-nextest --version 0.9.136 --locked
-          cargo install cargo-llvm-cov --version 0.8.7 --locked
-      - name: Run local gate
-        run: scripts/test-after-change.sh
-      - name: Upload traceability artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+          uv run python - <<'PY'
+          from pathlib import Path
+
+          violations = []
+          for path in Path("harnesslab").rglob("*.py"):
+              line_count = len(path.read_text(encoding="utf-8").splitlines())
+              if line_count > 500:
+                  violations.append(f"{path}:{line_count}")
+          if violations:
+              raise SystemExit("Files exceed 500 lines:\n" + "\n".join(violations))
+          PY
+      - name: Diff whitespace check
+        run: git diff --check
+
+  frontend-web:
+    name: Frontend Web Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          name: traceability
-          path: artifacts/
-          retention-days: 90
-      - name: Upload coverage artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: frontend
+      - name: Lint
+        run: npm run lint
+        working-directory: frontend
+      - name: Unit tests
+        run: npm run test
+        working-directory: frontend
+      - name: Storybook smoke
+        run: npm run storybook:test
+        working-directory: frontend
+      - name: Playwright e2e
+        run: npm run e2e
+        working-directory: frontend
+
+  real-harbor-docker-smoke:
+    name: Real Harbor Docker Smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.real_harbor_smoke }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: coverage
-          path: coverage/
-          retention-days: 90
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install Python dependencies
+        run: uv sync --group dev
+      - name: Run real Harbor Docker smoke
+        env:
+          HARNESSLAB_REAL_HARBOR: "1"
+        run: |
+          uv run pytest -m docker \
+            tests/python/test_harbor_real_smoke.py \
+            tests/python/test_real_harbor_cancel_recovery.py

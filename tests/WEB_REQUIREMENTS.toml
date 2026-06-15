@@ -99,3 +99,9 @@ id = "WEB-OPS-004"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Cleanup plans and archives stale generated-agent and artifact directories without deletion."
+
+[[requirement]]
+id = "WEB-OPS-005"
+area = "operations"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "CI runs Python and frontend WebUI gates with opt-in real Harbor Docker smoke."

@@ -1436,3 +1436,21 @@ Validation evidence:
 - `uv run pytest tests/python/test_cleanup_service.py tests/python/test_cli.py -vv`
 - `uv run ruff check harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
 - `uv run pyright harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
+
+### 2026-06-15 WebUI CI Matrix Pass
+
+Replaced the legacy Rust-first CI workflow with the current Harbor WebUI gates:
+
+- default `python-web` job installs uv dependencies and runs ruff, pyright,
+  pytest, the Python line-count gate, and `git diff --check`;
+- default `frontend-web` job installs Node dependencies, installs Playwright
+  Chromium, and runs typecheck, lint, Vitest, Storybook smoke, and Playwright
+  e2e;
+- `real-harbor-docker-smoke` remains opt-in via workflow dispatch with
+  `real_harbor_smoke=true`, preserving real Docker validation without making it
+  a default PR blocker.
+
+Validation evidence:
+
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'`
+- `git diff --check`

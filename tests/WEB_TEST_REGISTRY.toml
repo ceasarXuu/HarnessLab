@@ -109,6 +109,16 @@ path = "tests/python/test_cli.py"
 kind = "python-integration"
 
 [[test]]
+id = "WEB-OPS-005"
+path = ".github/workflows/ci.yml"
+kind = "ci-workflow"
+
+[[test]]
+id = "WEB-OPS-005"
+path = "scripts/test-after-change-web.sh"
+kind = "local-gate-reference"
+
+[[test]]
 id = "WEB-RCV-001"
 path = "tests/python/test_recovery_service.py"
 kind = "python-integration"

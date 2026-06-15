@@ -34,6 +34,7 @@ Implemented rewrite foundation:
 - safe `harnesslab cleanup plan` / `harnesslab cleanup archive` for stale local artifacts
 - Vue operations-console scaffold under `frontend/`
 - Python/Web gate script: `scripts/test-after-change-web.sh`
+- GitHub Actions CI for Python Web, frontend Web, and opt-in real Harbor Docker smoke
 
 ## Planned Local App
 
