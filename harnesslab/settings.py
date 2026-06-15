@@ -35,6 +35,10 @@ class Settings:
     def exports_dir(self) -> Path:
         return self.home / "exports"
 
+    @property
+    def archive_dir(self) -> Path:
+        return self.home / "archive"
+
     @classmethod
     def from_env(cls) -> Settings:
         home = Path(os.environ.get("HARNESSLAB_HOME", "~/.harnesslab")).expanduser()
@@ -48,5 +52,6 @@ class Settings:
             self.generated_agents_dir,
             self.experiments_dir,
             self.exports_dir,
+            self.archive_dir,
         ]:
             path.mkdir(parents=True, exist_ok=True)

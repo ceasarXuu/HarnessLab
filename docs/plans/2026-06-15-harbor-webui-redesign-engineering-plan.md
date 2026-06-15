@@ -1417,3 +1417,22 @@ Validation evidence:
 - `uv run pytest tests/python/test_backup_service.py tests/python/test_cli.py -vv`
 - `uv run ruff check harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
 - `uv run pyright harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
+
+### 2026-06-15 Safe Cleanup Archive Pass
+
+Landed the first stale artifact cleanup boundary:
+
+- `harnesslab cleanup plan` reports stale generated-agent directories and
+  experiment/run artifact directories not referenced by SQLite;
+- active agent ids, experiment ids, and run ids are excluded from cleanup
+  candidates;
+- `harnesslab cleanup archive` moves candidates under
+  `~/.harnesslab/archive/cleanup-*` instead of deleting them;
+- cleanup remains recoverable and complies with the repository rule against
+  irreversible deletion.
+
+Validation evidence:
+
+- `uv run pytest tests/python/test_cleanup_service.py tests/python/test_cli.py -vv`
+- `uv run ruff check harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
+- `uv run pyright harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`

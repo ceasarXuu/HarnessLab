@@ -31,6 +31,7 @@ Implemented rewrite foundation:
 - managed Harbor subprocess execution with cancellation cleanup evidence
 - Docker orphan doctor scan with dry-run cleanup plans
 - local `harnesslab backup export` / `harnesslab backup import` archives
+- safe `harnesslab cleanup plan` / `harnesslab cleanup archive` for stale local artifacts
 - Vue operations-console scaffold under `frontend/`
 - Python/Web gate script: `scripts/test-after-change-web.sh`
 

@@ -68,6 +68,11 @@ silent fallbacks:
 Cleanup plans are not executed automatically because container removal is not
 recoverable. Any automatic cleanup command needs a product decision and tests.
 
+Local filesystem cleanup uses archive moves, not deletion. `harnesslab cleanup
+plan` reports generated-agent directories and experiment artifact directories
+that SQLite no longer references. `harnesslab cleanup archive` moves those
+candidates under `~/.harnesslab/archive/cleanup-*` so they remain recoverable.
+
 ## Backup Policy
 
 `harnesslab backup export` writes a local `.tar.gz` archive of `~/.harnesslab`.
