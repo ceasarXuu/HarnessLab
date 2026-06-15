@@ -1,9 +1,12 @@
 # OrnnLab Documentation
 
-Start here for the active Harbor WebUI redesign.
+Start here for the active OrnnLab version documentation.
 
-- Current PRD: `../prd/2026-06-15-ornnlab-webui-prd.md`
-- Current engineering plan: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+- Current version bundle: `v0.1.3/README.md`
+- Version PRD: `v0.1.3/version-prd.md`
+- Version technical design: `v0.1.3/technical-design.md`
+- Version engineering plan: `v0.1.3/engineering-plan.md`
+- Version release ledger: `v0.1.3/release-ledger.md`
 - Install quickstart: `install-quickstart.md`
 - Release and rollback checklist: `release-checklist.md`
 - Version and documentation governance: `version-governance.md`
@@ -17,6 +20,10 @@ Start here for the active Harbor WebUI redesign.
 OrnnLab is a local WebUI over Harbor. Harbor owns benchmark execution and raw
 job artifacts. OrnnLab owns agent registration, experiment/run management,
 diagnostics, report summaries, and leaderboard views.
+
+Active product requirements are version-scoped. Do not create or maintain a
+single total PRD as the source of truth; create the next version folder under
+`docs/v<version>/` instead.
 
 ## Superseded Documents
 

@@ -68,6 +68,11 @@ DOC_INVENTORY = {
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/technology-decisions.md": "rename-now",
     "docs/test-engineering.md": "rename-now",
+    "docs/v0.1.3/README.md": "rename-now",
+    "docs/v0.1.3/engineering-plan.md": "rename-now",
+    "docs/v0.1.3/release-ledger.md": "rename-now",
+    "docs/v0.1.3/technical-design.md": "rename-now",
+    "docs/v0.1.3/version-prd.md": "rename-now",
     "docs/version-governance.md": "rename-now",
     "prd/2026-06-07-universal-benchmark-adapter-protocol.md": "historical-stub",
     "prd/2026-06-15-ornnlab-npm-distribution.md": "rename-now",
@@ -86,6 +91,11 @@ DOC_CONTROL_REQUIRED = {
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
     "docs/technology-decisions.md",
     "docs/test-engineering.md",
+    "docs/v0.1.3/README.md",
+    "docs/v0.1.3/engineering-plan.md",
+    "docs/v0.1.3/release-ledger.md",
+    "docs/v0.1.3/technical-design.md",
+    "docs/v0.1.3/version-prd.md",
     "docs/version-governance.md",
     "prd/2026-06-15-ornnlab-npm-distribution.md",
     "prd/2026-06-15-ornnlab-webui-prd.md",
@@ -103,6 +113,7 @@ def main() -> int:
     checks: list[dict[str, Any]] = [
         _check_doc_inventory(),
         _check_doc_control_tables(),
+        _check_version_folder_contract(),
         _check_product_metadata(),
         _check_current_docs(),
         _check_python_package(),
@@ -156,6 +167,48 @@ def _check_doc_control_tables() -> dict[str, Any]:
             "required_count": len(DOC_CONTROL_REQUIRED),
             "missing": missing,
             "incomplete": incomplete,
+        },
+    )
+
+
+def _check_version_folder_contract() -> dict[str, Any]:
+    version_dir = ROOT / "docs/v0.1.3"
+    required = [
+        "README.md",
+        "version-prd.md",
+        "technical-design.md",
+        "engineering-plan.md",
+        "release-ledger.md",
+    ]
+    missing = [name for name in required if not (version_dir / name).exists()]
+    expected_links = {
+        "README.md": [
+            "version-prd.md",
+            "technical-design.md",
+            "engineering-plan.md",
+            "release-ledger.md",
+        ],
+        "technical-design.md": ["version-prd.md", "engineering-plan.md", "release-ledger.md"],
+        "engineering-plan.md": ["version-prd.md", "technical-design.md", "release-ledger.md"],
+    }
+    missing_links: list[str] = []
+    for name, needles in expected_links.items():
+        path = version_dir / name
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                missing_links.append(f"docs/v0.1.3/{name}:{needle}")
+    return _result(
+        "current version folder has required PRD/design/plan bundle",
+        "inspect docs/v0.1.3 document contract",
+        not missing and not missing_links,
+        {
+            "version_dir": "docs/v0.1.3",
+            "required": required,
+            "missing": missing,
+            "missing_links": missing_links,
         },
     )
 

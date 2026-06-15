@@ -8,6 +8,7 @@
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added version-governance and release-ledger requirements. |
 | 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Build Set confirmation to release gate. |
 | 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree confirmation. |
+| 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required version-folder document bundle checks. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -16,12 +17,20 @@ Use this checklist for Harbor WebUI rewrite releases.
 - Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
   has current implementation ledger evidence.
 - Confirm version changes follow `docs/version-governance.md`.
+- Confirm the matching `docs/v<version>/` folder exists and contains:
+  `README.md`, `version-prd.md`, `technical-design.md`,
+  `engineering-plan.md`, and `release-ledger.md`.
+- Confirm the version PRD is scoped to this version only and is not a total
+  product PRD.
+- Confirm the version technical design cites the version PRD as its source.
+- Confirm the version engineering plan cites both the version PRD and technical
+  design.
 - Confirm Build Set development is on an approved release/hotfix branch, not
   directly on `main`.
 - Confirm parallel release, hotfix, or publish-verification work uses a dedicated
   worktree.
-- Create or update the matching `docs/releases/` ledger entry for every public
-  artifact version change.
+- Create or update the matching `docs/v<version>/release-ledger.md` entry for
+  every public artifact version change.
 - Confirm the release ledger includes a Build Set composition table binding npm,
   Python app, frontend, transition package, Harbor range, and source commit.
 - Confirm affected PRDs and technical docs updated their `Document Control`
