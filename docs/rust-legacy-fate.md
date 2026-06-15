@@ -27,7 +27,7 @@ Docker diagnostics without making those crates part of the release surface.
 
 ## Guardrails
 
-- New runtime behavior belongs in `harnesslab/`, `frontend/`, and current WebUI
+- New runtime behavior belongs in `ornnlab/`, `frontend/`, and current WebUI
   tests unless a new architecture decision says otherwise.
 - Active docs must point to the Harbor WebUI plan, not Rust CLI plans.
 - Any future archival must be recoverable: move to an archive path in git or a

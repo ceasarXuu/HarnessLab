@@ -13,7 +13,11 @@ LEGACY_RUN_LABEL = "harnesslab.run_id"
 
 class DockerOrphanService:
     def __init__(self, command: list[str] | None = None, timeout_sec: float = 5.0):
-        self.command = command or _command_from_env()
+        if command is None:
+            self.command, self.env_warnings = _command_from_env()
+        else:
+            self.command = command
+            self.env_warnings = []
         self.timeout_sec = timeout_sec
 
     def scan_ornnlab_containers(self) -> dict[str, Any]:
@@ -28,39 +32,21 @@ class DockerOrphanService:
                 "count": 0,
                 "containers": [],
                 "cleanup_plan": [],
+                "warnings": self.env_warnings,
                 "error": "docker_cli_missing",
             }
 
-        try:
-            result = subprocess.run(
-                [
-                    *self.command,
-                    "ps",
-                    "-a",
-                    "--filter",
-                    f"label={ORNNLAB_RUN_LABEL}",
-                    "--format",
-                    "{{json .}}",
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_sec,
-            )
-        except subprocess.TimeoutExpired:
-            return self._failed_scan("docker_ps_timeout")
-        if result.returncode != 0:
-            return self._failed_scan(
-                result.stderr.strip() or result.stdout.strip() or "docker_ps_failed"
-            )
-
         containers: list[dict[str, Any]] = []
-        try:
-            for line in result.stdout.splitlines():
-                if line.strip():
-                    containers.append(_container_from_json(line))
-        except json.JSONDecodeError as error:
-            return self._failed_scan(f"docker_ps_parse_failed: {error.msg}")
+        seen_ids: set[str] = set()
+        for label in [ORNNLAB_RUN_LABEL, LEGACY_RUN_LABEL]:
+            result = self._scan_label(label)
+            if result["error"]:
+                return self._failed_scan(result["error"])
+            for container in result["containers"]:
+                if container["id"] in seen_ids:
+                    continue
+                seen_ids.add(container["id"])
+                containers.append(container)
         cleanup_plan = [
             {
                 "container_id": container["id"],
@@ -82,8 +68,42 @@ class DockerOrphanService:
             "count": len(containers),
             "containers": containers,
             "cleanup_plan": cleanup_plan,
+            "warnings": self.env_warnings,
             "error": None,
         }
+
+    def _scan_label(self, label: str) -> dict[str, Any]:
+        try:
+            result = subprocess.run(
+                [
+                    *self.command,
+                    "ps",
+                    "-a",
+                    "--filter",
+                    f"label={label}",
+                    "--format",
+                    "{{json .}}",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_sec,
+            )
+        except subprocess.TimeoutExpired:
+            return {"containers": [], "error": "docker_ps_timeout"}
+        if result.returncode != 0:
+            return {
+                "containers": [],
+                "error": result.stderr.strip() or result.stdout.strip() or "docker_ps_failed",
+            }
+        containers: list[dict[str, Any]] = []
+        try:
+            for line in result.stdout.splitlines():
+                if line.strip():
+                    containers.append(_container_from_json(line))
+        except json.JSONDecodeError as error:
+            return {"containers": [], "error": f"docker_ps_parse_failed: {error.msg}"}
+        return {"containers": containers, "error": None}
 
     def _failed_scan(self, error: str) -> dict[str, Any]:
         return {
@@ -95,6 +115,7 @@ class DockerOrphanService:
             "count": 0,
             "containers": [],
             "cleanup_plan": [],
+            "warnings": self.env_warnings,
             "error": error,
         }
 
@@ -102,15 +123,23 @@ class DockerOrphanService:
         return self.scan_ornnlab_containers()
 
 
-def _command_from_env() -> list[str]:
-    raw = os.environ.get("ORNNLAB_DOCKER_COMMAND") or os.environ.get(
-        "HARNESSLAB_DOCKER_COMMAND",
-        "docker",
-    )
+def _command_from_env() -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    raw = os.environ.get("ORNNLAB_DOCKER_COMMAND")
+    legacy_raw = os.environ.get("HARNESSLAB_DOCKER_COMMAND")
+    if raw and legacy_raw:
+        warnings.append("legacy_docker_command_ignored")
+    elif raw:
+        pass
+    elif legacy_raw:
+        raw = legacy_raw
+        warnings.append("legacy_docker_command_env_in_use")
+    else:
+        raw = "docker"
     command = shlex.split(raw)
     if not command:
         raise ValueError("ORNNLAB_DOCKER_COMMAND cannot be empty")
-    return command
+    return command, warnings
 
 
 def _resolve_executable(executable: str) -> str | None:

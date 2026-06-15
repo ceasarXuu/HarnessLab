@@ -55,6 +55,10 @@ The main product implementation still uses HarnessLab names:
   Docker env/labels, and old home paths remain readable.
 - Root npm package, npm launcher, current README/docs/PRD, frontend package
   metadata, CI, and Python tests now use OrnnLab as the active product name.
+- A separate `npm/harnesslab-transition/` staging package exists for the old
+  scoped `@ceasarxuu/harnesslab` command and is validated by
+  `scripts/verify-harnesslab-transition-package.sh`; publishing it still
+  requires npm credentials and 2FA outside this local code change.
 - `docs/archive/**`, legacy Rust scripts, old npm reservation shims, and
   compatibility test fixtures intentionally retain HarnessLab names.
 
@@ -221,7 +225,7 @@ npx --yes ornnlab --help
   - Update repository/homepage/bugs after GitHub repository rename.
 - `bin/ornnlab.js`
   - Change default repository URL after repository rename.
-  - Change default checkout path from `~/.ornnlab/HarnessLab` to a launcher
+  - Change default checkout path from the legacy brand-named checkout path to a launcher
     root such as `~/.ornnlab/launcher/source`.
   - Replace help text that says "HarnessLab source" or "HarnessLab doctor".
   - After Python CLI rename, run `uv run ornnlab web` and
@@ -364,7 +368,7 @@ these names.
 Update current docs:
 
 - `README.md`
-- `prd/2026-06-15-harnesslab-webui-prd.md`
+- `prd/2026-06-15-ornnlab-webui-prd.md`
 - `prd/2026-06-15-ornnlab-npm-distribution.md`
 - `docs/README.md`
 - `docs/install-quickstart.md`
@@ -401,7 +405,7 @@ Active non-archive documentation inventory:
 | `docs/playbooks/terminal-bench-claude-ds.md` | historical |
 | `docs/reviews/2026-05-27-docker-runner-review-3.md` | historical |
 | `docs/spikes/2026-06-15-harbor-lifecycle-spike.md` | rename now |
-| `prd/2026-06-15-harnesslab-webui-prd.md` | rename now |
+| `prd/2026-06-15-ornnlab-webui-prd.md` | rename now |
 | `prd/2026-06-15-ornnlab-npm-distribution.md` | rename now |
 | `prd/2026-06-07-universal-benchmark-adapter-protocol.md` | historical |
 | `docs/plans/2026-06-15-ornnlab-rebrand-checklist.md` | rename now |

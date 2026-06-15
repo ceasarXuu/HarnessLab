@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from importlib import metadata
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,18 @@ from ornnlab.services.docker_orphan_service import DockerOrphanService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+
+RUNTIME_ENV_PAIRS = {
+    "ORNNLAB_HARBOR_ENGINE": "HARNESSLAB_HARBOR_ENGINE",
+    "ORNNLAB_HARBOR_SUBPROCESS_COMMAND": "HARNESSLAB_HARBOR_SUBPROCESS_COMMAND",
+    "ORNNLAB_DOCKER_COMMAND": "HARNESSLAB_DOCKER_COMMAND",
+    "ORNNLAB_REAL_HARBOR": "HARNESSLAB_REAL_HARBOR",
+    "ORNNLAB_REAL_HARBOR_AGENT": "HARNESSLAB_REAL_HARBOR_AGENT",
+    "ORNNLAB_REAL_HARBOR_BENCHMARK": "HARNESSLAB_REAL_HARBOR_BENCHMARK",
+    "ORNNLAB_REAL_HARBOR_BENCHMARK_VERSION": "HARNESSLAB_REAL_HARBOR_BENCHMARK_VERSION",
+    "ORNNLAB_REAL_HARBOR_N_TASKS": "HARNESSLAB_REAL_HARBOR_N_TASKS",
+    "ORNNLAB_REAL_HARBOR_CANCEL_DELAY": "HARNESSLAB_REAL_HARBOR_CANCEL_DELAY",
+}
 
 
 class DoctorService:
@@ -32,6 +45,7 @@ class DoctorService:
             "stale_running_runs": stale_running_runs,
             "migration": self.settings.migration,
             "warnings": self._warnings(docker_orphans, stale_running_runs),
+            "runtime_env_warnings": _runtime_env_warnings(),
         }
         if self.settings.warnings:
             status["legacy_warnings"] = list(self.settings.warnings)
@@ -72,8 +86,10 @@ class DoctorService:
             warnings.append("docker_orphans_detected")
         if docker_orphans.get("available") and not docker_orphans.get("ok"):
             warnings.append("docker_orphan_scan_failed")
+        warnings.extend(docker_orphans.get("warnings", []))
+        warnings.extend(_runtime_env_warnings())
         warnings.extend(self.settings.warnings)
-        return warnings
+        return list(dict.fromkeys(warnings))
 
     @staticmethod
     def _package_version(package: str) -> str | None:
@@ -152,3 +168,18 @@ def _remediation(status: dict[str, Any], latest: dict[str, Any] | None) -> list[
     if latest and latest.get("failure_class") == "harbor_recovery":
         actions.append("inspect_harbor_job_dir")
     return actions
+
+
+def _runtime_env_warnings() -> list[str]:
+    warnings: list[str] = []
+    for new_name, legacy_name in RUNTIME_ENV_PAIRS.items():
+        legacy_warning = _legacy_warning_name(legacy_name)
+        if os.environ.get(new_name) and os.environ.get(legacy_name):
+            warnings.append(f"{legacy_warning}_ignored")
+        elif os.environ.get(legacy_name):
+            warnings.append(f"{legacy_warning}_in_use")
+    return warnings
+
+
+def _legacy_warning_name(env_name: str) -> str:
+    return env_name.lower().replace("harnesslab_", "legacy_")

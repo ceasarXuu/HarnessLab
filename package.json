@@ -24,6 +24,7 @@
   },
   "scripts": {
     "smoke:npm-bin": "scripts/verify-npm-reservation-package.sh",
-    "smoke:npm-registry": "scripts/verify-npm-registry-package.sh"
+    "smoke:npm-registry": "scripts/verify-npm-registry-package.sh",
+    "smoke:harnesslab-transition": "bash scripts/verify-harnesslab-transition-package.sh"
   }
 }

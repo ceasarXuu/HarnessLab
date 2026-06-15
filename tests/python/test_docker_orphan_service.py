@@ -12,8 +12,10 @@ def test_docker_orphan_scan_finds_ornnlab_labelled_containers(tmp_path):
             [
                 "import json",
                 "import sys",
-                "assert sys.argv[1:5] == ['ps', '-a', '--filter', 'label=ornnlab.run_id']",
+                "assert sys.argv[1:4] == ['ps', '-a', '--filter']",
                 "assert sys.argv[5:] == ['--format', '{{json .}}']",
+                "if sys.argv[4] != 'label=ornnlab.run_id':",
+                "    raise SystemExit(0)",
                 "print(json.dumps({",
                 "    'ID': 'abc123',",
                 "    'Names': 'ornnlab-task-1',",
@@ -42,6 +44,51 @@ def test_docker_orphan_scan_finds_ornnlab_labelled_containers(tmp_path):
             "manual_review_required": True,
         }
     ]
+
+
+def test_docker_orphan_scan_finds_legacy_labelled_containers(tmp_path):
+    script = tmp_path / "fake_docker_legacy.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import sys",
+                "assert sys.argv[1:4] == ['ps', '-a', '--filter']",
+                "if sys.argv[4] != 'label=harnesslab.run_id':",
+                "    raise SystemExit(0)",
+                "print(json.dumps({",
+                "    'ID': 'legacy123',",
+                "    'Names': 'harnesslab-task-1',",
+                "    'Image': 'harbor-runner:latest',",
+                "    'Status': 'Exited',",
+                "    'Labels': 'harnesslab.run_id=run-legacy',",
+                "}))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_ornnlab_containers()
+
+    assert result["ok"] is True
+    assert result["count"] == 1
+    assert result["containers"][0]["labels"]["harnesslab.run_id"] == "run-legacy"
+    assert result["cleanup_plan"][0]["run_id"] == "run-legacy"
+
+
+def test_docker_orphan_command_env_prefers_ornnlab(monkeypatch, tmp_path):
+    new_script = tmp_path / "new_docker.py"
+    old_script = tmp_path / "old_docker.py"
+    new_script.write_text("import sys\nraise SystemExit(0)\n", encoding="utf-8")
+    old_script.write_text("raise SystemExit(99)\n", encoding="utf-8")
+    monkeypatch.setenv("ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {new_script}")
+    monkeypatch.setenv("HARNESSLAB_DOCKER_COMMAND", f"{sys.executable} {old_script}")
+
+    result = DockerOrphanService().scan_ornnlab_containers()
+
+    assert result["ok"] is True
+    assert result["command"] == [sys.executable, str(new_script)]
+    assert "legacy_docker_command_ignored" in result["warnings"]
 
 
 def test_docker_orphan_scan_reports_cli_failure(tmp_path):
