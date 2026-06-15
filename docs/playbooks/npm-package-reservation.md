@@ -37,10 +37,12 @@ distribution strategy was still being prepared.
 
 `ornnlab` was later published with the same reservation-package pattern at
 version `0.1.0`, owning the `ornnlab` command. `ornnlab@0.1.1` was the first
-active npm launcher for the OrnnLab Harbor WebUI source workflow. The prepared
-`ornnlab@0.1.2` release adds recoverable blank-machine bootstrap for required
-tools and optional Docker capability handling. The product name for that active
-path is OrnnLab.
+active npm launcher for the OrnnLab Harbor WebUI source workflow.
+`ornnlab@0.1.2` added recoverable blank-machine bootstrap for required tools and
+optional Docker capability handling. The prepared `ornnlab@0.1.3` release keeps
+Docker install lightweight and core-only, avoids Docker Desktop, versions
+bootstrap state, and verifies Harbor/backend/frontend readiness after dependency
+sync. The product name for that active path is OrnnLab.
 
 ## Preflight
 

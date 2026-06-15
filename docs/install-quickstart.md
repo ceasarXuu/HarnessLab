@@ -4,7 +4,7 @@ This is the current developer quickstart for the Harbor WebUI rewrite.
 
 ## npm Launcher Install
 
-After `ornnlab@0.1.2` is published:
+After `ornnlab@0.1.3` is published:
 
 ```bash
 npm install -g ornnlab
@@ -30,14 +30,20 @@ supported system package manager or installer path is available.
 
 Docker is optional for first launch. If Docker is already present, the launcher
 records that capability. If it is missing, the launcher asks whether to install
-Docker now; choosing no continues WebUI setup and lets you retry later:
+lightweight core Docker tooling; choosing no continues WebUI setup and lets you
+retry later:
 
 ```bash
 ORNNLAB_INSTALL_DOCKER=1 ornnlab install
 ```
 
 Bootstrap state is written under `~/.ornnlab/launcher/bootstrap-state.json` for
-diagnostics. Rerunning `ornnlab` retries incomplete setup phases.
+diagnostics. The state includes a schema version and launcher version. Rerunning
+`ornnlab` retries incomplete setup phases.
+
+OrnnLab does not install Docker Desktop. On macOS, the lightweight path is Docker
+CLI plus Colima. On Windows, OrnnLab does not silently install Docker Desktop; it
+will guide users toward a core WSL/Docker Engine path instead.
 
 For explicit bootstrap without starting the WebUI, run:
 

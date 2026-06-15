@@ -2,7 +2,7 @@
 
 - Status: Ready for implementation
 - Created: 2026-06-15
-- Updated: 2026-06-15
+- Updated: 2026-06-16
 - Owner / requester: unknown
 - Source request: Publish the current OrnnLab product under the occupied
   `ornnlab` npm package name.
@@ -20,6 +20,8 @@
   tells the user how to update the global npm launcher when needed.
 - `ornnlab uninstall` removes launcher-managed runtime files while preserving
   OrnnLab user data by default.
+- Docker handling is optional and core-only; the launcher must not install
+  Docker Desktop.
 - Plain `ornnlab` performs setup if needed, starts the current WebUI, and prints
   the frontend URL for the user.
 - `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` remain
@@ -52,6 +54,8 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `ornnlab uninstall` provides a safe cleanup flow for managed source checkout
   and launcher state, plus explicit instructions for removing the global npm
   package.
+- Docker install prompts use lightweight core tooling only. macOS uses Docker CLI
+  plus Colima; Windows must not install Docker Desktop automatically.
 - `ornnlab` starts backend and frontend dev servers for the current MVP.
 - The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
 - Local package smoke and registry smoke can verify the release.
@@ -77,7 +81,7 @@ available.
 - Bundled Python runtime.
 - Bundled frontend static serving from FastAPI.
 - Native app packaging.
-- Automatic Docker installation.
+- Automatic Docker Desktop installation.
 - Automatic deletion of old checkouts or user data.
 
 ## 5. Core User Journey
@@ -136,6 +140,7 @@ especially missing prerequisite commands or missing source checkout.
 - `ornnlab uninstall` does not silently remove product data.
 - `ornnlab uninstall` should use recoverable cleanup for any user-data removal
   path, such as moving to a timestamped backup or platform trash.
+- Docker Desktop must not be installed by the launcher.
 - Runtime product data remains under the current OrnnLab default
   `~/.ornnlab/data`.
 

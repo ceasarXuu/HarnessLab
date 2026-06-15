@@ -15,6 +15,7 @@ const backendHost = process.env.ORNNLAB_BACKEND_HOST || "127.0.0.1";
 const backendPort = process.env.ORNNLAB_BACKEND_PORT || "8765";
 const frontendHost = process.env.ORNNLAB_FRONTEND_HOST || "127.0.0.1";
 const frontendPort = process.env.ORNNLAB_FRONTEND_PORT || "5173";
+const stateSchemaVersion = 1;
 
 function addPathIfPresent(candidate) {
   if (fs.existsSync(candidate)) {
@@ -59,8 +60,10 @@ Environment:
 Bootstrap behavior:
   Required tools are git, uv, Node.js, and npm. The launcher tries to install
   missing required tools on macOS, Linux, and Windows when a supported package
-  manager is available. Docker is optional for first launch; if it is missing,
-  the launcher asks whether to install it and records the choice.
+  manager is available and prints each install command before running it. Docker
+  is optional for first launch; if it is missing, the launcher asks whether to
+  install lightweight core tooling and records the choice. The launcher does not
+  install Docker Desktop.
 
 When the app starts, the terminal prints:
   Frontend: http://${frontendHost}:${frontendPort}/
@@ -71,6 +74,9 @@ function phase(message) {
 }
 
 function run(command, args, options = {}) {
+  if (options.announce) {
+    console.log(`$ ${command} ${args.join(" ")}`.trimEnd());
+  }
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     env: process.env,
@@ -87,7 +93,10 @@ function run(command, args, options = {}) {
 }
 
 function runShell(command, options = {}) {
-  return run(command, [], { ...options, shell: true });
+  if (options.announce) {
+    console.log(`$ ${command}`);
+  }
+  return run(command, [], { ...options, shell: true, announce: false });
 }
 
 function spawnAttached(command, args, options = {}) {
@@ -122,6 +131,8 @@ function saveState(patch) {
     ...loadState(),
     ...patch,
     platform: process.platform,
+    schemaVersion: stateSchemaVersion,
+    launcherVersion: packageVersion,
     updatedAt: new Date().toISOString(),
   };
   fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
@@ -145,7 +156,9 @@ function linuxInstaller(command) {
 function installHomebrewIfNeeded() {
   if (commandExists("brew")) return;
   phase("Installing Homebrew because no supported macOS package manager was found");
-  runShell('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"');
+  runShell('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"', {
+    announce: true,
+  });
 }
 
 function installRequiredTool(tool) {
@@ -157,13 +170,13 @@ function installRequiredTool(tool) {
   if (process.platform === "darwin") {
     installHomebrewIfNeeded();
     const brewName = tool === "npm" || tool === "node" ? "node" : tool;
-    run("brew", ["install", brewName]);
+    run("brew", ["install", brewName], { announce: true });
     return;
   }
 
   if (process.platform === "linux") {
     if (tool === "uv") {
-      runShell('curl -LsSf https://astral.sh/uv/install.sh | sh');
+      runShell('curl -LsSf https://astral.sh/uv/install.sh | sh', { announce: true });
       refreshBootstrapPath();
       return;
     }
@@ -172,7 +185,7 @@ function installRequiredTool(tool) {
     if (!command) {
       throw new Error(`No supported Linux package manager found to install ${tool}`);
     }
-    runShell(command);
+    runShell(command, { announce: true });
     return;
   }
 
@@ -186,7 +199,7 @@ function installRequiredTool(tool) {
       node: "OpenJS.NodeJS.LTS",
       npm: "OpenJS.NodeJS.LTS",
     };
-    run("winget", ["install", "--id", ids[tool], "-e", "--source", "winget"]);
+    run("winget", ["install", "--id", ids[tool], "-e", "--source", "winget"], { announce: true });
     return;
   }
 
@@ -206,19 +219,18 @@ function installDocker() {
   phase("Installing optional Docker capability");
   if (process.platform === "darwin") {
     installHomebrewIfNeeded();
-    run("brew", ["install", "--cask", "docker"]);
+    run("brew", ["install", "docker", "colima"], { announce: true });
+    console.log("Installed Docker CLI and Colima. Start the lightweight runtime later with: colima start");
     return;
   }
   if (process.platform === "linux") {
     const command = linuxInstaller("docker.io");
     if (!command) throw new Error("No supported Linux package manager found to install Docker");
-    runShell(command);
+    runShell(command, { announce: true });
     return;
   }
   if (process.platform === "win32") {
-    if (!commandExists("winget")) throw new Error("winget is required to install Docker automatically on Windows");
-    run("winget", ["install", "--id", "Docker.DockerDesktop", "-e", "--source", "winget"]);
-    return;
+    throw new Error("Core-only Docker install is not automated on Windows. Use Docker Engine inside WSL; Docker Desktop is intentionally not installed by OrnnLab.");
   }
   throw new Error(`Unsupported platform for automatic Docker installation: ${process.platform}`);
 }
@@ -297,13 +309,18 @@ function ensureProjectSource() {
 function syncBackendDependencies() {
   phase("Syncing Python backend dependencies");
   run("uv", ["sync", "--group", "dev"], { cwd: sourceDir });
-  saveState({ backend: { status: "ready" } });
+  phase("Verifying Python backend dependencies");
+  run("uv", ["run", "python", "-c", "import harbor; import ornnlab"], { cwd: sourceDir });
+  run("uv", ["run", "ornnlab", "--version"], { cwd: sourceDir, stdio: "ignore" });
+  saveState({ backend: { status: "ready", verified: true } });
 }
 
 function syncFrontendDependencies() {
   phase("Installing frontend dependencies");
   run("npm", ["ci"], { cwd: path.join(sourceDir, "frontend") });
-  saveState({ frontend: { status: "ready" } });
+  phase("Verifying frontend dependencies");
+  run("npm", ["run", "build"], { cwd: path.join(sourceDir, "frontend") });
+  saveState({ frontend: { status: "ready", verified: true } });
 }
 
 async function setup() {
