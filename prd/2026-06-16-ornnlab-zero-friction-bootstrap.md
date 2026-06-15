@@ -112,8 +112,9 @@ Usage context:
 - Long build output may still stream from package managers, but it must be
   preceded by a clear phase label.
 - Errors should say whether the user can rerun `ornnlab` to resume.
-- `ornnlab setup` should force the bootstrap path and rerun missing or incomplete
-  stages.
+- `ornnlab install` should force the bootstrap path and rerun missing or
+  incomplete stages.
+- `ornnlab setup` should remain a compatibility alias for `ornnlab install`.
 - `ornnlab doctor` should remain available for deeper application diagnostics
   after bootstrap succeeds.
 
@@ -164,7 +165,7 @@ Usage context:
 ## 10. Acceptance Criteria
 
 - Given `git` or `uv` is missing on a supported platform, when the user runs
-  `ornnlab setup`, then the launcher attempts to install the missing tool using
+  `ornnlab install`, then the launcher attempts to install the missing tool using
   the supported platform installer.
 - Given Docker is missing, when setup reaches Docker detection, then the user is
   prompted with a yes/no choice and may skip it.

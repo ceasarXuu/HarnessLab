@@ -11,6 +11,8 @@ if [[ "$actual_version" != "$expected_version" ]]; then
 fi
 
 node bin/ornnlab.js --help | grep -q 'ornnlab                    Bootstrap if needed'
+node bin/ornnlab.js --help | grep -q 'ornnlab install            Install prerequisites'
+node bin/ornnlab.js --help | grep -q 'ornnlab setup              Alias for install'
 node bin/ornnlab.js --help | grep -q 'ORNNLAB_FRONTEND_PORT'
 node bin/ornnlab.js --help | grep -q 'ORNNLAB_INSTALL_DOCKER'
 node bin/ornnlab.js --help | grep -q 'Required tools are git, uv, Node.js, and npm'
