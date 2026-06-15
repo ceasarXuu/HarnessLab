@@ -8,13 +8,19 @@ After `ornnlab@0.1.1` is published:
 
 ```bash
 npm install -g ornnlab
-ornnlab setup
-ornnlab dev
+ornnlab
 ```
 
 The launcher checks out the source repository under `~/.ornnlab/HarnessLab` by
 default, installs backend and frontend dependencies, then starts the current
 FastAPI backend and Vue frontend development servers.
+
+The terminal prints the clickable app URL before starting the servers:
+
+```text
+Frontend: http://127.0.0.1:5173/
+Backend API: http://127.0.0.1:8765/
+```
 
 Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
 

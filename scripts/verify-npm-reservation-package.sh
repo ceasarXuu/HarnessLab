@@ -10,7 +10,9 @@ if [[ "$actual_version" != "$expected_version" ]]; then
   exit 1
 fi
 
-node bin/ornnlab.js --help | grep -q 'ornnlab setup'
+node bin/ornnlab.js --help | grep -q 'ornnlab                    Set up if needed'
+node bin/ornnlab.js --help | grep -q 'ORNNLAB_FRONTEND_PORT'
+node bin/ornnlab.js --help | grep -q 'Frontend: http://'
 node bin/ornnlab.js path >/dev/null
 
 if node bin/ornnlab.js unexpected-command >/dev/null 2>&1; then

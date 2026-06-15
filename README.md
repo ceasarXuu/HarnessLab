@@ -27,14 +27,18 @@ source-based WebUI workflow.
 
 ```bash
 npm install -g ornnlab
-ornnlab setup
-ornnlab dev
+ornnlab
 ```
 
 Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
 
 The launcher stores its managed source checkout under `~/.ornnlab/HarnessLab` by
 default. HarnessLab product data remains under `~/.harnesslab`.
+When the app starts, the terminal prints the frontend URL:
+
+```text
+Frontend: http://127.0.0.1:5173/
+```
 
 Until `ornnlab@0.1.1` is live on npm, the registry may still serve the older
 `ornnlab@0.1.0` reservation package.

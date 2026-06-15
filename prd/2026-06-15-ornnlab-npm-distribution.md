@@ -14,9 +14,11 @@
     distribution path.
   - The first npm release is a launcher over the GitHub source checkout, not a
     bundled native binary.
-  - `ornnlab setup` performs safe clone/update and dependency installation.
-  - `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` expose the
-    current WebUI workflows.
+- `ornnlab setup` performs safe clone/update and dependency installation.
+- Plain `ornnlab` performs setup if needed, starts the current WebUI, and prints
+  the frontend URL for the user.
+- `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` remain
+  explicit workflow commands.
 - Important exceptions:
   - The launcher does not delete or overwrite user data.
   - The launcher requires `git`, `uv`, Node.js, and npm on `PATH`.
@@ -39,7 +41,8 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `ornnlab --help` explains setup and run commands.
 - `ornnlab setup` clones or fast-forwards the HarnessLab source checkout and
   installs backend/frontend dependencies.
-- `ornnlab dev` starts backend and frontend dev servers for the current MVP.
+- `ornnlab` starts backend and frontend dev servers for the current MVP.
+- The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
 - Local package smoke and registry smoke can verify the release.
 
 ## 3. Users And Usage Context
@@ -69,11 +72,12 @@ available.
 ## 5. Core User Journey
 
 1. User runs `npm install -g ornnlab`.
-2. User runs `ornnlab setup`.
-3. Launcher clones or updates the source checkout and installs dependencies.
-4. User runs `ornnlab dev`.
+2. User runs `ornnlab`.
+3. Launcher clones or updates the source checkout and installs dependencies if
+   needed.
+4. Launcher prints the frontend URL.
 5. Launcher starts backend and frontend development servers.
-6. User opens the frontend URL printed by Vite.
+6. User opens the frontend URL printed in the terminal.
 
 ## 6. Interaction And Information Design
 
@@ -110,6 +114,8 @@ commands or missing source checkout.
 - `npm pack --dry-run --json` contains only `LICENSE`, `README.md`,
   `bin/ornnlab.js`, and `package.json`.
 - Clean local tarball install exposes `ornnlab --version` and `ornnlab --help`.
+- Launcher help documents that plain `ornnlab` starts the local WebUI.
+- Launcher help documents the printed frontend URL behavior.
 - After publish, `npm view ornnlab name version bin --json` returns the new
   version and `bin.ornnlab`.
 - After publish, clean `npx --yes ornnlab --version` returns the new version.

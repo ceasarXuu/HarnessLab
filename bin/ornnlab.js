@@ -9,10 +9,15 @@ const { version: packageVersion } = require("../package.json");
 const repoUrl = process.env.ORNNLAB_REPO || "https://github.com/ceasarXuu/HarnessLab.git";
 const homeDir = process.env.ORNNLAB_HOME || path.join(os.homedir(), ".ornnlab");
 const sourceDir = process.env.ORNNLAB_SOURCE || path.join(homeDir, "HarnessLab");
+const backendHost = process.env.ORNNLAB_BACKEND_HOST || "127.0.0.1";
+const backendPort = process.env.ORNNLAB_BACKEND_PORT || "8765";
+const frontendHost = process.env.ORNNLAB_FRONTEND_HOST || "127.0.0.1";
+const frontendPort = process.env.ORNNLAB_FRONTEND_PORT || "5173";
 
 const help = `OrnnLab npm launcher
 
 Usage:
+  ornnlab                    Set up if needed, then start the local WebUI
   ornnlab setup              Clone/update the HarnessLab source and install dependencies
   ornnlab dev                Start backend and frontend development servers
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
@@ -26,9 +31,14 @@ Environment:
   ORNNLAB_HOME     Default: ~/.ornnlab
   ORNNLAB_SOURCE   Default: ~/.ornnlab/HarnessLab
   ORNNLAB_REPO     Default: ${repoUrl}
+  ORNNLAB_BACKEND_PORT   Default: 8765
+  ORNNLAB_FRONTEND_PORT  Default: 5173
 
 Prerequisites:
   git, uv, Node.js, and npm must be available on PATH.
+
+When the app starts, the terminal prints:
+  Frontend: http://${frontendHost}:${frontendPort}/
 `;
 
 function run(command, args, options = {}) {
@@ -67,7 +77,7 @@ function ensureCommand(command) {
 
 function ensureSource() {
   if (!fs.existsSync(sourceDir)) {
-    throw new Error(`Source checkout not found. Run: ornnlab setup`);
+    throw new Error("Source checkout not found. Run: ornnlab setup");
   }
   const gitDir = path.join(sourceDir, ".git");
   if (!fs.existsSync(gitDir)) {
@@ -95,7 +105,9 @@ function setup() {
 
 function runBackend(args) {
   ensureSource();
-  run("uv", ["run", "harnesslab", "web", ...args], { cwd: sourceDir });
+  run("uv", ["run", "harnesslab", "web", "--host", backendHost, "--port", backendPort, ...args], {
+    cwd: sourceDir,
+  });
 }
 
 function runDoctor(args) {
@@ -105,17 +117,35 @@ function runDoctor(args) {
 
 function runFrontend(args) {
   ensureSource();
-  run("npm", ["run", "dev", "--", "--host", "127.0.0.1", ...args], {
+  run("npm", ["run", "dev", "--", "--host", frontendHost, "--port", frontendPort, "--strictPort", ...args], {
     cwd: path.join(sourceDir, "frontend"),
   });
 }
 
-function runDev() {
+function printLaunchUrls() {
+  console.log("");
+  console.log("OrnnLab is starting.");
+  console.log(`Frontend: http://${frontendHost}:${frontendPort}/`);
+  console.log(`Backend API: http://${backendHost}:${backendPort}/`);
+  console.log("Press Ctrl+C to stop both servers.");
+  console.log("");
+}
+
+function runDev({ setupIfMissing = false } = {}) {
+  if (!fs.existsSync(sourceDir) && setupIfMissing) {
+    console.log("OrnnLab source checkout not found; running setup first.");
+    setup();
+  }
   ensureSource();
-  const backend = spawnAttached("uv", ["run", "harnesslab", "web"], { cwd: sourceDir });
+  printLaunchUrls();
+  const backend = spawnAttached(
+    "uv",
+    ["run", "harnesslab", "web", "--host", backendHost, "--port", backendPort],
+    { cwd: sourceDir },
+  );
   const frontend = spawnAttached(
     "npm",
-    ["run", "dev", "--", "--host", "127.0.0.1"],
+    ["run", "dev", "--", "--host", frontendHost, "--port", frontendPort, "--strictPort"],
     { cwd: path.join(sourceDir, "frontend") },
   );
 
@@ -129,7 +159,11 @@ function runDev() {
 
 function main() {
   const [command, ...args] = process.argv.slice(2);
-  if (!command || command === "--help" || command === "-h") {
+  if (!command) {
+    runDev({ setupIfMissing: true });
+    return;
+  }
+  if (command === "--help" || command === "-h" || command === "help") {
     console.log(help.trimEnd());
     return;
   }
@@ -157,7 +191,7 @@ function main() {
     runDoctor(args);
     return;
   }
-  if (command === "dev") {
+  if (command === "dev" || command === "start") {
     runDev();
     return;
   }

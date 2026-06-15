@@ -83,7 +83,8 @@ npm install --prefix "$tmpdir/install" "$tmpdir/$tarball"
 Expected signals:
 
 - `ornnlab --version` prints the package version.
-- `ornnlab --help` explains setup and launch commands.
+- `ornnlab --help` explains that plain `ornnlab` starts the local WebUI and
+  prints the frontend URL.
 - The tarball contents are limited by `package.json` `files`.
 
 ## Publish Active `ornnlab` Package
