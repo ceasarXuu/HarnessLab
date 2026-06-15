@@ -21,16 +21,20 @@ summaries, and leaderboard views.
 
 ## Install With npm
 
-The npm launcher is prepared under the `ornnlab` package name. After
-`ornnlab@0.1.1` is published, it is the install path for the active
-source-based WebUI workflow.
+The npm launcher is published under the `ornnlab` package name. `ornnlab@0.1.2`
+is the next launcher release for the active source-based WebUI workflow and adds
+recoverable first-run bootstrap.
 
 ```bash
 npm install -g ornnlab
 ornnlab
 ```
 
-Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
+The npm install command still requires an existing Node/npm entrypoint. After
+that, the launcher checks `git`, `uv`, Node.js, npm, and optional Docker
+capability. Missing required tools are installed automatically when the platform
+has a supported package manager or installer path. Docker is optional for first
+launch and can be installed or skipped during setup.
 
 The launcher stores its managed source checkout under `~/.ornnlab/launcher/source` by
 default. OrnnLab product data remains under `~/.ornnlab/data`.
@@ -40,8 +44,8 @@ When the app starts, the terminal prints the frontend URL:
 Frontend: http://127.0.0.1:5173/
 ```
 
-Until `ornnlab@0.1.1` is live on npm, the registry may still serve the older
-`ornnlab@0.1.0` reservation package.
+If the registry serves `ornnlab@0.1.1`, that is the first WebUI launcher release
+without the full blank-machine bootstrap flow.
 
 ## Current Status
 
