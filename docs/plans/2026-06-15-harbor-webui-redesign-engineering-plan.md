@@ -1449,8 +1449,19 @@ Replaced the legacy Rust-first CI workflow with the current Harbor WebUI gates:
 - `real-harbor-docker-smoke` remains opt-in via workflow dispatch with
   `real_harbor_smoke=true`, preserving real Docker validation without making it
   a default PR blocker.
+- the workflow opts GitHub JavaScript actions into the Node 24 runtime with
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, closing the upcoming Node 20
+  actions-runtime deprecation warning observed on the first CI pass.
 
 Validation evidence:
 
 - `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'`
 - `git diff --check`
+- GitHub Actions run `27545293033` succeeded on 2026-06-15:
+  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033`
+- Python Web Gate succeeded:
+  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416989740`
+- Frontend Web Gate succeeded:
+  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416989626`
+- Real Harbor Docker Smoke was skipped by the intended workflow-dispatch guard:
+  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416991132`

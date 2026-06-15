@@ -99,6 +99,10 @@ GitHub Actions mirrors the WebUI gate as two required default jobs:
 - `frontend-web`: Node 22, `npm ci`, Playwright Chromium install, Vue
   typecheck, ESLint, Vitest, Storybook smoke, and Playwright e2e.
 
+The workflow sets `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` so reusable GitHub
+JavaScript actions run on the Node 24 runtime while the frontend application
+continues to test against Node 22.
+
 Real Harbor Docker smoke remains opt-in through `workflow_dispatch` with
 `real_harbor_smoke=true`, because it requires Docker and real benchmark runtime
 resources that should not block every PR by default.
