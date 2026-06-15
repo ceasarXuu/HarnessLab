@@ -34,7 +34,7 @@
 | Mutation | `cargo-mutants`，M13 起覆盖 critical modules。 |
 | Snapshots/golden | `insta` 用于 report/model golden，必须人工可读 diff。 |
 | Packaging | Cargo binary first；后续再加 Homebrew/tap 和 install script。 |
-| CI | GitHub Actions；required jobs 和 artifact retention 按 `docs/test-engineering.md`。 |
+| CI | GitHub Actions；required jobs 和 artifact retention 按 `docs/current/test-engineering.md`。 |
 
 ## 3. Language: Rust
 
@@ -168,7 +168,7 @@ Rules:
 - artifact collection uses streaming copy and size limits.
 - report generation reads `results.json` and task summaries, not full raw logs.
 
-Performance baselines remain those in `docs/mvp-development-spec.md`.
+Performance baselines remain those in `docs/legacy/mvp-development-spec.md`.
 
 ## 8. Artifact Store
 

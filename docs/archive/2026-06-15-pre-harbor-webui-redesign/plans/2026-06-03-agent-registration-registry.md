@@ -14,9 +14,9 @@
 
 This plan implements the product contract from:
 
-- `docs/prd.md` section `11. Agent Profile 配置体验`
-- `docs/architecture.md` section `5.3 Agent Registry`
-- `docs/mvp-development-spec.md` section `6.2 Agent Profile Schema`
+- `docs/legacy/prd.md` section `11. Agent Profile 配置体验`
+- `docs/legacy/architecture.md` section `5.3 Agent Registry`
+- `docs/legacy/mvp-development-spec.md` section `6.2 Agent Profile Schema`
 - `docs/playbooks/terminal-bench-claude-ds.md` section `2. 注册 claude-ds agent`
 
 In scope:
@@ -1214,9 +1214,9 @@ git commit -m "feat: block unsupported agent registry policies before run"
 **Files:**
 
 - Modify: `docs/playbooks/terminal-bench-claude-ds.md`
-- Create or modify: `docs/agent-profile-reference.md`
-- Modify: `docs/development-operations.md`
-- Modify: `docs/prd.md` only if implementation changes product contract
+- Create or modify: `docs/legacy/agent-profile-reference.md`
+- Modify: `docs/current/development-operations.md`
+- Modify: `docs/legacy/prd.md` only if implementation changes product contract
 
 **Step 1: Update claude-ds playbook**
 
@@ -1231,7 +1231,7 @@ Move `labels.sandbox_setup_command` to a clearly marked legacy appendix, or remo
 
 **Step 2: Add field reference doc**
 
-`docs/agent-profile-reference.md` should include:
+`docs/legacy/agent-profile-reference.md` should include:
 
 - Full TOML schema.
 - Field table with required flag, allowed values, default, example.
@@ -1248,7 +1248,7 @@ Move `labels.sandbox_setup_command` to a clearly marked legacy appendix, or remo
 Run:
 
 ```bash
-git diff --check -- docs/playbooks/terminal-bench-claude-ds.md docs/agent-profile-reference.md docs/development-operations.md
+git diff --check -- docs/playbooks/terminal-bench-claude-ds.md docs/legacy/agent-profile-reference.md docs/current/development-operations.md
 ```
 
 Expected:
@@ -1258,7 +1258,7 @@ Expected:
 **Step 4: Commit**
 
 ```bash
-git add docs/playbooks/terminal-bench-claude-ds.md docs/agent-profile-reference.md docs/development-operations.md docs/prd.md
+git add docs/playbooks/terminal-bench-claude-ds.md docs/legacy/agent-profile-reference.md docs/current/development-operations.md docs/legacy/prd.md
 git commit -m "docs: document semantic agent registration"
 ```
 
@@ -1337,7 +1337,7 @@ Only commit if this task produced additional changes.
 **Files:**
 
 - No code files.
-- Possible doc update: `docs/development-operations.md` if new operational lesson is found.
+- Possible doc update: `docs/current/development-operations.md` if new operational lesson is found.
 
 **Step 1: Create or update a real `claude-ds` profile**
 
@@ -1403,7 +1403,7 @@ Expected:
 **Step 5: Commit operational notes only if needed**
 
 ```bash
-git add docs/development-operations.md
+git add docs/current/development-operations.md
 git commit -m "docs: record agent registry validation notes"
 ```
 

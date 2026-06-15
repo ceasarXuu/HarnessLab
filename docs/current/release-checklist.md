@@ -9,6 +9,7 @@
 | 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Build Set confirmation to release gate. |
 | 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree confirmation. |
 | 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required version-folder document bundle checks. |
+| 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added docs-root convergence check. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -16,7 +17,9 @@ Use this checklist for Harbor WebUI rewrite releases.
 
 - Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
   has current implementation ledger evidence.
-- Confirm version changes follow `docs/version-governance.md`.
+- Confirm version changes follow `docs/current/version-governance.md`.
+- Confirm `docs/` has no Markdown files directly under the root; active
+  entrypoint, current docs, and legacy stubs must live in subdirectories.
 - Confirm the matching `docs/v<version>/` folder exists and contains:
   `README.md`, `version-prd.md`, `technical-design.md`,
   `engineering-plan.md`, and `release-ledger.md`.

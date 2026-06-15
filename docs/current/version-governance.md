@@ -10,6 +10,7 @@
 | 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Release Train / Build Set governance for independent component versions. |
 | 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree policy for version development. |
 | 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Replaced active total-PRD governance with per-version document folders. |
+| 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Required `docs/` root files to be collected under stable subdirectories. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -48,7 +49,7 @@ another still said `ornnlab@0.1.2`.
 | Frontend package version | `frontend/package.json` `version` | frontend build metadata if needed | Private implementation version; do not mention in user docs unless needed. |
 | Scoped transition package version | `npm/harnesslab-transition/package.json` `version` | old `@ceasarxuu/harnesslab` compatibility package | Only changes for transition/deprecation releases. |
 | Bootstrap state schema | launcher source constant and persisted `schemaVersion` | `~/.ornnlab/launcher/bootstrap-state.json`, bootstrap migrations | Schema version is not a product release version. |
-| Harbor dependency range | `pyproject.toml` dependency constraint | backend install, doctor, Harbor upgrade procedure | Upgrade through `docs/harbor-upgrade-procedure.md`. |
+| Harbor dependency range | `pyproject.toml` dependency constraint | backend install, doctor, Harbor upgrade procedure | Upgrade through `docs/current/harbor-upgrade-procedure.md`. |
 
 ## Release Train / Build Set
 
@@ -158,6 +159,12 @@ Rules:
 
 ## Documentation Rules
 
+- Do not put Markdown files directly under `docs/`.
+- Use `docs/index/` for the documentation entrypoint.
+- Use `docs/current/` for cross-version operational and governance documents
+  that are still active.
+- Use `docs/legacy/` for old root-level stubs or historical decisions that
+  must remain addressable but are not current product direction.
 - User-facing installation docs should prefer `latest` or unversioned commands:
   ```bash
   npm install -g ornnlab
@@ -296,19 +303,20 @@ active docs for unapproved literal version references.
 The active version-governed documents are:
 
 - `README.md`
-- `docs/version-governance.md`
+- `docs/index/README.md`
+- `docs/current/version-governance.md`
 - `docs/v0.1.3/README.md`
 - `docs/v0.1.3/version-prd.md`
 - `docs/v0.1.3/technical-design.md`
 - `docs/v0.1.3/engineering-plan.md`
 - `docs/v0.1.3/release-ledger.md`
 - `docs/releases/*.md` historical index entries
-- `docs/install-quickstart.md`
-- `docs/release-checklist.md`
-- `docs/development-operations.md`
-- `docs/technology-decisions.md`
-- `docs/harbor-upgrade-procedure.md`
-- `docs/test-engineering.md`
+- `docs/current/development-operations.md`
+- `docs/current/harbor-upgrade-procedure.md`
+- `docs/current/install-quickstart.md`
+- `docs/current/release-checklist.md`
+- `docs/current/technology-decisions.md`
+- `docs/current/test-engineering.md`
 - `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - `docs/playbooks/npm-package-reservation.md`
 - `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md` as

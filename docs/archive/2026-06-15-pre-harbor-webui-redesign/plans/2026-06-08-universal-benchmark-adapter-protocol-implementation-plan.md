@@ -12,7 +12,7 @@
   - `docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md`
   - `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-phase-0-branch-inventory.md`
   - `docs/plans/2026-06-08-universal-benchmark-adapter-protocol-phase-0-frozen-selector-manifest.md`
-  - `docs/adapter-protocol.md`
+  - `docs/legacy/adapter-protocol.md`
   - `tests/FROZEN_SELECTOR_MANIFEST.toml`
   - `vs_review/2026-06-07-benchmark-adapter-blocker-fix-review.md`
 - Risk Level: High
@@ -629,7 +629,7 @@ leaks.
 
 #### Deliverables
 
-- `docs/adapter-protocol.md`
+- `docs/legacy/adapter-protocol.md`
 - Protocol acceptance matrix mapped to PRD `AC-001..AC-009`.
 - Decision log entry for in-repo protocol isolation vs out-of-tree packaging.
 
@@ -1402,7 +1402,7 @@ Minimum new selector families:
 | 0.3 | 2026-06-08 | Started implementation with Phase 0 branch inventory and frozen selector manifest deliverables; Phase 0 review is pending before Phase 1 protocol specification work. |
 | 0.4 | 2026-06-08 | Added Phase 0 machine-enforced frozen selector lockfile and `xtask` guard; expanded inventory for integrations, serialized authority fields, registry dispatch classification, and readiness-owned label references. |
 | 0.5 | 2026-06-08 | Hardened Phase 0 frozen guard with independent selector id baseline, exact router case locking, and execution file content hashes for the shared selector executor and external proof scripts. |
-| 0.6 | 2026-06-08 | Started Phase 1 protocol specification with `docs/adapter-protocol.md` and registered `ADAPT-PROTOCOL-001..012` as planned requirement/test/selector gates. |
+| 0.6 | 2026-06-08 | Started Phase 1 protocol specification with `docs/legacy/adapter-protocol.md` and registered `ADAPT-PROTOCOL-001..012` as planned requirement/test/selector gates. |
 | 0.7 | 2026-06-08 | Started Phase 2 implementation by adding protocol identity/authority types, built-in adapter protocol registry binding validation, and active `ADAPT-PROTOCOL-001/002` selector routes. |
 | 0.8 | 2026-06-11 | Extended Phase 2 implementation into runtime/replay authority binding: production adapters dual-write `TaskRuntimeBinding`, CLI preflight/execute/cleanup resolve by protocol `adapter_id`, external-runtime snapshots fingerprint `protocol_authority`, and `ADAPT-PROTOCOL-002` documentation is scoped to current registry validation while later artifact/redaction/report gates remain explicit. |
 | 0.9 | 2026-06-11 | Closed Phase 2 adversarial review after Round 5: accepted blockers from prior rounds are fixed and validated; remaining items are non-blocking Phase 3/4 work such as SWE protocol-only positive coverage and cleanup/report/doctor branch removal. |

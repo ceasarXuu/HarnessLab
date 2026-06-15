@@ -11,17 +11,17 @@ CHECKLIST = ROOT / "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md"
 ARTIFACT = ROOT / "artifacts/rebrand/ornnlab-rebrand-verification.json"
 
 DOC_INVENTORY = {
-    "docs/README.md": "rename-now",
-    "docs/adapter-protocol.md": "historical-stub",
-    "docs/agent-profile-reference.md": "historical-stub",
-    "docs/agent-registration-guide.md": "historical-stub",
-    "docs/architecture.md": "superseded-stub",
+    "docs/index/README.md": "rename-now",
+    "docs/legacy/adapter-protocol.md": "historical-stub",
+    "docs/legacy/agent-profile-reference.md": "historical-stub",
+    "docs/legacy/agent-registration-guide.md": "historical-stub",
+    "docs/legacy/architecture.md": "superseded-stub",
     "docs/architecture/benchmark-compatibility-strategy.md": "historical-stub",
     "docs/architecture/harnesslab-vs-harbor.md": "historical-stub",
-    "docs/development-operations.md": "rename-now",
-    "docs/harbor-upgrade-procedure.md": "rename-now",
-    "docs/install-quickstart.md": "rename-now",
-    "docs/mvp-development-spec.md": "superseded-stub",
+    "docs/current/development-operations.md": "rename-now",
+    "docs/current/harbor-upgrade-procedure.md": "rename-now",
+    "docs/current/install-quickstart.md": "rename-now",
+    "docs/legacy/mvp-development-spec.md": "superseded-stub",
     "docs/plans/2026-06-03-agent-registration-gap-completion.md": "historical",
     "docs/plans/2026-06-03-agent-registration-registry.md": "historical",
     "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md": "historical",
@@ -60,20 +60,20 @@ DOC_INVENTORY = {
     "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md": "rename-now",
     "docs/playbooks/npm-package-reservation.md": "rename-now",
     "docs/playbooks/terminal-bench-claude-ds.md": "historical",
-    "docs/prd.md": "superseded-stub",
-    "docs/release-checklist.md": "rename-now",
+    "docs/legacy/prd.md": "superseded-stub",
+    "docs/current/release-checklist.md": "rename-now",
     "docs/releases/2026-06-16-ornnlab-0.1.3.md": "rename-now",
     "docs/reviews/2026-05-27-docker-runner-review-3.md": "historical",
-    "docs/rust-legacy-fate.md": "historical",
+    "docs/legacy/rust-legacy-fate.md": "historical",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
-    "docs/technology-decisions.md": "rename-now",
-    "docs/test-engineering.md": "rename-now",
+    "docs/current/technology-decisions.md": "rename-now",
+    "docs/current/test-engineering.md": "rename-now",
     "docs/v0.1.3/README.md": "rename-now",
     "docs/v0.1.3/engineering-plan.md": "rename-now",
     "docs/v0.1.3/release-ledger.md": "rename-now",
     "docs/v0.1.3/technical-design.md": "rename-now",
     "docs/v0.1.3/version-prd.md": "rename-now",
-    "docs/version-governance.md": "rename-now",
+    "docs/current/version-governance.md": "rename-now",
     "prd/2026-06-07-universal-benchmark-adapter-protocol.md": "historical-stub",
     "prd/2026-06-15-ornnlab-npm-distribution.md": "rename-now",
     "prd/2026-06-15-ornnlab-webui-prd.md": "rename-now",
@@ -81,22 +81,22 @@ DOC_INVENTORY = {
 }
 
 DOC_CONTROL_REQUIRED = {
-    "docs/development-operations.md",
-    "docs/harbor-upgrade-procedure.md",
-    "docs/install-quickstart.md",
+    "docs/current/development-operations.md",
+    "docs/current/harbor-upgrade-procedure.md",
+    "docs/current/install-quickstart.md",
     "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md",
     "docs/playbooks/npm-package-reservation.md",
-    "docs/release-checklist.md",
+    "docs/current/release-checklist.md",
     "docs/releases/2026-06-16-ornnlab-0.1.3.md",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
-    "docs/technology-decisions.md",
-    "docs/test-engineering.md",
+    "docs/current/technology-decisions.md",
+    "docs/current/test-engineering.md",
     "docs/v0.1.3/README.md",
     "docs/v0.1.3/engineering-plan.md",
     "docs/v0.1.3/release-ledger.md",
     "docs/v0.1.3/technical-design.md",
     "docs/v0.1.3/version-prd.md",
-    "docs/version-governance.md",
+    "docs/current/version-governance.md",
     "prd/2026-06-15-ornnlab-npm-distribution.md",
     "prd/2026-06-15-ornnlab-webui-prd.md",
     "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md",
@@ -113,6 +113,7 @@ def main() -> int:
     checks: list[dict[str, Any]] = [
         _check_doc_inventory(),
         _check_doc_control_tables(),
+        _check_docs_root_converged(),
         _check_version_folder_contract(),
         _check_product_metadata(),
         _check_current_docs(),
@@ -168,6 +169,16 @@ def _check_doc_control_tables() -> dict[str, Any]:
             "missing": missing,
             "incomplete": incomplete,
         },
+    )
+
+
+def _check_docs_root_converged() -> dict[str, Any]:
+    root_markdown = sorted(path.name for path in (ROOT / "docs").glob("*.md"))
+    return _result(
+        "docs root has no direct markdown files",
+        "inspect docs/*.md",
+        not root_markdown,
+        {"root_markdown": root_markdown},
     )
 
 

@@ -46,9 +46,9 @@
 ## Documentation Updated
 
 - `README.md`
-- `docs/README.md`
-- `docs/version-governance.md`
-- `docs/release-checklist.md`
+- `docs/index/README.md`
+- `docs/current/version-governance.md`
+- `docs/current/release-checklist.md`
 - `docs/v0.1.3/README.md`
 - `docs/v0.1.3/version-prd.md`
 - `docs/v0.1.3/technical-design.md`
