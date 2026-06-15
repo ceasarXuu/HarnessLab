@@ -1,6 +1,6 @@
 {
   "name": "@ceasarxuu/harnesslab",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Transition package for the old HarnessLab command; use ornnlab instead.",
   "license": "MIT",
   "bin": {

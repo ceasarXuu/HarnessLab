@@ -189,6 +189,9 @@ Expected signals:
   `package.json`.
 - The `harnesslab` command prints a transition notice pointing to `ornnlab`.
 - The root `ornnlab` package still excludes `bin/harnesslab.js`.
+- The transition publish must use a new version. `@ceasarxuu/harnesslab@0.1.1`
+  is already live with the older reservation message, so the staging manifest
+  starts at `0.1.2`.
 
 ## Additional Brand Reservations
 
