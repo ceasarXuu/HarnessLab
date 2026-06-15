@@ -91,3 +91,14 @@ change is intentionally docs-only and the narrower evidence is stated. The gate
 uses `uv run` for Python commands so it does not depend on a system `python`
 alias, and it runs Vitest with `--pool threads --maxWorkers=1` to avoid local
 fork-worker startup flakes.
+
+GitHub Actions mirrors the WebUI gate as two required default jobs:
+
+- `python-web`: `uv sync --group dev`, ruff, pyright, pytest, line-count, and
+  `git diff --check`;
+- `frontend-web`: Node 22, `npm ci`, Playwright Chromium install, Vue
+  typecheck, ESLint, Vitest, Storybook smoke, and Playwright e2e.
+
+Real Harbor Docker smoke remains opt-in through `workflow_dispatch` with
+`real_harbor_smoke=true`, because it requires Docker and real benchmark runtime
+resources that should not block every PR by default.

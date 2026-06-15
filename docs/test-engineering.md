@@ -36,6 +36,8 @@ Current rewrite gates are Python/Web first:
 - ruff and pyright for Python static gates;
 - Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
   smoke tests for the frontend;
+- GitHub Actions default jobs `python-web` and `frontend-web`, plus an opt-in
+  `real-harbor-docker-smoke` workflow dispatch job;
 - a line-count gate that fails when production source files exceed 500 lines.
 
 The old Cargo registry remains a legacy reference. Current rewrite traceability
@@ -76,3 +78,7 @@ Operational note: Vitest should run with `--pool threads --maxWorkers=1` for the
 current small frontend suite. The default fork pool can time out while starting
 workers on this local environment before any test file runs, which makes the
 gate flaky without increasing coverage.
+
+Operational note: CI keeps real Harbor Docker smoke out of the default required
+jobs. Use workflow dispatch with `real_harbor_smoke=true` when Docker-backed
+Harbor behavior must be revalidated.
