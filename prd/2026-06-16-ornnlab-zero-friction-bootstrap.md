@@ -68,6 +68,8 @@ Usage context:
 - Clone/update the source checkout.
 - Install Python backend dependencies.
 - Install frontend dependencies.
+- Provide `ornnlab update` to refresh the managed source checkout and
+  dependencies after installation.
 - Persist bootstrap state for diagnostics and recovery.
 - Make setup idempotent and recoverable after partial failure.
 
@@ -106,6 +108,22 @@ Usage context:
 6. If a later workflow requires Docker, the product can offer the installation
    choice again.
 
+Update journey:
+
+1. User runs:
+   ```bash
+   ornnlab update
+   ```
+2. Launcher checks the published npm launcher version and the installed launcher
+   version.
+3. If the global npm launcher is behind, the launcher prints the explicit command:
+   ```bash
+   npm install -g ornnlab@latest
+   ```
+4. Launcher updates the managed source checkout, reruns Python dependency sync,
+   reruns frontend dependency install, records update state, and exits without
+   starting the WebUI.
+
 ## 6. Interaction And Information Design
 
 - Phase output should be short and explicit.
@@ -115,6 +133,8 @@ Usage context:
 - `ornnlab install` should force the bootstrap path and rerun missing or
   incomplete stages.
 - `ornnlab setup` should remain a compatibility alias for `ornnlab install`.
+- `ornnlab update` should refresh the managed source checkout and dependencies
+  without starting the WebUI.
 - `ornnlab doctor` should remain available for deeper application diagnostics
   after bootstrap succeeds.
 
@@ -149,6 +169,10 @@ Usage context:
   failure.
 - If source clone succeeds but dependency installation fails, rerunning
   `ornnlab` should retry the failed dependency stage.
+- If update detects an outdated npm launcher, it should print the npm update
+  command instead of silently modifying the global install.
+- If update cannot reach the npm registry, it should continue source/dependency
+  update and record the version-check failure as a warning.
 - If Docker install is skipped, do not block WebUI launch.
 - If Docker is installed but the daemon is not running, record Docker as present
   with a runtime warning instead of blocking WebUI launch.
@@ -176,6 +200,11 @@ Usage context:
   stage.
 - Given all dependencies are already present, when the user reruns `ornnlab`,
   then setup avoids unnecessary reinstall work and starts the WebUI.
+- Given the user runs `ornnlab update`, when the managed source checkout is a
+  git repository, then the launcher runs a fast-forward update and reruns backend
+  and frontend dependency sync without starting servers.
+- Given the installed launcher version is behind npm latest, when the user runs
+  `ornnlab update`, then the launcher prints `npm install -g ornnlab@latest`.
 - Given automatic install fails, when the launcher exits, then the user sees the
   failed prerequisite, attempted command, and a safe rerun path.
 

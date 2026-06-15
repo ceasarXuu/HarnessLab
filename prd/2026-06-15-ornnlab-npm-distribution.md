@@ -16,6 +16,8 @@
     bundled native binary.
 - `ornnlab install` performs safe clone/update and dependency installation.
 - `ornnlab setup` remains a compatibility alias for `ornnlab install`.
+- `ornnlab update` refreshes the managed source checkout and dependencies, and
+  tells the user how to update the global npm launcher when needed.
 - Plain `ornnlab` performs setup if needed, starts the current WebUI, and prints
   the frontend URL for the user.
 - `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` remain
@@ -42,6 +44,9 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `ornnlab --help` explains setup and run commands.
 - `ornnlab install` clones or fast-forwards the OrnnLab source checkout and
   installs backend/frontend dependencies.
+- `ornnlab update` fast-forwards the managed source checkout, reruns dependency
+  sync, and prints the npm command for launcher self-update if the installed
+  launcher is behind the registry.
 - `ornnlab` starts backend and frontend dev servers for the current MVP.
 - The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
 - Local package smoke and registry smoke can verify the release.
@@ -80,11 +85,23 @@ available.
 5. Launcher starts backend and frontend development servers.
 6. User opens the frontend URL printed in the terminal.
 
+Update journey:
+
+1. User runs `ornnlab update`.
+2. Launcher checks whether the global npm launcher is behind the registry.
+3. If the launcher is outdated, it prints:
+   ```bash
+   npm install -g ornnlab@latest
+   ```
+4. Launcher updates the managed source checkout with `git pull --ff-only`.
+5. Launcher reruns backend and frontend dependency sync.
+6. Launcher exits without starting the WebUI.
+
 ## 6. Interaction And Information Design
 
-The command help must list setup, dev, backend, frontend, doctor, and path
-commands. Errors must be direct and actionable, especially missing prerequisite
-commands or missing source checkout.
+The command help must list install, update, setup, dev, backend, frontend,
+doctor, and path commands. Errors must be direct and actionable, especially
+missing prerequisite commands or missing source checkout.
 
 ## 7. Product Rules And State Logic
 
@@ -92,6 +109,8 @@ commands or missing source checkout.
 - `ORNNLAB_HOME`, `ORNNLAB_SOURCE`, and `ORNNLAB_REPO` may override defaults.
 - Existing non-git source paths are not overwritten.
 - Existing git checkouts are updated only with `git pull --ff-only`.
+- `ornnlab update` does not silently modify the global npm package installation;
+  it prints the explicit npm command instead.
 - Runtime product data remains under the current OrnnLab default
   `~/.ornnlab/data`.
 
@@ -117,6 +136,7 @@ commands or missing source checkout.
   `bin/ornnlab.js`, and `package.json`.
 - Clean local tarball install exposes `ornnlab --version` and `ornnlab --help`.
 - Launcher help documents that plain `ornnlab` starts the local WebUI.
+- Launcher help documents `ornnlab update`.
 - Launcher help documents the printed frontend URL behavior.
 - After publish, `npm view ornnlab name version bin --json` returns the new
   version and `bin.ornnlab`.
