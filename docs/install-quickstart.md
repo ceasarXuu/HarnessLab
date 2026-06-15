@@ -33,11 +33,19 @@ records that capability. If it is missing, the launcher asks whether to install
 Docker now; choosing no continues WebUI setup and lets you retry later:
 
 ```bash
-ORNNLAB_INSTALL_DOCKER=1 ornnlab setup
+ORNNLAB_INSTALL_DOCKER=1 ornnlab install
 ```
 
 Bootstrap state is written under `~/.ornnlab/launcher/bootstrap-state.json` for
 diagnostics. Rerunning `ornnlab` retries incomplete setup phases.
+
+For explicit bootstrap without starting the WebUI, run:
+
+```bash
+ornnlab install
+```
+
+`ornnlab setup` remains a compatibility alias.
 
 If the npm registry still serves `ornnlab@0.1.0`, that is the older reservation
 package and does not yet contain the WebUI launcher.

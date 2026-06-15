@@ -14,7 +14,8 @@
     distribution path.
   - The first npm release is a launcher over the GitHub source checkout, not a
     bundled native binary.
-- `ornnlab setup` performs safe clone/update and dependency installation.
+- `ornnlab install` performs safe clone/update and dependency installation.
+- `ornnlab setup` remains a compatibility alias for `ornnlab install`.
 - Plain `ornnlab` performs setup if needed, starts the current WebUI, and prints
   the frontend URL for the user.
 - `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` remain
@@ -39,7 +40,7 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `npm install -g ornnlab` installs an `ornnlab` command.
 - `ornnlab --version` prints the npm launcher version.
 - `ornnlab --help` explains setup and run commands.
-- `ornnlab setup` clones or fast-forwards the OrnnLab source checkout and
+- `ornnlab install` clones or fast-forwards the OrnnLab source checkout and
   installs backend/frontend dependencies.
 - `ornnlab` starts backend and frontend dev servers for the current MVP.
 - The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
@@ -97,7 +98,7 @@ commands or missing source checkout.
 ## 8. Edge Cases, Errors, And Recovery
 
 - Missing `git`, `uv`, or `npm`: fail with the missing command name.
-- Source checkout absent for run commands: tell the user to run `ornnlab setup`.
+- Source checkout absent for run commands: tell the user to run `ornnlab install`.
 - Existing non-git source path: fail without modifying it.
 - Dependency install failure: leave the checkout in place for manual inspection.
 - Frontend/backend process termination: forward `SIGTERM` on launcher shutdown.

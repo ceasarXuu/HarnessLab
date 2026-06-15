@@ -37,7 +37,8 @@ const help = `OrnnLab npm launcher
 
 Usage:
   ornnlab                    Bootstrap if needed, then start the local WebUI
-  ornnlab setup              Install prerequisites, clone/update source, and install dependencies
+  ornnlab install            Install prerequisites, clone/update source, and install dependencies
+  ornnlab setup              Alias for install
   ornnlab dev                Start backend and frontend development servers
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
   ornnlab ui [args...]       Start the Vue frontend dev server from the managed source checkout
@@ -245,7 +246,7 @@ async function handleDockerCapability() {
   const install = envChoice === "1" || (envChoice !== "0" && (await askYesNo("Docker is optional for first launch. Install Docker now?")));
   if (!install) {
     saveState({ docker: { status: "skipped" } });
-    console.log("Docker install skipped. You can rerun `ORNNLAB_INSTALL_DOCKER=1 ornnlab setup` later.");
+    console.log("Docker install skipped. You can rerun `ORNNLAB_INSTALL_DOCKER=1 ornnlab install` later.");
     return;
   }
 
@@ -261,7 +262,7 @@ async function handleDockerCapability() {
 
 function ensureSource() {
   if (!fs.existsSync(sourceDir)) {
-    throw new Error("Source checkout not found. Run: ornnlab setup");
+    throw new Error("Source checkout not found. Run: ornnlab install");
   }
   const gitDir = path.join(sourceDir, ".git");
   if (!fs.existsSync(gitDir)) {
@@ -406,7 +407,7 @@ async function main() {
     console.log(sourceDir);
     return;
   }
-  if (command === "setup") {
+  if (command === "install" || command === "setup") {
     await setup();
     return;
   }
@@ -431,6 +432,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(error.message);
-  console.error("Rerun `ornnlab setup` after fixing the issue; bootstrap will retry incomplete stages.");
+  console.error("Rerun `ornnlab install` after fixing the issue; bootstrap will retry incomplete stages.");
   process.exit(1);
 });

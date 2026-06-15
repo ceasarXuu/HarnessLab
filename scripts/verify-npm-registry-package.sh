@@ -15,6 +15,7 @@ if [[ "$actual_version" != "$expected_version" ]]; then
   exit 1
 fi
 
+npx --yes ornnlab --help | grep -q 'ornnlab install'
 npx --yes ornnlab --help | grep -q 'ornnlab setup'
 
 ornnlab_status="$(
