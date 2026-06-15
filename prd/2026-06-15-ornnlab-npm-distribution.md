@@ -18,6 +18,8 @@
 - `ornnlab setup` remains a compatibility alias for `ornnlab install`.
 - `ornnlab update` refreshes the managed source checkout and dependencies, and
   tells the user how to update the global npm launcher when needed.
+- `ornnlab uninstall` removes launcher-managed runtime files while preserving
+  OrnnLab user data by default.
 - Plain `ornnlab` performs setup if needed, starts the current WebUI, and prints
   the frontend URL for the user.
 - `ornnlab dev`, `ornnlab web`, `ornnlab ui`, and `ornnlab doctor` remain
@@ -47,6 +49,9 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `ornnlab update` fast-forwards the managed source checkout, reruns dependency
   sync, and prints the npm command for launcher self-update if the installed
   launcher is behind the registry.
+- `ornnlab uninstall` provides a safe cleanup flow for managed source checkout
+  and launcher state, plus explicit instructions for removing the global npm
+  package.
 - `ornnlab` starts backend and frontend dev servers for the current MVP.
 - The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
 - Local package smoke and registry smoke can verify the release.
@@ -97,11 +102,28 @@ Update journey:
 5. Launcher reruns backend and frontend dependency sync.
 6. Launcher exits without starting the WebUI.
 
+Uninstall journey:
+
+1. User runs `ornnlab uninstall`.
+2. Launcher explains what will be removed and what will be preserved.
+3. By default, launcher removes only OrnnLab launcher-managed files:
+   - `~/.ornnlab/launcher/source`
+   - `~/.ornnlab/launcher/bootstrap-state.json`
+   - other launcher cache files under `~/.ornnlab/launcher`
+4. Launcher preserves product data under `~/.ornnlab/data` by default.
+5. Launcher prints the explicit global package removal command:
+   ```bash
+   npm uninstall -g ornnlab
+   ```
+6. If the user requests full data removal, launcher requires an explicit
+   destructive confirmation and should prefer moving data to a timestamped
+   backup/trash path over permanent deletion.
+
 ## 6. Interaction And Information Design
 
-The command help must list install, update, setup, dev, backend, frontend,
-doctor, and path commands. Errors must be direct and actionable, especially
-missing prerequisite commands or missing source checkout.
+The command help must list install, update, uninstall, setup, dev, backend,
+frontend, doctor, and path commands. Errors must be direct and actionable,
+especially missing prerequisite commands or missing source checkout.
 
 ## 7. Product Rules And State Logic
 
@@ -111,6 +133,9 @@ missing prerequisite commands or missing source checkout.
 - Existing git checkouts are updated only with `git pull --ff-only`.
 - `ornnlab update` does not silently modify the global npm package installation;
   it prints the explicit npm command instead.
+- `ornnlab uninstall` does not silently remove product data.
+- `ornnlab uninstall` should use recoverable cleanup for any user-data removal
+  path, such as moving to a timestamped backup or platform trash.
 - Runtime product data remains under the current OrnnLab default
   `~/.ornnlab/data`.
 
@@ -120,6 +145,10 @@ missing prerequisite commands or missing source checkout.
 - Source checkout absent for run commands: tell the user to run `ornnlab install`.
 - Existing non-git source path: fail without modifying it.
 - Dependency install failure: leave the checkout in place for manual inspection.
+- Uninstall with missing launcher directories: exit successfully and report that
+  nothing needed removal.
+- Uninstall with running OrnnLab servers: warn the user and ask them to stop the
+  process before removing managed files.
 - Frontend/backend process termination: forward `SIGTERM` on launcher shutdown.
 
 ## 9. Content And Terminology
@@ -137,6 +166,11 @@ missing prerequisite commands or missing source checkout.
 - Clean local tarball install exposes `ornnlab --version` and `ornnlab --help`.
 - Launcher help documents that plain `ornnlab` starts the local WebUI.
 - Launcher help documents `ornnlab update`.
+- Launcher help documents `ornnlab uninstall`.
+- `ornnlab uninstall` preserves `~/.ornnlab/data` by default and reports the
+  preserved path.
+- `ornnlab uninstall` prints `npm uninstall -g ornnlab` for global package
+  removal instead of silently self-removing.
 - Launcher help documents the printed frontend URL behavior.
 - After publish, `npm view ornnlab name version bin --json` returns the new
   version and `bin.ornnlab`.
