@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 import uvicorn
 
 from harnesslab import __version__
 from harnesslab.app import create_app
+from harnesslab.services.backup_service import BackupService
 from harnesslab.services.doctor_service import DoctorService
 from harnesslab.settings import Settings
 
@@ -22,6 +24,12 @@ def main(argv: list[str] | None = None) -> int:
 
     doctor = sub.add_parser("doctor", help="Print local system status")
     doctor.add_argument("--logs", action="store_true", help="Include failed run log paths")
+    backup = sub.add_parser("backup", help="Export or import the local HarnessLab home")
+    backup_sub = backup.add_subparsers(dest="backup_command", required=True)
+    backup_export = backup_sub.add_parser("export", help="Create a local backup archive")
+    backup_export.add_argument("--output", help="Backup archive path")
+    backup_import = backup_sub.add_parser("import", help="Import into an empty HarnessLab home")
+    backup_import.add_argument("archive", help="Backup archive path")
     sub.add_parser("version", help="Print HarnessLab version")
 
     args = parser.parse_args(argv)
@@ -36,6 +44,14 @@ def main(argv: list[str] | None = None) -> int:
                 sort_keys=True,
             )
         )
+        return 0
+    if args.command == "backup":
+        service = BackupService(Settings.from_env())
+        if args.backup_command == "export":
+            result = service.export_home(Path(args.output) if args.output else None)
+        else:
+            result = service.import_home(Path(args.archive))
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "web":
         settings = Settings.from_env()

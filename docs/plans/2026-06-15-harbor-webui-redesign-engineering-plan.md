@@ -1398,3 +1398,22 @@ Validation evidence:
 - `uv run pytest tests/python/test_cli.py tests/python/test_system_api.py -vv`
 - `uv run ruff check harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
 - `uv run pyright harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
+
+### 2026-06-15 Local Backup Pass
+
+Landed the first Phase 6 backup/export/import boundary:
+
+- `harnesslab backup export` creates a local `.tar.gz` archive with
+  `harnesslab-backup-manifest.json`;
+- exports checkpoint SQLite and exclude the `exports/` directory to avoid
+  recursive backup archives;
+- `harnesslab backup import <archive>` restores only into an empty HarnessLab
+  home and never deletes or overwrites existing data;
+- import rejects unsafe tar members, including absolute paths, `..`, links, and
+  device files.
+
+Validation evidence:
+
+- `uv run pytest tests/python/test_backup_service.py tests/python/test_cli.py -vv`
+- `uv run ruff check harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
+- `uv run pyright harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`

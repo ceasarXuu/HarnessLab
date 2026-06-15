@@ -25,6 +25,9 @@ Current rewrite gates are Python/Web first:
   cleanup plans;
 - doctor logs tests that verify `harnesslab doctor --logs` and
   `/api/system/doctor?logs=true` expose failed-run paths and remediation;
+- backup tests that verify exports exclude nested backups, imports restore into
+  an empty home, non-empty targets are rejected, and unsafe tar members are
+  blocked;
 - opt-in real Harbor subprocess smoke and cancel-recovery tests in
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
