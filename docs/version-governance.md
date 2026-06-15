@@ -7,6 +7,7 @@
 | 1.0 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Defined version authorities, release ledger, and document/version drift rules. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required document version tables and engineering-version linkage for active PRD and technical docs. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Expanded document-control coverage to operations, test strategy, and Harbor spike docs. |
+| 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Release Train / Build Set governance for independent component versions. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -44,6 +45,37 @@ another still said `ornnlab@0.1.2`.
 | Scoped transition package version | `npm/harnesslab-transition/package.json` `version` | old `@ceasarxuu/harnesslab` compatibility package | Only changes for transition/deprecation releases. |
 | Bootstrap state schema | launcher source constant and persisted `schemaVersion` | `~/.ornnlab/launcher/bootstrap-state.json`, bootstrap migrations | Schema version is not a product release version. |
 | Harbor dependency range | `pyproject.toml` dependency constraint | backend install, doctor, Harbor upgrade procedure | Upgrade through `docs/harbor-upgrade-procedure.md`. |
+
+## Release Train / Build Set
+
+Component versions remain independent, but every release must bind them into one
+reviewable Build Set. A Build Set is the user-facing release composition: it
+names the launcher, backend, frontend, transition package, Harbor range, and
+source commit that were validated together.
+
+Recommended Build Set identifier:
+
+```text
+OrnnLab Build Set YYYY.MM.DD
+```
+
+Example:
+
+```text
+OrnnLab Build Set 2026.06.16
+```
+
+Build Set rules:
+
+- Do not force npm launcher, Python app, and frontend versions to match.
+- Do require one release ledger to bind their exact versions together.
+- Use the npm launcher version for the public npm install/update surface.
+- Use the Python app version for backend/API/data-model diagnostics.
+- Treat the frontend package version as internal unless a release specifically
+  exposes frontend build metadata.
+- Mention the Build Set in release ledgers and release checklist evidence.
+- User-facing docs may refer to the Build Set name when they need a stable
+  release label without duplicating every component version.
 
 ## Documentation Rules
 
@@ -106,6 +138,7 @@ docs/releases/YYYY-MM-DD-ornnlab-<version>.md
 
 Minimum content:
 
+- Build Set identifier
 - artifact name and version
 - commit SHA
 - changed user-visible behavior

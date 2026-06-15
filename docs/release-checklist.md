@@ -6,6 +6,7 @@
 |---|---|---|---|
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined WebUI release and rollback gate. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added version-governance and release-ledger requirements. |
+| 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Build Set confirmation to release gate. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -16,6 +17,8 @@ Use this checklist for Harbor WebUI rewrite releases.
 - Confirm version changes follow `docs/version-governance.md`.
 - Create or update the matching `docs/releases/` ledger entry for every public
   artifact version change.
+- Confirm the release ledger includes a Build Set composition table binding npm,
+  Python app, frontend, transition package, Harbor range, and source commit.
 - Confirm affected PRDs and technical docs updated their `Document Control`
   table with document version, engineering version, update date, and change.
 - Run `uv sync --group dev`.
