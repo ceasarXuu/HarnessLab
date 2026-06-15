@@ -5,7 +5,7 @@ uv run ruff check harnesslab tests/python
 uv run pyright
 uv run pytest tests/python
 
-python - <<'PY'
+uv run python - <<'PY'
 from pathlib import Path
 
 roots = [Path("harnesslab")]

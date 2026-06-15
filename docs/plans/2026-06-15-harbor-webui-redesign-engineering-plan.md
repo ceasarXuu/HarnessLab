@@ -615,6 +615,7 @@ REST endpoints:
 ```text
 GET    /api/system/status
 POST   /api/system/doctor
+GET    /api/system/docker-orphans
 
 GET    /api/agent-templates
 GET    /api/agents
@@ -1311,7 +1312,8 @@ Landed the opt-in real Harbor subprocess verification gate:
 
 Known remaining Phase 3 blockers:
 
-- Docker orphan scans beyond process-group cleanup remain a hardening follow-up.
+- Docker orphan cleanup execution remains manual-review only until product
+  requirements explicitly approve automatic container removal.
 
 Validation evidence:
 
@@ -1334,5 +1336,26 @@ environment:
 
 Known remaining Phase 3 hardening:
 
-- add a first-class Docker orphan scan/cleanup service instead of relying only on
-  process-group cleanup and manual post-run Docker inspection.
+- add product-approved execution for Docker cleanup plans if automatic removal
+  is needed; current cleanup output is intentionally dry-run/manual-review only.
+
+### 2026-06-15 Docker Orphan Doctor Gate Pass
+
+Landed first-class Docker orphan discovery for the WebUI doctor boundary:
+
+- `DockerOrphanService` scans `docker ps -a` for containers labelled
+  `harnesslab.run_id` using Docker's JSON-line output;
+- `/api/system/status` now includes `docker.harnesslab_orphans`;
+- `/api/system/docker-orphans` returns the same structured scan result and a
+  dry-run cleanup plan;
+- doctor warnings now include `docker_orphans_detected` when labelled
+  HarnessLab containers survive after execution and `docker_orphan_scan_failed`
+  when the Docker CLI is present but cannot scan;
+- cleanup plans are review-only and do not execute `docker rm -f`, preserving
+  the repository rule against irreversible deletion without explicit approval.
+
+Validation evidence:
+
+- `uv run pytest tests/python/test_docker_orphan_service.py tests/python/test_system_api.py -vv`
+- `uv run ruff check harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
+- `uv run pyright harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
