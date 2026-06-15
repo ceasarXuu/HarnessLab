@@ -3,7 +3,7 @@
 - Created: 2026-06-15
 - Updated: 2026-06-15
 - Version: 3.0
-- Status: Phase 1-4 foundation landed; real Harbor execution and hardening remain phased
+- Status: Harbor WebUI MVP foundation, execution boundary, hardening, and release docs landed
 - Owner: HarnessLab team
 - Source PRD: `prd/2026-06-15-harnesslab-webui-prd.md`
 - Harbor lifecycle spike: `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
@@ -1067,8 +1067,11 @@ Build HarnessLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates bench
 
 - Keep architecture and technology decision docs synchronized with the
   implemented Harbor WebUI boundary.
-- Decide Rust crate archival in Phase 6.
-- Add explicit Harbor upgrade procedure before any dependency bump.
+- Rust workspace fate is decided in `docs/rust-legacy-fate.md`: keep as
+  legacy/reference, outside the active WebUI release path.
+- Harbor dependency bumps must follow `docs/harbor-upgrade-procedure.md`.
+- Automatic Docker cleanup execution remains a future product decision because
+  container removal is not recoverable.
 
 ## 13. Implementation Ledger
 
