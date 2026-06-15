@@ -1294,3 +1294,29 @@ Validation evidence:
 - `uv run pytest tests/python`
 - `uv run ruff check harnesslab tests/python`
 - `uv run pyright`
+
+### 2026-06-15 Real Harbor Subprocess Gate Pass
+
+Landed the opt-in real Harbor subprocess verification gate:
+
+- `tests/python/test_real_harbor_cancel_recovery.py` now contains Docker-marked
+  real subprocess smoke and cancel-recovery tests;
+- the tests are skipped by default and run only when `HARNESSLAB_REAL_HARBOR=1`
+  and Docker CLI is available;
+- smoke mode verifies `harbor run --config` writes `job.log` and `result.json`;
+- cancel mode cancels the managed subprocess runner and verifies
+  `harbor.cleanup.json` records termination evidence;
+- default CI remains Docker-free while developers can run the real gate with
+  `HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
+
+Known remaining Phase 3 blockers:
+
+- the real Docker gate still must be executed on a Docker-capable machine before
+  claiming real Harbor cancellation/recovery complete;
+- Docker orphan scans beyond process-group cleanup remain a hardening follow-up.
+
+Validation evidence:
+
+- `uv run pytest tests/python`
+- `uv run ruff check harnesslab tests/python`
+- `uv run pyright`
