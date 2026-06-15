@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from harnesslab.services.cleanup_service import CleanupService
-from harnesslab.services.clock import now_iso
-from harnesslab.storage import sqlite
+from ornnlab.services.cleanup_service import CleanupService
+from ornnlab.services.clock import now_iso
+from ornnlab.storage import sqlite
 
 
 def test_cleanup_plan_finds_only_unreferenced_artifacts(settings):

@@ -1,4 +1,4 @@
-# HarnessLab Install And Quickstart
+# OrnnLab Install And Quickstart
 
 This is the current developer quickstart for the Harbor WebUI rewrite.
 
@@ -11,7 +11,7 @@ npm install -g ornnlab
 ornnlab
 ```
 
-The launcher checks out the source repository under `~/.ornnlab/HarnessLab` by
+The launcher checks out the source repository under `~/.ornnlab/launcher/source` by
 default, installs backend and frontend dependencies, then starts the current
 FastAPI backend and Vue frontend development servers.
 
@@ -46,14 +46,14 @@ npm --prefix frontend ci
 Verify the backend CLI:
 
 ```bash
-uv run harnesslab --version
-uv run harnesslab doctor
+uv run ornnlab --version
+uv run ornnlab doctor
 ```
 
 Start the local backend:
 
 ```bash
-uv run harnesslab web --host 127.0.0.1 --port 8765
+uv run ornnlab web --host 127.0.0.1 --port 8765
 ```
 
 In another shell, start the frontend development server:
@@ -80,24 +80,24 @@ For docs-only changes, `git diff --check` is the minimum gate.
 Run this only on a Docker-capable machine:
 
 ```bash
-HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py
+ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py
 ```
 
 The default local and CI gates intentionally skip real Docker execution.
 
 ## Local Data
 
-HarnessLab stores local product state under `~/.harnesslab` by default. Before
+OrnnLab stores local product state under `~/.ornnlab/data` by default. Before
 manual migration or destructive local experiments, create a recoverable backup:
 
 ```bash
-uv run harnesslab backup export
+uv run ornnlab backup export
 ```
 
 Stale generated-agent and run artifact directories should be archived, not
 deleted:
 
 ```bash
-uv run harnesslab cleanup plan
-uv run harnesslab cleanup archive
+uv run ornnlab cleanup plan
+uv run ornnlab cleanup archive
 ```

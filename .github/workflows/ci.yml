@@ -29,7 +29,7 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --group dev
       - name: Ruff
-        run: uv run ruff check harnesslab tests/python
+        run: uv run ruff check ornnlab tests/python
       - name: Pyright
         run: uv run pyright
       - name: Pytest
@@ -40,7 +40,7 @@ jobs:
           from pathlib import Path
 
           violations = []
-          for path in Path("harnesslab").rglob("*.py"):
+          for path in Path("ornnlab").rglob("*.py"):
               line_count = len(path.read_text(encoding="utf-8").splitlines())
               if line_count > 500:
                   violations.append(f"{path}:{line_count}")
@@ -97,7 +97,7 @@ jobs:
         run: uv sync --group dev
       - name: Run real Harbor Docker smoke
         env:
-          HARNESSLAB_REAL_HARBOR: "1"
+          ORNNLAB_REAL_HARBOR: "1"
         run: |
           uv run pytest -m docker \
             tests/python/test_harbor_real_smoke.py \

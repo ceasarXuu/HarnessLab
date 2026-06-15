@@ -1,8 +1,8 @@
-# HarnessLab Documentation
+# OrnnLab Documentation
 
 Start here for the active Harbor WebUI redesign.
 
-- Current PRD: `../prd/2026-06-15-harnesslab-webui-prd.md`
+- Current PRD: `../prd/2026-06-15-ornnlab-webui-prd.md`
 - Current engineering plan: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
 - Install quickstart: `install-quickstart.md`
 - Release and rollback checklist: `release-checklist.md`
@@ -13,8 +13,8 @@ Start here for the active Harbor WebUI redesign.
 
 ## Current Direction
 
-HarnessLab is a local WebUI over Harbor. Harbor owns benchmark execution and raw
-job artifacts. HarnessLab owns agent registration, experiment/run management,
+OrnnLab is a local WebUI over Harbor. Harbor owns benchmark execution and raw
+job artifacts. OrnnLab owns agent registration, experiment/run management,
 diagnostics, report summaries, and leaderboard views.
 
 ## Superseded Documents
@@ -27,7 +27,7 @@ guidance from being read as current direction.
 
 ## Current Implementation Entrypoints
 
-- Backend package: `../harnesslab/`
+- Backend package: `../ornnlab/`
 - Frontend package: `../frontend/`
 - Web gate: `../scripts/test-after-change-web.sh`
 - Web test registry: `../tests/WEB_TEST_REGISTRY.toml`

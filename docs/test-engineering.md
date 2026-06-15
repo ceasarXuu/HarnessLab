@@ -1,4 +1,4 @@
-# HarnessLab WebUI Test Engineering
+# OrnnLab WebUI Test Engineering
 
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
@@ -17,13 +17,13 @@ Current rewrite gates are Python/Web first:
 - startup recovery tests that recreate the app with persisted `running` rows and
   verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by
-  `HARNESSLAB_REAL_HARBOR=1`;
+  `ORNNLAB_REAL_HARBOR=1`;
 - managed Harbor subprocess tests that verify `harbor.config.json` execution,
   `job.log` capture, and `harbor.cleanup.json` after task cancellation;
 - Docker orphan doctor tests that use a fake Docker CLI to verify
-  `harnesslab.run_id` label scans, scan failure diagnostics, and dry-run
+  `ornnlab.run_id` label scans, scan failure diagnostics, and dry-run
   cleanup plans;
-- doctor logs tests that verify `harnesslab doctor --logs` and
+- doctor logs tests that verify `ornnlab doctor --logs` and
   `/api/system/doctor?logs=true` expose failed-run paths and remediation;
 - backup tests that verify exports exclude nested backups, imports restore into
   an empty home, non-empty targets are rejected, and unsafe tar members are
@@ -32,7 +32,7 @@ Current rewrite gates are Python/Web first:
   directories are selected and archived into a recoverable location;
 - opt-in real Harbor subprocess smoke and cancel-recovery tests in
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
-  `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
+  `ORNNLAB_REAL_HARBOR=1` and Docker availability;
 - ruff and pyright for Python static gates;
 - Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
   smoke tests for the frontend;
@@ -61,10 +61,10 @@ and produce false `interrupted` states.
 
 Operational note: Real Harbor subprocess validation is intentionally opt-in.
 Run it on a Docker-capable machine with
-`HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
+`ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
 
 Operational note: Docker orphan cleanup starts as a doctor/reporting gate, not
-an automatic remover. The WebUI scans labelled `harnesslab.run_id` containers
+an automatic remover. The WebUI scans labelled `ornnlab.run_id` containers
 and returns dry-run `docker rm -f` cleanup plans for manual review; execution
 needs a separate product decision because container removal is not recoverable.
 

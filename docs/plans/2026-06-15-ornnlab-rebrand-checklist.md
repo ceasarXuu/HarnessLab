@@ -20,7 +20,7 @@ Target naming:
 
 ## Current State
 
-The repository is already partially renamed:
+Initial checklist state before implementation:
 
 - Root npm package name is `ornnlab`.
 - Root npm bin maps `ornnlab` to `bin/ornnlab.js`.
@@ -37,6 +37,26 @@ The main product implementation still uses HarnessLab names:
   use `harnesslab`.
 - The Rust workspace is legacy/reference and still uses `harnesslab-*` crate,
   binary, adapter, and test names.
+
+## Implementation Evidence
+
+2026-06-15 rebrand pass:
+
+- Python project/package renamed to `ornnlab`, with `harnesslab` retained as a
+  thin compatibility alias.
+- `ornnlab` Python console script and `python -m ornnlab` are primary; the old
+  `harnesslab` console/module entrypoints delegate to OrnnLab during the
+  transition.
+- Default runtime home is `~/.ornnlab/data`; `ORNNLAB_HOME` wins over
+  `HARNESSLAB_HOME`; first-run migration from `~/.harnesslab` is copy-based and
+  writes `migration/ornnlab-home-migration.json`.
+- Runtime artifacts now prefer `ornnlab.sqlite`, `ornnlab-events.jsonl`,
+  `ornnlab-backup-*`, and `ornnlab.run_id`; legacy backup manifests, legacy
+  Docker env/labels, and old home paths remain readable.
+- Root npm package, npm launcher, current README/docs/PRD, frontend package
+  metadata, CI, and Python tests now use OrnnLab as the active product name.
+- `docs/archive/**`, legacy Rust scripts, old npm reservation shims, and
+  compatibility test fixtures intentionally retain HarnessLab names.
 
 ## Rename Boundaries
 

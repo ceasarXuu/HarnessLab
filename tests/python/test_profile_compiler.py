@@ -1,7 +1,7 @@
 import json
 
-from harnesslab.models.agent import AgentProfile
-from harnesslab.services.profile_compiler import ProfileCompiler, normalize_command_preview
+from ornnlab.models.agent import AgentProfile
+from ornnlab.services.profile_compiler import ProfileCompiler, normalize_command_preview
 
 
 def test_builtin_profile_compiles_to_harbor_agent_config(settings):

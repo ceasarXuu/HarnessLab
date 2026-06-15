@@ -4,13 +4,13 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from harnesslab.app import create_app
-from harnesslab.models.experiment import ExperimentCreate
-from harnesslab.services.agent_service import AgentService
-from harnesslab.services.experiment_service import ExperimentService
-from harnesslab.services.queue_service import QueueService
-from harnesslab.services.worker_service import QueueWorkerService
-from harnesslab.storage import sqlite
+from ornnlab.app import create_app
+from ornnlab.models.experiment import ExperimentCreate
+from ornnlab.services.agent_service import AgentService
+from ornnlab.services.experiment_service import ExperimentService
+from ornnlab.services.queue_service import QueueService
+from ornnlab.services.worker_service import QueueWorkerService
+from ornnlab.storage import sqlite
 
 
 @pytest.fixture

@@ -1,4 +1,6 @@
-from harnesslab.cli import main
+from __future__ import annotations
+
+from ornnlab.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

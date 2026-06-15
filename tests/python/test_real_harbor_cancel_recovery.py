@@ -5,25 +5,45 @@ import shutil
 
 import pytest
 
-from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
-from harnesslab.settings import Settings
+from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from ornnlab.settings import Settings
 
 pytestmark = pytest.mark.docker
 
 
 def _real_harbor_enabled() -> bool:
-    return os.environ.get("HARNESSLAB_REAL_HARBOR") == "1" and shutil.which("docker") is not None
+    return (
+        os.environ.get("ORNNLAB_REAL_HARBOR", os.environ.get("HARNESSLAB_REAL_HARBOR")) == "1"
+        and shutil.which("docker") is not None
+    )
 
 
 def _real_config(tmp_path, job_name: str):
     settings = Settings(home=tmp_path)
     builder = HarborConfigBuilder(settings)
-    benchmark_version = os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK_VERSION") or None
+    benchmark_version = (
+        os.environ.get("ORNNLAB_REAL_HARBOR_BENCHMARK_VERSION")
+        or os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK_VERSION")
+        or None
+    )
     config = builder.build(
-        agent_config={"name": os.environ.get("HARNESSLAB_REAL_HARBOR_AGENT", "oracle")},
-        benchmark_name=os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK", "terminal-bench"),
+        agent_config={
+            "name": os.environ.get(
+                "ORNNLAB_REAL_HARBOR_AGENT",
+                os.environ.get("HARNESSLAB_REAL_HARBOR_AGENT", "oracle"),
+            )
+        },
+        benchmark_name=os.environ.get(
+            "ORNNLAB_REAL_HARBOR_BENCHMARK",
+            os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK", "terminal-bench"),
+        ),
         benchmark_version=benchmark_version,
-        n_tasks=int(os.environ.get("HARNESSLAB_REAL_HARBOR_N_TASKS", "1")),
+        n_tasks=int(
+            os.environ.get(
+                "ORNNLAB_REAL_HARBOR_N_TASKS",
+                os.environ.get("HARNESSLAB_REAL_HARBOR_N_TASKS", "1"),
+            )
+        ),
         n_attempts=1,
         n_concurrent=1,
         jobs_dir=str(tmp_path / job_name / "harbor-job"),
@@ -35,7 +55,7 @@ def _real_config(tmp_path, job_name: str):
 
 @pytest.mark.skipif(
     not _real_harbor_enabled(),
-    reason="set HARNESSLAB_REAL_HARBOR=1 with Docker available to run real Harbor subprocess",
+    reason="set ORNNLAB_REAL_HARBOR=1 with Docker available to run real Harbor subprocess",
 )
 def test_real_harbor_subprocess_smoke(tmp_path):
     config = _real_config(tmp_path, "real-harbor-subprocess-smoke")
@@ -51,14 +71,21 @@ def test_real_harbor_subprocess_smoke(tmp_path):
 
 @pytest.mark.skipif(
     not _real_harbor_enabled(),
-    reason="set HARNESSLAB_REAL_HARBOR=1 with Docker available to run real Harbor cancel recovery",
+    reason="set ORNNLAB_REAL_HARBOR=1 with Docker available to run real Harbor cancel recovery",
 )
 def test_real_harbor_subprocess_cancel_writes_cleanup_evidence(tmp_path):
     config = _real_config(tmp_path, "real-harbor-subprocess-cancel")
 
     async def run_and_cancel() -> None:
         task = asyncio.create_task(HarborEngine(mode="subprocess").run(config))
-        await asyncio.sleep(float(os.environ.get("HARNESSLAB_REAL_HARBOR_CANCEL_DELAY", "1.0")))
+        await asyncio.sleep(
+            float(
+                os.environ.get(
+                    "ORNNLAB_REAL_HARBOR_CANCEL_DELAY",
+                    os.environ.get("HARNESSLAB_REAL_HARBOR_CANCEL_DELAY", "1.0"),
+                )
+            )
+        )
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

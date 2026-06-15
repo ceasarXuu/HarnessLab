@@ -1,3 +1,13 @@
-"""HarnessLab Harbor WebUI backend."""
+from __future__ import annotations
 
-__version__ = "0.2.0"
+import warnings
+
+from ornnlab import __version__
+
+warnings.warn(
+    "harnesslab is deprecated; use ornnlab instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+__all__ = ["__version__"]

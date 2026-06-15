@@ -1,6 +1,6 @@
 # Harbor Upgrade Procedure
 
-HarnessLab pins Harbor as `harbor>=0.13,<0.14`. Any Harbor dependency bump must
+OrnnLab pins Harbor as `harbor>=0.13,<0.14`. Any Harbor dependency bump must
 go through this procedure before merging.
 
 ## Scope
@@ -9,8 +9,8 @@ This procedure applies to changes in:
 
 - `pyproject.toml`
 - `uv.lock`
-- `harnesslab/services/harbor_engine.py`
-- `harnesslab/services/profile_compiler.py`
+- `ornnlab/services/harbor_engine.py`
+- `ornnlab/services/profile_compiler.py`
 - real Harbor smoke tests
 - docs or scripts that describe Harbor CLI/API behavior
 
@@ -36,7 +36,7 @@ This procedure applies to changes in:
 6. On a Docker-capable machine, run:
 
    ```bash
-   HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py
+   ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py
    ```
 
 7. Inspect a produced Harbor job directory and confirm these files still exist
@@ -52,7 +52,7 @@ This procedure applies to changes in:
 
 If Harbor changes cancellation, result parsing, job directory layout, or
 generated-agent import behavior, stop the upgrade and keep the existing Harbor
-pin until HarnessLab has a dedicated compatibility patch.
+pin until OrnnLab has a dedicated compatibility patch.
 
 Do not add silent compatibility fallbacks. Add explicit version-aware behavior,
 tests, and doctor diagnostics.
