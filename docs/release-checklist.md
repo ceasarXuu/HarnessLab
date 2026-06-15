@@ -1,0 +1,77 @@
+# HarnessLab Release And Rollback Checklist
+
+Use this checklist for Harbor WebUI rewrite releases.
+
+## Pre-Release Gate
+
+- Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+  has current implementation ledger evidence.
+- Run `uv sync --group dev`.
+- Run `npm --prefix frontend ci`.
+- Run `scripts/test-after-change-web.sh`.
+- Run `git diff --check`.
+- Confirm GitHub Actions default jobs pass:
+  - Python Web Gate
+  - Frontend Web Gate
+- Run the opt-in real Harbor Docker smoke when release scope touches Harbor
+  execution, cancellation, Docker cleanup, or result parsing.
+- Confirm `uv run harnesslab doctor --logs` returns structured status and does
+  not hide failed-run log paths.
+- Confirm `uv run harnesslab backup export` succeeds before any migration test.
+- Confirm `uv run harnesslab cleanup plan` reports only recoverable archive
+  candidates.
+- Confirm no production code file exceeds 500 lines.
+- Confirm `git status --short --branch` is clean and synchronized with
+  `origin/main`.
+
+## Packaging Smoke
+
+From a fresh checkout:
+
+```bash
+uv sync --group dev
+uv run harnesslab --version
+uv run harnesslab doctor
+uv run harnesslab web --host 127.0.0.1 --port 8765
+```
+
+In a second shell:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run typecheck
+npm --prefix frontend run lint
+npm --prefix frontend run test
+npm --prefix frontend run storybook:test
+npm --prefix frontend run e2e
+```
+
+## Rollback
+
+HarnessLab local state is file and SQLite based. Rollback should preserve user
+data before changing versions:
+
+1. Stop the backend process.
+2. Export a backup with `uv run harnesslab backup export`.
+3. Record the archive path printed by the command.
+4. Check for stale local artifacts with `uv run harnesslab cleanup plan`.
+5. Move stale candidates with `uv run harnesslab cleanup archive` only when the
+   plan is understood.
+6. Revert the application version through git or package manager controls.
+7. Start the backend and run `uv run harnesslab doctor --logs`.
+8. If local state cannot be read, restore the backup into an empty HarnessLab
+   home with `uv run harnesslab backup import <archive>`.
+
+Do not delete `~/.harnesslab` as a rollback step. Move it to a dated backup
+location if manual intervention is required.
+
+## Release Blockers
+
+- Default GitHub Actions jobs are failing.
+- Required real Harbor smoke was skipped for a Harbor execution change.
+- `doctor --logs` cannot surface the latest failed/interrupted run paths.
+- Backup export/import fails.
+- Cleanup requires irreversible deletion.
+- Active docs contradict the Harbor WebUI architecture.
+- Rust legacy crates are treated as active release artifacts without a new
+  explicit decision.

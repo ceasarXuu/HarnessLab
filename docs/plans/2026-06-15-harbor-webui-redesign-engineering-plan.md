@@ -1465,3 +1465,20 @@ Validation evidence:
   `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416989626`
 - Real Harbor Docker Smoke was skipped by the intended workflow-dispatch guard:
   `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416991132`
+
+### 2026-06-15 Release Documentation Pass
+
+Closed the remaining Phase 6 documentation boundaries:
+
+- `docs/install-quickstart.md` records fresh-checkout backend and frontend
+  launch commands, local data behavior, and optional real Harbor smoke;
+- `docs/release-checklist.md` records the release gate, packaging smoke,
+  rollback steps, and release blockers;
+- `docs/harbor-upgrade-procedure.md` defines the Harbor dependency bump
+  checklist and failure policy;
+- `docs/rust-legacy-fate.md` explicitly keeps the Rust workspace as a
+  legacy/reference asset outside the active WebUI release path.
+
+Validation evidence:
+
+- `git diff --check`
