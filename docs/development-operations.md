@@ -1,4 +1,4 @@
-# HarnessLab Development Operations
+# OrnnLab Development Operations
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.

@@ -1,5 +1,5 @@
 {
-  "name": "@ceasarxuu/harnesslab-frontend",
+  "name": "@ceasarxuu/ornnlab-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --pool threads --maxWorkers=1",
+    "test": "vitest run --pool vmThreads --maxWorkers=1",
     "e2e": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4174 --strictPort\" http://127.0.0.1:4174 \"playwright test\"",
     "storybook": "storybook dev -p 6006",
     "storybook:test": "storybook dev --ci --smoke-test -p 6006"

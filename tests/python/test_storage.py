@@ -1,4 +1,4 @@
-from harnesslab.storage import sqlite
+from ornnlab.storage import sqlite
 
 
 def test_sqlite_initializes_idempotently(settings):

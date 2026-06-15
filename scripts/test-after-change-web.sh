@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-uv run ruff check harnesslab tests/python
+uv run ruff check ornnlab tests/python
 uv run pyright
 uv run pytest tests/python
 
 uv run python - <<'PY'
 from pathlib import Path
 
-roots = [Path("harnesslab")]
+roots = [Path("ornnlab")]
 violations = []
 for root in roots:
     for path in root.rglob("*.py"):

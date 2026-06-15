@@ -1,4 +1,4 @@
-# HarnessLab Architecture
+# OrnnLab Architecture
 
 The previous Rust runtime architecture was archived on 2026-06-15 because the
 product direction changed to a Harbor-powered local WebUI.
@@ -8,7 +8,7 @@ product direction changed to a Harbor-powered local WebUI.
 
 ## System Boundary
 
-HarnessLab is a local product layer around Harbor. It does not reimplement
+OrnnLab is a local product layer around Harbor. It does not reimplement
 benchmark execution, sandbox orchestration, agent execution, verifier execution,
 or raw Harbor job artifacts.
 
@@ -23,14 +23,14 @@ Vue WebUI
 
 ## Ownership
 
-HarnessLab owns:
+OrnnLab owns:
 
 - local agent profiles and generated custom-command agent manifests;
 - experiment, run, queue, event, report, template, and leaderboard indexes;
 - WebUI workflows for creating agents, starting/cancelling runs, viewing reports,
   and reviewing local leaderboard results;
 - doctor diagnostics for Harbor, Docker, SQLite, stale running rows, and
-  HarnessLab-labelled Docker orphan scans;
+  OrnnLab-labelled Docker orphan scans;
 - restart reconciliation from SQLite state and Harbor artifacts.
 
 Harbor owns:
@@ -62,7 +62,7 @@ and generated reports.
 
 Startup recovery reconciles persisted `running` rows before serving routes:
 
-- if `result.json` exists, HarnessLab marks the run terminal from that artifact
+- if `result.json` exists, OrnnLab marks the run terminal from that artifact
   and regenerates its report;
 - if no result artifact exists, the run becomes `interrupted` with
   `stale_running_without_result`;
@@ -84,17 +84,17 @@ live-log implementation closes that phase.
 
 ## Artifact Layout
 
-The default home is `~/.harnesslab`:
+The default home is `~/.ornnlab/data`:
 
 ```text
-harnesslab.sqlite
+ornnlab.sqlite
 agents/<agent-id>.toml
 generated-agents/<agent-id>/manifest.json
 experiments/<experiment-id>/
   config.snapshot.json
   agent.snapshot.toml
   harbor.config.json
-  harnesslab-events.jsonl
+  ornnlab-events.jsonl
   harbor-job/
     job.log
     result.json

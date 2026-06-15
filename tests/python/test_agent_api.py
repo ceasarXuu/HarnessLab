@@ -1,4 +1,4 @@
-from harnesslab.services.queue_service import QueueService
+from ornnlab.services.queue_service import QueueService
 
 
 def _oracle_payload():

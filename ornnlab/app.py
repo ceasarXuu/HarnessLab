@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from ornnlab.api import agents, benchmarks, experiments, leaderboard, runs, system, templates
+from ornnlab.services.queue_service import QueueService
+from ornnlab.services.recovery_service import RunRecoveryService
+from ornnlab.services.worker_service import QueueWorkerService
+from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    active_settings = settings or Settings.from_env()
+    active_settings.ensure_dirs()
+    sqlite.initialize(active_settings)
+    startup_recovery = RunRecoveryService(active_settings).reconcile_startup()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if QueueService(active_settings).queued_count() > 0:
+            app.state.worker.start()
+        yield
+
+    app = FastAPI(title="OrnnLab", version="0.2.0", lifespan=lifespan)
+    app.state.settings = active_settings
+    app.state.startup_recovery = startup_recovery
+    app.state.worker = QueueWorkerService(active_settings)
+    app.include_router(system.router)
+    app.include_router(agents.router)
+    app.include_router(benchmarks.router)
+    app.include_router(experiments.router)
+    app.include_router(runs.router)
+    app.include_router(templates.router)
+    app.include_router(leaderboard.router)
+    return app

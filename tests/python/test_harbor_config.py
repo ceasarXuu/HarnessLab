@@ -1,4 +1,4 @@
-from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
 
 
 def test_harbor_config_builder_creates_dataset_ref(settings):
@@ -12,7 +12,7 @@ def test_harbor_config_builder_creates_dataset_ref(settings):
         jobs_dir="/tmp/jobs",
     )
 
-    assert config.job_name == "harnesslab-terminal-bench-2-0"
+    assert config.job_name == "ornnlab-terminal-bench-2-0"
     assert config.dataset["name"] == "terminal-bench@2.0"
     assert config.agent["name"] == "oracle"
 
@@ -59,7 +59,7 @@ def test_capability_snapshot_records_default_fake_adapter():
 
 
 def test_capability_snapshot_can_select_python_api_adapter(monkeypatch):
-    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "python-api")
+    monkeypatch.setenv("ORNNLAB_HARBOR_ENGINE", "python-api")
 
     snapshot = HarborEngine().capability_snapshot()
 
@@ -67,7 +67,7 @@ def test_capability_snapshot_can_select_python_api_adapter(monkeypatch):
 
 
 def test_subprocess_capability_snapshot_records_cancel_support(monkeypatch):
-    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
+    monkeypatch.setenv("ORNNLAB_HARBOR_ENGINE", "subprocess")
 
     snapshot = HarborEngine().capability_snapshot()
 

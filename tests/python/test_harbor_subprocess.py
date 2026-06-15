@@ -4,9 +4,9 @@ import sys
 
 import pytest
 
-from harnesslab.services.harbor_engine import HarborConfigBuilder, HarborEngine
-from harnesslab.services.harbor_subprocess import ManagedSubprocessHarborRunner
-from harnesslab.settings import Settings
+from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from ornnlab.services.harbor_subprocess import ManagedSubprocessHarborRunner
+from ornnlab.settings import Settings
 
 
 def test_managed_subprocess_runner_uses_harbor_config(tmp_path):
@@ -96,10 +96,11 @@ def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):
             terminate_grace_sec=0.5,
         )
         task = asyncio.create_task(runner.run(config))
-        for _ in range(50):
+        for _ in range(200):
             if started.exists():
                 break
             await asyncio.sleep(0.01)
+        assert started.exists()
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

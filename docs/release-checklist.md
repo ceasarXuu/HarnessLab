@@ -1,4 +1,4 @@
-# HarnessLab Release And Rollback Checklist
+# OrnnLab Release And Rollback Checklist
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -15,10 +15,10 @@ Use this checklist for Harbor WebUI rewrite releases.
   - Frontend Web Gate
 - Run the opt-in real Harbor Docker smoke when release scope touches Harbor
   execution, cancellation, Docker cleanup, or result parsing.
-- Confirm `uv run harnesslab doctor --logs` returns structured status and does
+- Confirm `uv run ornnlab doctor --logs` returns structured status and does
   not hide failed-run log paths.
-- Confirm `uv run harnesslab backup export` succeeds before any migration test.
-- Confirm `uv run harnesslab cleanup plan` reports only recoverable archive
+- Confirm `uv run ornnlab backup export` succeeds before any migration test.
+- Confirm `uv run ornnlab cleanup plan` reports only recoverable archive
   candidates.
 - Confirm no production code file exceeds 500 lines.
 - Confirm `git status --short --branch` is clean and synchronized with
@@ -30,9 +30,9 @@ From a fresh checkout:
 
 ```bash
 uv sync --group dev
-uv run harnesslab --version
-uv run harnesslab doctor
-uv run harnesslab web --host 127.0.0.1 --port 8765
+uv run ornnlab --version
+uv run ornnlab doctor
+uv run ornnlab web --host 127.0.0.1 --port 8765
 ```
 
 In a second shell:
@@ -48,21 +48,21 @@ npm --prefix frontend run e2e
 
 ## Rollback
 
-HarnessLab local state is file and SQLite based. Rollback should preserve user
+OrnnLab local state is file and SQLite based. Rollback should preserve user
 data before changing versions:
 
 1. Stop the backend process.
-2. Export a backup with `uv run harnesslab backup export`.
+2. Export a backup with `uv run ornnlab backup export`.
 3. Record the archive path printed by the command.
-4. Check for stale local artifacts with `uv run harnesslab cleanup plan`.
-5. Move stale candidates with `uv run harnesslab cleanup archive` only when the
+4. Check for stale local artifacts with `uv run ornnlab cleanup plan`.
+5. Move stale candidates with `uv run ornnlab cleanup archive` only when the
    plan is understood.
 6. Revert the application version through git or package manager controls.
-7. Start the backend and run `uv run harnesslab doctor --logs`.
-8. If local state cannot be read, restore the backup into an empty HarnessLab
-   home with `uv run harnesslab backup import <archive>`.
+7. Start the backend and run `uv run ornnlab doctor --logs`.
+8. If local state cannot be read, restore the backup into an empty OrnnLab
+   home with `uv run ornnlab backup import <archive>`.
 
-Do not delete `~/.harnesslab` as a rollback step. Move it to a dated backup
+Do not delete `~/.ornnlab/data` as a rollback step. Move it to a dated backup
 location if manual intervention is required.
 
 ## Release Blockers

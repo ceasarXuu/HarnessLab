@@ -2,40 +2,40 @@ from __future__ import annotations
 
 import sys
 
-from harnesslab.services.docker_orphan_service import DockerOrphanService
+from ornnlab.services.docker_orphan_service import DockerOrphanService
 
 
-def test_docker_orphan_scan_finds_harnesslab_labelled_containers(tmp_path):
+def test_docker_orphan_scan_finds_ornnlab_labelled_containers(tmp_path):
     script = tmp_path / "fake_docker.py"
     script.write_text(
         "\n".join(
             [
                 "import json",
                 "import sys",
-                "assert sys.argv[1:5] == ['ps', '-a', '--filter', 'label=harnesslab.run_id']",
+                "assert sys.argv[1:5] == ['ps', '-a', '--filter', 'label=ornnlab.run_id']",
                 "assert sys.argv[5:] == ['--format', '{{json .}}']",
                 "print(json.dumps({",
                 "    'ID': 'abc123',",
-                "    'Names': 'harnesslab-task-1',",
+                "    'Names': 'ornnlab-task-1',",
                 "    'Image': 'harbor-runner:latest',",
                 "    'Status': 'Up 3 minutes',",
-                "    'Labels': 'harnesslab.run_id=run-1,com.docker.compose.project=harbor',",
+                "    'Labels': 'ornnlab.run_id=run-1,com.docker.compose.project=harbor',",
                 "}))",
             ]
         ),
         encoding="utf-8",
     )
 
-    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_harnesslab_containers()
+    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_ornnlab_containers()
 
     assert result["ok"] is True
     assert result["available"] is True
     assert result["count"] == 1
-    assert result["containers"][0]["labels"]["harnesslab.run_id"] == "run-1"
+    assert result["containers"][0]["labels"]["ornnlab.run_id"] == "run-1"
     assert result["cleanup_plan"] == [
         {
             "container_id": "abc123",
-            "name": "harnesslab-task-1",
+            "name": "ornnlab-task-1",
             "run_id": "run-1",
             "command": [sys.executable, str(script), "rm", "-f", "abc123"],
             "dry_run": True,
@@ -57,7 +57,7 @@ def test_docker_orphan_scan_reports_cli_failure(tmp_path):
         encoding="utf-8",
     )
 
-    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_harnesslab_containers()
+    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_ornnlab_containers()
 
     assert result["ok"] is False
     assert result["available"] is True
@@ -69,7 +69,7 @@ def test_docker_orphan_scan_reports_cli_failure(tmp_path):
 def test_docker_orphan_scan_reports_missing_cli():
     result = DockerOrphanService(
         command=["/definitely/missing/docker"]
-    ).scan_harnesslab_containers()
+    ).scan_ornnlab_containers()
 
     assert result["ok"] is False
     assert result["available"] is False
@@ -80,7 +80,7 @@ def test_docker_orphan_scan_handles_empty_output(tmp_path):
     script = tmp_path / "fake_docker_empty.py"
     script.write_text("", encoding="utf-8")
 
-    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_harnesslab_containers()
+    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_ornnlab_containers()
 
     assert result["ok"] is True
     assert result["count"] == 0
@@ -92,7 +92,7 @@ def test_docker_orphan_scan_reports_parse_failure(tmp_path):
     script = tmp_path / "fake_docker_bad_json.py"
     script.write_text("print('not-json')", encoding="utf-8")
 
-    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_harnesslab_containers()
+    result = DockerOrphanService(command=[sys.executable, str(script)]).scan_ornnlab_containers()
 
     assert result["ok"] is False
     assert result["available"] is True
@@ -106,7 +106,7 @@ def test_docker_orphan_scan_reports_timeout(tmp_path):
     result = DockerOrphanService(
         command=[sys.executable, str(script)],
         timeout_sec=0.01,
-    ).scan_harnesslab_containers()
+    ).scan_ornnlab_containers()
 
     assert result["ok"] is False
     assert result["available"] is True

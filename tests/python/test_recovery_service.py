@@ -2,10 +2,10 @@ import json
 
 from fastapi.testclient import TestClient
 
-from harnesslab.app import create_app
-from harnesslab.services.clock import now_iso
-from harnesslab.settings import Settings
-from harnesslab.storage import sqlite
+from ornnlab.app import create_app
+from ornnlab.services.clock import now_iso
+from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
 
 
 def _create_running_run(

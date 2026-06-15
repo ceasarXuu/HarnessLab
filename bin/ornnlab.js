@@ -7,8 +7,8 @@ const path = require("node:path");
 const { version: packageVersion } = require("../package.json");
 
 const repoUrl = process.env.ORNNLAB_REPO || "https://github.com/ceasarXuu/HarnessLab.git";
-const homeDir = process.env.ORNNLAB_HOME || path.join(os.homedir(), ".ornnlab");
-const sourceDir = process.env.ORNNLAB_SOURCE || path.join(homeDir, "HarnessLab");
+const launcherDir = process.env.ORNNLAB_LAUNCHER_HOME || path.join(os.homedir(), ".ornnlab", "launcher");
+const sourceDir = process.env.ORNNLAB_SOURCE || path.join(launcherDir, "source");
 const backendHost = process.env.ORNNLAB_BACKEND_HOST || "127.0.0.1";
 const backendPort = process.env.ORNNLAB_BACKEND_PORT || "8765";
 const frontendHost = process.env.ORNNLAB_FRONTEND_HOST || "127.0.0.1";
@@ -18,19 +18,19 @@ const help = `OrnnLab npm launcher
 
 Usage:
   ornnlab                    Set up if needed, then start the local WebUI
-  ornnlab setup              Clone/update the HarnessLab source and install dependencies
+  ornnlab setup              Clone/update the OrnnLab source and install dependencies
   ornnlab dev                Start backend and frontend development servers
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
   ornnlab ui [args...]       Start the Vue frontend dev server from the managed source checkout
-  ornnlab doctor [args...]   Run HarnessLab doctor from the managed source checkout
+  ornnlab doctor [args...]   Run OrnnLab doctor from the managed source checkout
   ornnlab path               Print the managed source checkout path
   ornnlab --version          Print launcher version
   ornnlab --help             Show this help
 
 Environment:
-  ORNNLAB_HOME     Default: ~/.ornnlab
-  ORNNLAB_SOURCE   Default: ~/.ornnlab/HarnessLab
-  ORNNLAB_REPO     Default: ${repoUrl}
+  ORNNLAB_LAUNCHER_HOME  Default: ~/.ornnlab/launcher
+  ORNNLAB_SOURCE         Default: ~/.ornnlab/launcher/source
+  ORNNLAB_REPO           Default: ${repoUrl}
   ORNNLAB_BACKEND_PORT   Default: 8765
   ORNNLAB_FRONTEND_PORT  Default: 5173
 
@@ -89,7 +89,7 @@ function setup() {
   ensureCommand("git");
   ensureCommand("uv");
   ensureCommand("npm");
-  fs.mkdirSync(homeDir, { recursive: true });
+  fs.mkdirSync(launcherDir, { recursive: true });
 
   if (!fs.existsSync(sourceDir)) {
     run("git", ["clone", repoUrl, sourceDir]);
@@ -105,14 +105,14 @@ function setup() {
 
 function runBackend(args) {
   ensureSource();
-  run("uv", ["run", "harnesslab", "web", "--host", backendHost, "--port", backendPort, ...args], {
+  run("uv", ["run", "ornnlab", "web", "--host", backendHost, "--port", backendPort, ...args], {
     cwd: sourceDir,
   });
 }
 
 function runDoctor(args) {
   ensureSource();
-  run("uv", ["run", "harnesslab", "doctor", ...args], { cwd: sourceDir });
+  run("uv", ["run", "ornnlab", "doctor", ...args], { cwd: sourceDir });
 }
 
 function runFrontend(args) {
@@ -140,7 +140,7 @@ function runDev({ setupIfMissing = false } = {}) {
   printLaunchUrls();
   const backend = spawnAttached(
     "uv",
-    ["run", "harnesslab", "web", "--host", backendHost, "--port", backendPort],
+    ["run", "ornnlab", "web", "--host", backendHost, "--port", backendPort],
     { cwd: sourceDir },
   );
   const frontend = spawnAttached(

@@ -4,7 +4,7 @@
 - Created: 2026-06-15
 - Updated: 2026-06-15
 - Owner / requester: unknown
-- Source request: Publish the current HarnessLab product under the occupied
+- Source request: Publish the current OrnnLab product under the occupied
   `ornnlab` npm package name.
 
 ## Requester Review Summary
@@ -39,7 +39,7 @@ usable while the project still lacks a fully bundled desktop/native package.
 - `npm install -g ornnlab` installs an `ornnlab` command.
 - `ornnlab --version` prints the npm launcher version.
 - `ornnlab --help` explains setup and run commands.
-- `ornnlab setup` clones or fast-forwards the HarnessLab source checkout and
+- `ornnlab setup` clones or fast-forwards the OrnnLab source checkout and
   installs backend/frontend dependencies.
 - `ornnlab` starts backend and frontend dev servers for the current MVP.
 - The terminal prints `Frontend: http://127.0.0.1:5173/` before server logs.
@@ -47,7 +47,7 @@ usable while the project still lacks a fully bundled desktop/native package.
 
 ## 3. Users And Usage Context
 
-Primary user: local developer/operator evaluating HarnessLab as a Harbor WebUI.
+Primary user: local developer/operator evaluating OrnnLab as a Harbor WebUI.
 
 Usage context: single-user local machine with npm, Node.js, `uv`, and git
 available.
@@ -58,7 +58,7 @@ available.
 
 - Unscoped npm package name: `ornnlab`.
 - CLI command name: `ornnlab`.
-- Source checkout management under `~/.ornnlab/HarnessLab` by default.
+- Source checkout management under `~/.ornnlab/launcher/source` by default.
 - Backend, frontend, doctor, and path commands.
 
 ### Out Of Scope
@@ -87,12 +87,12 @@ commands or missing source checkout.
 
 ## 7. Product Rules And State Logic
 
-- Default state path is `~/.ornnlab/HarnessLab`.
+- Default source checkout path is `~/.ornnlab/launcher/source`.
 - `ORNNLAB_HOME`, `ORNNLAB_SOURCE`, and `ORNNLAB_REPO` may override defaults.
 - Existing non-git source paths are not overwritten.
 - Existing git checkouts are updated only with `git pull --ff-only`.
-- Runtime product data remains under the current HarnessLab default
-  `~/.harnesslab`.
+- Runtime product data remains under the current OrnnLab default
+  `~/.ornnlab/data`.
 
 ## 8. Edge Cases, Errors, And Recovery
 
@@ -105,7 +105,8 @@ commands or missing source checkout.
 ## 9. Content And Terminology
 
 - Public install name: `ornnlab`.
-- Product name remains HarnessLab/OrnnLab during transition.
+- Product name is OrnnLab; `harnesslab` remains only as a compatibility alias
+  and historical npm reservation name during the transition.
 - Help text should call this an npm launcher, not a complete native bundle.
 
 ## 10. Acceptance Criteria
