@@ -6,6 +6,9 @@ Use this checklist for Harbor WebUI rewrite releases.
 
 - Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
   has current implementation ledger evidence.
+- Confirm version changes follow `docs/version-governance.md`.
+- Create or update the matching `docs/releases/` ledger entry for every public
+  artifact version change.
 - Run `uv sync --group dev`.
 - Run `npm --prefix frontend ci`.
 - Run `scripts/test-after-change-web.sh`.
@@ -21,6 +24,8 @@ Use this checklist for Harbor WebUI rewrite releases.
 - Confirm `uv run ornnlab cleanup plan` reports only recoverable archive
   candidates.
 - Confirm no production code file exceeds 500 lines.
+- Confirm active README/quickstart docs do not contain stale literal package
+  versions; prefer `npm install -g ornnlab` or `ornnlab@latest`.
 - Confirm `git status --short --branch` is clean and synchronized with
   `origin/main`.
 

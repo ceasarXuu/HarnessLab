@@ -21,9 +21,8 @@ summaries, and leaderboard views.
 
 ## Install With npm
 
-The npm launcher is published under the `ornnlab` package name. `ornnlab@0.1.2`
-is the next launcher release for the active source-based WebUI workflow and adds
-recoverable first-run bootstrap.
+The npm launcher is published under the `ornnlab` package name. It is the public
+install path for the active source-based WebUI workflow.
 
 ```bash
 npm install -g ornnlab
@@ -44,8 +43,8 @@ When the app starts, the terminal prints the frontend URL:
 Frontend: http://127.0.0.1:5173/
 ```
 
-If the registry serves `ornnlab@0.1.1`, that is the first WebUI launcher release
-without the full blank-machine bootstrap flow.
+For version authority and release documentation rules, see
+`docs/version-governance.md`.
 
 ## Current Status
 
