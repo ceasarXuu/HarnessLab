@@ -1380,3 +1380,21 @@ Validation evidence:
 
 - `git diff --check`
 - search for stale Phase 1 rewrite placeholders in active docs
+
+### 2026-06-15 Doctor Logs Pass
+
+Landed the first Phase 6 `doctor --logs` diagnostic:
+
+- `harnesslab doctor --logs` prints the normal status payload plus a `logs`
+  section;
+- `/api/system/doctor?logs=true` exposes the same structure for the WebUI;
+- the logs section reports the latest failed/interrupted run, failure class and
+  code, job dir, `job.log`, result, report, and report summary paths;
+- remediation actions are derived from doctor warnings and the latest failure
+  class, including Docker resource and Harbor recovery cases.
+
+Validation evidence:
+
+- `uv run pytest tests/python/test_cli.py tests/python/test_system_api.py -vv`
+- `uv run ruff check harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
+- `uv run pyright harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
