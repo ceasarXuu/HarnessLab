@@ -8,6 +8,7 @@
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required document version tables and engineering-version linkage for active PRD and technical docs. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Expanded document-control coverage to operations, test strategy, and Harbor spike docs. |
 | 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Release Train / Build Set governance for independent component versions. |
+| 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree policy for version development. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -76,6 +77,42 @@ Build Set rules:
 - Mention the Build Set in release ledgers and release checklist evidence.
 - User-facing docs may refer to the Build Set name when they need a stable
   release label without duplicating every component version.
+
+## Release Branch And Worktree Policy
+
+`main` should stay clean, synchronized, and releasable. Version development
+should happen on an explicit release or hotfix branch after user confirmation.
+
+Branch rules:
+
+- Do not start Build Set development directly on `main`.
+- Ask for confirmation before creating a branch, because this repository's
+  agent rules forbid unapproved branch creation.
+- Use one release branch per Build Set:
+  ```text
+  codex/release-ornnlab-<npm-version>
+  ```
+- Use one hotfix branch per emergency fix:
+  ```text
+  codex/hotfix-ornnlab-<version>-<topic>
+  ```
+- Keep the release ledger on the same branch as the version change.
+- Move the release ledger status through `Planned` -> `Prepared` -> `Published`.
+- Merge/push back to `main` only after local gates and publish verification
+  have been recorded.
+
+Worktree rules:
+
+- A small docs-only or one-file fix may use a branch without a separate
+  worktree.
+- A Build Set release branch should use a dedicated worktree when practical.
+- Parallel release work, hotfix work, or publish verification must use separate
+  worktrees to avoid dirty-state ambiguity.
+- Suggested worktree pattern:
+  ```bash
+  git worktree add ../HarnessLab-ornnlab-0.1.4 -b codex/release-ornnlab-0.1.4
+  ```
+- Do not reuse a worktree across two active Build Sets.
 
 ## Documentation Rules
 

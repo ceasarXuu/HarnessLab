@@ -7,6 +7,7 @@
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined WebUI release and rollback gate. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added version-governance and release-ledger requirements. |
 | 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Build Set confirmation to release gate. |
+| 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree confirmation. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -15,6 +16,10 @@ Use this checklist for Harbor WebUI rewrite releases.
 - Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
   has current implementation ledger evidence.
 - Confirm version changes follow `docs/version-governance.md`.
+- Confirm Build Set development is on an approved release/hotfix branch, not
+  directly on `main`.
+- Confirm parallel release, hotfix, or publish-verification work uses a dedicated
+  worktree.
 - Create or update the matching `docs/releases/` ledger entry for every public
   artifact version change.
 - Confirm the release ledger includes a Build Set composition table binding npm,
