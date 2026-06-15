@@ -1,5 +1,12 @@
 # Harbor Upgrade Procedure
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined Harbor dependency upgrade checks and rollback expectations. |
+| 1.1 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-16 | Linked Harbor upgrade procedure to document version governance. |
+
 OrnnLab pins Harbor as `harbor>=0.13,<0.14`. Any Harbor dependency bump must
 go through this procedure before merging.
 

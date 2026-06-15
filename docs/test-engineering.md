@@ -1,5 +1,12 @@
 # OrnnLab WebUI Test Engineering
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined Python/Web-first test strategy for the Harbor WebUI rewrite. |
+| 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked test strategy to document version governance. |
+
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
 - Archived copy: `archive/2026-06-15-pre-harbor-webui-redesign/test-engineering.md`

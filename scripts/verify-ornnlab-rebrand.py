@@ -75,6 +75,23 @@ DOC_INVENTORY = {
     "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md": "rename-now",
 }
 
+DOC_CONTROL_REQUIRED = {
+    "docs/development-operations.md",
+    "docs/harbor-upgrade-procedure.md",
+    "docs/install-quickstart.md",
+    "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md",
+    "docs/playbooks/npm-package-reservation.md",
+    "docs/release-checklist.md",
+    "docs/releases/2026-06-16-ornnlab-0.1.3.md",
+    "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
+    "docs/technology-decisions.md",
+    "docs/test-engineering.md",
+    "docs/version-governance.md",
+    "prd/2026-06-15-ornnlab-npm-distribution.md",
+    "prd/2026-06-15-ornnlab-webui-prd.md",
+    "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md",
+}
+
 FORBIDDEN_CURRENT_PATTERNS = [
     re.compile(r"2026-06-15-harnesslab-webui-prd\.md"),
     re.compile(r"~/.ornnlab/HarnessLab"),
@@ -85,6 +102,7 @@ FORBIDDEN_CURRENT_PATTERNS = [
 def main() -> int:
     checks: list[dict[str, Any]] = [
         _check_doc_inventory(),
+        _check_doc_control_tables(),
         _check_product_metadata(),
         _check_current_docs(),
         _check_python_package(),
@@ -115,6 +133,30 @@ def _check_doc_inventory() -> dict[str, Any]:
         "verify non-archive docs/prd files are represented",
         not missing and not stale,
         {"missing": missing, "stale": stale, "count": len(discovered)},
+    )
+
+
+def _check_doc_control_tables() -> dict[str, Any]:
+    missing: list[str] = []
+    incomplete: list[str] = []
+    required_header = "| Document Version | Engineering Version(s) | Updated | Change |"
+    for relative in sorted(DOC_CONTROL_REQUIRED):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        top = "\n".join(text.splitlines()[:20])
+        if "## Document Control" not in top:
+            missing.append(relative)
+            continue
+        if required_header not in top:
+            incomplete.append(relative)
+    return _result(
+        "active PRD and technical docs have document version tables",
+        "scan Document Control sections near top of governed docs",
+        not missing and not incomplete,
+        {
+            "required_count": len(DOC_CONTROL_REQUIRED),
+            "missing": missing,
+            "incomplete": incomplete,
+        },
     )
 
 

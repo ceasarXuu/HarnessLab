@@ -1,5 +1,12 @@
 # npm Package Reservation Playbook
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | `@ceasarxuu/harnesslab` npm `0.1.2`; `ornnlab` npm `0.1.1` | 2026-06-16 | Recorded npm reservation, transition publish, and WebAuthn publish flow. |
+| 1.1 | `ornnlab` npm `0.1.3` | 2026-06-16 | Added prepared bootstrap release notes and document version governance. |
+
 This playbook records the steps used to reserve the public
 `@ceasarxuu/harnesslab` npm package and `harnesslab` CLI command names, plus the
 later `ornnlab` distribution package.

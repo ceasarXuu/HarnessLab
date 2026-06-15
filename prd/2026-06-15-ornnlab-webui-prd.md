@@ -1,5 +1,12 @@
 # PRD: OrnnLab WebUI
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Established Harbor-powered WebUI product direction and MVP scope. |
+| 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked this PRD into the version-governed document system. |
+
 - Status: Ready for phased implementation
 - Created: 2026-06-15
 - Updated: 2026-06-15

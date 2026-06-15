@@ -1,5 +1,12 @@
 # OrnnLab Harbor WebUI Redesign Engineering Plan
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 3.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Captured Harbor WebUI MVP architecture, execution boundary, hardening, and release docs. |
+| 3.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked engineering plan to document version governance. |
+
 - Created: 2026-06-15
 - Updated: 2026-06-15
 - Version: 3.0

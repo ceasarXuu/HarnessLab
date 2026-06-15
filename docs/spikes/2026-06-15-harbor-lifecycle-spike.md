@@ -1,5 +1,12 @@
 # Harbor Lifecycle Spike
 
+## Document Control
+
+| Document Version | Engineering Version(s) | Updated | Change |
+|---|---|---|---|
+| 1.0 | Python app `0.2.0`; Harbor `0.13.2` | 2026-06-15 | Recorded Harbor API and CLI lifecycle evidence for WebUI execution design. |
+| 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked spike evidence to document version governance. |
+
 - Date: 2026-06-15
 - Harbor version inspected: `0.13.2`
 - Related plan: `../plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
