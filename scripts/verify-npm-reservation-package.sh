@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-node --check bin/harnesslab.js
+node --check bin/ornnlab.js
 
 expected_version="$(node -p "require('./package.json').version")"
-actual_version="$(node bin/harnesslab.js --version)"
+actual_version="$(node bin/ornnlab.js --version)"
 if [[ "$actual_version" != "$expected_version" ]]; then
   printf 'version mismatch: expected %s, got %s\n' "$expected_version" "$actual_version" >&2
   exit 1
 fi
 
-node bin/harnesslab.js --help >/dev/null
+node bin/ornnlab.js --help | grep -q 'ornnlab setup'
+node bin/ornnlab.js path >/dev/null
 
-if node bin/harnesslab.js unexpected-command >/dev/null 2>&1; then
+if node bin/ornnlab.js unexpected-command >/dev/null 2>&1; then
   printf 'expected unsupported command to fail\n' >&2
   exit 1
 fi
@@ -29,7 +30,7 @@ pack_json="$(npm pack --dry-run --json)"
 PACK_JSON="$pack_json" node <<'NODE'
 const packs = JSON.parse(process.env.PACK_JSON);
 const files = packs[0].files.map((file) => file.path).sort();
-const expected = ["LICENSE", "README.md", "bin/harnesslab.js", "package.json"];
+const expected = ["LICENSE", "README.md", "bin/ornnlab.js", "package.json"];
 const forbidden = files.filter((file) =>
   file === ".env" ||
   file === ".env.local" ||

@@ -19,6 +19,26 @@ verification, and raw job artifacts. HarnessLab owns the local product layer:
 declarative agent registration, experiment/run management, diagnostics, report
 summaries, and leaderboard views.
 
+## Install With npm
+
+The npm launcher is prepared under the `ornnlab` package name. After
+`ornnlab@0.1.1` is published, it is the install path for the active
+source-based WebUI workflow.
+
+```bash
+npm install -g ornnlab
+ornnlab setup
+ornnlab dev
+```
+
+Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
+
+The launcher stores its managed source checkout under `~/.ornnlab/HarnessLab` by
+default. HarnessLab product data remains under `~/.harnesslab`.
+
+Until `ornnlab@0.1.1` is live on npm, the registry may still serve the older
+`ornnlab@0.1.0` reservation package.
+
 ## Current Status
 
 This repository still contains the previous Rust workspace and npm reservation
@@ -67,13 +87,13 @@ npm --prefix frontend run dev -- --host 127.0.0.1
 
 See `docs/install-quickstart.md` for the full fresh-checkout flow.
 
-## Existing npm Reservation Package
+## Existing npm Package History
 
-The scoped npm package currently reserves the `harnesslab` command name:
+The previous scoped npm package reserved the `harnesslab` command name:
 
 ```bash
 npx @ceasarxuu/harnesslab --help
 npx @ceasarxuu/harnesslab --version
 ```
 
-This package is not the active WebUI implementation.
+The active npm install path is now `ornnlab`.

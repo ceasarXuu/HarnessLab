@@ -1,7 +1,7 @@
 {
-  "name": "@ceasarxuu/harnesslab",
+  "name": "ornnlab",
   "version": "0.1.1",
-  "description": "HarnessLab command reservation package for benchmark harness workflows.",
+  "description": "OrnnLab npm launcher for the HarnessLab Harbor WebUI.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,10 +12,10 @@
     "url": "https://github.com/ceasarXuu/HarnessLab/issues"
   },
   "bin": {
-    "harnesslab": "bin/harnesslab.js"
+    "ornnlab": "bin/ornnlab.js"
   },
   "files": [
-    "bin/",
+    "bin/ornnlab.js",
     "README.md",
     "LICENSE"
   ],
