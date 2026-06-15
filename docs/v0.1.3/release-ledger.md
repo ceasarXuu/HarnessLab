@@ -1,23 +1,17 @@
-# Release Ledger: ornnlab 0.1.3
+# Release Ledger: OrnnLab v0.1.3
 
 ## Document Control
 
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
-| 1.0 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Recorded prepared `ornnlab@0.1.3` release ledger before npm publish. |
-| 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked release ledger to document version governance. |
-| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Recorded document-control coverage for PRD and technical docs. |
-| 1.3 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added Build Set composition for independent component versions. |
-| 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked this prepared release to branch/worktree governance. |
-| 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked historical release index entry to canonical `docs/v0.1.3/` release ledger. |
+| 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the canonical release ledger inside the `v0.1.3` version document folder. |
 
 - Status: Prepared, not yet published
 - Date: 2026-06-16
 - Commit: `76f754f`
 - Version authority: `package.json`
 - Build Set: OrnnLab Build Set `2026.06.16`
-- Canonical version folder: `../v0.1.3/README.md`
-- Canonical release ledger: `../v0.1.3/release-ledger.md`
+- Historical index entry: `../releases/2026-06-16-ornnlab-0.1.3.md`
 
 ## Build Set Composition
 
@@ -47,46 +41,42 @@
 - Bootstrap state includes schema and launcher versions.
 - Backend readiness verifies Harbor and OrnnLab imports after `uv sync`.
 - Frontend readiness verifies `npm run build` after `npm ci`.
+- Current release documentation is organized under `docs/v0.1.3/`.
 
 ## Documentation Updated
 
+- `README.md`
+- `docs/README.md`
 - `docs/version-governance.md`
-- `docs/install-quickstart.md`
-- `docs/development-operations.md`
-- `docs/harbor-upgrade-procedure.md`
-- `docs/playbooks/npm-package-reservation.md`
 - `docs/release-checklist.md`
-- `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
-- `docs/technology-decisions.md`
-- `docs/test-engineering.md`
-- `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
-- `prd/2026-06-15-ornnlab-npm-distribution.md`
-- `prd/2026-06-15-ornnlab-webui-prd.md`
-- `prd/2026-06-16-ornnlab-zero-friction-bootstrap.md`
+- `docs/v0.1.3/README.md`
+- `docs/v0.1.3/version-prd.md`
+- `docs/v0.1.3/technical-design.md`
+- `docs/v0.1.3/engineering-plan.md`
+- `docs/v0.1.3/release-ledger.md`
 
 ## Local Validation
 
 ```bash
-node --check bin/ornnlab.js
-npm run smoke:npm-bin
-npm run smoke:harnesslab-transition
 uv run python scripts/verify-ornnlab-rebrand.py
-uv run python -c "import harbor; import ornnlab"
-uv run ornnlab --version
-npm --prefix frontend run build
-npm pack --dry-run --json
-scripts/test-after-change-web.sh
+uv run python -m py_compile scripts/verify-ornnlab-rebrand.py
+git diff --check
+npm run smoke:npm-bin
 ```
 
 ## Publish Plan
 
 Use the npm WebAuthn flow documented in
-`docs/playbooks/npm-package-reservation.md`:
+`../playbooks/npm-package-reservation.md`:
 
 ```bash
 npm login --auth-type=web
 npm publish --access public --auth-type=web
 ```
+
+Publishing requires the maintainer to complete npm web login and approve the
+local machine WebAuthn key. Do not treat this project as using TOTP or an npm
+access token for publish.
 
 After publishing, append:
 
@@ -103,3 +93,4 @@ npx --yes ornnlab --help
 - Do not delete `~/.ornnlab/data`.
 - Use `ornnlab uninstall` only after it is implemented; until then, remove
   launcher-managed files manually by moving them to a dated backup.
+
