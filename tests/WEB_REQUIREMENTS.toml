@@ -93,3 +93,9 @@ id = "WEB-OPS-003"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
 summary = "Local backups export and safely import HarnessLab home archives."
+
+[[requirement]]
+id = "WEB-OPS-004"
+area = "operations"
+doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
+summary = "Cleanup plans and archives stale generated-agent and artifact directories without deletion."

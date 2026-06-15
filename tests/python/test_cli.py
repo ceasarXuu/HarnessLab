@@ -21,3 +21,13 @@ def test_backup_export_command_prints_archive_path(settings, capsys):
 
     assert payload["archive_path"].endswith(".tar.gz")
     assert payload["file_count"] >= 0
+
+
+def test_cleanup_plan_command_prints_candidates(settings, capsys):
+    (settings.generated_agents_dir / "stale-agent").mkdir(parents=True)
+
+    assert main(["cleanup", "plan"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["candidate_count"] == 1
+    assert payload["candidates"][0]["type"] == "generated-agent"

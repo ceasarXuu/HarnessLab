@@ -9,6 +9,7 @@ import uvicorn
 from harnesslab import __version__
 from harnesslab.app import create_app
 from harnesslab.services.backup_service import BackupService
+from harnesslab.services.cleanup_service import CleanupService
 from harnesslab.services.doctor_service import DoctorService
 from harnesslab.settings import Settings
 
@@ -30,6 +31,10 @@ def main(argv: list[str] | None = None) -> int:
     backup_export.add_argument("--output", help="Backup archive path")
     backup_import = backup_sub.add_parser("import", help="Import into an empty HarnessLab home")
     backup_import.add_argument("archive", help="Backup archive path")
+    cleanup = sub.add_parser("cleanup", help="Plan or archive stale local artifacts")
+    cleanup_sub = cleanup.add_subparsers(dest="cleanup_command", required=True)
+    cleanup_sub.add_parser("plan", help="Print stale artifact cleanup candidates")
+    cleanup_sub.add_parser("archive", help="Move cleanup candidates into local archive")
     sub.add_parser("version", help="Print HarnessLab version")
 
     args = parser.parse_args(argv)
@@ -51,6 +56,11 @@ def main(argv: list[str] | None = None) -> int:
             result = service.export_home(Path(args.output) if args.output else None)
         else:
             result = service.import_home(Path(args.archive))
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    if args.command == "cleanup":
+        service = CleanupService(Settings.from_env())
+        result = service.plan() if args.cleanup_command == "plan" else service.archive()
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "web":

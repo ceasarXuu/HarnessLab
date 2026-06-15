@@ -28,6 +28,8 @@ Current rewrite gates are Python/Web first:
 - backup tests that verify exports exclude nested backups, imports restore into
   an empty home, non-empty targets are rejected, and unsafe tar members are
   blocked;
+- cleanup tests that verify only unreferenced generated-agent and artifact
+  directories are selected and archived into a recoverable location;
 - opt-in real Harbor subprocess smoke and cancel-recovery tests in
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `HARNESSLAB_REAL_HARBOR=1` and Docker availability;
