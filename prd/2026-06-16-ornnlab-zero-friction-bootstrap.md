@@ -70,6 +70,8 @@ Usage context:
 - Install frontend dependencies.
 - Provide `ornnlab update` to refresh the managed source checkout and
   dependencies after installation.
+- Provide `ornnlab uninstall` to remove launcher-managed files while preserving
+  user data by default.
 - Persist bootstrap state for diagnostics and recovery.
 - Make setup idempotent and recoverable after partial failure.
 
@@ -124,6 +126,25 @@ Update journey:
    reruns frontend dependency install, records update state, and exits without
    starting the WebUI.
 
+Uninstall journey:
+
+1. User runs:
+   ```bash
+   ornnlab uninstall
+   ```
+2. Launcher lists launcher-managed files that can be removed.
+3. Launcher preserves `~/.ornnlab/data` unless the user explicitly requests a
+   full data cleanup.
+4. Launcher removes or archives recoverably:
+   - source checkout under `~/.ornnlab/launcher/source`
+   - bootstrap state under `~/.ornnlab/launcher/bootstrap-state.json`
+   - launcher cache files under `~/.ornnlab/launcher`
+5. Launcher prints:
+   ```bash
+   npm uninstall -g ornnlab
+   ```
+   for global npm package removal.
+
 ## 6. Interaction And Information Design
 
 - Phase output should be short and explicit.
@@ -135,6 +156,8 @@ Update journey:
 - `ornnlab setup` should remain a compatibility alias for `ornnlab install`.
 - `ornnlab update` should refresh the managed source checkout and dependencies
   without starting the WebUI.
+- `ornnlab uninstall` should remove launcher-managed runtime files without
+  deleting product data by default.
 - `ornnlab doctor` should remain available for deeper application diagnostics
   after bootstrap succeeds.
 
@@ -158,6 +181,10 @@ Update journey:
   - backend dependency status
   - frontend dependency status
   - last error and timestamp
+- Uninstall state should record:
+  - removed launcher-managed paths
+  - preserved data paths
+  - backup/trash paths when data cleanup is explicitly requested
 - Readiness should be derived from actual files/commands, not only from the state
   file.
 
@@ -173,6 +200,12 @@ Update journey:
   command instead of silently modifying the global install.
 - If update cannot reach the npm registry, it should continue source/dependency
   update and record the version-check failure as a warning.
+- If uninstall finds no launcher-managed files, it should exit successfully and
+  report that the install is already clean.
+- If uninstall is asked to remove user data, it should require explicit
+  confirmation and use a recoverable move to backup/trash, not permanent delete.
+- If OrnnLab appears to be running, uninstall should ask the user to stop it
+  before removing managed files.
 - If Docker install is skipped, do not block WebUI launch.
 - If Docker is installed but the daemon is not running, record Docker as present
   with a runtime warning instead of blocking WebUI launch.
@@ -205,6 +238,13 @@ Update journey:
   and frontend dependency sync without starting servers.
 - Given the installed launcher version is behind npm latest, when the user runs
   `ornnlab update`, then the launcher prints `npm install -g ornnlab@latest`.
+- Given the user runs `ornnlab uninstall`, then launcher-managed files are
+  removed or archived and `~/.ornnlab/data` is preserved by default.
+- Given the user requests full data cleanup during uninstall, then the launcher
+  requires explicit confirmation and moves data to a recoverable backup/trash
+  location.
+- Given the user runs `ornnlab uninstall`, then the launcher prints
+  `npm uninstall -g ornnlab` for removing the global npm package.
 - Given automatic install fails, when the launcher exits, then the user sees the
   failed prerequisite, attempted command, and a safe rerun path.
 
