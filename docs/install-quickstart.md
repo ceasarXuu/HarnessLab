@@ -4,16 +4,17 @@ This is the current developer quickstart for the Harbor WebUI rewrite.
 
 ## npm Launcher Install
 
-After `ornnlab@0.1.1` is published:
+After `ornnlab@0.1.2` is published:
 
 ```bash
 npm install -g ornnlab
 ornnlab
 ```
 
-The launcher checks out the source repository under `~/.ornnlab/launcher/source` by
-default, installs backend and frontend dependencies, then starts the current
-FastAPI backend and Vue frontend development servers.
+The launcher bootstraps the local machine, checks out the source repository
+under `~/.ornnlab/launcher/source` by default, installs backend and frontend
+dependencies, then starts the current FastAPI backend and Vue frontend
+development servers.
 
 The terminal prints the clickable app URL before starting the servers:
 
@@ -22,7 +23,21 @@ Frontend: http://127.0.0.1:5173/
 Backend API: http://127.0.0.1:8765/
 ```
 
-Prerequisites: `git`, `uv`, Node.js, and npm must be available on `PATH`.
+The npm install command still requires an existing Node/npm entrypoint. After
+that, the launcher checks required runtime tools (`git`, `uv`, Node.js, and
+npm) and attempts to install missing tools on macOS, Linux, and Windows when a
+supported system package manager or installer path is available.
+
+Docker is optional for first launch. If Docker is already present, the launcher
+records that capability. If it is missing, the launcher asks whether to install
+Docker now; choosing no continues WebUI setup and lets you retry later:
+
+```bash
+ORNNLAB_INSTALL_DOCKER=1 ornnlab setup
+```
+
+Bootstrap state is written under `~/.ornnlab/launcher/bootstrap-state.json` for
+diagnostics. Rerunning `ornnlab` retries incomplete setup phases.
 
 If the npm registry still serves `ornnlab@0.1.0`, that is the older reservation
 package and does not yet contain the WebUI launcher.

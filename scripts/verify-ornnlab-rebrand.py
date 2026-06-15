@@ -70,6 +70,7 @@ DOC_INVENTORY = {
     "prd/2026-06-07-universal-benchmark-adapter-protocol.md": "historical-stub",
     "prd/2026-06-15-ornnlab-npm-distribution.md": "rename-now",
     "prd/2026-06-15-ornnlab-webui-prd.md": "rename-now",
+    "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md": "rename-now",
 }
 
 FORBIDDEN_CURRENT_PATTERNS = [

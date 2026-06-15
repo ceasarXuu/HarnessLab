@@ -36,9 +36,11 @@ command and points users back to the HarnessLab repository while the native CLI
 distribution strategy was still being prepared.
 
 `ornnlab` was later published with the same reservation-package pattern at
-version `0.1.0`, owning the `ornnlab` command. `ornnlab@0.1.1` is now the
-active npm launcher for the OrnnLab Harbor WebUI source workflow. The product
-name for that active path is OrnnLab.
+version `0.1.0`, owning the `ornnlab` command. `ornnlab@0.1.1` was the first
+active npm launcher for the OrnnLab Harbor WebUI source workflow. The prepared
+`ornnlab@0.1.2` release adds recoverable blank-machine bootstrap for required
+tools and optional Docker capability handling. The product name for that active
+path is OrnnLab.
 
 ## Preflight
 
