@@ -6,6 +6,7 @@ Start here for the active Harbor WebUI redesign.
 - Current engineering plan: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
 - Install quickstart: `install-quickstart.md`
 - Release and rollback checklist: `release-checklist.md`
+- Version and documentation governance: `version-governance.md`
 - Harbor upgrade procedure: `harbor-upgrade-procedure.md`
 - Rust legacy workspace decision: `rust-legacy-fate.md`
 - Harbor lifecycle spike: `spikes/2026-06-15-harbor-lifecycle-spike.md`

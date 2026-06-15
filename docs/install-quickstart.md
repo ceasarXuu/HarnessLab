@@ -4,7 +4,7 @@ This is the current developer quickstart for the Harbor WebUI rewrite.
 
 ## npm Launcher Install
 
-After `ornnlab@0.1.3` is published:
+Install the latest OrnnLab npm launcher:
 
 ```bash
 npm install -g ornnlab
@@ -53,8 +53,8 @@ ornnlab install
 
 `ornnlab setup` remains a compatibility alias.
 
-If the npm registry still serves `ornnlab@0.1.0`, that is the older reservation
-package and does not yet contain the WebUI launcher.
+If the npm registry serves an older launcher, check `docs/releases/` and
+`docs/playbooks/npm-package-reservation.md` for the current release status.
 
 ## Requirements
 
