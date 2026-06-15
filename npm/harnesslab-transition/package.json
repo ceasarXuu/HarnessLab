@@ -1,0 +1,16 @@
+{
+  "name": "@ceasarxuu/harnesslab",
+  "version": "0.1.1",
+  "description": "Transition package for the old HarnessLab command; use ornnlab instead.",
+  "license": "MIT",
+  "bin": {
+    "harnesslab": "bin/harnesslab.js"
+  },
+  "files": [
+    "bin/harnesslab.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

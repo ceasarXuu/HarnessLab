@@ -1,9 +1,10 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 uv run ruff check ornnlab tests/python
 uv run pyright
 uv run pytest tests/python
+uv run python scripts/verify-ornnlab-rebrand.py
 
 uv run python - <<'PY'
 from pathlib import Path
@@ -20,6 +21,7 @@ if violations:
 PY
 
 if [ -f frontend/package.json ]; then
+  bash scripts/verify-harnesslab-transition-package.sh
   npm --prefix frontend run typecheck
   npm --prefix frontend run lint
   npm --prefix frontend run test

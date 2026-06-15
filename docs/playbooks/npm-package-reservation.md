@@ -33,12 +33,13 @@ when installed from the scoped package.
 `harnessrig` and `harnessyard` were published as independent unscoped
 reservation packages at version `0.1.0`. Each package owns its same-named CLI
 command and points users back to the HarnessLab repository while the native CLI
-distribution strategy is prepared.
+distribution strategy was still being prepared.
 
 `ornnlab` was later published with the same reservation-package pattern at
 version `0.1.0`, owning the `ornnlab` command. The prepared `ornnlab@0.1.1`
-package is the active npm launcher for the HarnessLab Harbor WebUI source
-workflow once publish succeeds.
+package is the active npm launcher for the OrnnLab Harbor WebUI source
+workflow once publish succeeds. The product name for that active path is
+OrnnLab.
 
 ## Preflight
 
@@ -167,6 +168,27 @@ npm run smoke:npm-registry
 
 Do not store raw tokens, OTPs, npm debug logs, or command output containing
 credential material in repository artifacts.
+
+## Publish Old Scoped Transition Package
+
+The old scoped package should be published only from the dedicated staging
+manifest:
+
+```bash
+npm run smoke:harnesslab-transition
+cd npm/harnesslab-transition
+npm publish --access public --otp=<current-otp>
+npm view @ceasarxuu/harnesslab name version bin --json
+npx --yes @ceasarxuu/harnesslab --help
+npx --yes ornnlab --help
+```
+
+Expected signals:
+
+- The packed package contains only `README.md`, `bin/harnesslab.js`, and
+  `package.json`.
+- The `harnesslab` command prints a transition notice pointing to `ornnlab`.
+- The root `ornnlab` package still excludes `bin/harnesslab.js`.
 
 ## Additional Brand Reservations
 

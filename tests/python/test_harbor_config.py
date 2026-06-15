@@ -73,3 +73,21 @@ def test_subprocess_capability_snapshot_records_cancel_support(monkeypatch):
 
     assert snapshot.lifecycle_mode == "subprocess"
     assert snapshot.supports_cancel is True
+
+
+def test_ornnlab_harbor_engine_env_wins_over_legacy_env(monkeypatch):
+    monkeypatch.setenv("ORNNLAB_HARBOR_ENGINE", "python-api")
+    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
+
+    snapshot = HarborEngine().capability_snapshot()
+
+    assert snapshot.lifecycle_mode == "python-api"
+
+
+def test_legacy_harbor_engine_env_remains_supported(monkeypatch):
+    monkeypatch.delenv("ORNNLAB_HARBOR_ENGINE", raising=False)
+    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
+
+    snapshot = HarborEngine().capability_snapshot()
+
+    assert snapshot.lifecycle_mode == "subprocess"

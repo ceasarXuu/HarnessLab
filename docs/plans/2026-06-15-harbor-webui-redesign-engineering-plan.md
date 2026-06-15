@@ -1,11 +1,11 @@
-# HarnessLab Harbor WebUI Redesign Engineering Plan
+# OrnnLab Harbor WebUI Redesign Engineering Plan
 
 - Created: 2026-06-15
 - Updated: 2026-06-15
 - Version: 3.0
 - Status: Harbor WebUI MVP foundation, execution boundary, hardening, and release docs landed
-- Owner: HarnessLab team
-- Source PRD: `prd/2026-06-15-harnesslab-webui-prd.md`
+- Owner: OrnnLab team
+- Source PRD: `prd/2026-06-15-ornnlab-webui-prd.md`
 - Harbor lifecycle spike: `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Supersedes:
   - `docs/plans/2026-06-15-harbor-integration-engineering-plan.md`
@@ -16,7 +16,7 @@
 
 ## 1. Executive Decision
 
-HarnessLab should stop investing in a self-owned benchmark runtime. Harbor becomes the execution engine. HarnessLab becomes a local product layer that makes agent registration, experiment setup, run monitoring, result reuse, and leaderboard review easier than using Harbor directly.
+OrnnLab should stop investing in a self-owned benchmark runtime. Harbor becomes the execution engine. OrnnLab becomes a local product layer that makes agent registration, experiment setup, run monitoring, result reuse, and leaderboard review easier than using Harbor directly.
 
 The target architecture is:
 
@@ -79,7 +79,7 @@ Local run artifacts show:
 
 ### 3.1 In Scope
 
-- Local single-user WebUI launched by `harnesslab web`.
+- Local single-user WebUI launched by `ornnlab web`.
 - Agent registration and editing through templates and structured forms.
 - Declarative profiles persisted as TOML for user readability.
 - Direct mapping to Harbor built-in agents where possible.
@@ -87,7 +87,7 @@ Local run artifacts show:
 - Experiment creation, cloning, queueing, running, cancellation, and retry.
 - One active experiment at a time in MVP, with a persisted FIFO queue for additional runs.
 - Real-time status and log tailing through Server-Sent Events.
-- HarnessLab report shell with summary, trial table, failure explanation, raw Harbor artifact links, and optional Harbor viewer launch.
+- OrnnLab report shell with summary, trial table, failure explanation, raw Harbor artifact links, and optional Harbor viewer launch.
 - Leaderboard computed from completed local experiments.
 - Doctor/status surfaces for Harbor, Docker, disk, Python, generated agents, profile validity, and stale running jobs.
 - Structured logs and audit events for agent changes, experiment lifecycle, Harbor calls, failure classification, and cleanup.
@@ -126,7 +126,7 @@ Harbor Framework
 Local Harbor job directory
 ```
 
-HarnessLab owns product state, profile compilation, UX-level validation, status recovery, and summaries. Harbor owns environment lifecycle, task execution, agent execution, verifier execution, and raw job artifacts.
+OrnnLab owns product state, profile compilation, UX-level validation, status recovery, and summaries. Harbor owns environment lifecycle, task execution, agent execution, verifier execution, and raw job artifacts.
 
 ### 4.1.1 Harbor Lifecycle Contract
 
@@ -159,7 +159,7 @@ state transition:
 1. write `experiment.cancel_requested`;
 2. cancel the backend asyncio task running Harbor;
 3. wait a bounded grace period;
-4. run HarnessLab cleanup using recorded `harbor_job_dir`, Harbor job name,
+4. run OrnnLab cleanup using recorded `harbor_job_dir`, Harbor job name,
    known Docker compose project names when available, and Docker label scans;
 5. mark the run `cancelled` only after cleanup evidence is written;
 6. otherwise mark it `interrupted` with `cancel_escalation_failed`.
@@ -170,16 +170,16 @@ requirements, Phase 1 must stop and choose one of two fallbacks before Phase 3:
 - wrap `harbor run --config <file>` as a managed subprocess with process-group
   cancellation and log tailing;
 - keep the Python API for creation/result parsing but launch execution in a
-  separate worker process so HarnessLab owns kill and restart boundaries.
+  separate worker process so OrnnLab owns kill and restart boundaries.
 
 This lifecycle decision is a release blocker, not an implementation detail.
 
 ### 4.2 Proposed Repository Shape
 
 ```text
-HarnessLab/
+OrnnLab/
   pyproject.toml
-  harnesslab/
+  ornnlab/
     __init__.py
     __main__.py
     cli.py
@@ -243,9 +243,9 @@ No production code file should exceed 500 lines. Large services must be split by
 ### 4.3 Local Data Layout
 
 ```text
-~/.harnesslab/
+~/.ornnlab/data/
   config.toml
-  harnesslab.sqlite
+  ornnlab.sqlite
   agents/
     <agent-id>.toml
   generated-agents/
@@ -257,7 +257,7 @@ No production code file should exceed 500 lines. Large services must be split by
       config.snapshot.json
       agent.snapshot.toml
       harbor.config.json
-      harnesslab-events.jsonl
+      ornnlab-events.jsonl
       app.log.jsonl
       harbor-job/
         config.json
@@ -273,7 +273,7 @@ No production code file should exceed 500 lines. Large services must be split by
   logs/
 ```
 
-SQLite stores indexes and state transitions. Files store source-of-truth profile text, snapshots, Harbor artifacts, logs, and generated reports. SQLite rows must always point to file artifacts by relative paths under `~/.harnesslab`.
+SQLite stores indexes and state transitions. Files store source-of-truth profile text, snapshots, Harbor artifacts, logs, and generated reports. SQLite rows must always point to file artifacts by relative paths under `~/.ornnlab/data`.
 
 ### 4.4 SQLite Tables
 
@@ -368,7 +368,7 @@ Migrations must be explicit SQL files with a `schema_migrations` table and idemp
 
 ### 4.5 Entity Semantics
 
-HarnessLab must not overload "experiment" to mean every product and runtime
+OrnnLab must not overload "experiment" to mean every product and runtime
 object.
 
 | Entity | Meaning | Maps to Harbor | User-visible |
@@ -431,7 +431,7 @@ The `comparability_key` stored on `runs` is the stable hash of those fields.
 
 SQLite is the authority for queue order and state transitions. Files are the
 authority for user-authored profiles, immutable snapshots, Harbor raw artifacts,
-and generated reports. `harnesslab-events.jsonl` is an append-only human/debug
+and generated reports. `ornnlab-events.jsonl` is an append-only human/debug
 mirror of `experiment_events`, not an independent state source.
 
 Write order:
@@ -563,7 +563,7 @@ Responsibilities:
 - call `await Job.create(config)` and `await job.run()`;
 - write `harbor.config.json` before execution;
 - stream structured app events around Harbor calls;
-- classify Harbor exceptions into HarnessLab failure classes;
+- classify Harbor exceptions into OrnnLab failure classes;
 - detect job artifact paths;
 - expose cancellation hooks best-effort through task cancellation and process cleanup if Harbor API lacks direct cancellation for a specific state.
 
@@ -606,7 +606,7 @@ Required event families:
 
 Every log line must include `ts`, `level`, `event`, `run_id` or `experiment_id` when applicable, `correlation_id`, and redacted payload.
 
-`harnesslab doctor --logs` must print the latest failed experiment, failure class/code, relevant log paths, Docker status, Harbor version, generated agent manifest path, and next remediation.
+`ornnlab doctor --logs` must print the latest failed experiment, failure class/code, relevant log paths, Docker status, Harbor version, generated agent manifest path, and next remediation.
 
 ## 6. API Design
 
@@ -704,7 +704,7 @@ SSE recovery contract:
 - Dashboard: system status, active/queued experiment, recent results, quick actions.
 - Agents: list, create wizard, edit, detail, compile/validate diagnostics.
 - Experiments: list, create wizard, detail, live logs, cancel/retry/clone.
-- Reports: HarnessLab summary shell plus raw Harbor artifacts.
+- Reports: OrnnLab summary shell plus raw Harbor artifacts.
 - Leaderboard: benchmark filter, rank table, score trend, link to source experiment.
 - Settings/Doctor: Harbor version, Docker status, data directory, logs, generated agents, repair actions.
 
@@ -736,13 +736,13 @@ SSE recovery contract:
 
 ### 8.2 Required Smoke Paths
 
-1. `harnesslab web --port 0` starts backend and serves frontend.
+1. `ornnlab web --port 0` starts backend and serves frontend.
 2. System status returns Harbor version, Docker status, data directory, and schema version.
 3. Create built-in `oracle` profile through API and UI.
 4. Compile profile to Harbor `AgentConfig(name="oracle")`.
 5. Create experiment for `terminal-bench@2.0`, `n_tasks=1`, `n_concurrent=1`.
 6. Run experiment to completion with real Harbor when Docker is available.
-7. Generate HarnessLab report summary.
+7. Generate OrnnLab report summary.
 8. Leaderboard includes the completed experiment.
 9. Cancel a fake long-running experiment and verify no running state remains after backend restart.
 10. Force a fake Docker resource failure and verify user-facing diagnostics include log paths and remediation.
@@ -818,7 +818,7 @@ Objective: create an installable backend with status, storage, migrations, and H
 Tasks:
 
 1. Create `pyproject.toml` with FastAPI, uvicorn, pydantic, ruff, pyright, pytest, and Harbor dependency pinned to `>=0.13,<0.14`.
-2. Implement `harnesslab web`, `harnesslab doctor`, and `harnesslab version`.
+2. Implement `ornnlab web`, `ornnlab doctor`, and `ornnlab version`.
 3. Implement app startup, settings, path initialization, structured logging, and SQLite migrations.
 4. Implement `/api/system/status` and `/api/benchmarks`.
 5. Implement Harbor model wrappers and config-builder tests without running Docker.
@@ -829,7 +829,7 @@ Tasks:
 
 Acceptance criteria:
 
-- `uv run harnesslab web --port 0` starts and reports the selected port.
+- `uv run ornnlab web --port 0` starts and reports the selected port.
 - `/api/system/status` returns Harbor version, Docker status, data dir, DB schema version, and warnings.
 - SQLite initializes idempotently.
 - Harbor `JobConfig` can be built for `oracle + terminal-bench@2.0 + n_tasks=1`.
@@ -839,7 +839,7 @@ Acceptance criteria:
 Testing:
 
 - `uv run pytest tests/python/test_storage.py tests/python/test_system_api.py tests/python/test_harbor_config.py`
-- `uv run ruff check harnesslab tests`
+- `uv run ruff check ornnlab tests`
 - `uv run pyright`
 - `git diff --check`
 
@@ -862,7 +862,7 @@ Acceptance criteria:
 
 - User can create, edit, validate, compile, and delete an agent through API.
 - Built-in `oracle` compiles without generated Python.
-- Custom command profile generates importable Python under `~/.harnesslab/generated-agents/`.
+- Custom command profile generates importable Python under `~/.ornnlab/data/generated-agents/`.
 - Unsupported fields produce blocker diagnostics, not warnings.
 - Deleting an agent referenced by a running/queued experiment is blocked.
 - Custom-command UI/API exposes command preview, env inheritance, mount list, and trusted-local warning before first run.
@@ -901,7 +901,7 @@ Acceptance criteria:
 - Fake failure cases map to stable failure classes and user remediation text.
 - SSE stream emits status, progress, log lines, completion, and failure events.
 - SSE reconnect with `Last-Event-ID` replays missed events or emits `log.replay_unavailable`.
-- Running experiment artifacts contain `harbor.config.json`, `harnesslab-events.jsonl`, app logs, and Harbor job directory.
+- Running experiment artifacts contain `harbor.config.json`, `ornnlab-events.jsonl`, app logs, and Harbor job directory.
 
 Testing:
 
@@ -979,9 +979,9 @@ Objective: make the rewrite shippable and retire stale architecture safely.
 
 Tasks:
 
-1. Add `harnesslab doctor --logs` and repair guidance.
+1. Add `ornnlab doctor --logs` and repair guidance.
 2. Add stale job cleanup and generated-agent cleanup.
-3. Add local backup/export/import for `~/.harnesslab`.
+3. Add local backup/export/import for `~/.ornnlab/data`.
 4. Add installer and README quickstart.
 5. Expand `docs/architecture.md` and `docs/technology-decisions.md` from their current stubs into full documents matching this plan.
 6. Decide whether to archive, keep, or remove Rust crates. If removal is chosen, move them to a backup/archive path or use a reversible git commit; do not use unrecoverable deletion outside git.
@@ -1036,7 +1036,7 @@ Do not parallelize two workers over the same service files. Keep write scopes di
 
 ### Decision
 
-Build HarnessLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates benchmark execution to Harbor.
+Build OrnnLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates benchmark execution to Harbor.
 
 ### Drivers
 
@@ -1079,7 +1079,7 @@ Build HarnessLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates bench
 
 Landed initial rewrite scaffolding:
 
-- Python package with `harnesslab web`, `harnesslab doctor`, and `harnesslab version`.
+- Python package with `ornnlab web`, `ornnlab doctor`, and `ornnlab version`.
 - FastAPI app with system, agent, benchmark, experiment, event, and leaderboard endpoints.
 - SQLite migration for agents, experiments, runs, queue items, events, and templates.
 - AgentProfile v2 Pydantic model plus built-in Harbor agent config compilation and
@@ -1091,8 +1091,8 @@ Landed initial rewrite scaffolding:
 Validation evidence:
 
 - `scripts/test-after-change-web.sh`
-- `uv run harnesslab --version`
-- `uv run harnesslab doctor`
+- `uv run ornnlab --version`
+- `uv run ornnlab doctor`
 
 ### 2026-06-15 Queue And Result Pass
 
@@ -1109,7 +1109,7 @@ Landed additional Phase 3/5 backend behavior:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 CRUD Template Report Pass
@@ -1126,7 +1126,7 @@ Landed more Phase 2/3/5 product-loop behavior:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Harbor Lifecycle Adapter Pass
@@ -1134,7 +1134,7 @@ Validation evidence:
 Landed the first Phase 3 real-execution boundary:
 
 - `HarborEngine` now selects a deterministic `fake` adapter by default or a real
-  `python-api` adapter when `HARNESSLAB_HARBOR_ENGINE=python-api` is set.
+  `python-api` adapter when `ORNNLAB_HARBOR_ENGINE=python-api` is set.
 - Every run writes `harbor.config.json` in Harbor `JobConfig` shape before the
   run is marked `running`, plus `harbor.capability.json` for auditability.
 - Experiment execution now resolves each agent through AgentProfile compilation
@@ -1142,7 +1142,7 @@ Landed the first Phase 3 real-execution boundary:
 - Fake runs write `result.json`, preserving the same artifact contract as the
   Python API runner.
 - Real Harbor smoke coverage is available as an opt-in Docker test via
-  `HARNESSLAB_REAL_HARBOR=1`.
+  `ORNNLAB_REAL_HARBOR=1`.
 
 Known remaining Phase 3 blockers:
 
@@ -1155,7 +1155,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Startup Recovery Pass
@@ -1181,7 +1181,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 - `npm --prefix frontend run typecheck`
 
@@ -1209,7 +1209,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Running Cancellation Guard Pass
@@ -1238,7 +1238,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Active Worker Task Cancellation Pass
@@ -1268,16 +1268,16 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Managed Subprocess Harbor Runner Pass
 
 Landed the first process-owned Harbor execution boundary:
 
-- `HARNESSLAB_HARBOR_ENGINE=subprocess` selects a managed subprocess runner;
+- `ORNNLAB_HARBOR_ENGINE=subprocess` selects a managed subprocess runner;
 - the runner invokes `harbor run --config <harbor.config.json>` by default and
-  supports `HARNESSLAB_HARBOR_SUBPROCESS_COMMAND` for explicit command override;
+  supports `ORNNLAB_HARBOR_SUBPROCESS_COMMAND` for explicit command override;
 - stdout/stderr are mirrored to `job.log`;
 - successful subprocess execution reads or writes `result.json` so report
   generation has a stable artifact contract;
@@ -1297,7 +1297,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Real Harbor Subprocess Gate Pass
@@ -1306,13 +1306,13 @@ Landed the opt-in real Harbor subprocess verification gate:
 
 - `tests/python/test_real_harbor_cancel_recovery.py` now contains Docker-marked
   real subprocess smoke and cancel-recovery tests;
-- the tests are skipped by default and run only when `HARNESSLAB_REAL_HARBOR=1`
+- the tests are skipped by default and run only when `ORNNLAB_REAL_HARBOR=1`
   and Docker CLI is available;
 - smoke mode verifies `harbor run --config` writes `job.log` and `result.json`;
 - cancel mode cancels the managed subprocess runner and verifies
   `harbor.cleanup.json` records termination evidence;
 - default CI remains Docker-free while developers can run the real gate with
-  `HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
+  `ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py`.
 
 Known remaining Phase 3 blockers:
 
@@ -1322,7 +1322,7 @@ Known remaining Phase 3 blockers:
 Validation evidence:
 
 - `uv run pytest tests/python`
-- `uv run ruff check harnesslab tests/python`
+- `uv run ruff check ornnlab tests/python`
 - `uv run pyright`
 
 ### 2026-06-15 Real Harbor Subprocess Gate Verification
@@ -1330,12 +1330,12 @@ Validation evidence:
 Verified the opt-in real Harbor subprocess gate on a Docker-capable Colima
 environment:
 
-- `HARNESSLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_smoke -vv`
+- `ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_smoke -vv`
   passed in 115.85 seconds;
-- `HARNESSLAB_REAL_HARBOR=1 HARNESSLAB_REAL_HARBOR_CANCEL_DELAY=1.0 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_cancel_writes_cleanup_evidence -vv`
+- `ORNNLAB_REAL_HARBOR=1 ORNNLAB_REAL_HARBOR_CANCEL_DELAY=1.0 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py::test_real_harbor_subprocess_cancel_writes_cleanup_evidence -vv`
   passed in 1.11 seconds;
-- post-run Docker scans found no Harbor/HarnessLab/Terminal-Bench matching
-  containers, no `harnesslab.run_id` labelled containers, and no compose
+- post-run Docker scans found no Harbor/OrnnLab/Terminal-Bench matching
+  containers, no `ornnlab.run_id` labelled containers, and no compose
   projects.
 
 Known remaining Phase 3 hardening:
@@ -1348,12 +1348,12 @@ Known remaining Phase 3 hardening:
 Landed first-class Docker orphan discovery for the WebUI doctor boundary:
 
 - `DockerOrphanService` scans `docker ps -a` for containers labelled
-  `harnesslab.run_id` using Docker's JSON-line output;
-- `/api/system/status` now includes `docker.harnesslab_orphans`;
+  `ornnlab.run_id` using Docker's JSON-line output;
+- `/api/system/status` now includes `docker.ornnlab_orphans`;
 - `/api/system/docker-orphans` returns the same structured scan result and a
   dry-run cleanup plan;
 - doctor warnings now include `docker_orphans_detected` when labelled
-  HarnessLab containers survive after execution and `docker_orphan_scan_failed`
+  OrnnLab containers survive after execution and `docker_orphan_scan_failed`
   when the Docker CLI is present but cannot scan;
 - cleanup plans are review-only and do not execute `docker rm -f`, preserving
   the repository rule against irreversible deletion without explicit approval.
@@ -1361,8 +1361,8 @@ Landed first-class Docker orphan discovery for the WebUI doctor boundary:
 Validation evidence:
 
 - `uv run pytest tests/python/test_docker_orphan_service.py tests/python/test_system_api.py -vv`
-- `uv run ruff check harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
-- `uv run pyright harnesslab/services/docker_orphan_service.py harnesslab/services/doctor_service.py harnesslab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
+- `uv run ruff check ornnlab/services/docker_orphan_service.py ornnlab/services/doctor_service.py ornnlab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
+- `uv run pyright ornnlab/services/docker_orphan_service.py ornnlab/services/doctor_service.py ornnlab/api/system.py tests/python/test_docker_orphan_service.py tests/python/test_system_api.py`
 
 ### 2026-06-15 Docs Convergence Pass
 
@@ -1388,7 +1388,7 @@ Validation evidence:
 
 Landed the first Phase 6 `doctor --logs` diagnostic:
 
-- `harnesslab doctor --logs` prints the normal status payload plus a `logs`
+- `ornnlab doctor --logs` prints the normal status payload plus a `logs`
   section;
 - `/api/system/doctor?logs=true` exposes the same structure for the WebUI;
 - the logs section reports the latest failed/interrupted run, failure class and
@@ -1399,8 +1399,8 @@ Landed the first Phase 6 `doctor --logs` diagnostic:
 Validation evidence:
 
 - `uv run pytest tests/python/test_cli.py tests/python/test_system_api.py -vv`
-- `uv run ruff check harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
-- `uv run pyright harnesslab/services/doctor_service.py harnesslab/cli.py harnesslab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
+- `uv run ruff check ornnlab/services/doctor_service.py ornnlab/cli.py ornnlab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
+- `uv run pyright ornnlab/services/doctor_service.py ornnlab/cli.py ornnlab/api/system.py tests/python/test_cli.py tests/python/test_system_api.py`
 
 ### 2026-06-15 Local Backup Pass
 
@@ -1418,8 +1418,8 @@ Landed the first Phase 6 backup/export/import boundary:
 Validation evidence:
 
 - `uv run pytest tests/python/test_backup_service.py tests/python/test_cli.py -vv`
-- `uv run ruff check harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
-- `uv run pyright harnesslab/services/backup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
+- `uv run ruff check ornnlab/services/backup_service.py ornnlab/settings.py ornnlab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
+- `uv run pyright ornnlab/services/backup_service.py ornnlab/settings.py ornnlab/cli.py tests/python/test_backup_service.py tests/python/test_cli.py`
 
 ### 2026-06-15 Safe Cleanup Archive Pass
 
@@ -1430,15 +1430,15 @@ Landed the first stale artifact cleanup boundary:
 - active agent ids, experiment ids, and run ids are excluded from cleanup
   candidates;
 - `harnesslab cleanup archive` moves candidates under
-  `~/.harnesslab/archive/cleanup-*` instead of deleting them;
+  `~/.ornnlab/data/archive/cleanup-*` instead of deleting them;
 - cleanup remains recoverable and complies with the repository rule against
   irreversible deletion.
 
 Validation evidence:
 
 - `uv run pytest tests/python/test_cleanup_service.py tests/python/test_cli.py -vv`
-- `uv run ruff check harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
-- `uv run pyright harnesslab/services/cleanup_service.py harnesslab/settings.py harnesslab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
+- `uv run ruff check ornnlab/services/cleanup_service.py ornnlab/settings.py ornnlab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
+- `uv run pyright ornnlab/services/cleanup_service.py ornnlab/settings.py ornnlab/cli.py tests/python/test_cleanup_service.py tests/python/test_cli.py`
 
 ### 2026-06-15 WebUI CI Matrix Pass
 
@@ -1461,13 +1461,13 @@ Validation evidence:
 - `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'`
 - `git diff --check`
 - GitHub Actions run `27545293033` succeeded on 2026-06-15:
-  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033`
+  `https://github.com/ceasarXuu/OrnnLab/actions/runs/27545293033`
 - Python Web Gate succeeded:
-  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416989740`
+  `https://github.com/ceasarXuu/OrnnLab/actions/runs/27545293033/job/81416989740`
 - Frontend Web Gate succeeded:
-  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416989626`
+  `https://github.com/ceasarXuu/OrnnLab/actions/runs/27545293033/job/81416989626`
 - Real Harbor Docker Smoke was skipped by the intended workflow-dispatch guard:
-  `https://github.com/ceasarXuu/HarnessLab/actions/runs/27545293033/job/81416991132`
+  `https://github.com/ceasarXuu/OrnnLab/actions/runs/27545293033/job/81416991132`
 
 ### 2026-06-15 Release Documentation Pass
 
