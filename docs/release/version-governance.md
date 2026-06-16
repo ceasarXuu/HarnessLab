@@ -11,6 +11,7 @@
 | 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added release branch and worktree policy for version development. |
 | 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Replaced active total-PRD governance with per-version document folders. |
 | 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Required `docs/` root files to be collected under stable subdirectories. |
+| 1.7 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Aligned documentation hierarchy with the `docs-manager` skill default pattern. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -49,7 +50,7 @@ another still said `ornnlab@0.1.2`.
 | Frontend package version | `frontend/package.json` `version` | frontend build metadata if needed | Private implementation version; do not mention in user docs unless needed. |
 | Scoped transition package version | `npm/harnesslab-transition/package.json` `version` | old `@ceasarxuu/harnesslab` compatibility package | Only changes for transition/deprecation releases. |
 | Bootstrap state schema | launcher source constant and persisted `schemaVersion` | `~/.ornnlab/launcher/bootstrap-state.json`, bootstrap migrations | Schema version is not a product release version. |
-| Harbor dependency range | `pyproject.toml` dependency constraint | backend install, doctor, Harbor upgrade procedure | Upgrade through `docs/current/harbor-upgrade-procedure.md`. |
+| Harbor dependency range | `pyproject.toml` dependency constraint | backend install, doctor, Harbor upgrade procedure | Upgrade through `docs/playbooks/harbor-upgrade-procedure.md`. |
 
 ## Release Train / Build Set
 
@@ -124,46 +125,47 @@ Every product version must have one canonical folder:
 
 ```text
 docs/v<version>/
-  README.md
-  version-prd.md
+  prd.md
   technical-design.md
   engineering-plan.md
-  release-ledger.md
 ```
 
 The folder is the active source of truth for that version. Do not create or
-maintain a single total PRD for the whole product.
+maintain a single total PRD for the whole product. Release records and version
+indexes live under `docs/release/`, not inside the version folder.
 
 Required documents:
 
 | File | Authority |
 |---|---|
-| `README.md` | Version document index and Build Set summary. |
-| `version-prd.md` | Product requirements for this version only. |
-| `technical-design.md` | Technical design derived from `version-prd.md`. |
+| `prd.md` | Product requirements for this version only. |
+| `technical-design.md` | Technical design derived from `prd.md`. |
 | `engineering-plan.md` | Actual implementation plan for this version. |
-| `release-ledger.md` | Build Set composition, publish state, validation evidence, and rollback notes. |
 
 Rules:
 
 - The version PRD owns only the product requirements for that version.
 - The technical design must cite the version PRD as its source.
 - The engineering plan must cite both the version PRD and technical design.
-- The release ledger must live in the same version folder for new versions.
-- `docs/releases/` may remain as a historical index for already-created release
-  records, but new release evidence should be canonical under `docs/v<version>/`.
+- The version folder must contain exactly the three version documents.
+- Release ledgers, version indexes, and release checklists live in
+  `docs/release/`.
+- Historical release index files may remain under `docs/release/` if they are
+  clearly labeled.
 - PRD document versions are independent from product and package versions.
-- Every file in the version folder must have a `Document Control` table.
-- Version folders should include the Build Set composition so reviewers can see
-  npm, Python, frontend, transition package, Harbor range, and commit together.
+- Every file in the version folder must have a `Document Control` table. Version
+  PRDs must additionally include `PRD Document Version` metadata and a PRD
+  version history table.
 
 ## Documentation Rules
 
 - Do not put Markdown files directly under `docs/`.
-- Use `docs/index/` for the documentation entrypoint.
-- Use `docs/current/` for cross-version operational and governance documents
-  that are still active.
-- Use `docs/legacy/` for old root-level stubs or historical decisions that
+- Use `docs/architecture/` for cross-version architecture, technology, test
+  engineering, and documentation indexes.
+- Use `docs/release/` for release/version management, release records, and
+  release checklists.
+- Use `docs/playbooks/` for reusable operating procedures.
+- Use `docs/archive/` for old root-level stubs or historical decisions that
   must remain addressable but are not current product direction.
 - User-facing installation docs should prefer `latest` or unversioned commands:
   ```bash
@@ -211,24 +213,23 @@ Rules:
   `policy only` when no artifact version is affected.
 - `Updated` must be an exact date.
 - `Change` must summarize the reason a reviewer should care.
-- Historical release facts may remain in `docs/releases/`; active version PRDs
-  and technical docs should link to the version-folder release ledger rather
-  than duplicating long histories.
+- Historical release facts may remain in `docs/release/`; active version PRDs
+  and technical docs should link to release ledgers rather than duplicating long
+  histories.
 
 ## Release Ledger
 
-Create or update `docs/v<version>/release-ledger.md` for each public release
+Create or update `docs/release/ornnlab-<version>.md` for each public release
 that changes a published artifact.
 
 Recommended file name:
 
 ```text
-docs/v<version>/release-ledger.md
+docs/release/ornnlab-<version>.md
 ```
 
-Historical `docs/releases/YYYY-MM-DD-ornnlab-<version>.md` files may remain as
-index entries, but they should link to the canonical version folder when one
-exists.
+Historical date-prefixed release files may remain as index entries, but they
+should link to the canonical release ledger when one exists.
 
 Minimum content:
 
@@ -275,8 +276,10 @@ Local gates should detect:
 - required active PRD and technical docs missing a top-level `Document Control`
   table.
 - missing current version folder documents:
-  `README.md`, `version-prd.md`, `technical-design.md`,
-  `engineering-plan.md`, and `release-ledger.md`.
+  `prd.md`, `technical-design.md`, and `engineering-plan.md`.
+- extra Markdown files in a version folder.
+- version PRDs missing `PRD Document Version` metadata or a PRD version history
+  table.
 
 Recommended commands:
 
@@ -303,20 +306,20 @@ active docs for unapproved literal version references.
 The active version-governed documents are:
 
 - `README.md`
-- `docs/index/README.md`
-- `docs/current/version-governance.md`
-- `docs/v0.1.3/README.md`
-- `docs/v0.1.3/version-prd.md`
+- `docs/architecture/docs-index.md`
+- `docs/release/version-governance.md`
+- `docs/release/ornnlab-0.1.3-docs.md`
+- `docs/v0.1.3/prd.md`
 - `docs/v0.1.3/technical-design.md`
 - `docs/v0.1.3/engineering-plan.md`
-- `docs/v0.1.3/release-ledger.md`
-- `docs/releases/*.md` historical index entries
-- `docs/current/development-operations.md`
-- `docs/current/harbor-upgrade-procedure.md`
-- `docs/current/install-quickstart.md`
-- `docs/current/release-checklist.md`
-- `docs/current/technology-decisions.md`
-- `docs/current/test-engineering.md`
+- `docs/release/ornnlab-0.1.3.md`
+- `docs/release/*.md` release and version-management documents
+- `docs/playbooks/development-operations.md`
+- `docs/playbooks/harbor-upgrade-procedure.md`
+- `docs/playbooks/install-quickstart.md`
+- `docs/release/checklist.md`
+- `docs/architecture/technology-decisions.md`
+- `docs/architecture/test-engineering.md`
 - `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - `docs/playbooks/npm-package-reservation.md`
 - `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md` as
@@ -338,6 +341,6 @@ historical.
 | npm launcher version source | `package.json` only | It is what npm publishes and what `ornnlab --version` reads. |
 | Python app version source | `pyproject.toml` only | It is what Python packaging and backend diagnostics read. |
 | Quickstart versions | Avoid literal versions | Prevents stale install docs after release bumps. |
-| Active version docs | Use `docs/v<version>/` | Keeps PRD, design, plan, and release evidence together. |
-| Release history | Use `docs/v<version>/release-ledger.md` | Keeps version facts in the same reviewable bundle as the version PRD. |
+| Active version docs | Use `docs/v<version>/` | Keeps PRD, design, and plan together. |
+| Release history | Use `docs/release/ornnlab-<version>.md` | Keeps version facts in global release management. |
 | Historical docs | Preserve old versions under archive/release notes | Historical evidence should not be rewritten as current guidance. |

@@ -2,16 +2,16 @@
 
 Start here for the active OrnnLab version documentation.
 
-- Current version bundle: `../v0.1.3/README.md`
-- Version PRD: `../v0.1.3/version-prd.md`
+- Current version docs index: `../release/ornnlab-0.1.3-docs.md`
+- Version PRD: `../v0.1.3/prd.md`
 - Version technical design: `../v0.1.3/technical-design.md`
 - Version engineering plan: `../v0.1.3/engineering-plan.md`
-- Version release ledger: `../v0.1.3/release-ledger.md`
-- Install quickstart: `../current/install-quickstart.md`
-- Release and rollback checklist: `../current/release-checklist.md`
-- Version and documentation governance: `../current/version-governance.md`
-- Harbor upgrade procedure: `../current/harbor-upgrade-procedure.md`
-- Rust legacy workspace decision: `../legacy/rust-legacy-fate.md`
+- Version release ledger: `../release/ornnlab-0.1.3.md`
+- Install quickstart: `../playbooks/install-quickstart.md`
+- Release and rollback checklist: `../release/checklist.md`
+- Version and documentation governance: `../release/version-governance.md`
+- Harbor upgrade procedure: `../playbooks/harbor-upgrade-procedure.md`
+- Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Legacy archive: `../archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
@@ -39,4 +39,4 @@ guidance from being read as current direction.
 - Frontend package: `../../frontend/`
 - Web gate: `../../scripts/test-after-change-web.sh`
 - Web test registry: `../../tests/WEB_TEST_REGISTRY.toml`
-- Release gate: `../current/release-checklist.md`
+- Release gate: `../release/checklist.md`

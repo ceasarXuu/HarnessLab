@@ -46,14 +46,14 @@
 ## Documentation Updated
 
 - `README.md`
-- `docs/index/README.md`
-- `docs/current/version-governance.md`
-- `docs/current/release-checklist.md`
-- `docs/v0.1.3/README.md`
-- `docs/v0.1.3/version-prd.md`
+- `docs/architecture/docs-index.md`
+- `docs/release/version-governance.md`
+- `docs/release/checklist.md`
+- `docs/release/ornnlab-0.1.3-docs.md`
+- `docs/v0.1.3/prd.md`
 - `docs/v0.1.3/technical-design.md`
 - `docs/v0.1.3/engineering-plan.md`
-- `docs/v0.1.3/release-ledger.md`
+- `docs/release/ornnlab-0.1.3.md`
 
 ## Local Validation
 
@@ -93,4 +93,3 @@ npx --yes ornnlab --help
 - Do not delete `~/.ornnlab/data`.
 - Use `ornnlab uninstall` only after it is implemented; until then, remove
   launcher-managed files manually by moving them to a dated backup.
-

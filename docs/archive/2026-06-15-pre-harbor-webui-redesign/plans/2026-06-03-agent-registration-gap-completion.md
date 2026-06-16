@@ -228,8 +228,8 @@ Files:
 
 - `crates/harnesslab-core/src/agent_profile_reference.rs`
 - `crates/harnesslab-cli/tests/agent_registry_contract.rs`
-- `docs/legacy/agent-registration-guide.md`
-- `docs/legacy/agent-profile-reference.md`
+- `docs/archive/stubs/agent-registration-guide.md`
+- `docs/archive/stubs/agent-profile-reference.md`
 
 Tasks:
 
@@ -482,11 +482,11 @@ Acceptance:
 
 Files:
 
-- `docs/legacy/agent-registration-guide.md`
-- `docs/legacy/agent-profile-reference.md`
-- `docs/legacy/mvp-development-spec.md`
-- `docs/legacy/architecture.md`
-- `docs/current/development-operations.md`
+- `docs/archive/stubs/agent-registration-guide.md`
+- `docs/archive/stubs/agent-profile-reference.md`
+- `docs/archive/stubs/mvp-development-spec.md`
+- `docs/archive/stubs/architecture.md`
+- `docs/playbooks/development-operations.md`
 
 Tasks:
 

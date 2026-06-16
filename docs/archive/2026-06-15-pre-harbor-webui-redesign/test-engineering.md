@@ -136,14 +136,14 @@ expected_layers = ["unit", "integration"]
 required_runtime_proof = true
 
 [requirements.source]
-doc = "docs/legacy/mvp-development-spec.md"
+doc = "docs/archive/stubs/mvp-development-spec.md"
 section = "5.4"
 ```
 
 Rules:
 
 - 每个必须自动验证的产品需求、架构 contract、failure code、CLI exit code 和 artifact contract 都必须有 requirement ID。
-- `docs/legacy/prd.md` 中的产品级承诺可以在 `docs/legacy/mvp-development-spec.md` 落成可测 requirement 后再进入 manifest。
+- `docs/archive/stubs/prd.md` 中的产品级承诺可以在 `docs/archive/stubs/mvp-development-spec.md` 落成可测 requirement 后再进入 manifest。
 - `tests/REQUIREMENTS.toml` 是 `generate-test-traceability.sh` 的主输入；没有进入 manifest 的需求不算已被测试工程保护。
 - `risk: critical` 的 requirement 必须有 negative control 或 mutation target。
 
@@ -171,7 +171,7 @@ required_artifacts = ["coverage/coverage.json"]
 status = "active"
 
 [tests.source]
-doc = "docs/legacy/mvp-development-spec.md"
+doc = "docs/archive/stubs/mvp-development-spec.md"
 section = "5.4"
 
 [tests.verifies]
@@ -185,7 +185,7 @@ expected = "test fails"
 
 ### 5.2 Registry Rules
 
-- Every test ID in `docs/legacy/mvp-development-spec.md` must appear in `tests/TEST_REGISTRY.toml`.
+- Every test ID in `docs/archive/stubs/mvp-development-spec.md` must appear in `tests/TEST_REGISTRY.toml`.
 - Every requirement in `tests/REQUIREMENTS.toml` must be verified by at least one active registry entry.
 - Every registry entry must point back to a doc section.
 - Every registry entry must point to at least one test file pattern.
@@ -267,7 +267,7 @@ JSON output shape:
   "requirements": [
     {
       "id": "run_exit_code_priority",
-      "source": "docs/legacy/mvp-development-spec.md#5.4",
+      "source": "docs/archive/stubs/mvp-development-spec.md#5.4",
       "test_ids": ["ORCH-003"],
       "runtime_proof": ["fake-terminal:test-fail"],
       "status": "covered"

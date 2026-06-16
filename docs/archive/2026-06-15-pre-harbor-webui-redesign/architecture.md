@@ -2,7 +2,7 @@
 
 > 本文定义 HarnessLab 的核心架构。目标不是一次性写出所有实现细节，而是先确定稳定的系统边界、模块职责、扩展点和数据流，避免后续实现被某个 benchmark、某个 CLI agent 或某种 Docker 细节绑死。
 
-更细的开发切片、测试编号、通过标准和本地/CI gate 见 `docs/legacy/mvp-development-spec.md`。防止测试丢失、跑偏和自欺的测试工程见 `docs/current/test-engineering.md`。本文只保留架构边界和关键 contract。
+更细的开发切片、测试编号、通过标准和本地/CI gate 见 `docs/archive/stubs/mvp-development-spec.md`。防止测试丢失、跑偏和自欺的测试工程见 `docs/architecture/test-engineering.md`。本文只保留架构边界和关键 contract。
 
 ## 1. 架构目标
 
@@ -987,7 +987,7 @@ MVP 实现时测试按边界设计：
 | Integration | Docker smoke sandbox、fake terminal benchmark、fake patch benchmark。 |
 | Golden | report model -> HTML snapshot。 |
 | Resume/Replay | crash 后 resume、snapshot replay、缺失数据错误。 |
-| Coverage | production code line、branch、function/method coverage 均不低于 95%；若工具链无法原生统计 function/method coverage，按 `docs/legacy/mvp-development-spec.md` 的替代阈值执行。 |
+| Coverage | production code line、branch、function/method coverage 均不低于 95%；若工具链无法原生统计 function/method coverage，按 `docs/archive/stubs/mvp-development-spec.md` 的替代阈值执行。 |
 
 必须先内置 fake benchmark：
 
@@ -996,7 +996,7 @@ MVP 实现时测试按边界设计：
 
 Fake benchmark 不对用户开放为正式 benchmark，只作为测试工具，避免违反“不自创 benchmark”的产品定位。
 
-测试架构必须接入 `docs/current/test-engineering.md` 定义的 Test Registry、Traceability Matrix、Runtime Proof、Seeded Failure、Coverage + Mutation 和 PR Evidence Chain。架构 contract 发生变化时，同一 PR 必须更新对应测试 ID、registry entry 和 traceability row。
+测试架构必须接入 `docs/architecture/test-engineering.md` 定义的 Test Registry、Traceability Matrix、Runtime Proof、Seeded Failure、Coverage + Mutation 和 PR Evidence Chain。架构 contract 发生变化时，同一 PR 必须更新对应测试 ID、registry entry 和 traceability row。
 
 关键路径组件必须具备可测试注入点，避免负向控制只能靠脆弱 monkey patch：
 
@@ -1029,7 +1029,7 @@ HarnessLab
   Test Fixtures
 ```
 
-MVP 技术栈和文件树以 `docs/current/technology-decisions.md` 为准：Rust workspace、TOML 用户配置、JSON/JSONL run artifacts。以上模块边界和 contract 不应因具体 crate 调整而改变。
+MVP 技术栈和文件树以 `docs/architecture/technology-decisions.md` 为准：Rust workspace、TOML 用户配置、JSON/JSONL run artifacts。以上模块边界和 contract 不应因具体 crate 调整而改变。
 
 ## 18. 关键 ADR
 
@@ -1072,7 +1072,7 @@ MVP 技术栈和文件树以 `docs/current/technology-decisions.md` 为准：Rus
 
 ## 20. 开发顺序建议
 
-开发顺序以 `docs/legacy/mvp-development-spec.md` Section 3 和 `docs/current/test-engineering.md` Section 17 为准。架构建议不能绕过 M0 测试工程。
+开发顺序以 `docs/archive/stubs/mvp-development-spec.md` Section 3 和 `docs/architecture/test-engineering.md` Section 17 为准。架构建议不能绕过 M0 测试工程。
 
 前置步骤：M0 testing project、registry、requirement manifest、traceability、coverage gate、local gate。
 
