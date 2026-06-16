@@ -370,13 +370,13 @@ Update current docs:
 - `README.md`
 - `prd/2026-06-15-ornnlab-webui-prd.md`
 - `prd/2026-06-15-ornnlab-npm-distribution.md`
-- `docs/index/README.md`
-- `docs/current/install-quickstart.md`
-- `docs/current/release-checklist.md`
-- `docs/current/development-operations.md`
-- `docs/current/technology-decisions.md`
-- `docs/current/harbor-upgrade-procedure.md`
-- `docs/current/test-engineering.md`
+- `docs/architecture/docs-index.md`
+- `docs/playbooks/install-quickstart.md`
+- `docs/release/checklist.md`
+- `docs/playbooks/development-operations.md`
+- `docs/architecture/technology-decisions.md`
+- `docs/playbooks/harbor-upgrade-procedure.md`
+- `docs/architecture/test-engineering.md`
 - `docs/playbooks/npm-package-reservation.md`
 - current engineering plans under `docs/plans/`
 
@@ -385,20 +385,20 @@ Active non-archive documentation inventory:
 | Path | Action |
 |---|---|
 | `README.md` | rename now |
-| `docs/index/README.md` | rename now |
-| `docs/current/install-quickstart.md` | rename now |
-| `docs/current/release-checklist.md` | rename now |
-| `docs/current/development-operations.md` | rename now |
-| `docs/current/technology-decisions.md` | rename now |
-| `docs/current/harbor-upgrade-procedure.md` | rename now |
-| `docs/current/test-engineering.md` | rename now |
-| `docs/legacy/prd.md` | superseded stub |
-| `docs/legacy/architecture.md` | superseded stub |
-| `docs/legacy/mvp-development-spec.md` | superseded stub |
-| `docs/legacy/rust-legacy-fate.md` | historical |
-| `docs/legacy/adapter-protocol.md` | historical |
-| `docs/legacy/agent-profile-reference.md` | historical |
-| `docs/legacy/agent-registration-guide.md` | historical |
+| `docs/architecture/docs-index.md` | rename now |
+| `docs/playbooks/install-quickstart.md` | rename now |
+| `docs/release/checklist.md` | rename now |
+| `docs/playbooks/development-operations.md` | rename now |
+| `docs/architecture/technology-decisions.md` | rename now |
+| `docs/playbooks/harbor-upgrade-procedure.md` | rename now |
+| `docs/architecture/test-engineering.md` | rename now |
+| `docs/archive/stubs/prd.md` | superseded stub |
+| `docs/archive/stubs/architecture.md` | superseded stub |
+| `docs/archive/stubs/mvp-development-spec.md` | superseded stub |
+| `docs/archive/stubs/rust-legacy-fate.md` | historical |
+| `docs/archive/stubs/adapter-protocol.md` | historical |
+| `docs/archive/stubs/agent-profile-reference.md` | historical |
+| `docs/archive/stubs/agent-registration-guide.md` | historical |
 | `docs/architecture/benchmark-compatibility-strategy.md` | historical |
 | `docs/architecture/harnesslab-vs-harbor.md` | historical |
 | `docs/playbooks/npm-package-reservation.md` | rename now |

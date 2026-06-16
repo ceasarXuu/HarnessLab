@@ -990,7 +990,7 @@ Tasks:
 2. Add stale job cleanup and generated-agent cleanup.
 3. Add local backup/export/import for `~/.ornnlab/data`.
 4. Add installer and README quickstart.
-5. Expand `docs/legacy/architecture.md` and `docs/current/technology-decisions.md` from their current stubs into full documents matching this plan.
+5. Expand `docs/archive/stubs/architecture.md` and `docs/architecture/technology-decisions.md` from their current stubs into full documents matching this plan.
 6. Decide whether to archive, keep, or remove Rust crates. If removal is chosen, move them to a backup/archive path or use a reversible git commit; do not use unrecoverable deletion outside git.
 7. Add CI matrix for Python, frontend, and optional Docker smoke.
 8. Add release checklist and rollback instructions.
@@ -1074,9 +1074,9 @@ Build OrnnLab v3 as a Python FastAPI + Vue 3 local WebUI that delegates benchmar
 
 - Keep architecture and technology decision docs synchronized with the
   implemented Harbor WebUI boundary.
-- Rust workspace fate is decided in `docs/legacy/rust-legacy-fate.md`: keep as
+- Rust workspace fate is decided in `docs/archive/stubs/rust-legacy-fate.md`: keep as
   legacy/reference, outside the active WebUI release path.
-- Harbor dependency bumps must follow `docs/current/harbor-upgrade-procedure.md`.
+- Harbor dependency bumps must follow `docs/playbooks/harbor-upgrade-procedure.md`.
 - Automatic Docker cleanup execution remains a future product decision because
   container removal is not recoverable.
 
@@ -1376,12 +1376,12 @@ Validation evidence:
 Expanded Phase 6 documentation after the backend skeleton and execution
 hardening had landed:
 
-- `docs/legacy/architecture.md` now describes the active Harbor WebUI system boundary,
+- `docs/archive/stubs/architecture.md` now describes the active Harbor WebUI system boundary,
   ownership split, runtime modes, recovery behavior, API surface, and artifact
   layout instead of deferring to a future rewrite;
-- `docs/current/technology-decisions.md` now records active stack, execution mode,
+- `docs/architecture/technology-decisions.md` now records active stack, execution mode,
   diagnostics, and quality-gate decisions;
-- `docs/current/test-engineering.md` now points to the active `WEB-*` traceability files
+- `docs/architecture/test-engineering.md` now points to the active `WEB-*` traceability files
   and records Playwright/Vitest operational fixes;
 - README implemented-status bullets now mention managed subprocess execution
   and Docker orphan doctor scans.
@@ -1480,13 +1480,13 @@ Validation evidence:
 
 Closed the remaining Phase 6 documentation boundaries:
 
-- `docs/current/install-quickstart.md` records fresh-checkout backend and frontend
+- `docs/playbooks/install-quickstart.md` records fresh-checkout backend and frontend
   launch commands, local data behavior, and optional real Harbor smoke;
-- `docs/current/release-checklist.md` records the release gate, packaging smoke,
+- `docs/release/checklist.md` records the release gate, packaging smoke,
   rollback steps, and release blockers;
-- `docs/current/harbor-upgrade-procedure.md` defines the Harbor dependency bump
+- `docs/playbooks/harbor-upgrade-procedure.md` defines the Harbor dependency bump
   checklist and failure policy;
-- `docs/legacy/rust-legacy-fate.md` explicitly keeps the Rust workspace as a
+- `docs/archive/stubs/rust-legacy-fate.md` explicitly keeps the Rust workspace as a
   legacy/reference asset outside the active WebUI release path.
 
 Validation evidence:

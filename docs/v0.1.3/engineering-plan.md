@@ -6,10 +6,14 @@
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the actual implementation and validation plan for the `v0.1.3` version bundle. |
 
-- Source PRD: `version-prd.md`
+- Source PRD: `prd.md`
 - Technical design: `technical-design.md`
-- Release ledger: `release-ledger.md`
+- Release ledger: `../release/ornnlab-0.1.3.md`
 - Status: Prepared, not yet published.
+
+This engineering plan derives from `docs/v0.1.3/prd.md` and
+`docs/v0.1.3/technical-design.md`; it must not redefine the `v0.1.3` product
+scope or completion definition.
 
 ## Phase 1: Bootstrap Command Surface
 
@@ -62,16 +66,16 @@ Acceptance:
 Scope:
 
 - Create `docs/v0.1.3/`.
-- Move current release thinking into version-scoped PRD, technical design,
-  engineering plan, and release ledger.
+- Move current release thinking into version-scoped PRD, technical design, and
+  engineering plan.
 - Stop treating a total PRD as the active product authority.
 - Update validation to check the version folder contract.
 
 Acceptance:
 
-- `docs/index/README.md` points to `docs/v0.1.3/README.md` as the active version
-  documentation entrypoint.
-- `docs/current/version-governance.md` defines the version-folder contract.
+- `docs/architecture/docs-index.md` points to `docs/v0.1.3/prd.md` as the
+  active version PRD.
+- `docs/release/version-governance.md` defines the version-folder contract.
 - `scripts/verify-ornnlab-rebrand.py` checks the required version documents.
 
 ## Validation Commands
@@ -89,4 +93,3 @@ npm run smoke:npm-bin
 - Implement `ornnlab uninstall`.
 - Add platform-specific lightweight Docker installation paths after confirming
   supported operating-system behavior.
-

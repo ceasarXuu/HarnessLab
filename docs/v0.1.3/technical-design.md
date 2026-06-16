@@ -6,9 +6,12 @@
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Derived the `v0.1.3` bootstrap and document-governance design from the version PRD. |
 
-- Source PRD: `version-prd.md`
+- Source PRD: `prd.md`
 - Implementation plan: `engineering-plan.md`
-- Release ledger: `release-ledger.md`
+- Release ledger: `../release/ornnlab-0.1.3.md`
+
+This technical design derives from `docs/v0.1.3/prd.md` and must not redefine
+the `v0.1.3` product scope or completion definition.
 
 ## 1. Architecture Boundary
 
@@ -94,16 +97,14 @@ Each product version owns a folder:
 
 ```text
 docs/v<version>/
-  README.md
-  version-prd.md
+  prd.md
   technical-design.md
   engineering-plan.md
-  release-ledger.md
 ```
 
 The version PRD describes only that version. Technical design derives from the
 PRD. Engineering plan records how the release is implemented and verified.
-Every file has its own document version table independent of product versions.
+Release evidence lives under `docs/release/`.
 
 ## 8. Validation Design
 
@@ -114,4 +115,3 @@ The release guard should verify:
 - governed active documents have `Document Control` tables;
 - active docs do not point readers to a superseded total PRD as current truth;
 - npm package metadata and transition package metadata remain aligned.
-

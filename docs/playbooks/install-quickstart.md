@@ -60,7 +60,7 @@ ornnlab install
 
 `ornnlab setup` remains a compatibility alias.
 
-If the npm registry serves an older launcher, check `docs/releases/` and
+If the npm registry serves an older launcher, check `docs/release/` and
 `docs/playbooks/npm-package-reservation.md` for the current release status.
 
 ## Requirements

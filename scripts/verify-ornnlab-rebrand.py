@@ -11,17 +11,12 @@ CHECKLIST = ROOT / "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md"
 ARTIFACT = ROOT / "artifacts/rebrand/ornnlab-rebrand-verification.json"
 
 DOC_INVENTORY = {
-    "docs/index/README.md": "rename-now",
-    "docs/legacy/adapter-protocol.md": "historical-stub",
-    "docs/legacy/agent-profile-reference.md": "historical-stub",
-    "docs/legacy/agent-registration-guide.md": "historical-stub",
-    "docs/legacy/architecture.md": "superseded-stub",
+    "docs/architecture/docs-index.md": "rename-now",
     "docs/architecture/benchmark-compatibility-strategy.md": "historical-stub",
     "docs/architecture/harnesslab-vs-harbor.md": "historical-stub",
-    "docs/current/development-operations.md": "rename-now",
-    "docs/current/harbor-upgrade-procedure.md": "rename-now",
-    "docs/current/install-quickstart.md": "rename-now",
-    "docs/legacy/mvp-development-spec.md": "superseded-stub",
+    "docs/playbooks/development-operations.md": "rename-now",
+    "docs/playbooks/harbor-upgrade-procedure.md": "rename-now",
+    "docs/playbooks/install-quickstart.md": "rename-now",
     "docs/plans/2026-06-03-agent-registration-gap-completion.md": "historical",
     "docs/plans/2026-06-03-agent-registration-registry.md": "historical",
     "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md": "historical",
@@ -60,20 +55,18 @@ DOC_INVENTORY = {
     "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md": "rename-now",
     "docs/playbooks/npm-package-reservation.md": "rename-now",
     "docs/playbooks/terminal-bench-claude-ds.md": "historical",
-    "docs/legacy/prd.md": "superseded-stub",
-    "docs/current/release-checklist.md": "rename-now",
-    "docs/releases/2026-06-16-ornnlab-0.1.3.md": "rename-now",
+    "docs/release/checklist.md": "rename-now",
+    "docs/release/2026-06-16-ornnlab-0.1.3.md": "rename-now",
     "docs/reviews/2026-05-27-docker-runner-review-3.md": "historical",
-    "docs/legacy/rust-legacy-fate.md": "historical",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
-    "docs/current/technology-decisions.md": "rename-now",
-    "docs/current/test-engineering.md": "rename-now",
-    "docs/v0.1.3/README.md": "rename-now",
+    "docs/architecture/technology-decisions.md": "rename-now",
+    "docs/architecture/test-engineering.md": "rename-now",
+    "docs/release/ornnlab-0.1.3-docs.md": "rename-now",
     "docs/v0.1.3/engineering-plan.md": "rename-now",
-    "docs/v0.1.3/release-ledger.md": "rename-now",
+    "docs/release/ornnlab-0.1.3.md": "rename-now",
     "docs/v0.1.3/technical-design.md": "rename-now",
-    "docs/v0.1.3/version-prd.md": "rename-now",
-    "docs/current/version-governance.md": "rename-now",
+    "docs/v0.1.3/prd.md": "rename-now",
+    "docs/release/version-governance.md": "rename-now",
     "prd/2026-06-07-universal-benchmark-adapter-protocol.md": "historical-stub",
     "prd/2026-06-15-ornnlab-npm-distribution.md": "rename-now",
     "prd/2026-06-15-ornnlab-webui-prd.md": "rename-now",
@@ -81,22 +74,22 @@ DOC_INVENTORY = {
 }
 
 DOC_CONTROL_REQUIRED = {
-    "docs/current/development-operations.md",
-    "docs/current/harbor-upgrade-procedure.md",
-    "docs/current/install-quickstart.md",
+    "docs/playbooks/development-operations.md",
+    "docs/playbooks/harbor-upgrade-procedure.md",
+    "docs/playbooks/install-quickstart.md",
     "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md",
     "docs/playbooks/npm-package-reservation.md",
-    "docs/current/release-checklist.md",
-    "docs/releases/2026-06-16-ornnlab-0.1.3.md",
+    "docs/release/checklist.md",
+    "docs/release/2026-06-16-ornnlab-0.1.3.md",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
-    "docs/current/technology-decisions.md",
-    "docs/current/test-engineering.md",
-    "docs/v0.1.3/README.md",
+    "docs/architecture/technology-decisions.md",
+    "docs/architecture/test-engineering.md",
+    "docs/release/ornnlab-0.1.3-docs.md",
     "docs/v0.1.3/engineering-plan.md",
-    "docs/v0.1.3/release-ledger.md",
+    "docs/release/ornnlab-0.1.3.md",
     "docs/v0.1.3/technical-design.md",
-    "docs/v0.1.3/version-prd.md",
-    "docs/current/version-governance.md",
+    "docs/v0.1.3/prd.md",
+    "docs/release/version-governance.md",
     "prd/2026-06-15-ornnlab-npm-distribution.md",
     "prd/2026-06-15-ornnlab-webui-prd.md",
     "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md",
@@ -185,22 +178,15 @@ def _check_docs_root_converged() -> dict[str, Any]:
 def _check_version_folder_contract() -> dict[str, Any]:
     version_dir = ROOT / "docs/v0.1.3"
     required = [
-        "README.md",
-        "version-prd.md",
+        "prd.md",
         "technical-design.md",
         "engineering-plan.md",
-        "release-ledger.md",
     ]
+    discovered = sorted(path.name for path in version_dir.glob("*.md"))
     missing = [name for name in required if not (version_dir / name).exists()]
     expected_links = {
-        "README.md": [
-            "version-prd.md",
-            "technical-design.md",
-            "engineering-plan.md",
-            "release-ledger.md",
-        ],
-        "technical-design.md": ["version-prd.md", "engineering-plan.md", "release-ledger.md"],
-        "engineering-plan.md": ["version-prd.md", "technical-design.md", "release-ledger.md"],
+        "technical-design.md": ["prd.md", "engineering-plan.md"],
+        "engineering-plan.md": ["prd.md", "technical-design.md"],
     }
     missing_links: list[str] = []
     for name, needles in expected_links.items():
@@ -211,15 +197,25 @@ def _check_version_folder_contract() -> dict[str, Any]:
         for needle in needles:
             if needle not in text:
                 missing_links.append(f"docs/v0.1.3/{name}:{needle}")
+    prd_text = (version_dir / "prd.md").read_text(encoding="utf-8")
+    prd_metadata_present = (
+        "PRD Document Version:" in prd_text
+        and "## PRD Document Version History" in prd_text
+    )
     return _result(
         "current version folder has required PRD/design/plan bundle",
         "inspect docs/v0.1.3 document contract",
-        not missing and not missing_links,
+        set(discovered) == set(required)
+        and not missing
+        and not missing_links
+        and prd_metadata_present,
         {
             "version_dir": "docs/v0.1.3",
             "required": required,
+            "discovered": discovered,
             "missing": missing,
             "missing_links": missing_links,
+            "prd_metadata_present": prd_metadata_present,
         },
     )
 

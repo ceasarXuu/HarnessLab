@@ -5,14 +5,14 @@ registration, experiment management, reports, and leaderboard review.
 
 Current source of truth:
 
-- Version document bundle: `docs/v0.1.3/README.md`
-- Version PRD: `docs/v0.1.3/version-prd.md`
+- Version document index: `docs/release/ornnlab-0.1.3-docs.md`
+- Version PRD: `docs/v0.1.3/prd.md`
 - Version technical design: `docs/v0.1.3/technical-design.md`
 - Version engineering plan: `docs/v0.1.3/engineering-plan.md`
-- Install quickstart: `docs/current/install-quickstart.md`
-- Release and rollback checklist: `docs/current/release-checklist.md`
-- Harbor upgrade procedure: `docs/current/harbor-upgrade-procedure.md`
-- Rust legacy workspace decision: `docs/legacy/rust-legacy-fate.md`
+- Install quickstart: `docs/playbooks/install-quickstart.md`
+- Release and rollback checklist: `docs/release/checklist.md`
+- Harbor upgrade procedure: `docs/playbooks/harbor-upgrade-procedure.md`
+- Rust legacy workspace decision: `docs/archive/stubs/rust-legacy-fate.md`
 - Documentation archive: `docs/archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
 The active product direction is no longer a self-owned Rust benchmark runtime.
@@ -46,7 +46,7 @@ Frontend: http://127.0.0.1:5173/
 ```
 
 For version authority and release documentation rules, see
-`docs/current/version-governance.md`.
+`docs/release/version-governance.md`.
 
 ## Current Status
 
@@ -94,7 +94,7 @@ npm --prefix frontend ci
 npm --prefix frontend run dev -- --host 127.0.0.1
 ```
 
-See `docs/current/install-quickstart.md` for the full fresh-checkout flow.
+See `docs/playbooks/install-quickstart.md` for the full fresh-checkout flow.
 
 ## Existing npm Package History
 

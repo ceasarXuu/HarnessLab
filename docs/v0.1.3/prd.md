@@ -1,15 +1,31 @@
 # Version PRD: OrnnLab v0.1.3
 
+- App/Product Version: `v0.1.3`
+- PRD Document Version: `1.0`
+- Status: Ready for implementation
+- Created: 2026-06-16
+- Updated: 2026-06-16
+- Owner / Requester: project maintainer
+- Technical Design: `docs/v0.1.3/technical-design.md`
+- Engineering Plan: `docs/v0.1.3/engineering-plan.md`
+- Version Source: `package.json`
+
 ## Document Control
 
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Established version-scoped PRD for the npm bootstrap and documentation-governance release. |
 
-- Status: Ready for implementation
-- Product version folder: `docs/v0.1.3/`
-- Owner / requester: project maintainer
-- Source request: reduce first-run friction and make version documents reviewable as a coherent release bundle.
+## PRD Document Version History
+
+| Document Version | Updated | Change |
+|---|---|---|
+| 1.0 | 2026-06-16 | Created `v0.1.3` version PRD. |
+
+This version PRD is the source of truth for `v0.1.3` product scope, version
+goal, completion definition, rules, and acceptance criteria. The technical
+design and engineering plan must derive from this PRD and must not redefine the
+product scope.
 
 ## 1. Product Intent
 
@@ -88,8 +104,8 @@ Out of scope:
   commands.
 - npm publishing instructions state that the maintainer must log in and use the
   local machine WebAuthn key.
-- Active version documents live under `docs/v0.1.3/` and each has its own
-  document version table.
+- Active version documents live under `docs/v0.1.3/` as the exact three-file
+  package `prd.md`, `technical-design.md`, and `engineering-plan.md`.
 - No new total PRD is introduced for the product as a whole.
 
 ## 7. Open Risks
@@ -100,4 +116,3 @@ Out of scope:
   remain transparent and skippable.
 - `ornnlab update` and `ornnlab uninstall` still need implementation detail in
   follow-up engineering work.
-
