@@ -5,8 +5,9 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Created the Harbor rebrand residue fix plan as a v0.1.4 work item. |
+| 1.1 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Executed Phase 1–3 and recorded implementation evidence; scope expanded to also clean stale top-level `prd/` references discovered in `verify-ornnlab-rebrand.py`. |
 
-- Status: Drafted, awaiting v0.1.4 PRD/technical-design/engineering-plan to bind this work item.
+- Status: Phase 1–3 implemented; Phase 4 pending v0.1.4 release artifacts.
 - Parent version folder: `docs/releases/v0.1.4/`
 - Source audit: see "Audit Evidence" section below. The audit was produced on
   2026-06-22 against the working tree after the Harbor + Python/Vue rewrite
@@ -247,3 +248,97 @@ this plan, so rollback is purely a `git revert` per phase.
 - Whether v0.1.4 will publish a release ledger
   `docs/releases/v0.1.4/ornnlab-0.1.4.md`. If yes, Phase 4 binds this work
   to that ledger; if no, this plan remains a standalone work-item record.
+
+## Implementation Evidence
+
+Execution date: 2026-06-22. Plan version 1.1.
+
+### Phase 1 — Verify scripts (commit `99aa89d`)
+
+- `scripts/verify-version-governance.py`: 5 `ALLOWED_LITERAL_FILES` entries
+  migrated `docs/release/` -> `docs/releases/v0.1.3/`; added
+  `docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md` as an allowed
+  literal-version host.
+- `scripts/verify-ornnlab-rebrand.py`:
+  - `DOC_INVENTORY` and `DOC_CONTROL_REQUIRED`: all 5 `docs/release/`
+    entries migrated to `docs/releases/v0.1.3/`; v0.1.4 plan registered.
+  - Scope expansion: 4 dead `prd/2026-06-*.md` entries removed from
+    `DOC_INVENTORY` and 3 removed from `DOC_CONTROL_REQUIRED`. Underlying
+    files had previously been moved to `docs/archive/prd/`, so the script
+    was failing on HEAD with `FileNotFoundError`. `_check_doc_inventory`
+    walk roots reduced from `["docs", "prd"]` to `["docs"]`.
+
+Gate evidence:
+
+```text
+uv run python scripts/verify-version-governance.py
+  -> Version governance guard: PASSED (4/4 checks)
+  exit=0
+
+uv run python scripts/verify-ornnlab-rebrand.py
+  -> all 10 checks passed
+  exit=0
+```
+
+### Phase 2 — Active docs and README link repair (commit `99aa89d`)
+
+Updated 8 documents:
+
+- `README.md`: 3 `docs/release/` -> `docs/releases/v0.1.3/`.
+- `docs/playbooks/install-quickstart.md`: `docs/release/` -> `docs/releases/`.
+- `docs/v0.1.3/engineering-plan.md`, `docs/v0.1.3/technical-design.md`:
+  per-version path alignment.
+- `docs/releases/v0.1.3/checklist.md`: 2 references aligned, and the
+  release-ledger create-or-update rule rewritten to the per-version
+  pattern `docs/releases/v<version>/ornnlab-<version>.md`.
+- `docs/releases/v0.1.3/ornnlab-0.1.3.md`: "Documentation Updated" list.
+- `docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md`: 2 references.
+- `docs/releases/v0.1.3/version-governance.md`: governance prose rewritten
+  to match the per-version folder rule introduced in v1.5/1.7 (folder
+  layout, governed files list, Release Ledger section, Decisions table).
+
+Active-surface verification:
+
+```text
+rg "docs/release/" -g '!docs/archive/**' -g '!docs/plans/**' \
+  -g '!vs_review/**' -g '!coe/**' -g '!docs/releases/v0.1.4/**'
+  -> 0 results in real link surfaces
+  (the v0.1.4 fix plan itself retains historical mentions as audit evidence)
+```
+
+### Phase 3 — Frontend brand residue (commit `d45ccab`)
+
+- `frontend/index.html`: browser tab title `HarnessLab Console` -> `OrnnLab
+  Console`. This was an additional residue found during execution and was
+  added to Phase 3 scope.
+- `frontend/src/components/AppShell.vue`: sidebar eyebrow `HarnessLab` ->
+  `OrnnLab`.
+- `frontend/src/api/client.ts`: exported symbol `harnessLabApi` ->
+  `ornnLabApi`. The symbol had zero in-project call sites; rename was
+  safe.
+
+Gate evidence:
+
+```text
+npm --prefix frontend run typecheck   (vue-tsc --noEmit)   exit=0
+npm --prefix frontend run lint        (eslint)             exit=0
+npm --prefix frontend run test        (vitest, 1 passed)    exit=0
+npm --prefix frontend run build       (vite, 1.96s)         exit=0
+rg "HarnessLab|harnessLab" frontend/ -> 0 results
+```
+
+### Phase 4 — Binding to v0.1.4 release artifacts
+
+Not executed in this pass. v0.1.4 PRD / technical-design / engineering-plan
+trio and `docs/releases/v0.1.4/ornnlab-0.1.4.md` release ledger do not yet
+exist. When v0.1.4 is cut, this work item must be referenced from the
+engineering plan and the release ledger should record commits `99aa89d`
+and `d45ccab` (and any subsequent residue closure) under user-visible
+changes.
+
+Suggested release-ledger language when v0.1.4 is prepared:
+
+> Harbor rebrand residue closed: `docs/release/` link drift and `HarnessLab`
+> brand strings in the WebUI eliminated; verify scripts hardened to scan the
+> per-version `docs/releases/v<version>/` layout and to ignore archived
+> `prd/` history.
