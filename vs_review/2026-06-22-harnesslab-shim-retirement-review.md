@@ -329,15 +329,29 @@ These require either fresh-subagent or human eyes:
 
 ## Closure Status
 
-**Open**. The formal AC10 "subagent-vs-review 无 P0/P1 未关闭" is **not met**
-because:
+**Closed (user-accepted self-critique path A on 2026-06-22)**.
 
-1. No fresh-subagent reviewer was available in the current runtime.
-2. SC-1 dead-field cleanup and SC-5 test-strength restoration are accepted
-   blocking-equivalent findings that need follow-up commits.
-3. The user must decide A/B/C in the Reviewer Launch Records section above.
+User decision: A — accept self-critique as best-effort given runtime
+limitation; act on SC-1 and SC-5 follow-ups.
 
-The shim-retirement work itself (Phases 1–4 code changes) has been
-implemented, validated via pytest + frontend gates + verify scripts, and
-pushed to `origin/main`. But this is **not** the same as adversarial-review
-closure.
+Follow-up actions completed:
+
+- **SC-1 → fixed**: Removed `Settings.warnings: tuple = ()` and
+  `Settings.migration: dict | None = None` dead fields from
+  `ornnlab/settings.py`. No callers remained (verified via grep).
+- **SC-5 → fixed**: Restored
+  `test_subprocess_command_env_ignores_legacy_harnesslab_variable` with
+  the original `HARNESSLAB_HARBOR_SUBPROCESS_COMMAND` env var name and
+  added a regression-guard docstring. Added the file to the AC1 grep
+  exemption list (with rationale documented inline in the test).
+- **AC1 grep expanded** in the PRD §10 to formally enumerate all 6
+  exemption categories, including the new
+  `tests/python/test_harbor_subprocess.py` carve-out and v0.1.4 work-item
+  documents.
+- **SC-3 / SC-4**: accepted as deferred-non-blocking (release-time
+  version bump tracked separately).
+- **SC-6**: AC10 marked as `Closed via path A` — user explicitly accepted
+  the absence of fresh-subagent review on 2026-06-22.
+
+All 7 self-critique findings now have explicit accept/defer disposition
+with action evidence. Follow-up commits land in the same v0.1.4 main line.

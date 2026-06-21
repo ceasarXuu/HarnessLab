@@ -121,9 +121,15 @@ def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):
     assert runner.command == ["new-harbor", "run"]
 
 
-def test_subprocess_command_env_ignores_unknown_variable(monkeypatch):
+def test_subprocess_command_env_ignores_legacy_harnesslab_variable(monkeypatch):
+    # Regression guard: HARNESSLAB_HARBOR_SUBPROCESS_COMMAND was a legacy
+    # compatibility fallback retired in v0.1.4. Production code in
+    # ornnlab/services/harbor_subprocess.py must NOT read it. This test will
+    # fail if anyone accidentally reintroduces a HARNESSLAB_* env fallback.
+    # AC1 grep exempts this file via scripts/verify-ornnlab-rebrand.py guard
+    # exemptions; see harnesslab-shim-retirement-prd.md SC-5 follow-up.
     monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
-    monkeypatch.setenv("SOME_UNKNOWN_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
+    monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
 
     runner = ManagedSubprocessHarborRunner()
 

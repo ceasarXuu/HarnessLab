@@ -16,8 +16,6 @@ class Settings:
     home: Path
     host: str = "127.0.0.1"
     port: int = 8765
-    warnings: tuple[str, ...] = ()
-    migration: dict[str, str | int | bool | None] | None = None
 
     @property
     def db_path(self) -> Path:

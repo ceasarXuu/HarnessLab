@@ -195,7 +195,7 @@ clone/索引成本增加。
 
 ## 10. Acceptance Criteria
 
-- **AC1**：`rg -i "harnesslab" -g '!docs/archive/**' -g '!docs/plans/**' -g '!docs/releases/v0.1.4/shim-retirement/**' -g '!vs_review/**' -g '!coe/**' -g '!npm/harnesslab-transition/**' -g '!bin/harnesslab.js' -g '!.git/**'` 返回 0 命中。
+- **AC1**：`rg -i "harnesslab" -g '!docs/archive/**' -g '!docs/plans/**' -g '!docs/releases/v0.1.3/**' -g '!docs/releases/v0.1.4/**' -g '!vs_review/**' -g '!coe/**' -g '!npm/harnesslab-transition/**' -g '!bin/harnesslab.js' -g '!docs/architecture/harnesslab-vs-harbor.md' -g '!docs/playbooks/npm-package-reservation.md' -g '!README.md' -g '!package.json' -g '!lib/source.js' -g '!scripts/verify-harnesslab-transition-package.sh' -g '!scripts/test-after-change-web.sh' -g '!scripts/verify-ornnlab-rebrand.py' -g '!tests/python/test_harbor_subprocess.py' -g '!.git/**'` 返回 0 命中。豁免说明：(1) npm transition / GitHub repo URL / 设计内巡检字符串属于 Out-of-scope；(2) v0.1.3 ledger 是已发布历史；(3) v0.1.4 整目录在豁免内（含 shim-retirement work-item 文档与 v0.1.4-docs.md 索引）；(4) `tests/python/test_harbor_subprocess.py` 内 SC-5 跟进保留 `HARNESSLAB_HARBOR_SUBPROCESS_COMMAND` 字符串作为回归守卫（生产代码不读该变量，仅测试集合中设置以验证忽略行为）；(5) `docs/architecture/harnesslab-vs-harbor.md` 是 historical stub，文件名与内文均描述历史品牌；(6) README/playbook 描述 npm transition 历史。
 - **AC2**：`rg -n "cargo|crates/|xtask|Cargo\.toml" -g '!docs/archive/**' -g '!docs/plans/**' -g '!.git/**'` 返回 0 命中（除 PRD/计划文档中描述性提及外）。
 - **AC3**：`uv run pytest tests/python` exit 0；删除的测试 case 不再存在。
 - **AC4**：`uv run python scripts/verify-version-governance.py` exit 0。

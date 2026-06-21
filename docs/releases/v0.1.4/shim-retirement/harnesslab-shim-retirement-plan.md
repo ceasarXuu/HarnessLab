@@ -14,7 +14,7 @@
 - Created: 2026-06-22
 - Updated: 2026-06-22
 - Version: 1.0
-- Status: Completed (all 4 phases implemented and validated, awaiting adversarial review)
+- Status: Completed (all 4 phases implemented and validated; SC-1/SC-5 follow-up commits landed; adversarial review closed via user-accepted path A on 2026-06-22)
 - Owner / Responsible: User (项目所有者) + AI agent
 - Related Systems: OrnnLab Python (`ornnlab/`), Rust legacy workspace (`crates/`, `xtask/`), terminal_bench Python integration (`integrations/terminal_bench/`), verify scripts (`scripts/verify-*.py`).
 - Related Links:
