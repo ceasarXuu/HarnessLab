@@ -322,6 +322,7 @@ The active version-governed documents are:
 - `docs/releases/v0.1.4/v0.1.4-docs.md`
 - `docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md`
 - `docs/releases/v0.1.4/harnesslab-shim-retirement-prd.md`
+- `docs/releases/v0.1.4/harnesslab-shim-retirement-plan.md`
 - `docs/architecture/technology-decisions.md`
 - `docs/architecture/test-engineering.md`
 - `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
