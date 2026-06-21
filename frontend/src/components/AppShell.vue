@@ -37,7 +37,7 @@ const statusLine = computed(() => {
   <div class="console-shell">
     <aside class="console-shell__nav panel">
       <div>
-        <p class="eyebrow">HarnessLab</p>
+        <p class="eyebrow">OrnnLab</p>
         <h1 class="nav-title">Operations Console</h1>
         <p class="muted">
           Focused front-end scaffold for operators managing agents, experiments,

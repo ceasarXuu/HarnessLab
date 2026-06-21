@@ -131,7 +131,7 @@ export const createApiClient = (basePath = '/api'): ApiClient => {
 
 export const apiClient = createApiClient('/api')
 
-export const harnessLabApi = {
+export const ornnLabApi = {
   experiments: () => apiClient.get<Experiment[]>('/experiments'),
   experiment: (id: string) => apiClient.get<ExperimentStateResponse>(`/experiments/${id}`),
   runExperiment: (id: string) => apiClient.post<Record<string, never>, ExperimentStateResponse>(
