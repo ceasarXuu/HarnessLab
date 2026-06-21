@@ -15,4 +15,25 @@ frontend/test-results/
 *.profraw
 .env
 .env.local
+.env.*.local
 .npmrc
+
+# OS / Editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# Build / package artifacts
+*.tgz
+*.log
+node_modules/
+dist/
+
+# Local secrets
+*.pem
+*.key
+secrets/
