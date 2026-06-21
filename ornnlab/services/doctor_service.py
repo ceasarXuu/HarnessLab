@@ -37,7 +37,6 @@ class DoctorService:
                 "cli": docker_orphans["command"][0],
                 "available": docker_orphans["available"],
                 "ornnlab_orphans": docker_orphans,
-                "harnesslab_orphans": docker_orphans,
             },
             "data_dir": str(self.settings.home),
             "db_path": str(self.settings.db_path),

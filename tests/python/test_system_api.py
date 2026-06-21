@@ -13,7 +13,6 @@ def test_system_status_reports_core_fields(client):
     assert payload["stale_running_runs"] == 0
     assert "docker" in payload
     assert "ornnlab_orphans" in payload["docker"]
-    assert "harnesslab_orphans" in payload["docker"]
     assert "harbor_version" in payload
 
 

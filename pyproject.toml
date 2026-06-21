@@ -13,7 +13,6 @@ dependencies = [
 
 [project.scripts]
 ornnlab = "ornnlab.cli:main"
-harnesslab = "ornnlab.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]
@@ -42,18 +41,17 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pyright]
-include = ["ornnlab", "harnesslab", "tests/python"]
+include = ["ornnlab", "tests/python"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 
 [tool.hatch.build.targets.wheel]
-packages = ["ornnlab", "harnesslab"]
+packages = ["ornnlab"]
 
 [tool.hatch.build.targets.sdist]
 only-include = [
   "README.md",
   "pyproject.toml",
   "ornnlab",
-  "harnesslab",
   "tests/python",
 ]
