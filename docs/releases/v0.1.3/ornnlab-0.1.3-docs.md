@@ -5,6 +5,7 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the canonical version document folder for `v0.1.3`. |
+| 1.1 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Fixed the historical release index pointer to the in-folder file after the `docs/release/` -> `docs/releases/v0.1.3/` migration. |
 
 This file indexes the active documentation bundle for OrnnLab `v0.1.3`.
 
@@ -32,4 +33,4 @@ This file indexes the active documentation bundle for OrnnLab `v0.1.3`.
 
 - Version status: Prepared, not yet published.
 - Canonical release evidence: `ornnlab-0.1.3.md`.
-- Historical release index entry: `../releases/2026-06-16-ornnlab-0.1.3.md`.
+- Historical release index entry: `./2026-06-16-ornnlab-0.1.3.md`.

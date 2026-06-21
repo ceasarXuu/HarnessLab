@@ -39,4 +39,4 @@ guidance from being read as current direction.
 - Frontend package: `../../frontend/`
 - Web gate: `../../scripts/test-after-change-web.sh`
 - Web test registry: `../../tests/WEB_TEST_REGISTRY.toml`
-- Release gate: `../release/checklist.md`
+- Release gate: `../releases/v0.1.3/checklist.md`

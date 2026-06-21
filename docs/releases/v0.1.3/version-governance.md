@@ -12,6 +12,7 @@
 | 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Replaced active total-PRD governance with per-version document folders. |
 | 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Required `docs/` root files to be collected under stable subdirectories. |
 | 1.7 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Aligned documentation hierarchy with the `docs-manager` skill default pattern. |
+| 1.8 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Migrated active documentation index to `docs/releases/v<version>/` paths; registered the in-flight `docs/releases/v0.1.4/` work-item folder and its index; removed stale top-level `prd/` references after the prd archive sweep. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -318,17 +319,14 @@ The active version-governed documents are:
 - `docs/playbooks/harbor-upgrade-procedure.md`
 - `docs/playbooks/install-quickstart.md`
 - `docs/releases/v0.1.3/checklist.md`
+- `docs/releases/v0.1.4/v0.1.4-docs.md`
+- `docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md`
 - `docs/architecture/technology-decisions.md`
 - `docs/architecture/test-engineering.md`
 - `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
 - `docs/playbooks/npm-package-reservation.md`
 - `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md` as
   pre-version-folder source material
-- `prd/2026-06-15-ornnlab-webui-prd.md` as pre-version-folder source material
-- `prd/2026-06-15-ornnlab-npm-distribution.md` as pre-version-folder source
-  material
-- `prd/2026-06-16-ornnlab-zero-friction-bootstrap.md` as pre-version-folder
-  source material
 
 When a new active install, release, bootstrap, or packaging document is added,
 it must either follow this governance policy or explicitly explain why it is

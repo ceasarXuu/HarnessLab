@@ -11,6 +11,7 @@
 | 1.4 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added required version-folder document bundle checks. |
 | 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added docs-root convergence check. |
 | 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Aligned release checklist with the `docs-manager` version-doc trio. |
+| 1.7 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Added path-drift guard against the legacy `docs/release/` documentation root after the per-version folder migration. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -59,6 +60,20 @@ Use this checklist for Harbor WebUI rewrite releases.
   versions; prefer `npm install -g ornnlab` or `ornnlab@latest`.
 - Confirm `git status --short --branch` is clean and synchronized with
   `origin/main`.
+- Confirm no active document references the legacy `docs/release/` path as a
+  link. Run:
+
+  ```bash
+  rg "docs/release/[A-Za-z0-9._-]+\.md" \
+    -g '!docs/archive/**' -g '!docs/plans/**' \
+    -g '!vs_review/**' -g '!coe/**' \
+    -g '!docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md'
+  ```
+
+  The grep must return zero results. Descriptive mentions of the legacy
+  root inside changelog rows or governance prose are filtered out by
+  requiring a concrete `.md` filename. The v0.1.4 fix plan keeps full
+  historical citations as audit evidence and is the only allowed exception.
 
 ## Packaging Smoke
 
