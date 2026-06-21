@@ -16,6 +16,7 @@
   },
   "files": [
     "bin/ornnlab.js",
+    "lib/",
     "README.md",
     "LICENSE"
   ],
