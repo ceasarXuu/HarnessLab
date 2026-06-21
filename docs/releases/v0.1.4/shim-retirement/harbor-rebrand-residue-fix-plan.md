@@ -243,8 +243,11 @@ this plan, so rollback is purely a `git revert` per phase.
 
 ## Open Decisions
 
-- Whether to schedule retirement of the HarnessLab compatibility shims in
-  v0.1.4 or defer them. This plan does not decide it.
+- ~~Whether to schedule retirement of the HarnessLab compatibility shims in
+  v0.1.4 or defer them.~~ **Resolved 2026-06-22**: 已退役 → 参见
+  [`harnesslab-shim-retirement-prd.md`](./harnesslab-shim-retirement-prd.md)
+  and [`harnesslab-shim-retirement-plan.md`](./harnesslab-shim-retirement-plan.md).
+  Phase 1–3 implemented, Phase 4 verification complete.
 - Whether v0.1.4 will publish a release ledger
   `docs/releases/v0.1.4/ornnlab-0.1.4.md`. If yes, Phase 4 binds this work
   to that ledger; if no, this plan remains a standalone work-item record.

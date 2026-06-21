@@ -121,9 +121,9 @@ def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):
     assert runner.command == ["new-harbor", "run"]
 
 
-def test_subprocess_command_env_ignores_legacy_variable(monkeypatch):
+def test_subprocess_command_env_ignores_unknown_variable(monkeypatch):
     monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
-    monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
+    monkeypatch.setenv("SOME_UNKNOWN_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
 
     runner = ManagedSubprocessHarborRunner()
 

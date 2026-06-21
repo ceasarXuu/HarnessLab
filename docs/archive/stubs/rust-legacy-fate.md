@@ -3,7 +3,7 @@
 Decision date: 2026-06-15
 Retirement date: 2026-06-22
 
-The Rust workspace has been **Retired** from the repository.
+The Rust workspace has been **Retired in commit `699e23e` on 2026-06-22**.
 
 ## Final Status
 

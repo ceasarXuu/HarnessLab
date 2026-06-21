@@ -80,7 +80,7 @@ summary = "Managed Harbor subprocess execution records logs and cleanup evidence
 id = "WEB-OPS-001"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
-summary = "Doctor scans HarnessLab-labelled Docker orphans and returns dry-run cleanup plans."
+summary = "Doctor scans OrnnLab-labelled Docker orphans and returns dry-run cleanup plans."
 
 [[requirement]]
 id = "WEB-OPS-002"
@@ -92,7 +92,7 @@ summary = "Doctor --logs reports latest failed run log paths and remediation act
 id = "WEB-OPS-003"
 area = "operations"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
-summary = "Local backups export and safely import HarnessLab home archives."
+summary = "Local backups export and safely import OrnnLab home archives."
 
 [[requirement]]
 id = "WEB-OPS-004"

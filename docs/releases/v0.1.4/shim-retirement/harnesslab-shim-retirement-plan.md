@@ -7,13 +7,14 @@
 | 1.0 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Initial Standard Plan derived from `harnesslab-shim-retirement-prd.md`. Five phases: Discovery → Python Shim Outer → Services/Settings/Tests → Rust Workspace → Verification & Close-out. Plan-to-code completeness evidence bound to every phase exit. |
 | 1.1 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | OQ-1 resolved as option A: `integrations/terminal_bench/harnesslab_tb_*.py` will be renamed to `ornnlab_tb_*.py` inside this plan. Added Phase 2.5 (terminal_bench module rename) between Phase 2 and Phase 3. Updated AC1 exemption list (terminal_bench no longer exempt). Plan moved out of Draft. |
 | 1.2 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Phase 0 Discovery completed. Key findings: (a) `HarnessLabCommandAgent` is a real external agent contract; user approved full rename (agent name `harnesslab-command` → `ornnlab-command`, env vars `HARNESSLAB_AGENT_*` → `ORNNLAB_AGENT_*`, all 5 `verify-terminal-bench-*.sh` smoke scripts updated to the new strings rather than deleted). (b) `.github/workflows/ci.yml:72` `npm run smoke:harnesslab-transition` stays (npm Out-of-scope). (c) `test_harbor_config.py` line 23/28/43 `HARNESSLAB_TEST_ENV` is a generic env-passthrough fixture (not shim), keep but rename to `ORNNLAB_TEST_ENV` for brand consistency. (d) `test_settings_migration.py` is fully shim-only → delete file. (e) Phase 3 Rust-cleanup scope corrected: `verify-terminal-bench-*.sh` scripts are NOT Rust-related, do not delete in Phase 3. |
+| 1.3 | OrnnLab Build Set `2026.06.22`; `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | **Completed**: Phase 1 (commit 3faacfe), 2A (9832a65), 2B+2C (9da8588), 2.5 (215a61c), 3 (699e23e), and 4 (this commit). All 10 AC validated. AC1 grep returns 0 hits in active surface (excluding designed-in retention: npm transition package, GitHub repo URL, v0.1.3 release ledger, shim-retirement work-item docs, verify-ornnlab-rebrand.py shim-detection strings, README/playbook descriptions of the historical brand). AC2 grep returns 0 hits in active surface. Pytest 83 passed (51 web + 32 terminal_bench). Frontend typecheck/lint/test all pass. Verify scripts both exit 0. Rust workspace + 11 Rust verify scripts + tools.versions.toml + TEST_REGISTRY.toml + FROZEN_SELECTOR_MANIFEST.toml + verify-test-after-change-select-output.sh all removed in Phase 3 + Phase 4 cleanup. rust-legacy-fate.md status flipped to Retired in commit 699e23e. |
 
 ## Metadata
 
 - Created: 2026-06-22
 - Updated: 2026-06-22
 - Version: 1.0
-- Status: In Progress (Phase 0 Discovery 进行中)
+- Status: Completed (all 4 phases implemented and validated, awaiting adversarial review)
 - Owner / Responsible: User (项目所有者) + AI agent
 - Related Systems: OrnnLab Python (`ornnlab/`), Rust legacy workspace (`crates/`, `xtask/`), terminal_bench Python integration (`integrations/terminal_bench/`), verify scripts (`scripts/verify-*.py`).
 - Related Links:
