@@ -5,13 +5,15 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Initial Standard Plan derived from `harnesslab-shim-retirement-prd.md`. Five phases: Discovery → Python Shim Outer → Services/Settings/Tests → Rust Workspace → Verification & Close-out. Plan-to-code completeness evidence bound to every phase exit. |
+| 1.1 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | OQ-1 resolved as option A: `integrations/terminal_bench/harnesslab_tb_*.py` will be renamed to `ornnlab_tb_*.py` inside this plan. Added Phase 2.5 (terminal_bench module rename) between Phase 2 and Phase 3. Updated AC1 exemption list (terminal_bench no longer exempt). Plan moved out of Draft. |
+| 1.2 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Phase 0 Discovery completed. Key findings: (a) `HarnessLabCommandAgent` is a real external agent contract; user approved full rename (agent name `harnesslab-command` → `ornnlab-command`, env vars `HARNESSLAB_AGENT_*` → `ORNNLAB_AGENT_*`, all 5 `verify-terminal-bench-*.sh` smoke scripts updated to the new strings rather than deleted). (b) `.github/workflows/ci.yml:72` `npm run smoke:harnesslab-transition` stays (npm Out-of-scope). (c) `test_harbor_config.py` line 23/28/43 `HARNESSLAB_TEST_ENV` is a generic env-passthrough fixture (not shim), keep but rename to `ORNNLAB_TEST_ENV` for brand consistency. (d) `test_settings_migration.py` is fully shim-only → delete file. (e) Phase 3 Rust-cleanup scope corrected: `verify-terminal-bench-*.sh` scripts are NOT Rust-related, do not delete in Phase 3. |
 
 ## Metadata
 
 - Created: 2026-06-22
 - Updated: 2026-06-22
 - Version: 1.0
-- Status: Draft (awaiting sign-off on OQ-1 before Phase 1 starts)
+- Status: In Progress (Phase 0 Discovery 进行中)
 - Owner / Responsible: User (项目所有者) + AI agent
 - Related Systems: OrnnLab Python (`ornnlab/`), Rust legacy workspace (`crates/`, `xtask/`), terminal_bench Python integration (`integrations/terminal_bench/`), verify scripts (`scripts/verify-*.py`).
 - Related Links:
@@ -487,11 +489,9 @@ n/a (本计划结束)。
 
 ## 16. Open Questions
 
-- **OQ-1**：`integrations/terminal_bench/harnesslab_tb_*.py` (6 个文件) 处置：
-  - (A) **本计划内同步 rename** 为 `ornnlab_tb_*.py`（一致性最高，工作量略增）。
-  - (B) **独立 work item 推迟**：作为 v0.1.4 第三个 work item 另写 PRD，本计划 AC1 grep 豁免该目录。
-  - (C) **删除**：仅当 Discovery 确认这些文件已被 OrnnLab 抛弃。Discovery 已观察到这些是产品代码，故 (C) 默认不可行。
-  - **推荐**：B（保持本计划聚焦、降低风险）。若选 A，本计划新增 Phase 2.5 并扩展 AC。
+- **OQ-1 (Resolved 2026-06-22, option A)**：`integrations/terminal_bench/harnesslab_tb_*.py` (6 个文件) 处置：
+  - **Decision**: A — 本计划内同步 rename 为 `ornnlab_tb_*.py`，并在新 Phase 2.5 中实施。
+  - Rationale: 用户决定追求最大一致性，避免后续遗留独立 work item。AC1 grep 豁免清单不再包含 `integrations/terminal_bench/`。
 
 ## 17. Change Log
 
