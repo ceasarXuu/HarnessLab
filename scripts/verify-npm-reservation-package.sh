@@ -48,8 +48,20 @@ if (forbidden.length > 0) {
   console.error(`forbidden files in npm package: ${forbidden.join(", ")}`);
   process.exit(1);
 }
-if (JSON.stringify(files) !== JSON.stringify(expected)) {
-  console.error(`unexpected npm pack files: ${files.join(", ")}`);
+const missing = expected.filter((e) => !files.includes(e));
+if (missing.length > 0) {
+  console.error(`missing required files: ${missing.join(", ")}`);
+  process.exit(1);
+}
+const extra = files.filter((f) => !expected.includes(f));
+const unexpected = extra.filter((f) => !f.startsWith("lib/"));
+if (unexpected.length > 0) {
+  console.error(`unexpected files in npm package: ${unexpected.join(", ")}`);
+  process.exit(1);
+}
+const libFiles = files.filter((f) => f.startsWith("lib/"));
+if (libFiles.length === 0) {
+  console.error("expected lib/ modules in npm package but found none");
   process.exit(1);
 }
 NODE
