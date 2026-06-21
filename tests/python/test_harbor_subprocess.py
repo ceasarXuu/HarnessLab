@@ -113,19 +113,18 @@ def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):
     assert terminated.read_text() == "15"
 
 
-def test_subprocess_command_env_prefers_ornnlab(monkeypatch):
+def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):
     monkeypatch.setenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", "new-harbor run")
-    monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
 
     runner = ManagedSubprocessHarborRunner()
 
     assert runner.command == ["new-harbor", "run"]
 
 
-def test_legacy_subprocess_command_env_remains_supported(monkeypatch):
+def test_subprocess_command_env_ignores_legacy_variable(monkeypatch):
     monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
     monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
 
     runner = ManagedSubprocessHarborRunner()
 
-    assert runner.command == ["old-harbor", "run"]
+    assert runner.command == ["harbor", "run"]

@@ -10,36 +10,18 @@ from ornnlab.settings import Settings
 
 @pytest.mark.docker
 @pytest.mark.skipif(
-    os.environ.get("ORNNLAB_REAL_HARBOR", os.environ.get("HARNESSLAB_REAL_HARBOR")) != "1"
-    or shutil.which("docker") is None,
+    os.environ.get("ORNNLAB_REAL_HARBOR") != "1" or shutil.which("docker") is None,
     reason="set ORNNLAB_REAL_HARBOR=1 with Docker available to run real Harbor smoke",
 )
 def test_real_harbor_python_api_smoke(tmp_path):
     settings = Settings(home=tmp_path)
     builder = HarborConfigBuilder(settings)
-    benchmark_version = (
-        os.environ.get("ORNNLAB_REAL_HARBOR_BENCHMARK_VERSION")
-        or os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK_VERSION")
-        or None
-    )
+    benchmark_version = os.environ.get("ORNNLAB_REAL_HARBOR_BENCHMARK_VERSION") or None
     config = builder.build(
-        agent_config={
-            "name": os.environ.get(
-                "ORNNLAB_REAL_HARBOR_AGENT",
-                os.environ.get("HARNESSLAB_REAL_HARBOR_AGENT", "oracle"),
-            )
-        },
-        benchmark_name=os.environ.get(
-            "ORNNLAB_REAL_HARBOR_BENCHMARK",
-            os.environ.get("HARNESSLAB_REAL_HARBOR_BENCHMARK", "terminal-bench"),
-        ),
+        agent_config={"name": os.environ.get("ORNNLAB_REAL_HARBOR_AGENT", "oracle")},
+        benchmark_name=os.environ.get("ORNNLAB_REAL_HARBOR_BENCHMARK", "terminal-bench"),
         benchmark_version=benchmark_version,
-        n_tasks=int(
-            os.environ.get(
-                "ORNNLAB_REAL_HARBOR_N_TASKS",
-                os.environ.get("HARNESSLAB_REAL_HARBOR_N_TASKS", "1"),
-            )
-        ),
+        n_tasks=int(os.environ.get("ORNNLAB_REAL_HARBOR_N_TASKS", "1")),
         n_attempts=1,
         n_concurrent=1,
         jobs_dir=str(tmp_path / "harbor-job"),

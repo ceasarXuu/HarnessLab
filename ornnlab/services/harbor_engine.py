@@ -159,10 +159,7 @@ def _version(package: str) -> str | None:
 
 
 def _normalize_mode(mode: str | None) -> str:
-    raw = mode or os.environ.get("ORNNLAB_HARBOR_ENGINE") or os.environ.get(
-        "HARNESSLAB_HARBOR_ENGINE",
-        "fake",
-    )
+    raw = mode or os.environ.get("ORNNLAB_HARBOR_ENGINE", "fake")
     normalized = raw.strip().lower().replace("_", "-")
     aliases = {
         "fake": "fake",

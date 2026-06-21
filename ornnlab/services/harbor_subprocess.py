@@ -69,10 +69,7 @@ class ManagedSubprocessHarborRunner:
 
 
 def _command_from_env() -> list[str]:
-    raw = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND") or os.environ.get(
-        "HARNESSLAB_HARBOR_SUBPROCESS_COMMAND",
-        "harbor run",
-    )
+    raw = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", "harbor run")
     command = shlex.split(raw)
     if not command:
         raise ValueError("ORNNLAB_HARBOR_SUBPROCESS_COMMAND cannot be empty")

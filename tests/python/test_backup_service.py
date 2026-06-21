@@ -65,28 +65,3 @@ def test_backup_import_rejects_path_traversal(tmp_path):
         BackupService(Settings(home=tmp_path / "target")).import_home(archive_path)
 
     assert not (tmp_path / "escape.txt").exists()
-
-
-def test_backup_import_accepts_legacy_manifest(tmp_path):
-    archive_path = tmp_path / "legacy.tar.gz"
-    payload = b"name = 'Oracle'\n"
-    with tarfile.open(archive_path, "w:gz") as archive:
-        manifest = json.dumps(
-            {
-                "schema_version": 1,
-                "harnesslab_version": "0.1.0",
-                "source_home": "/tmp/legacy",
-                "file_count": 1,
-            }
-        ).encode("utf-8")
-        manifest_info = tarfile.TarInfo("harnesslab-backup-manifest.json")
-        manifest_info.size = len(manifest)
-        archive.addfile(manifest_info, io.BytesIO(manifest))
-        agent_info = tarfile.TarInfo("agents/oracle.toml")
-        agent_info.size = len(payload)
-        archive.addfile(agent_info, io.BytesIO(payload))
-
-    imported = BackupService(Settings(home=tmp_path / "target")).import_home(archive_path)
-
-    assert imported["manifest"]["ornnlab_version"] == "0.1.0"
-    assert (tmp_path / "target" / "agents" / "oracle.toml").read_bytes() == payload

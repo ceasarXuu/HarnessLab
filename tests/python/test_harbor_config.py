@@ -20,12 +20,12 @@ def test_harbor_config_builder_creates_dataset_ref(settings):
 def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
     from harbor.models.job.config import JobConfig
 
-    monkeypatch.setenv("HARNESSLAB_TEST_ENV", "present")
+    monkeypatch.setenv("ORNNLAB_TEST_ENV", "present")
     config = HarborConfigBuilder(settings).build(
         agent_config={
             "name": "oracle",
             "agent_timeout_sec": 120,
-            "env": {"HARNESSLAB_TEST_ENV": None},
+            "env": {"ORNNLAB_TEST_ENV": None},
         },
         benchmark_name="terminal-bench",
         benchmark_version="2.0",
@@ -40,7 +40,7 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
     job_config = JobConfig.model_validate(payload)
 
     assert payload["agents"][0]["override_timeout_sec"] == 120
-    assert payload["agents"][0]["env"] == {"HARNESSLAB_TEST_ENV": "present"}
+    assert payload["agents"][0]["env"] == {"ORNNLAB_TEST_ENV": "present"}
     assert payload["datasets"][0] == {
         "name": "terminal-bench",
         "version": "2.0",
@@ -73,21 +73,3 @@ def test_subprocess_capability_snapshot_records_cancel_support(monkeypatch):
 
     assert snapshot.lifecycle_mode == "subprocess"
     assert snapshot.supports_cancel is True
-
-
-def test_ornnlab_harbor_engine_env_wins_over_legacy_env(monkeypatch):
-    monkeypatch.setenv("ORNNLAB_HARBOR_ENGINE", "python-api")
-    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
-
-    snapshot = HarborEngine().capability_snapshot()
-
-    assert snapshot.lifecycle_mode == "python-api"
-
-
-def test_legacy_harbor_engine_env_remains_supported(monkeypatch):
-    monkeypatch.delenv("ORNNLAB_HARBOR_ENGINE", raising=False)
-    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
-
-    snapshot = HarborEngine().capability_snapshot()
-
-    assert snapshot.lifecycle_mode == "subprocess"

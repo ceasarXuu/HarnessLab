@@ -8,7 +8,6 @@ import subprocess
 from typing import Any
 
 ORNNLAB_RUN_LABEL = "ornnlab.run_id"
-LEGACY_RUN_LABEL = "harnesslab.run_id"
 
 
 class DockerOrphanService:
@@ -28,7 +27,6 @@ class DockerOrphanService:
                 "ok": False,
                 "command": self.command,
                 "label": ORNNLAB_RUN_LABEL,
-                "legacy_label": LEGACY_RUN_LABEL,
                 "count": 0,
                 "containers": [],
                 "cleanup_plan": [],
@@ -36,23 +34,15 @@ class DockerOrphanService:
                 "error": "docker_cli_missing",
             }
 
-        containers: list[dict[str, Any]] = []
-        seen_ids: set[str] = set()
-        for label in [ORNNLAB_RUN_LABEL, LEGACY_RUN_LABEL]:
-            result = self._scan_label(label)
-            if result["error"]:
-                return self._failed_scan(result["error"])
-            for container in result["containers"]:
-                if container["id"] in seen_ids:
-                    continue
-                seen_ids.add(container["id"])
-                containers.append(container)
+        result = self._scan_label(ORNNLAB_RUN_LABEL)
+        if result["error"]:
+            return self._failed_scan(result["error"])
+        containers = result["containers"]
         cleanup_plan = [
             {
                 "container_id": container["id"],
                 "name": container["name"],
-                "run_id": container["labels"].get(ORNNLAB_RUN_LABEL)
-                or container["labels"].get(LEGACY_RUN_LABEL),
+                "run_id": container["labels"].get(ORNNLAB_RUN_LABEL),
                 "command": [*self.command, "rm", "-f", container["id"]],
                 "dry_run": True,
                 "manual_review_required": True,
@@ -64,7 +54,6 @@ class DockerOrphanService:
             "ok": True,
             "command": self.command,
             "label": ORNNLAB_RUN_LABEL,
-            "legacy_label": LEGACY_RUN_LABEL,
             "count": len(containers),
             "containers": containers,
             "cleanup_plan": cleanup_plan,
@@ -111,7 +100,6 @@ class DockerOrphanService:
             "ok": False,
             "command": self.command,
             "label": ORNNLAB_RUN_LABEL,
-            "legacy_label": LEGACY_RUN_LABEL,
             "count": 0,
             "containers": [],
             "cleanup_plan": [],
@@ -119,23 +107,10 @@ class DockerOrphanService:
             "error": error,
         }
 
-    def scan_harnesslab_containers(self) -> dict[str, Any]:
-        return self.scan_ornnlab_containers()
-
 
 def _command_from_env() -> tuple[list[str], list[str]]:
     warnings: list[str] = []
-    raw = os.environ.get("ORNNLAB_DOCKER_COMMAND")
-    legacy_raw = os.environ.get("HARNESSLAB_DOCKER_COMMAND")
-    if raw and legacy_raw:
-        warnings.append("legacy_docker_command_ignored")
-    elif raw:
-        pass
-    elif legacy_raw:
-        raw = legacy_raw
-        warnings.append("legacy_docker_command_env_in_use")
-    else:
-        raw = "docker"
+    raw = os.environ.get("ORNNLAB_DOCKER_COMMAND", "docker")
     command = shlex.split(raw)
     if not command:
         raise ValueError("ORNNLAB_DOCKER_COMMAND cannot be empty")

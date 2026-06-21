@@ -13,7 +13,6 @@ from ornnlab.storage import sqlite
 from ornnlab.storage.paths import ensure_parent
 
 MANIFEST_NAME = "ornnlab-backup-manifest.json"
-LEGACY_MANIFEST_NAME = "harnesslab-backup-manifest.json"
 BACKUP_PREFIX = "ornnlab-backup"
 
 
@@ -53,16 +52,8 @@ class BackupService:
         with tarfile.open(archive_path, "r:gz") as archive:
             for member in archive.getmembers():
                 _validate_member(member)
-                if member.name in {MANIFEST_NAME, LEGACY_MANIFEST_NAME}:
-                    parsed_manifest = json.loads(_read_member(archive, member).decode("utf-8"))
-                    if (
-                        "ornnlab_version" not in parsed_manifest
-                        and "harnesslab_version" in parsed_manifest
-                    ):
-                        parsed_manifest["ornnlab_version"] = parsed_manifest[
-                            "harnesslab_version"
-                        ]
-                    manifest = parsed_manifest
+                if member.name == MANIFEST_NAME:
+                    manifest = json.loads(_read_member(archive, member).decode("utf-8"))
                     continue
                 target = (self.settings.home / member.name).resolve()
                 target.relative_to(self.settings.home.resolve())
@@ -101,8 +92,6 @@ class BackupService:
             if path.name in {
                 "ornnlab.sqlite-wal",
                 "ornnlab.sqlite-shm",
-                "harnesslab.sqlite-wal",
-                "harnesslab.sqlite-shm",
             }:
                 continue
             files.append(path)
