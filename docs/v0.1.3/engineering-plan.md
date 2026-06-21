@@ -5,6 +5,7 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the actual implementation and validation plan for the `v0.1.3` version bundle. |
+| 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-21 | Updated remaining work: update and uninstall commands implemented; added version governance guard and publish script. |
 
 - Source PRD: `prd.md`
 - Technical design: `technical-design.md`
@@ -89,7 +90,5 @@ npm run smoke:npm-bin
 
 ## Remaining Work
 
-- Implement `ornnlab update`.
-- Implement `ornnlab uninstall`.
 - Add platform-specific lightweight Docker installation paths after confirming
   supported operating-system behavior.
