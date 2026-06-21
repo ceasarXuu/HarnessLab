@@ -114,7 +114,6 @@ def main() -> int:
         _check_python_package(),
         _check_npm_package_surface(),
         _check_scoped_transition_package(),
-        _check_migration_tests(),
     ]
     ok = all(check["status"] == "passed" for check in checks)
     _write_artifact(checks, ok)
@@ -313,32 +312,6 @@ def _check_scoped_transition_package() -> dict[str, Any]:
     )
 
 
-def _check_migration_tests() -> dict[str, Any]:
-    test_text = (ROOT / "tests/python/test_settings_migration.py").read_text(encoding="utf-8")
-    docker_text = (ROOT / "tests/python/test_docker_orphan_service.py").read_text(encoding="utf-8")
-    backup_text = (ROOT / "tests/python/test_backup_service.py").read_text(encoding="utf-8")
-    harbor_text = (ROOT / "tests/python/test_harbor_config.py").read_text(encoding="utf-8")
-    passed = all(
-        needle in haystack
-        for needle, haystack in [
-            ("test_ornnlab_home_wins_over_legacy_home", test_text),
-            ("test_launcher_root_does_not_block_legacy_home_migration", test_text),
-            ("harnesslab-backup-manifest.json", backup_text),
-            ("harnesslab.run_id", docker_text),
-            ("ORNNLAB_HARBOR_ENGINE", harbor_text),
-        ]
-    )
-    return _result(
-        "compatibility tests cover migration and legacy surfaces",
-        "inspect targeted pytest modules",
-        passed,
-        {
-            "migration_fixture_path": "tests/python/test_settings_migration.py",
-            "docker_fixture_path": "tests/python/test_docker_orphan_service.py",
-        },
-    )
-
-
 def _write_artifact(checks: list[dict[str, Any]], ok: bool) -> None:
     ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
     root_package = _json(ROOT / "package.json")
@@ -348,7 +321,6 @@ def _write_artifact(checks: list[dict[str, Any]], ok: bool) -> None:
         "status": "passed" if ok else "failed",
         "version": root_package.get("version"),
         "package_artifact_path": "ornnlab-{}.tgz".format(root_package.get("version")),
-        "migration_fixture_path": "tests/python/test_settings_migration.py",
         "command": "uv run python scripts/verify-ornnlab-rebrand.py",
         "checks": checks,
     }

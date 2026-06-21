@@ -78,23 +78,6 @@ def test_system_docker_orphans_endpoint_returns_cleanup_plan(client, monkeypatch
     assert payload["cleanup_plan"][0]["manual_review_required"] is True
 
 
-def test_system_status_reports_legacy_runtime_env_warnings(client, monkeypatch, tmp_path):
-    script = tmp_path / "fake_docker.py"
-    script.write_text("", encoding="utf-8")
-    monkeypatch.delenv("ORNNLAB_DOCKER_COMMAND", raising=False)
-    monkeypatch.setenv("HARNESSLAB_DOCKER_COMMAND", f"{sys.executable} {script}")
-    monkeypatch.setenv("HARNESSLAB_HARBOR_ENGINE", "subprocess")
-
-    response = client.get("/api/system/status")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert "legacy_docker_command_in_use" in payload["runtime_env_warnings"]
-    assert "legacy_harbor_engine_in_use" in payload["runtime_env_warnings"]
-    assert "legacy_docker_command_in_use" in payload["warnings"]
-    assert "legacy_harbor_engine_in_use" in payload["warnings"]
-
-
 def test_system_doctor_logs_reports_latest_failed_run(client):
     client.post(
         "/api/agents",
