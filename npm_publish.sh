@@ -23,6 +23,35 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+# B4 修复：验证本地 commits 已推送到 origin/main，确保 npm 发布与 GitHub 源码一致
+echo "==> Verifying origin/main sync..."
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$current_branch" != "main" ]; then
+  echo "ERROR: not on main branch (current: $current_branch). Publish must be from main." >&2
+  exit 1
+fi
+
+git fetch origin main --quiet
+
+ahead="$(git rev-list --count origin/main..HEAD)"
+behind="$(git rev-list --count HEAD..origin/main)"
+
+if [ "$ahead" != "0" ]; then
+  echo "ERROR: local main is ahead of origin/main by $ahead commit(s)." >&2
+  echo "       Push commits before publishing to keep npm/GitHub provenance aligned." >&2
+  echo "       Run: git push" >&2
+  exit 1
+fi
+
+if [ "$behind" != "0" ]; then
+  echo "ERROR: local main is behind origin/main by $behind commit(s)." >&2
+  echo "       Pull before publishing to ensure the tarball reflects the latest source." >&2
+  echo "       Run: git pull --ff-only" >&2
+  exit 1
+fi
+
+echo "  Branch in sync with origin/main ✓"
+
 # 3. 运行本地验证
 echo "==> Running local validation..."
 npm run smoke:npm-bin
