@@ -18,7 +18,7 @@ Use this checklist for Harbor WebUI rewrite releases.
 
 - Confirm `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
   has current implementation ledger evidence.
-- Confirm version changes follow `docs/release/version-governance.md`.
+- Confirm version changes follow `docs/releases/v0.1.3/version-governance.md`.
 - Confirm `docs/` has no Markdown files directly under the root; active
   entrypoint, current docs, and legacy stubs must live in subdirectories.
 - Confirm the matching `docs/v<version>/` folder contains exactly:
@@ -34,8 +34,8 @@ Use this checklist for Harbor WebUI rewrite releases.
   directly on `main`.
 - Confirm parallel release, hotfix, or publish-verification work uses a dedicated
   worktree.
-- Create or update the matching `docs/release/ornnlab-<version>.md` entry for
-  every public artifact version change.
+- Create or update the matching `docs/releases/v<version>/ornnlab-<version>.md`
+  entry for every public artifact version change.
 - Confirm the release ledger includes a Build Set composition table binding npm,
   Python app, frontend, transition package, Harbor range, and source commit.
 - Confirm affected PRDs and technical docs updated their `Document Control`

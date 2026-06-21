@@ -105,7 +105,7 @@ docs/v<version>/
 
 The version PRD describes only that version. Technical design derives from the
 PRD. Engineering plan records how the release is implemented and verified.
-Release evidence lives under `docs/release/`.
+Release evidence lives under `docs/releases/v<version>/`.
 
 ## 8. Validation Design
 

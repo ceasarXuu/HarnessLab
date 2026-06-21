@@ -53,13 +53,13 @@
 
 - `README.md`
 - `docs/architecture/docs-index.md`
-- `docs/release/version-governance.md`
-- `docs/release/checklist.md`
-- `docs/release/ornnlab-0.1.3-docs.md`
+- `docs/releases/v0.1.3/version-governance.md`
+- `docs/releases/v0.1.3/checklist.md`
+- `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
 - `docs/v0.1.3/prd.md`
 - `docs/v0.1.3/technical-design.md`
 - `docs/v0.1.3/engineering-plan.md`
-- `docs/release/ornnlab-0.1.3.md`
+- `docs/releases/v0.1.3/ornnlab-0.1.3.md`
 
 ## Local Validation
 

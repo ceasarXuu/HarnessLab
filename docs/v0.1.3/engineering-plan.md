@@ -76,7 +76,7 @@ Acceptance:
 
 - `docs/architecture/docs-index.md` points to `docs/v0.1.3/prd.md` as the
   active version PRD.
-- `docs/release/version-governance.md` defines the version-folder contract.
+- `docs/releases/v0.1.3/version-governance.md` defines the version-folder contract.
 - `scripts/verify-ornnlab-rebrand.py` checks the required version documents.
 
 ## Validation Commands

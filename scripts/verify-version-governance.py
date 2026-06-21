@@ -22,11 +22,12 @@ ARTIFACT = ROOT / "artifacts/governance/version-governance-check.json"
 
 # 文件允许包含字面 ornnlab@<version> 引用（release 记录、版本治理、playbook 等）
 ALLOWED_LITERAL_FILES: set[str] = {
-    "docs/release/ornnlab-0.1.3.md",
-    "docs/release/ornnlab-0.1.3-docs.md",
-    "docs/release/2026-06-16-ornnlab-0.1.3.md",
-    "docs/release/version-governance.md",
-    "docs/release/checklist.md",
+    "docs/releases/v0.1.3/ornnlab-0.1.3.md",
+    "docs/releases/v0.1.3/ornnlab-0.1.3-docs.md",
+    "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md",
+    "docs/releases/v0.1.3/version-governance.md",
+    "docs/releases/v0.1.3/checklist.md",
+    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md",
     "docs/v0.1.3/prd.md",
     "docs/v0.1.3/technical-design.md",
     "docs/v0.1.3/engineering-plan.md",

@@ -5,12 +5,12 @@ registration, experiment management, reports, and leaderboard review.
 
 Current source of truth:
 
-- Version document index: `docs/release/ornnlab-0.1.3-docs.md`
+- Version document index: `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
 - Version PRD: `docs/v0.1.3/prd.md`
 - Version technical design: `docs/v0.1.3/technical-design.md`
 - Version engineering plan: `docs/v0.1.3/engineering-plan.md`
 - Install quickstart: `docs/playbooks/install-quickstart.md`
-- Release and rollback checklist: `docs/release/checklist.md`
+- Release and rollback checklist: `docs/releases/v0.1.3/checklist.md`
 - Harbor upgrade procedure: `docs/playbooks/harbor-upgrade-procedure.md`
 - Rust legacy workspace decision: `docs/archive/stubs/rust-legacy-fate.md`
 - Documentation archive: `docs/archive/2026-06-15-pre-harbor-webui-redesign/README.md`
@@ -46,7 +46,7 @@ Frontend: http://127.0.0.1:5173/
 ```
 
 For version authority and release documentation rules, see
-`docs/release/version-governance.md`.
+`docs/releases/v0.1.3/version-governance.md`.
 
 ## Current Status
 

@@ -132,7 +132,7 @@ docs/v<version>/
 
 The folder is the active source of truth for that version. Do not create or
 maintain a single total PRD for the whole product. Release records and version
-indexes live under `docs/release/`, not inside the version folder.
+indexes live under `docs/releases/v<version>/`, not inside the version folder.
 
 Required documents:
 
@@ -149,9 +149,9 @@ Rules:
 - The engineering plan must cite both the version PRD and technical design.
 - The version folder must contain exactly the three version documents.
 - Release ledgers, version indexes, and release checklists live in
-  `docs/release/`.
-- Historical release index files may remain under `docs/release/` if they are
-  clearly labeled.
+  `docs/releases/v<version>/`.
+- Historical release index files may remain under `docs/releases/v<version>/`
+  if they are clearly labeled.
 - PRD document versions are independent from product and package versions.
 - Every file in the version folder must have a `Document Control` table. Version
   PRDs must additionally include `PRD Document Version` metadata and a PRD
@@ -162,8 +162,8 @@ Rules:
 - Do not put Markdown files directly under `docs/`.
 - Use `docs/architecture/` for cross-version architecture, technology, test
   engineering, and documentation indexes.
-- Use `docs/release/` for release/version management, release records, and
-  release checklists.
+- Use `docs/releases/v<version>/` for release/version management, release
+  records, and release checklists.
 - Use `docs/playbooks/` for reusable operating procedures.
 - Use `docs/archive/` for old root-level stubs or historical decisions that
   must remain addressable but are not current product direction.
@@ -213,19 +213,19 @@ Rules:
   `policy only` when no artifact version is affected.
 - `Updated` must be an exact date.
 - `Change` must summarize the reason a reviewer should care.
-- Historical release facts may remain in `docs/release/`; active version PRDs
-  and technical docs should link to release ledgers rather than duplicating long
-  histories.
+- Historical release facts may remain in `docs/releases/v<version>/`; active
+  version PRDs and technical docs should link to release ledgers rather than
+  duplicating long histories.
 
 ## Release Ledger
 
-Create or update `docs/release/ornnlab-<version>.md` for each public release
-that changes a published artifact.
+Create or update `docs/releases/v<version>/ornnlab-<version>.md` for each public
+release that changes a published artifact.
 
 Recommended file name:
 
 ```text
-docs/release/ornnlab-<version>.md
+docs/releases/v<version>/ornnlab-<version>.md
 ```
 
 Historical date-prefixed release files may remain as index entries, but they
@@ -307,17 +307,17 @@ The active version-governed documents are:
 
 - `README.md`
 - `docs/architecture/docs-index.md`
-- `docs/release/version-governance.md`
-- `docs/release/ornnlab-0.1.3-docs.md`
+- `docs/releases/v0.1.3/version-governance.md`
+- `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
 - `docs/v0.1.3/prd.md`
 - `docs/v0.1.3/technical-design.md`
 - `docs/v0.1.3/engineering-plan.md`
-- `docs/release/ornnlab-0.1.3.md`
-- `docs/release/*.md` release and version-management documents
+- `docs/releases/v0.1.3/ornnlab-0.1.3.md`
+- `docs/releases/v<version>/*.md` release and version-management documents
 - `docs/playbooks/development-operations.md`
 - `docs/playbooks/harbor-upgrade-procedure.md`
 - `docs/playbooks/install-quickstart.md`
-- `docs/release/checklist.md`
+- `docs/releases/v0.1.3/checklist.md`
 - `docs/architecture/technology-decisions.md`
 - `docs/architecture/test-engineering.md`
 - `docs/spikes/2026-06-15-harbor-lifecycle-spike.md`
@@ -342,5 +342,5 @@ historical.
 | Python app version source | `pyproject.toml` only | It is what Python packaging and backend diagnostics read. |
 | Quickstart versions | Avoid literal versions | Prevents stale install docs after release bumps. |
 | Active version docs | Use `docs/v<version>/` | Keeps PRD, design, and plan together. |
-| Release history | Use `docs/release/ornnlab-<version>.md` | Keeps version facts in global release management. |
+| Release history | Use `docs/releases/v<version>/ornnlab-<version>.md` | Keeps version facts in the per-version release folder. |
 | Historical docs | Preserve old versions under archive/release notes | Historical evidence should not be rewritten as current guidance. |

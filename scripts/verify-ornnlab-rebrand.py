@@ -55,22 +55,19 @@ DOC_INVENTORY = {
     "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md": "rename-now",
     "docs/playbooks/npm-package-reservation.md": "rename-now",
     "docs/playbooks/terminal-bench-claude-ds.md": "historical",
-    "docs/release/checklist.md": "rename-now",
-    "docs/release/2026-06-16-ornnlab-0.1.3.md": "rename-now",
+    "docs/releases/v0.1.3/checklist.md": "rename-now",
+    "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md": "rename-now",
+    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md": "rename-now",
     "docs/reviews/2026-05-27-docker-runner-review-3.md": "historical",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",
-    "docs/release/ornnlab-0.1.3-docs.md": "rename-now",
+    "docs/releases/v0.1.3/ornnlab-0.1.3-docs.md": "rename-now",
     "docs/v0.1.3/engineering-plan.md": "rename-now",
-    "docs/release/ornnlab-0.1.3.md": "rename-now",
+    "docs/releases/v0.1.3/ornnlab-0.1.3.md": "rename-now",
     "docs/v0.1.3/technical-design.md": "rename-now",
     "docs/v0.1.3/prd.md": "rename-now",
-    "docs/release/version-governance.md": "rename-now",
-    "prd/2026-06-07-universal-benchmark-adapter-protocol.md": "historical-stub",
-    "prd/2026-06-15-ornnlab-npm-distribution.md": "rename-now",
-    "prd/2026-06-15-ornnlab-webui-prd.md": "rename-now",
-    "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md": "rename-now",
+    "docs/releases/v0.1.3/version-governance.md": "rename-now",
 }
 
 DOC_CONTROL_REQUIRED = {
@@ -79,20 +76,18 @@ DOC_CONTROL_REQUIRED = {
     "docs/playbooks/install-quickstart.md",
     "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md",
     "docs/playbooks/npm-package-reservation.md",
-    "docs/release/checklist.md",
-    "docs/release/2026-06-16-ornnlab-0.1.3.md",
+    "docs/releases/v0.1.3/checklist.md",
+    "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md",
+    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
     "docs/architecture/technology-decisions.md",
     "docs/architecture/test-engineering.md",
-    "docs/release/ornnlab-0.1.3-docs.md",
+    "docs/releases/v0.1.3/ornnlab-0.1.3-docs.md",
     "docs/v0.1.3/engineering-plan.md",
-    "docs/release/ornnlab-0.1.3.md",
+    "docs/releases/v0.1.3/ornnlab-0.1.3.md",
     "docs/v0.1.3/technical-design.md",
     "docs/v0.1.3/prd.md",
-    "docs/release/version-governance.md",
-    "prd/2026-06-15-ornnlab-npm-distribution.md",
-    "prd/2026-06-15-ornnlab-webui-prd.md",
-    "prd/2026-06-16-ornnlab-zero-friction-bootstrap.md",
+    "docs/releases/v0.1.3/version-governance.md",
 }
 
 FORBIDDEN_CURRENT_PATTERNS = [
@@ -126,7 +121,7 @@ def main() -> int:
 def _check_doc_inventory() -> dict[str, Any]:
     discovered = {
         str(path.relative_to(ROOT))
-        for root in ["docs", "prd"]
+        for root in ["docs"]
         for path in (ROOT / root).rglob("*.md")
         if "/archive/" not in str(path.relative_to(ROOT))
     }
