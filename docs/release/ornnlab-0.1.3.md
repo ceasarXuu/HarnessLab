@@ -5,6 +5,7 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the canonical release ledger inside the `v0.1.3` version document folder. |
+| 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-21 | Added update/uninstall implementation, version governance guard, and publish script to user-visible changes. |
 
 - Status: Prepared, not yet published
 - Date: 2026-06-16
@@ -42,6 +43,11 @@
 - Backend readiness verifies Harbor and OrnnLab imports after `uv sync`.
 - Frontend readiness verifies `npm run build` after `npm ci`.
 - Current release documentation is organized under `docs/v0.1.3/`.
+- Implemented `ornnlab update` command with `--dry-run` support.
+- Implemented `ornnlab uninstall` command with recoverable dated backup.
+- Split `bin/ornnlab.js` into `lib/` modules for maintainability.
+- Added `scripts/verify-version-governance.py` version governance guard.
+- Added `npm_publish.sh` automated publish script with WebAuthn flow.
 
 ## Documentation Updated
 

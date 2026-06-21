@@ -5,6 +5,7 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Derived the `v0.1.3` bootstrap and document-governance design from the version PRD. |
+| 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-21 | Updated command model: update and uninstall status changed from Planned to Implemented. |
 
 - Source PRD: `prd.md`
 - Implementation plan: `engineering-plan.md`
@@ -30,8 +31,8 @@ the application/backend authority. Harbor remains the execution engine.
 | Command | Design Status | Responsibility |
 |---|---|---|
 | `ornnlab install` | Prepared design | Verify/install required dependencies and record bootstrap state. |
-| `ornnlab update` | Planned | Update public launcher and managed dependency set with preflight checks. |
-| `ornnlab uninstall` | Planned | Remove launcher-managed artifacts through recoverable cleanup. |
+| `ornnlab update` | Implemented | Update public launcher and managed dependency set with preflight checks. |
+| `ornnlab uninstall` | Implemented | Remove launcher-managed artifacts through recoverable cleanup. |
 | `ornnlab --version` | Existing | Report public npm launcher version. |
 
 Setup work belongs in `ornnlab install`. Regular command invocation should read
