@@ -1,6 +1,0 @@
-[tools]
-rust = "1.95.0"
-rust_coverage = "nightly-2026-05-26"
-cargo_nextest = "0.9.136"
-cargo_llvm_cov = "0.8.7"
-cargo_mutants = "25"
