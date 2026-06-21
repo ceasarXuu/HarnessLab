@@ -57,10 +57,10 @@ DOC_INVENTORY = {
     "docs/playbooks/terminal-bench-claude-ds.md": "historical",
     "docs/releases/v0.1.3/checklist.md": "rename-now",
     "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md": "rename-now",
-    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md": "rename-now",
+    "docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md": "rename-now",
     "docs/releases/v0.1.4/v0.1.4-docs.md": "rename-now",
-    "docs/releases/v0.1.4/harnesslab-shim-retirement-prd.md": "rename-now",
-    "docs/releases/v0.1.4/harnesslab-shim-retirement-plan.md": "rename-now",
+    "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-prd.md": "rename-now",
+    "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md": "rename-now",
     "docs/reviews/2026-05-27-docker-runner-review-3.md": "historical",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
@@ -81,10 +81,10 @@ DOC_CONTROL_REQUIRED = {
     "docs/playbooks/npm-package-reservation.md",
     "docs/releases/v0.1.3/checklist.md",
     "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md",
-    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md",
+    "docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md",
     "docs/releases/v0.1.4/v0.1.4-docs.md",
-    "docs/releases/v0.1.4/harnesslab-shim-retirement-prd.md",
-    "docs/releases/v0.1.4/harnesslab-shim-retirement-plan.md",
+    "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-prd.md",
+    "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
     "docs/architecture/technology-decisions.md",
     "docs/architecture/test-engineering.md",
@@ -264,17 +264,16 @@ def _check_current_docs() -> dict[str, Any]:
 def _check_python_package() -> dict[str, Any]:
     passed = (
         (ROOT / "ornnlab/__main__.py").exists()
-        and (ROOT / "harnesslab/__main__.py").exists()
-        and not (ROOT / "harnesslab/api").exists()
+        and not (ROOT / "harnesslab").exists()
         and (ROOT / "ornnlab/api").exists()
     )
     return _result(
-        "Python package is renamed with compatibility shim",
-        "inspect ornnlab and harnesslab package directories",
+        "Python package is OrnnLab only (HarnessLab shim retired)",
+        "inspect ornnlab package directory and confirm harnesslab is gone",
         passed,
         {
             "ornnlab_main": str(ROOT / "ornnlab/__main__.py"),
-            "compat_main": str(ROOT / "harnesslab/__main__.py"),
+            "harnesslab_dir_present": (ROOT / "harnesslab").exists(),
         },
     )
 

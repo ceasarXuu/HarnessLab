@@ -67,7 +67,7 @@ Use this checklist for Harbor WebUI rewrite releases.
   rg "docs/release/[A-Za-z0-9._-]+\.md" \
     -g '!docs/archive/**' -g '!docs/plans/**' \
     -g '!vs_review/**' -g '!coe/**' \
-    -g '!docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md'
+    -g '!docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md'
   ```
 
   The grep must return zero results. Descriptive mentions of the legacy

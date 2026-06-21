@@ -27,7 +27,7 @@ ALLOWED_LITERAL_FILES: set[str] = {
     "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md",
     "docs/releases/v0.1.3/version-governance.md",
     "docs/releases/v0.1.3/checklist.md",
-    "docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md",
+    "docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md",
     "docs/v0.1.3/prd.md",
     "docs/v0.1.3/technical-design.md",
     "docs/v0.1.3/engineering-plan.md",

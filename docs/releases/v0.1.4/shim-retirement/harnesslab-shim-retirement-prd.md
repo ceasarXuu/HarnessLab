@@ -139,7 +139,7 @@ clone/索引成本增加。
 
 #### G. 文档
 
-- 关闭 [docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md) 中 "HarnessLab 兼容 shim 退役时间表" 这条 open item（在 Open Decisions 章节追加退役决议链接）。
+- 关闭 [docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md) 中 "HarnessLab 兼容 shim 退役时间表" 这条 open item（在 Open Decisions 章节追加退役决议链接）。
 - 更新 [docs/releases/v0.1.4/v0.1.4-docs.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/v0.1.4-docs.md)：登记本 PRD + 即将产出的实施计划。
 - 同步更新 [docs/releases/v0.1.3/version-governance.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.3/version-governance.md) Document Control 与 Active Index，新增本 PRD。
 
@@ -195,7 +195,7 @@ clone/索引成本增加。
 
 ## 10. Acceptance Criteria
 
-- **AC1**：`rg -i "harnesslab" -g '!docs/archive/**' -g '!docs/plans/**' -g '!docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md' -g '!docs/releases/v0.1.4/harnesslab-shim-retirement-prd.md' -g '!docs/releases/v0.1.4/harnesslab-shim-retirement-plan.md' -g '!vs_review/**' -g '!coe/**' -g '!npm/harnesslab-transition/**' -g '!bin/harnesslab.js' -g '!.git/**'` 返回 0 命中。
+- **AC1**：`rg -i "harnesslab" -g '!docs/archive/**' -g '!docs/plans/**' -g '!docs/releases/v0.1.4/shim-retirement/**' -g '!vs_review/**' -g '!coe/**' -g '!npm/harnesslab-transition/**' -g '!bin/harnesslab.js' -g '!.git/**'` 返回 0 命中。
 - **AC2**：`rg -n "cargo|crates/|xtask|Cargo\.toml" -g '!docs/archive/**' -g '!docs/plans/**' -g '!.git/**'` 返回 0 命中（除 PRD/计划文档中描述性提及外）。
 - **AC3**：`uv run pytest tests/python` exit 0；删除的测试 case 不再存在。
 - **AC4**：`uv run python scripts/verify-version-governance.py` exit 0。
@@ -203,7 +203,7 @@ clone/索引成本增加。
 - **AC6**：`npm --prefix frontend run typecheck && npm --prefix frontend run lint && npm --prefix frontend run test && npm --prefix frontend run build` 全 exit 0。
 - **AC7**：`harnesslab/` 目录、`crates/`、`xtask/`、`Cargo.toml`、`Cargo.lock`、`rust-toolchain.toml` 在仓库工作树中均不存在（`ls` 报 No such file or directory）。
 - **AC8**：[rust-legacy-fate.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/archive/stubs/rust-legacy-fate.md) 含 "Retired in commit <sha> on 2026-06-22" 字样。
-- **AC9**：[docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md) Open Decisions 章节中"HarnessLab 兼容 shim 退役时间表"条目改为"已退役 → 参见 harnesslab-shim-retirement-prd.md"。
+- **AC9**：[docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md) Open Decisions 章节中"HarnessLab 兼容 shim 退役时间表"条目改为"已退役 → 参见 harnesslab-shim-retirement-prd.md"。
 - **AC10**：所有改动以最小化提交原则分多个 commit，且 push 到 `origin/main`，工作树 clean。
 
 ## 11. Review Checklist And Sign-off Questions
@@ -240,4 +240,4 @@ clone/索引成本增加。
 - **测试驱动**：删除 shim 同时删除/调整其对应测试，确保 `pytest` 在每个 commit 后通过。
 - **审查驱动**：实施后用 `subagent-vs-review` 跑一轮对抗性审查。
 - **日志驱动**：删除后用 [rust-legacy-fate.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/archive/stubs/rust-legacy-fate.md) + v0.1.4 文档索引登记本次退役决议，未来回查有迹可循。
-- **工程计划文档**：本 PRD 完成后再产出 `docs/releases/v0.1.4/harnesslab-shim-retirement-plan.md` 作为分阶段实施计划（参考 [harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md) 的结构）。
+- **工程计划文档**：本 PRD 完成后再产出 `docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md` 作为分阶段实施计划（参考 [harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md) 的结构）。

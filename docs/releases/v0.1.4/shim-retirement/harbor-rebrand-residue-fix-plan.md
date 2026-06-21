@@ -257,7 +257,7 @@ Execution date: 2026-06-22. Plan version 1.1.
 
 - `scripts/verify-version-governance.py`: 5 `ALLOWED_LITERAL_FILES` entries
   migrated `docs/release/` -> `docs/releases/v0.1.3/`; added
-  `docs/releases/v0.1.4/harbor-rebrand-residue-fix-plan.md` as an allowed
+  `docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md` as an allowed
   literal-version host.
 - `scripts/verify-ornnlab-rebrand.py`:
   - `DOC_INVENTORY` and `DOC_CONTROL_REQUIRED`: all 5 `docs/release/`
