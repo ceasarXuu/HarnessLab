@@ -65,7 +65,7 @@ mount_docker_socket = false
 parser = "none"
 
 [labels]
-terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"
+terminal_bench_agent_import_path = "ornnlab_tb_agent:OrnnLabCommandAgent"
 terminal_bench_agent_pythonpath = "$ROOT/integrations/terminal_bench"
 EOF
 
@@ -113,7 +113,7 @@ if ! rg --fixed-strings -- "--agent-import-path '[REDACTED]'" "$COMMAND_SNAPSHOT
   echo "missing redacted import-path proof in command snapshot: $COMMAND_SNAPSHOT" >&2
   exit 1
 fi
-if rg --fixed-strings "harnesslab_tb_agent:HarnessLabCommandAgent" "$COMMAND_SNAPSHOT" >/dev/null; then
+if rg --fixed-strings "ornnlab_tb_agent:OrnnLabCommandAgent" "$COMMAND_SNAPSHOT" >/dev/null; then
   echo "raw import-path leaked in command snapshot: $COMMAND_SNAPSHOT" >&2
   exit 1
 fi
@@ -125,7 +125,7 @@ python3 - "$RUN_DIR/tasks/hello-world/attempts/1/external-runtime.private.json" 
 import json, sys
 snapshot = json.load(open(sys.argv[1]))
 commands = [command["command"] for command in snapshot["commands"]]
-assert any("harnesslab_tb_agent:HarnessLabCommandAgent" in command for command in commands), commands
+assert any("ornnlab_tb_agent:OrnnLabCommandAgent" in command for command in commands), commands
 print("private runtime snapshot import-path proof ok")
 PY
 if ! rg --fixed-strings "external_runner_configured" "$RUN_DIR/events.jsonl" >/dev/null; then

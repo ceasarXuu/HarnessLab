@@ -90,7 +90,7 @@ deny = []
 parser = "none"
 
 [labels]
-terminal_bench_agent_import_path = "harnesslab_tb_agent:HarnessLabCommandAgent"
+terminal_bench_agent_import_path = "ornnlab_tb_agent:OrnnLabCommandAgent"
 terminal_bench_agent_pythonpath = "$ROOT/integrations/terminal_bench"
 EOF
 

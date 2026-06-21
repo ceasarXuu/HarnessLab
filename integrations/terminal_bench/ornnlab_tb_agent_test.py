@@ -12,10 +12,10 @@ import pytest
 terminal_bench = pytest.importorskip("terminal_bench.agents.failure_mode")
 FailureMode = terminal_bench.FailureMode
 
-from harnesslab_tb_process import AgentCommandTimedOut, CleanupResult
+from ornnlab_tb_process import AgentCommandTimedOut, CleanupResult
 
-from harnesslab_tb_agent import (
-    HarnessLabCommandAgent,
+from ornnlab_tb_agent import (
+    OrnnLabCommandAgent,
     extract_shell_script,
     run_registered_agent,
     shell_syntax_error,
@@ -68,7 +68,7 @@ def agent_print_command(output):
     return f"python -c {shlex.quote(f'print({output!r})')}"
 
 
-class HarnessLabCommandAgentTests(unittest.TestCase):
+class OrnnLabCommandAgentTests(unittest.TestCase):
     def test_stdin_mode_passes_prompt_to_subprocess_stdin(self):
         output = run_registered_agent(
             "python -c 'import sys; print(sys.stdin.read())'",
@@ -116,17 +116,17 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         )
 
     def test_shell_syntax_error_reports_missing_shell(self):
-        with patch("harnesslab_tb_agent.subprocess.run", side_effect=OSError("missing")):
+        with patch("ornnlab_tb_agent.subprocess.run", side_effect=OSError("missing")):
             self.assertIn("missing", shell_syntax_error("echo ok"))
 
     def test_perform_task_maps_nonzero_agent_to_unknown_agent_error(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         with patch.dict(
             os.environ,
             {
-                "HARNESSLAB_AGENT_COMMAND": "python -c 'import sys; sys.exit(7)'",
-                "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                "ORNNLAB_AGENT_COMMAND": "python -c 'import sys; sys.exit(7)'",
+                "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
             },
             clear=False,
         ):
@@ -135,13 +135,13 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertEqual(result.failure_mode, FailureMode.UNKNOWN_AGENT_ERROR)
 
     def test_perform_task_maps_empty_agent_output_to_parse_error(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         with patch.dict(
             os.environ,
             {
-                "HARNESSLAB_AGENT_COMMAND": "python -c 'print()'",
-                "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                "ORNNLAB_AGENT_COMMAND": "python -c 'print()'",
+                "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
             },
             clear=False,
         ):
@@ -150,7 +150,7 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertEqual(result.failure_mode, FailureMode.PARSE_ERROR)
 
     def test_perform_task_maps_agent_command_timeout_to_agent_timeout(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         command = (
             "python -c "
             + shlex.quote(
@@ -161,9 +161,9 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": command,
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "1",
+                    "ORNNLAB_AGENT_COMMAND": command,
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "1",
                 },
                 clear=False,
             ):
@@ -182,7 +182,7 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertIn("Task instruction:", prompt_text)
 
     def test_perform_task_persists_successful_cleanup_diagnostics(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         with tempfile.TemporaryDirectory() as tmp:
             child_pid_file = Path(tmp) / "daemon.pid"
             child_code = (
@@ -209,9 +209,9 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": f"python -c {shlex.quote(parent_code)}",
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": f"python -c {shlex.quote(parent_code)}",
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -220,11 +220,11 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             cleanup_text = (Path(tmp) / "agent_cleanup.log").read_text()
 
         self.assertEqual(result.failure_mode, FailureMode.NONE)
-        self.assertIn("harnesslab agent cleanup after exit", cleanup_text)
+        self.assertIn("ornnlab agent cleanup after exit", cleanup_text)
         self.assertIn("succeeded=True", cleanup_text)
 
     def test_perform_task_maps_failed_cleanup_to_unknown_agent_error(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         cleanup = CleanupResult(
             root_pid=123,
             pids={123},
@@ -238,13 +238,13 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": "agent",
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "1",
+                    "ORNNLAB_AGENT_COMMAND": "agent",
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "1",
                 },
                 clear=False,
             ), patch(
-                "harnesslab_tb_agent.run_registered_agent",
+                "ornnlab_tb_agent.run_registered_agent",
                 side_effect=timeout_error,
             ):
                 result = agent.perform_task("do it", FakeSession(), Path(tmp))
@@ -254,16 +254,16 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertIn("token_survivors=[456]", error_text)
 
     def test_perform_task_maps_invalid_shell_output_to_parse_error(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         session = FakeSession()
         output = "All 11 tests passed (file existence check + 10 maze content checks)."
         with tempfile.TemporaryDirectory() as tmp:
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": agent_print_command(output),
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": agent_print_command(output),
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -283,7 +283,7 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertEqual(shell_text.strip(), "/bin/sh")
 
     def test_perform_task_uses_container_tmux_shell_for_syntax_check(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         script = "arr=(a b)\necho ${arr[0]}"
         with tempfile.TemporaryDirectory() as tmp:
             fake_shell = Path(tmp) / "fake-task-shell"
@@ -302,9 +302,9 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": agent_print_command(script),
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": agent_print_command(script),
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -335,15 +335,15 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertTrue(all(user == "agent-user" for user in session.container.users))
 
     def test_perform_task_logs_shell_lookup_fallback_reason(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         session = FakeSession(container=None)
         with tempfile.TemporaryDirectory() as tmp:
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": agent_print_command("echo ok"),
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": agent_print_command("echo ok"),
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -355,7 +355,7 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertIn("no terminal container", resolution_text)
 
     def test_perform_task_rejects_fenced_invalid_shell_before_tmux(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         session = FakeSession()
         script = "All 11 tests passed (file existence check + 10 maze content checks)."
         output = f"```sh\n{script}\n```"
@@ -363,9 +363,9 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": agent_print_command(output),
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": agent_print_command(output),
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -385,15 +385,15 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertEqual(shell_text.strip(), "/bin/sh")
 
     def test_perform_task_sends_valid_multiline_script_to_terminal_session(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         session = FakeSession()
         script = "set -eu\necho ok\nprintf '%s\\n' done"
         with patch.dict(
             os.environ,
             {
-                "HARNESSLAB_AGENT_COMMAND": agent_print_command(f"```sh\n{script}\n```"),
-                "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                "ORNNLAB_AGENT_COMMAND": agent_print_command(f"```sh\n{script}\n```"),
+                "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
             },
             clear=False,
         ):
@@ -405,7 +405,7 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertTrue(session.commands[0].command.startswith("/bin/sh -lc "))
 
     def test_perform_task_uses_resolved_shell_in_execution_wrapper(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         with tempfile.TemporaryDirectory() as tmp:
             shell_dir = Path(tmp) / "task shell dir"
             shell_dir.mkdir()
@@ -422,9 +422,9 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "HARNESSLAB_AGENT_COMMAND": agent_print_command("echo ok"),
-                    "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                    "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                    "ORNNLAB_AGENT_COMMAND": agent_print_command("echo ok"),
+                    "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                    "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
                 },
                 clear=False,
             ):
@@ -444,19 +444,19 @@ class HarnessLabCommandAgentTests(unittest.TestCase):
         self.assertEqual(len(execution_lines), 1)
         self.assertRegex(
             execution_lines[0],
-            rf"^{re.escape(quoted_shell)} /tmp/harnesslab-agent-run-[0-9a-f]+\.sh$",
+            rf"^{re.escape(quoted_shell)} /tmp/ornnlab-agent-run-[0-9a-f]+\.sh$",
         )
         self.assertTrue(command.startswith("/bin/sh -lc "))
 
     def test_perform_task_sends_agent_script_to_terminal_session(self):
-        agent = HarnessLabCommandAgent()
+        agent = OrnnLabCommandAgent()
         session = FakeSession()
         with patch.dict(
             os.environ,
             {
-                "HARNESSLAB_AGENT_COMMAND": "python -c 'print(\"echo ok\")'",
-                "HARNESSLAB_AGENT_INPUT_MODE": "stdin",
-                "HARNESSLAB_AGENT_TIMEOUT_SEC": "5",
+                "ORNNLAB_AGENT_COMMAND": "python -c 'print(\"echo ok\")'",
+                "ORNNLAB_AGENT_INPUT_MODE": "stdin",
+                "ORNNLAB_AGENT_TIMEOUT_SEC": "5",
             },
             clear=False,
         ):

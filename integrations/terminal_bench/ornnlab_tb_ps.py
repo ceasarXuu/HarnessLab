@@ -139,7 +139,7 @@ def live_all_pids() -> set[int]:
     return {row.pid for row in process_rows() if not row.is_zombie}
 
 
-def live_harnesslab_agent_token_pids() -> set[int]:
+def live_ornnlab_agent_token_pids() -> set[int]:
     completed = subprocess.run(
         ["ps", "eww", "-axo", "pid=,command="],
         text=True,
@@ -149,7 +149,7 @@ def live_harnesslab_agent_token_pids() -> set[int]:
     )
     pids = set()
     for line in completed.stdout.splitlines():
-        if "HARNESSLAB_AGENT_RUN_TOKEN=" not in line:
+        if "ORNNLAB_AGENT_RUN_TOKEN=" not in line:
             continue
         parts = line.split(None, 1)
         if not parts:

@@ -14,13 +14,13 @@ from terminal_bench.agents.failure_mode import FailureMode
 from terminal_bench.terminal.models import TerminalCommand
 from terminal_bench.terminal.tmux_session import TmuxSession
 
-from harnesslab_tb_process import AgentCommandTimedOut, run_agent_process
+from ornnlab_tb_process import AgentCommandTimedOut, run_agent_process
 
 
-class HarnessLabCommandAgent(BaseAgent):
+class OrnnLabCommandAgent(BaseAgent):
     @staticmethod
     def name() -> str:
-        return "harnesslab-command"
+        return "ornnlab-command"
 
     def perform_task(
         self,
@@ -28,13 +28,13 @@ class HarnessLabCommandAgent(BaseAgent):
         session: TmuxSession,
         logging_dir: Path | None = None,
     ) -> AgentResult:
-        command = required_env("HARNESSLAB_AGENT_COMMAND")
-        input_mode = os.environ.get("HARNESSLAB_AGENT_INPUT_MODE", "stdin")
-        timeout = int(os.environ.get("HARNESSLAB_AGENT_TIMEOUT_SEC", "3600"))
+        command = required_env("ORNNLAB_AGENT_COMMAND")
+        input_mode = os.environ.get("ORNNLAB_AGENT_INPUT_MODE", "stdin")
+        timeout = int(os.environ.get("ORNNLAB_AGENT_TIMEOUT_SEC", "3600"))
         prompt = self._command_prompt(self._render_instruction(instruction))
         log_dir = prepare_log_dir(logging_dir)
         write_log(log_dir, "prompt.txt", prompt)
-        setup_command = os.environ.get("HARNESSLAB_AGENT_SETUP_COMMAND", "")
+        setup_command = os.environ.get("ORNNLAB_AGENT_SETUP_COMMAND", "")
         if setup_command.strip():
             write_log(log_dir, "agent_setup_command.sha256", sha256_hex(setup_command))
             try:
@@ -47,7 +47,7 @@ class HarnessLabCommandAgent(BaseAgent):
                     timeout=max(timeout, 1),
                 )
             except Exception as error:
-                write_log(log_dir, "agent_setup_error.log", f"harnesslab agent setup failed: {error}")
+                write_log(log_dir, "agent_setup_error.log", f"ornnlab agent setup failed: {error}")
                 return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
             write_log(log_dir, "agent_setup_stdout.log", setup.stdout or "")
             write_log(log_dir, "agent_setup_stderr.log", setup.stderr or "")
@@ -55,7 +55,7 @@ class HarnessLabCommandAgent(BaseAgent):
                 write_log(
                     log_dir,
                     "agent_setup_error.log",
-                    f"harnesslab agent setup failed: exit_code={setup.returncode}",
+                    f"ornnlab agent setup failed: exit_code={setup.returncode}",
                 )
                 return AgentResult(failure_mode=FailureMode.UNKNOWN_AGENT_ERROR)
 
@@ -148,13 +148,13 @@ def run_registered_agent(
 
 
 def wrap_run_as(command: str) -> str:
-    run_as = os.environ.get("HARNESSLAB_AGENT_RUN_AS", "current")
-    if run_as != "harnesslab":
+    run_as = os.environ.get("ORNNLAB_AGENT_RUN_AS", "current")
+    if run_as != "ornnlab":
         return command
     quoted = shlex.quote(command)
     return (
-        'if [ "$(id -u)" = "0" ] && id -u harnesslab >/dev/null 2>&1; '
-        f"then exec runuser -u harnesslab --preserve-environment -- bash -lc {quoted}; "
+        'if [ "$(id -u)" = "0" ] && id -u ornnlab >/dev/null 2>&1; '
+        f"then exec runuser -u ornnlab --preserve-environment -- bash -lc {quoted}; "
         f"else exec bash -lc {quoted}; fi"
     )
 
@@ -328,7 +328,7 @@ def container_shell_syntax_error(
     script: str,
     shell: str,
 ) -> str | None:
-    path = f"/tmp/harnesslab-agent-syntax-{uuid.uuid4().hex}.sh"
+    path = f"/tmp/ornnlab-agent-syntax-{uuid.uuid4().hex}.sh"
     command = build_container_syntax_command(script, shell, path)
     try:
         result = exec_in_session(session, ["/bin/sh", "-lc", command])
@@ -369,7 +369,7 @@ def build_container_syntax_command(script: str, shell: str, path: str) -> str:
 
 def build_container_execution_command(script: str, shell: str) -> str:
     delimiter = heredoc_delimiter(script)
-    path = f"/tmp/harnesslab-agent-run-{uuid.uuid4().hex}.sh"
+    path = f"/tmp/ornnlab-agent-run-{uuid.uuid4().hex}.sh"
     quoted_path = shlex.quote(path)
     quoted_shell = shlex.quote(shell)
     body = (
@@ -385,9 +385,9 @@ def build_container_execution_command(script: str, shell: str) -> str:
 
 
 def heredoc_delimiter(script: str) -> str:
-    delimiter = f"HARNESSLAB_SCRIPT_{uuid.uuid4().hex}"
+    delimiter = f"ORNNLAB_SCRIPT_{uuid.uuid4().hex}"
     while delimiter in script:
-        delimiter = f"HARNESSLAB_SCRIPT_{uuid.uuid4().hex}"
+        delimiter = f"ORNNLAB_SCRIPT_{uuid.uuid4().hex}"
     return delimiter
 
 

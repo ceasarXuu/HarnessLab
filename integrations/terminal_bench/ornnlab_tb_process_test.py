@@ -12,8 +12,8 @@ import pytest
 
 pytest.importorskip("terminal_bench.agents.base_agent")
 
-from harnesslab_tb_agent import run_registered_agent
-from harnesslab_tb_process import AgentCommandTimedOut
+from ornnlab_tb_agent import run_registered_agent
+from ornnlab_tb_process import AgentCommandTimedOut
 
 
 def wait_for_process_exit(pid, timeout=5.0):
@@ -63,7 +63,7 @@ def wait_for_file(path, timeout=5.0):
     return path.exists()
 
 
-class HarnessLabCommandProcessTests(unittest.TestCase):
+class OrnnLabCommandProcessTests(unittest.TestCase):
     def test_agent_process_uses_full_configured_timeout_budget(self):
         code = "import time; time.sleep(7); print('finished')"
 
@@ -190,7 +190,7 @@ class HarnessLabCommandProcessTests(unittest.TestCase):
                 "import os, pathlib, subprocess, sys, time\n"
                 f"pid_file = pathlib.Path({str(child_pid_file)!r})\n"
                 "env = os.environ.copy()\n"
-                "env.pop('HARNESSLAB_AGENT_RUN_TOKEN', None)\n"
+                "env.pop('ORNNLAB_AGENT_RUN_TOKEN', None)\n"
                 "subprocess.Popen(\n"
                 "    [sys.executable, '-c', "
                 f"{grandchild_code!r}, str(pid_file)],\n"
@@ -209,7 +209,7 @@ class HarnessLabCommandProcessTests(unittest.TestCase):
 
             with patch.dict(
                 os.environ,
-                {"HARNESSLAB_AGENT_STRICT_GLOBAL_PROCESS_SCAN": "1"},
+                {"ORNNLAB_AGENT_STRICT_GLOBAL_PROCESS_SCAN": "1"},
             ):
                 with self.assertRaises(RuntimeError) as raised:
                     run_registered_agent(command, "stdin", "ignored", 5)

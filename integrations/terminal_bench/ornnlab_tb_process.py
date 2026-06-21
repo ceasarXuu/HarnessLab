@@ -10,11 +10,11 @@ import time
 import uuid
 from pathlib import Path
 
-from harnesslab_tb_ps import (
+from ornnlab_tb_ps import (
     clone_snapshot,
     empty_snapshot,
     live_all_pids,
-    live_harnesslab_agent_token_pids,
+    live_ornnlab_agent_token_pids,
     live_snapshot_pids,
     live_token_pids,
     merge_process_snapshots,
@@ -29,7 +29,7 @@ def run_agent_process(
     timeout: int,
     cleanup_log_path: Path | None = None,
 ) -> subprocess.CompletedProcess:
-    token = f"harnesslab-agent-{uuid.uuid4().hex}"
+    token = f"ornnlab-agent-{uuid.uuid4().hex}"
     baseline_pids = live_all_pids()
     process = subprocess.Popen(
         supervised_shell_command(command),
@@ -83,7 +83,7 @@ def run_agent_process(
 
 def agent_env(token: str) -> dict[str, str]:
     env = os.environ.copy()
-    env["HARNESSLAB_AGENT_RUN_TOKEN"] = token
+    env["ORNNLAB_AGENT_RUN_TOKEN"] = token
     return env
 
 
@@ -96,7 +96,7 @@ def record_cleanup(
     cleanup: "CleanupResult",
     cleanup_log_path: Path | None,
 ) -> None:
-    message = f"harnesslab agent cleanup {phase}: {cleanup.message()}"
+    message = f"ornnlab agent cleanup {phase}: {cleanup.message()}"
     print(message, file=sys.stderr)
     if cleanup_log_path is None:
         return
@@ -346,7 +346,7 @@ def escaped_process_pids(
     baseline_pids: set[int],
     known_snapshot: dict[str, set[int]],
 ) -> set[int]:
-    if os.environ.get("HARNESSLAB_AGENT_STRICT_GLOBAL_PROCESS_SCAN") != "1":
+    if os.environ.get("ORNNLAB_AGENT_STRICT_GLOBAL_PROCESS_SCAN") != "1":
         return set()
     if not baseline_pids:
         return set()
@@ -354,7 +354,7 @@ def escaped_process_pids(
         live_all_pids()
         - baseline_pids
         - known_snapshot["pids"]
-        - live_harnesslab_agent_token_pids()
+        - live_ornnlab_agent_token_pids()
         - {os.getpid()}
     )
 

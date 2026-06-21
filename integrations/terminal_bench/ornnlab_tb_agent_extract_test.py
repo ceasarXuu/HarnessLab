@@ -4,10 +4,10 @@ import pytest
 
 pytest.importorskip("terminal_bench.agents.base_agent")
 
-from harnesslab_tb_agent import extract_shell_script
+from ornnlab_tb_agent import extract_shell_script
 
 
-class HarnessLabShellExtractionTests(unittest.TestCase):
+class OrnnLabShellExtractionTests(unittest.TestCase):
     def test_extract_shell_script_removes_common_agent_preamble(self):
         output = """I'll output the POSIX sh script directly:
 
