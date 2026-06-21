@@ -1,36 +1,45 @@
 # Rust Legacy Workspace Fate
 
 Decision date: 2026-06-15
+Retirement date: 2026-06-22
 
-The Rust workspace remains in the repository as a legacy/reference asset. It is
-not the active implementation path for the Harbor WebUI rewrite.
+The Rust workspace has been **Retired** from the repository.
 
-## Decision
+## Final Status
 
-- Keep `Cargo.toml`, `crates/`, and `xtask/` in place for now.
-- Do not extend Rust as the main product runtime.
-- Do not include Rust jobs in the default WebUI CI matrix.
-- Treat previous Rust tests and docs as historical evidence for requirements,
-  redaction, adapter lessons, and operational discipline.
-- Revisit archival only through a separate reversible migration plan.
+- Cargo workspace (`Cargo.toml`, `Cargo.lock`, `crates/`, `xtask/`) — deleted.
+- Rust toolchain files (`rust-toolchain.toml`, `rust-toolchain.coverage.toml`)
+  — deleted.
+- Rust coverage configuration (`coverage-critical.toml`) — deleted.
+- Rust-only verification scripts (11 entries under `scripts/`) — deleted.
+- See `docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md`
+  Phase 3 for the deletion ledger.
 
-## Rationale
+The retirement is recoverable through git history. The original Rust workspace
+content lives at the commits immediately preceding the Phase 3 commit on the
+`main` branch.
 
-The active product delegates benchmark execution to Harbor and uses
-Python/FastAPI plus Vue for the local WebUI. Moving or deleting the Rust
-workspace during this rewrite would create unnecessary recovery risk while the
-new product is still being hardened.
+## Why retired
 
-Keeping the Rust workspace as legacy reference also preserves prior evidence for
-adapter contracts, public/private artifact boundaries, replay lessons, and
-Docker diagnostics without making those crates part of the release surface.
+The active product runtime is `ornnlab/` (Python/FastAPI + Vue) backed by
+Harbor. The Rust workspace was kept as historical reference during the
+HarnessLab → OrnnLab brand migration. Once the project owner confirmed
+"the project has no released users and no real legacy data to preserve" in
+2026-06-22, the legacy reference was retired together with the rest of the
+HarnessLab compatibility layer to simplify the repository and remove search
+noise.
 
-## Guardrails
+## Historical Decision (2026-06-15) — superseded
 
-- New runtime behavior belongs in `ornnlab/`, `frontend/`, and current WebUI
-  tests unless a new architecture decision says otherwise.
-- Active docs must point to the Harbor WebUI plan, not Rust CLI plans.
-- Any future archival must be recoverable: move to an archive path in git or a
-  backup location, never through irreversible deletion.
-- If a Rust file needs modification for repository hygiene, keep the change
-  scoped and run the relevant Rust gate explicitly.
+The original 2026-06-15 decision was to "Keep `Cargo.toml`, `crates/`, and
+`xtask/` in place for now" as legacy/reference. That stance was reversed
+on 2026-06-22 by the shim-retirement PRD when the project owner approved
+maximum-scope retirement.
+
+## Guardrails (post-retirement)
+
+- The OrnnLab Python codebase is the single source of truth.
+- `pytest tests/python`, `npm run` gates in `frontend/`, and the verify
+  scripts under `scripts/` form the only active CI gate.
+- If Rust ever returns, it must come from a brand-new architecture decision,
+  not from resurrecting this workspace.
