@@ -5,6 +5,8 @@ const { setup, ensureReady } = require("../lib/bootstrap");
 const { runDev, runBackend, runDoctor, runFrontend, frontendHost, frontendPort } = require("../lib/dev");
 const { sourceDir } = require("../lib/state");
 const { repoUrl } = require("../lib/source");
+const { handleUpdate } = require("../lib/update");
+const { handleUninstall } = require("../lib/uninstall");
 
 const help = `OrnnLab npm launcher
 
@@ -12,6 +14,8 @@ Usage:
   ornnlab                    Bootstrap if needed, then start the local WebUI
   ornnlab install            Install prerequisites, clone/update source, and install dependencies
   ornnlab setup              Alias for install
+  ornnlab update             Update the global launcher and managed dependencies
+  ornnlab uninstall          Move launcher-managed artifacts to a dated backup
   ornnlab dev                Start backend and frontend development servers
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
   ornnlab ui [args...]       Start the Vue frontend dev server from the managed source checkout
@@ -37,6 +41,14 @@ Bootstrap behavior:
   install lightweight core tooling and records the choice. The launcher does not
   install Docker Desktop.
 
+Lifecycle commands:
+  ornnlab update     Updates the global npm launcher, pulls source, syncs
+                     backend and frontend dependencies, and verifies readiness.
+                     User data and local run artifacts are preserved.
+  ornnlab uninstall  Moves launcher-managed files to a dated backup directory.
+                     User experiment data is preserved by default. No files are
+                     irreversibly deleted.
+
 When the app starts, the terminal prints:
   Frontend: http://${frontendHost}:${frontendPort}/
 `;
@@ -61,6 +73,14 @@ async function main() {
   }
   if (command === "install" || command === "setup") {
     await setup();
+    return;
+  }
+  if (command === "update") {
+    await handleUpdate(args);
+    return;
+  }
+  if (command === "uninstall") {
+    await handleUninstall(args);
     return;
   }
   if (command === "web") {
