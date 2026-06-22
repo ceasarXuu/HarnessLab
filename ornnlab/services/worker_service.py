@@ -80,7 +80,7 @@ class QueueWorkerService:
         while True:
             done = {task for task in pending if task.done()}
             for task in done:
-                pending.remove(task)
+                pending.discard(task)
                 run_id = task.get_name()
                 self._active_runs.pop(run_id, None)
                 self._consume_task_result(task)
@@ -88,7 +88,7 @@ class QueueWorkerService:
             if len(pending) >= limit:
                 done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
                 for task in done:
-                    pending.remove(task)
+                    pending.discard(task)
                     run_id = task.get_name()
                     self._active_runs.pop(run_id, None)
                     self._consume_task_result(task)
@@ -99,6 +99,7 @@ class QueueWorkerService:
                 if pending:
                     done, _ = await asyncio.wait(pending, return_when=asyncio.ALL_COMPLETED)
                     for task in done:
+                        pending.discard(task)
                         run_id = task.get_name()
                         self._active_runs.pop(run_id, None)
                         self._consume_task_result(task)

@@ -64,6 +64,10 @@ class QueueService:
                 "UPDATE runs SET status = ?, updated_at = ? WHERE id = ?",
                 ("running", now, run["id"]),
             )
+            conn.execute(
+                "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, run["experiment_id"]),
+            )
             run["status"] = "running"
             return run
 

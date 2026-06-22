@@ -53,8 +53,7 @@ class RunRecoveryService:
                 conn,
                 "SELECT r.* FROM queue_items q JOIN runs r ON r.id = q.run_id "
                 "WHERE q.state = 'running' "
-                "AND r.status NOT IN ('completed', 'failed', 'cancelled', 'interrupted') "
-                "AND r.status != 'running' "
+                "AND r.status NOT IN ('running', 'completed', 'failed', 'cancelled', 'interrupted') "
                 "ORDER BY q.dequeued_at, r.id",
             )
 

@@ -376,7 +376,8 @@ class ExperimentService:
                 "WHERE id = ? AND status NOT IN ('cancelled', 'failed', 'interrupted')",
                 (result["status"], finished, report_path, finished, run["id"]),
             )
-        if cursor.rowcount == 0:
+            updated = cursor.rowcount
+        if updated == 0:
             self.events.append(
                 "run",
                 run["id"],

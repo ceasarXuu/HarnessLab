@@ -130,11 +130,12 @@ async def event_stream(experiment_id: str, request: Request, after: int = 0) -> 
 
     async def stream():
         cursor = after
+        exp_service = ExperimentService(settings)
+        event_service = EventService(settings)
         while True:
             if await request.is_disconnected():
                 break
 
-            exp_service = ExperimentService(settings)
             try:
                 state = exp_service.get(experiment_id)
             except KeyError:
@@ -142,16 +143,14 @@ async def event_stream(experiment_id: str, request: Request, after: int = 0) -> 
                 break
 
             aggregate_ids = [experiment_id, *[run["id"] for run in state["runs"]]]
-            service = EventService(settings)
-            events = service.list_after_many(aggregate_ids, cursor)
+            events = event_service.list_after_many(aggregate_ids, cursor)
             for event in events:
                 cursor = event.id
                 yield _format_sse(event)
 
             if _experiment_terminal(state):
                 await asyncio.sleep(0.1)
-                service = EventService(settings)
-                remaining = service.list_after_many(aggregate_ids, cursor)
+                remaining = event_service.list_after_many(aggregate_ids, cursor)
                 for event in remaining:
                     cursor = event.id
                     yield _format_sse(event)
