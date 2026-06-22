@@ -1,0 +1,144 @@
+%% OrnnLab v0.1.4 系统总览架构图
+%% 生成日期: 2026-06-22
+%% 说明: v0.1.4 完成 HarnessLab shim 与 Rust legacy 退役后的当前态
+
+flowchart TB
+    classDef user fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e
+    classDef launcher fill:#fef3c7,stroke:#b45309,color:#78350f
+    classDef backend fill:#dcfce7,stroke:#15803d,color:#14532d
+    classDef storage fill:#ede9fe,stroke:#6d28d9,color:#4c1d95
+    classDef engine fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    classDef frontend fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef integration fill:#f1f5f9,stroke:#475569,color:#1e293b
+    classDef retired fill:#f5f5f4,stroke:#a8a29e,color:#57534e,stroke-dasharray:4 4
+
+    subgraph UserEntry["用户入口"]
+        NpmInstall["npm install -g ornnlab"]:::user
+        UserCli["ornnlab CLI<br/>(python -m ornnlab)"]:::user
+    end
+
+    subgraph Launcher["npm Launcher (bin/ornnlab.js → lib/)"]
+        Bootstrap["bootstrap.js<br/>检查 git / uv / node / npm / Docker"]:::launcher
+        SourceMgmt["source.js<br/>源码同步到 ~/.ornnlab/launcher/source"]:::launcher
+        Dev["dev.js<br/>启动后端 + 前端 dev server"]:::launcher
+    end
+
+    subgraph Backend["Python 后端 (ornnlab/) — FastAPI 0.2.0"]
+        CliEntry["cli.py<br/>web / doctor / backup / cleanup / version"]:::backend
+        App["app.py<br/>create_app() + lifespan"]:::backend
+
+        subgraph Routers["API Routers (ornnlab/api/)"]
+            RSys["system"]:::backend
+            RAg["agents"]:::backend
+            RBen["benchmarks"]:::backend
+            RExp["experiments"]:::backend
+            RRun["runs"]:::backend
+            RTpl["templates"]:::backend
+            RLead["leaderboard"]:::backend
+        end
+
+        subgraph Services["Services (ornnlab/services/)"]
+            SQueue["QueueService"]:::backend
+            SWorker["QueueWorkerService"]:::backend
+            SRecovery["RunRecoveryService"]:::backend
+            SExp["ExperimentService"]:::backend
+            SHarbor["HarborEngine<br/>HarborSubprocess"]:::backend
+            SProfile["ProfileCompiler"]:::backend
+            SDoctor["DoctorService"]:::backend
+            SBackup["BackupService"]:::backend
+            SCleanup["CleanupService"]:::backend
+            SDocker["DockerOrphanService"]:::backend
+            SEvent["EventService"]:::backend
+            SLead["LeaderboardService"]:::backend
+            STpl["TemplateService"]:::backend
+            SFail["FailureClassifier"]:::backend
+        end
+    end
+
+    subgraph Storage["本地存储 (~/.ornnlab/data)"]
+        SQLite[("ornnlab.sqlite<br/>metadata index")]:::storage
+        subgraph FS["文件系统 artifacts"]
+            Logs["logs/"]:::storage
+            Agents["agents/<br/>(声明式配置)"]:::storage
+            GenAgents["generated-agents/<br/>(Harbor 编译产物)"]:::storage
+            Experiments["experiments/<br/>(run 工件)"]:::storage
+            Exports["exports/<br/>(backup 归档)"]:::storage
+            Archive["archive/<br/>(cleanup 迁移)"]:::storage
+        end
+    end
+
+    subgraph Engine["执行引擎"]
+        Harbor["Harbor 0.13.x<br/>(子进程托管)"]:::engine
+        Docker["Docker 容器<br/>(benchmark 运行环境)"]:::engine
+    end
+
+    subgraph Frontend["前端 (frontend/) — Vue 3 + TypeScript"]
+        Vite["Vite dev server<br/>127.0.0.1:5173"]:::frontend
+        Views["Views:<br/>Dashboard / Agents / Experiments / Leaderboard"]:::frontend
+        ApiClient["api/client.ts<br/>HTTP + SSE"]:::frontend
+    end
+
+    subgraph Integration["集成"]
+        TB["terminal_bench adapter<br/>(integrations/terminal_bench/)"]:::integration
+    end
+
+    subgraph Retired["v0.1.4 已退役 (不在当前架构中)"]
+        RustLegacy["Rust legacy workspace<br/>(crates/ xtask/ Cargo.toml)"]:::retired
+        HarnessShim["HarnessLab 兼容 shim<br/>(harnesslab/ 包 / LEGACY_* / 迁移逻辑)"]:::retired
+    end
+
+    %% 用户入口 → Launcher
+    NpmInstall --> Bootstrap
+    UserCli --> CliEntry
+
+    %% Launcher 内部
+    Bootstrap --> SourceMgmt
+    SourceMgmt --> Dev
+    Dev --> CliEntry
+    Dev --> Vite
+
+    %% CLI → App
+    CliEntry -->|web| App
+
+    %% App → Routers → Services
+    App --> RSys & RAg & RBen & RExp & RRun & RTpl & RLead
+    RSys --> SDoctor
+    RAg --> SProfile
+    RExp --> SExp
+    RRun --> SQueue & SWorker & SRecovery & SEvent
+    RLead --> SLead
+    RTpl --> STpl
+
+    %% Services → Harbor → Docker
+    SQueue --> SWorker
+    SWorker --> SHarbor
+    SExp --> SHarbor
+    SHarbor --> Harbor
+    Harbor --> Docker
+
+    %% Services → Storage
+    SExp --> SQLite
+    SEvent --> SQLite
+    SLead --> SQLite
+    SProfile --> Agents & GenAgents
+    SExp --> Experiments & Logs
+    SBackup --> Exports
+    SCleanup --> Archive
+    SDocker --> SQLite
+    SDoctor --> SQLite
+
+    %% Docker artifacts → FS
+    Docker -.->|run artifacts| Experiments
+    Docker -.->|stdout/stderr| Logs
+
+    %% 前端 ↔ 后端
+    Views --> ApiClient
+    ApiClient -->|HTTP / SSE| Routers
+
+    %% terminal_bench 集成
+    TB -->|调用| SHarbor
+    TB -->|读取| Experiments
+
+    %% 退役标注
+    RustLegacy -.->|已删除| Retired
+    HarnessShim -.->|已删除| Retired

@@ -35,6 +35,7 @@ guidance from being read as current direction.
 
 ## Current Implementation Entrypoints
 
+- Architecture diagram (v0.1.4): `architecture-v0.1.4.mmd` / `architecture-v0.1.4.png`
 - Backend package: `../../ornnlab/`
 - Frontend package: `../../frontend/`
 - Web gate: `../../scripts/test-after-change-web.sh`
