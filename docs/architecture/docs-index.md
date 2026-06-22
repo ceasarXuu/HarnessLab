@@ -2,14 +2,14 @@
 
 Start here for the active OrnnLab version documentation.
 
-- Current version docs index: `../release/ornnlab-0.1.3-docs.md`
-- Version PRD: `../v0.1.3/prd.md`
-- Version technical design: `../v0.1.3/technical-design.md`
-- Version engineering plan: `../v0.1.3/engineering-plan.md`
-- Version release ledger: `../release/ornnlab-0.1.3.md`
+- Current version docs index: `../releases/v0.1.3/ornnlab-0.1.3-docs.md`
+- Version PRD: `../releases/v0.1.3/prd.md`
+- Version technical design: `../releases/v0.1.3/technical-design.md`
+- Version engineering plan: `../releases/v0.1.3/engineering-plan.md`
+- Version release ledger: `../releases/v0.1.3/ornnlab-0.1.3.md`
 - Install quickstart: `../playbooks/install-quickstart.md`
-- Release and rollback checklist: `../release/checklist.md`
-- Version and documentation governance: `../release/version-governance.md`
+- Release and rollback checklist: `../releases/v0.1.3/checklist.md`
+- Version and documentation governance: `../releases/v0.1.3/version-governance.md`
 - Harbor upgrade procedure: `../playbooks/harbor-upgrade-procedure.md`
 - Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
@@ -23,7 +23,7 @@ diagnostics, report summaries, and leaderboard views.
 
 Active product requirements are version-scoped. Do not create or maintain a
 single total PRD as the source of truth; create the next version folder under
-`docs/v<version>/` instead.
+`docs/releases/v<version>/` instead.
 
 ## Superseded Documents
 

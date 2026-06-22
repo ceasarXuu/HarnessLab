@@ -4,10 +4,10 @@
 - PRD Document Version: `1.0`
 - Status: Ready for implementation
 - Created: 2026-06-16
-- Updated: 2026-06-16
+- Updated: 2026-06-23
 - Owner / Requester: project maintainer
-- Technical Design: `docs/v0.1.3/technical-design.md`
-- Engineering Plan: `docs/v0.1.3/engineering-plan.md`
+- Technical Design: `docs/releases/v0.1.3/technical-design.md`
+- Engineering Plan: `docs/releases/v0.1.3/engineering-plan.md`
 - Version Source: `package.json`
 
 ## Document Control
@@ -15,12 +15,14 @@
 | Document Version | Engineering Version(s) | Updated | Change |
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Established version-scoped PRD for the npm bootstrap and documentation-governance release. |
+| 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Merged version trio into `docs/releases/v0.1.3/` to consolidate all version documents and avoid documentation forking. |
 
 ## PRD Document Version History
 
 | Document Version | Updated | Change |
 |---|---|---|
 | 1.0 | 2026-06-16 | Created `v0.1.3` version PRD. |
+| 1.1 | 2026-06-23 | Relocated PRD into `docs/releases/v0.1.3/` as part of version-folder consolidation. |
 
 This version PRD is the source of truth for `v0.1.3` product scope, version
 goal, completion definition, rules, and acceptance criteria. The technical
@@ -50,7 +52,7 @@ one version folder.
 - Record npm publish operations in the playbook as a user-login plus local
   WebAuthn security-key flow, not a TOTP or access-token flow.
 - Replace the active total-PRD model with version-scoped documents under
-  `docs/v0.1.3/`.
+  `docs/releases/v0.1.3/`.
 
 ## 3. Users And Usage Context
 
@@ -104,8 +106,9 @@ Out of scope:
   commands.
 - npm publishing instructions state that the maintainer must log in and use the
   local machine WebAuthn key.
-- Active version documents live under `docs/v0.1.3/` as the exact three-file
-  package `prd.md`, `technical-design.md`, and `engineering-plan.md`.
+- Active version documents live under `docs/releases/v0.1.3/` as the exact
+  three-file package `prd.md`, `technical-design.md`, and `engineering-plan.md`
+  alongside the release ledger and governance documents.
 - No new total PRD is introduced for the product as a whole.
 
 ## 7. Open Risks

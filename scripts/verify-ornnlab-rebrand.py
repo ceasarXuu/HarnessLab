@@ -17,48 +17,11 @@ DOC_INVENTORY = {
     "docs/playbooks/development-operations.md": "rename-now",
     "docs/playbooks/harbor-upgrade-procedure.md": "rename-now",
     "docs/playbooks/install-quickstart.md": "rename-now",
-    "docs/plans/2026-06-03-agent-registration-gap-completion.md": "historical",
-    "docs/plans/2026-06-03-agent-registration-registry.md": "historical",
-    "docs/plans/2026-06-04-benchmark-adapter-architecture-design.md": "historical",
-    "docs/plans/2026-06-04-benchmark-adapter-phase-0-inventory.md": "historical",
-    "docs/plans/2026-06-04-benchmark-adapter-phase-1-boundary.md": "historical",
-    "docs/plans/2026-06-04-benchmark-adapter-phase-1-coverage.md": "historical",
-    "docs/plans/2026-06-04-benchmark-adapter-phase-1-inventory.md": "historical",
-    "docs/plans/2026-06-05-benchmark-adapter-phase-2-inventory.md": "historical",
-    (
-        "docs/plans/"
-        "2026-06-06-benchmark-adapter-phase-4-terminal-bench-runtime-extraction.md"
-    ): "historical",
-    (
-        "docs/plans/"
-        "2026-06-06-benchmark-adapter-phase-5-swe-bench-pro-runtime-extraction.md"
-    ): "historical",
-    "docs/plans/2026-06-06-benchmark-adapter-phase-6-runtime-snapshot-cleanup.md": "historical",
-    "docs/plans/2026-06-06-benchmark-adapter-phase-7-docs-diagnostics.md": "historical",
-    "docs/plans/2026-06-06-benchmark-adapter-phase-8-full-gate-closure.md": "historical",
-    (
-        "docs/plans/"
-        "2026-06-08-universal-benchmark-adapter-protocol-implementation-plan.md"
-    ): "historical",
-    (
-        "docs/plans/"
-        "2026-06-08-universal-benchmark-adapter-protocol-phase-0-branch-inventory.md"
-    ): "historical",
-    (
-        "docs/plans/"
-        "2026-06-08-universal-benchmark-adapter-protocol-phase-0-frozen-selector-manifest.md"
-    ): "historical",
-    "docs/plans/2026-06-12-remove-external-runner-kind-plan.md": "historical",
-    "docs/plans/2026-06-15-harbor-integration-engineering-plan.md": "historical-stub",
-    "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md": "rename-now",
-    "docs/plans/2026-06-15-harnesslab-webui-engineering-plan.md": "historical-stub",
-    "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md": "rename-now",
     "docs/playbooks/npm-package-reservation.md": "rename-now",
     "docs/playbooks/terminal-bench-claude-ds.md": "historical",
     "docs/releases/v0.1.3/checklist.md": "rename-now",
     "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md": "rename-now",
     "docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md": "rename-now",
-    "docs/releases/v0.1.4/v0.1.4-docs.md": "rename-now",
     "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-prd.md": "rename-now",
     "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md": "rename-now",
     "docs/reviews/2026-05-27-docker-runner-review-3.md": "historical",
@@ -66,10 +29,10 @@ DOC_INVENTORY = {
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",
     "docs/releases/v0.1.3/ornnlab-0.1.3-docs.md": "rename-now",
-    "docs/v0.1.3/engineering-plan.md": "rename-now",
+    "docs/releases/v0.1.3/engineering-plan.md": "rename-now",
     "docs/releases/v0.1.3/ornnlab-0.1.3.md": "rename-now",
-    "docs/v0.1.3/technical-design.md": "rename-now",
-    "docs/v0.1.3/prd.md": "rename-now",
+    "docs/releases/v0.1.3/technical-design.md": "rename-now",
+    "docs/releases/v0.1.3/prd.md": "rename-now",
     "docs/releases/v0.1.3/version-governance.md": "rename-now",
 }
 
@@ -77,22 +40,20 @@ DOC_CONTROL_REQUIRED = {
     "docs/playbooks/development-operations.md",
     "docs/playbooks/harbor-upgrade-procedure.md",
     "docs/playbooks/install-quickstart.md",
-    "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md",
     "docs/playbooks/npm-package-reservation.md",
     "docs/releases/v0.1.3/checklist.md",
     "docs/releases/v0.1.3/2026-06-16-ornnlab-0.1.3.md",
     "docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md",
-    "docs/releases/v0.1.4/v0.1.4-docs.md",
     "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-prd.md",
     "docs/releases/v0.1.4/shim-retirement/harnesslab-shim-retirement-plan.md",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md",
     "docs/architecture/technology-decisions.md",
     "docs/architecture/test-engineering.md",
     "docs/releases/v0.1.3/ornnlab-0.1.3-docs.md",
-    "docs/v0.1.3/engineering-plan.md",
+    "docs/releases/v0.1.3/engineering-plan.md",
     "docs/releases/v0.1.3/ornnlab-0.1.3.md",
-    "docs/v0.1.3/technical-design.md",
-    "docs/v0.1.3/prd.md",
+    "docs/releases/v0.1.3/technical-design.md",
+    "docs/releases/v0.1.3/prd.md",
     "docs/releases/v0.1.3/version-governance.md",
 }
 
@@ -176,7 +137,7 @@ def _check_docs_root_converged() -> dict[str, Any]:
 
 
 def _check_version_folder_contract() -> dict[str, Any]:
-    version_dir = ROOT / "docs/v0.1.3"
+    version_dir = ROOT / "docs/releases/v0.1.3"
     required = [
         "prd.md",
         "technical-design.md",
@@ -196,7 +157,7 @@ def _check_version_folder_contract() -> dict[str, Any]:
         text = path.read_text(encoding="utf-8")
         for needle in needles:
             if needle not in text:
-                missing_links.append(f"docs/v0.1.3/{name}:{needle}")
+                missing_links.append(f"docs/releases/v0.1.3/{name}:{needle}")
     prd_text = (version_dir / "prd.md").read_text(encoding="utf-8")
     prd_metadata_present = (
         "PRD Document Version:" in prd_text
@@ -204,13 +165,12 @@ def _check_version_folder_contract() -> dict[str, Any]:
     )
     return _result(
         "current version folder has required PRD/design/plan bundle",
-        "inspect docs/v0.1.3 document contract",
-        set(discovered) == set(required)
-        and not missing
+        "inspect docs/releases/v0.1.3 document contract",
+        not missing
         and not missing_links
         and prd_metadata_present,
         {
-            "version_dir": "docs/v0.1.3",
+            "version_dir": "docs/releases/v0.1.3",
             "required": required,
             "discovered": discovered,
             "missing": missing,

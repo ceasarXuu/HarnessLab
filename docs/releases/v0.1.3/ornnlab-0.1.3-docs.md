@@ -6,6 +6,7 @@
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the canonical version document folder for `v0.1.3`. |
 | 1.1 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Fixed the historical release index pointer to the in-folder file after the `docs/release/` -> `docs/releases/v0.1.3/` migration. |
+| 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Consolidated version trio into `docs/releases/v0.1.3/`; document set table now points to in-folder files. |
 
 This file indexes the active documentation bundle for OrnnLab `v0.1.3`.
 
@@ -13,10 +14,10 @@ This file indexes the active documentation bundle for OrnnLab `v0.1.3`.
 
 | Document | Purpose |
 |---|---|
-| `../v0.1.3/prd.md` | Product requirements for this version only. |
-| `../v0.1.3/technical-design.md` | Technical design derived from the version PRD. |
-| `../v0.1.3/engineering-plan.md` | Actual implementation and validation plan for this version. |
-| `ornnlab-0.1.3.md` | Release evidence, artifact versions, publish state, and rollback notes. |
+| `./prd.md` | Product requirements for this version only. |
+| `./technical-design.md` | Technical design derived from the version PRD. |
+| `./engineering-plan.md` | Actual implementation and validation plan for this version. |
+| `./ornnlab-0.1.3.md` | Release evidence, artifact versions, publish state, and rollback notes. |
 
 ## Build Set Composition
 

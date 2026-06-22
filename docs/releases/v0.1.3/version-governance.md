@@ -13,6 +13,7 @@
 | 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Required `docs/` root files to be collected under stable subdirectories. |
 | 1.7 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Aligned documentation hierarchy with the `docs-manager` skill default pattern. |
 | 1.8 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Migrated active documentation index to `docs/releases/v<version>/` paths; registered the in-flight `docs/releases/v0.1.4/` work-item folder and its index; removed stale top-level `prd/` references after the prd archive sweep. |
+| 1.9 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Consolidated the version trio (`prd.md`, `technical-design.md`, `engineering-plan.md`) into `docs/releases/v<version>/` alongside release records to avoid documentation forking across two directories. |
 
 This document defines how engineering versions, npm package versions, and
 documentation references stay aligned.
@@ -122,18 +123,24 @@ Worktree rules:
 
 ## Version Document Folder
 
-Every product version must have one canonical folder:
+Every product version owns one canonical folder that consolidates the version
+trio and the release records together:
 
 ```text
-docs/v<version>/
+docs/releases/v<version>/
   prd.md
   technical-design.md
   engineering-plan.md
+  ornnlab-<version>.md
+  ornnlab-<version>-docs.md
+  checklist.md
+  version-governance.md
 ```
 
 The folder is the active source of truth for that version. Do not create or
-maintain a single total PRD for the whole product. Release records and version
-indexes live under `docs/releases/v<version>/`, not inside the version folder.
+maintain a single total PRD for the whole product. Keeping the version trio and
+release evidence in one folder avoids documentation forking across two
+directories.
 
 Required documents:
 
@@ -148,23 +155,25 @@ Rules:
 - The version PRD owns only the product requirements for that version.
 - The technical design must cite the version PRD as its source.
 - The engineering plan must cite both the version PRD and technical design.
-- The version folder must contain exactly the three version documents.
-- Release ledgers, version indexes, and release checklists live in
-  `docs/releases/v<version>/`.
+- The version folder must contain the three required version documents; it may
+  also contain release ledgers, version indexes, release checklists, and
+  governance documents for that version.
 - Historical release index files may remain under `docs/releases/v<version>/`
   if they are clearly labeled.
 - PRD document versions are independent from product and package versions.
-- Every file in the version folder must have a `Document Control` table. Version
-  PRDs must additionally include `PRD Document Version` metadata and a PRD
-  version history table.
+- Every governed file in the version folder must have a `Document Control`
+  table. Version PRDs must additionally include `PRD Document Version` metadata
+  and a PRD version history table.
 
 ## Documentation Rules
 
 - Do not put Markdown files directly under `docs/`.
 - Use `docs/architecture/` for cross-version architecture, technology, test
   engineering, and documentation indexes.
-- Use `docs/releases/v<version>/` for release/version management, release
-  records, and release checklists.
+- Use `docs/releases/v<version>/` for version PRD, technical design,
+  engineering plan, release/version management, release records, and release
+  checklists. Consolidating all version documents in one folder prevents
+  documentation forking.
 - Use `docs/playbooks/` for reusable operating procedures.
 - Use `docs/archive/` for old root-level stubs or historical decisions that
   must remain addressable but are not current product direction.
@@ -276,9 +285,8 @@ Local gates should detect:
 - package tarball contents drifting from the intended npm surface.
 - required active PRD and technical docs missing a top-level `Document Control`
   table.
-- missing current version folder documents:
+- missing current version folder documents under `docs/releases/v<version>/`:
   `prd.md`, `technical-design.md`, and `engineering-plan.md`.
-- extra Markdown files in a version folder.
 - version PRDs missing `PRD Document Version` metadata or a PRD version history
   table.
 
@@ -310,9 +318,9 @@ The active version-governed documents are:
 - `docs/architecture/docs-index.md`
 - `docs/releases/v0.1.3/version-governance.md`
 - `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
-- `docs/v0.1.3/prd.md`
-- `docs/v0.1.3/technical-design.md`
-- `docs/v0.1.3/engineering-plan.md`
+- `docs/releases/v0.1.3/prd.md`
+- `docs/releases/v0.1.3/technical-design.md`
+- `docs/releases/v0.1.3/engineering-plan.md`
 - `docs/releases/v0.1.3/ornnlab-0.1.3.md`
 - `docs/releases/v<version>/*.md` release and version-management documents
 - `docs/playbooks/development-operations.md`
@@ -341,6 +349,6 @@ historical.
 | npm launcher version source | `package.json` only | It is what npm publishes and what `ornnlab --version` reads. |
 | Python app version source | `pyproject.toml` only | It is what Python packaging and backend diagnostics read. |
 | Quickstart versions | Avoid literal versions | Prevents stale install docs after release bumps. |
-| Active version docs | Use `docs/v<version>/` | Keeps PRD, design, and plan together. |
+| Active version docs | Use `docs/releases/v<version>/` | Keeps PRD, design, plan, and release evidence together in one folder to prevent forking. |
 | Release history | Use `docs/releases/v<version>/ornnlab-<version>.md` | Keeps version facts in the per-version release folder. |
 | Historical docs | Preserve old versions under archive/release notes | Historical evidence should not be rewritten as current guidance. |

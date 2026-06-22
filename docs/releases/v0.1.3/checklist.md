@@ -12,6 +12,7 @@
 | 1.5 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Added docs-root convergence check. |
 | 1.6 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Aligned release checklist with the `docs-manager` version-doc trio. |
 | 1.7 | OrnnLab Build Set (planned `2026.06.22`); `ornnlab` npm `0.1.4` (planned); Python app `0.2.0` | 2026-06-22 | Added path-drift guard against the legacy `docs/release/` documentation root after the per-version folder migration. |
+| 1.8 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Updated version-folder gate to check `docs/releases/v<version>/` for the required trio after consolidating version documents into the release folder. |
 
 Use this checklist for Harbor WebUI rewrite releases.
 
@@ -22,8 +23,10 @@ Use this checklist for Harbor WebUI rewrite releases.
 - Confirm version changes follow `docs/releases/v0.1.3/version-governance.md`.
 - Confirm `docs/` has no Markdown files directly under the root; active
   entrypoint, current docs, and legacy stubs must live in subdirectories.
-- Confirm the matching `docs/v<version>/` folder contains exactly:
-  `prd.md`, `technical-design.md`, and `engineering-plan.md`.
+- Confirm the matching `docs/releases/v<version>/` folder contains the required
+  version trio: `prd.md`, `technical-design.md`, and `engineering-plan.md`.
+  The folder may also contain release ledgers, checklists, and governance
+  documents for that version.
 - Confirm the version PRD is scoped to this version only and is not a total
   product PRD.
 - Confirm the version PRD has `PRD Document Version` metadata and a PRD version

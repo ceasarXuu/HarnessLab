@@ -6,13 +6,14 @@
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Derived the `v0.1.3` bootstrap and document-governance design from the version PRD. |
 | 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-21 | Updated command model: update and uninstall status changed from Planned to Implemented. |
+| 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Relocated into `docs/releases/v0.1.3/` and updated documentation-design section to the consolidated version-folder model. |
 
 - Source PRD: `prd.md`
 - Implementation plan: `engineering-plan.md`
-- Release ledger: `../release/ornnlab-0.1.3.md`
+- Release ledger: `ornnlab-0.1.3.md`
 
-This technical design derives from `docs/v0.1.3/prd.md` and must not redefine
-the `v0.1.3` product scope or completion definition.
+This technical design derives from `docs/releases/v0.1.3/prd.md` and must not
+redefine the `v0.1.3` product scope or completion definition.
 
 ## 1. Architecture Boundary
 
@@ -94,25 +95,32 @@ support.
 
 ## 7. Documentation Design
 
-Each product version owns a folder:
+Each product version owns one consolidated folder that holds the version trio
+and the release records together:
 
 ```text
-docs/v<version>/
+docs/releases/v<version>/
   prd.md
   technical-design.md
   engineering-plan.md
+  ornnlab-<version>.md
+  ornnlab-<version>-docs.md
+  checklist.md
+  version-governance.md
 ```
 
 The version PRD describes only that version. Technical design derives from the
 PRD. Engineering plan records how the release is implemented and verified.
-Release evidence lives under `docs/releases/v<version>/`.
+Release evidence and governance live alongside the trio in the same folder to
+avoid documentation forking across two directories.
 
 ## 8. Validation Design
 
 The release guard should verify:
 
-- current version folder exists;
-- required version documents exist;
+- current version folder exists under `docs/releases/v<version>/`;
+- required version documents exist (`prd.md`, `technical-design.md`,
+  `engineering-plan.md`);
 - governed active documents have `Document Control` tables;
 - active docs do not point readers to a superseded total PRD as current truth;
 - npm package metadata and transition package metadata remain aligned.

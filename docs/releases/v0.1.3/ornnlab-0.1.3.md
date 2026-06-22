@@ -6,13 +6,14 @@
 |---|---|---|---|
 | 1.0 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Created the canonical release ledger inside the `v0.1.3` version document folder. |
 | 1.1 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-21 | Added update/uninstall implementation, version governance guard, and publish script to user-visible changes. |
+| 1.2 | OrnnLab Build Set `2026.06.16`; `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-23 | Consolidated version trio into `docs/releases/v0.1.3/`; updated documentation list and historical index pointer. |
 
 - Status: Prepared, not yet published
 - Date: 2026-06-16
 - Commit: `76f754f`
 - Version authority: `package.json`
 - Build Set: OrnnLab Build Set `2026.06.16`
-- Historical index entry: `../releases/2026-06-16-ornnlab-0.1.3.md`
+- Historical index entry: `./2026-06-16-ornnlab-0.1.3.md`
 
 ## Build Set Composition
 
@@ -42,7 +43,7 @@
 - Bootstrap state includes schema and launcher versions.
 - Backend readiness verifies Harbor and OrnnLab imports after `uv sync`.
 - Frontend readiness verifies `npm run build` after `npm ci`.
-- Current release documentation is organized under `docs/v0.1.3/`.
+- Current release documentation is consolidated under `docs/releases/v0.1.3/`.
 - Implemented `ornnlab update` command with `--dry-run` support.
 - Implemented `ornnlab uninstall` command with recoverable dated backup.
 - Split `bin/ornnlab.js` into `lib/` modules for maintainability.
@@ -56,9 +57,9 @@
 - `docs/releases/v0.1.3/version-governance.md`
 - `docs/releases/v0.1.3/checklist.md`
 - `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
-- `docs/v0.1.3/prd.md`
-- `docs/v0.1.3/technical-design.md`
-- `docs/v0.1.3/engineering-plan.md`
+- `docs/releases/v0.1.3/prd.md`
+- `docs/releases/v0.1.3/technical-design.md`
+- `docs/releases/v0.1.3/engineering-plan.md`
 - `docs/releases/v0.1.3/ornnlab-0.1.3.md`
 
 ## Local Validation

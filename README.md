@@ -6,9 +6,9 @@ registration, experiment management, reports, and leaderboard review.
 Current source of truth:
 
 - Version document index: `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
-- Version PRD: `docs/v0.1.3/prd.md`
-- Version technical design: `docs/v0.1.3/technical-design.md`
-- Version engineering plan: `docs/v0.1.3/engineering-plan.md`
+- Version PRD: `docs/releases/v0.1.3/prd.md`
+- Version technical design: `docs/releases/v0.1.3/technical-design.md`
+- Version engineering plan: `docs/releases/v0.1.3/engineering-plan.md`
 - Install quickstart: `docs/playbooks/install-quickstart.md`
 - Release and rollback checklist: `docs/releases/v0.1.3/checklist.md`
 - Harbor upgrade procedure: `docs/playbooks/harbor-upgrade-procedure.md`
