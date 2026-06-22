@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from ornnlab.app import create_app
 from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.services.agent_service import AgentService
+from ornnlab.services.clock import now_iso
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.worker_service import QueueWorkerService
@@ -195,3 +196,118 @@ async def test_running_cancel_is_not_overwritten_by_worker(settings):
         and event.payload["source"] == "cancelled_during_engine_task_cancel"
         for event in events
     )
+
+
+@pytest.mark.anyio
+async def test_mark_run_running_does_not_overwrite_cancelled_status(settings):
+    sqlite.initialize(settings)
+    AgentService(settings).create(
+        {
+            "schema_version": 2,
+            "id": "oracle",
+            "name": "Oracle",
+            "kind": "oracle",
+            "harbor": {"agent": "oracle"},
+        }
+    )
+    service = ExperimentService(settings)
+    created = service.create(
+        ExperimentCreate(
+            name="Cancel before mark running",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench"],
+            n_tasks=1,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    service.enqueue(created["experiment"]["id"])
+    service.cancel_run(run_id)
+
+    marked = service._mark_run_running(
+        {"id": run_id, "experiment_id": created["experiment"]["id"]},
+        job_dir=str(settings.experiments_dir / run_id / "harbor-job"),
+        harbor_job_name=run_id,
+        now=now_iso(),
+    )
+
+    assert marked is False
+    assert service.get_run(run_id)["status"] == "cancelled"
+
+
+@pytest.mark.anyio
+async def test_wait_experiment_terminal_returns_immediately_when_no_runs(settings):
+    sqlite.initialize(settings)
+    from ornnlab.models.experiment import ExperimentCreate
+
+    service = ExperimentService(settings)
+    created = service.create(
+        ExperimentCreate(
+            name="No runs",
+            agent_ids=[],
+            benchmark_names=[],
+            n_tasks=1,
+        )
+    )
+    experiment_id = created["experiment"]["id"]
+
+    worker = QueueWorkerService(settings)
+    await asyncio.wait_for(
+        worker.wait_experiment_terminal(experiment_id, poll_interval_sec=0.01),
+        timeout=1.0,
+    )
+
+
+@pytest.mark.anyio
+async def test_reconcile_startup_does_not_duplicate_running_runs(settings):
+    sqlite.initialize(settings)
+    AgentService(settings).create(
+        {
+            "schema_version": 2,
+            "id": "oracle",
+            "name": "Oracle",
+            "kind": "oracle",
+            "harbor": {"agent": "oracle"},
+        }
+    )
+    service = ExperimentService(settings)
+    created = service.create(
+        ExperimentCreate(
+            name="Crash recovery",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench"],
+            n_tasks=1,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    experiment_id = created["experiment"]["id"]
+    job_dir = settings.experiments_dir / run_id / "harbor-job"
+    job_dir.mkdir(parents=True, exist_ok=True)
+    now = now_iso()
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
+            ("running", now, experiment_id),
+        )
+        conn.execute(
+            "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, updated_at = ? "
+            "WHERE id = ?",
+            ("running", now, str(job_dir), now, run_id),
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO queue_items("
+            "run_id, queue_position, state, enqueued_at, dequeued_at"
+            ") VALUES (?, ?, ?, ?, ?)",
+            (run_id, 1, "running", now, now),
+        )
+
+    from ornnlab.services.recovery_service import RunRecoveryService
+
+    recovery = RunRecoveryService(settings)
+    counts = recovery.reconcile_startup()
+
+    assert counts["recovered"] + counts["interrupted"] == 1
+    events = service.events.list_after(run_id)
+    reconcile_events = [
+        event for event in events if event.event_type == "experiment.reconcile_decision"
+    ]
+    assert len(reconcile_events) == 1

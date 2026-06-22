@@ -305,7 +305,15 @@ class ExperimentService:
         except Exception as exc:
             await self._mark_run_failed(run, job_dir, exc)
             return
-        self._mark_run_running(run, job_dir, config.job_name, now)
+        if not self._mark_run_running(run, job_dir, config.job_name, now):
+            self.events.append(
+                "run",
+                run["id"],
+                "harbor.job.cancelled",
+                {"source": "cancelled_before_mark_running"},
+                severity="warning",
+            )
+            return
         self.events.append(
             "run",
             run["id"],
@@ -400,18 +408,21 @@ class ExperimentService:
         job_dir: str,
         harbor_job_name: str,
         now: str,
-    ) -> None:
+    ) -> bool:
         with sqlite.connect(self.settings) as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, "
                 "harbor_job_name = ?, updated_at = ? "
-                "WHERE id = ?",
+                "WHERE id = ? AND status NOT IN ('cancelled', 'failed', 'interrupted')",
                 ("running", now, job_dir, harbor_job_name, now, run["id"]),
             )
+            if cursor.rowcount == 0:
+                return False
             conn.execute(
                 "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
                 ("running", now, run["experiment_id"]),
             )
+            return True
 
     async def _mark_run_failed(self, run: dict, job_dir: str, exc: Exception) -> None:
         failure = classify_exception(exc)

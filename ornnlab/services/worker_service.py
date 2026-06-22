@@ -49,7 +49,7 @@ class QueueWorkerService:
         while True:
             state = ExperimentService(self.settings).get(experiment_id)
             statuses = {run["status"] for run in state["runs"]}
-            if statuses and statuses.issubset(TERMINAL_RUN_STATUSES):
+            if not statuses or statuses.issubset(TERMINAL_RUN_STATUSES):
                 return
             await asyncio.sleep(poll_interval_sec)
 
