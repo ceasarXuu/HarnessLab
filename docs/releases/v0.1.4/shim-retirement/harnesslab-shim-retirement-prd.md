@@ -206,13 +206,7 @@ clone/索引成本增加。
 - **AC9**：[docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/shim-retirement/harbor-rebrand-residue-fix-plan.md) Open Decisions 章节中"HarnessLab 兼容 shim 退役时间表"条目改为"已退役 → 参见 harnesslab-shim-retirement-prd.md"。
 - **AC10**：所有改动以最小化提交原则分多个 commit，且 push 到 `origin/main`，工作树 clean。
 
-## 11. Review Checklist And Sign-off Questions
 
-- [ ] 你确认放弃"禁止不可恢复删除"用户规则（已通过 B 选项确认，记入决策日志）。
-- [ ] 你确认本机 / CI / Docker 主机上没有 HarnessLab 残留数据需要保留。
-- [ ] 你确认 `terminal_bench` 集成中如果有非 Rust 内容（Python/Markdown 等），我可以保留这些非 Rust 部分；如果全是 Rust，则整目录删。
-- [ ] 你确认 `coverage-critical.toml` 如果不仅服务 Rust，可以保留（实施时检查后决定）。
-- [ ] 你确认本 PRD 编号为 v0.1.4 的第二个 work item，与 `harbor-rebrand-residue-fix-plan.md` 并列。
 
 ## 12. Clarification Decision Log
 
