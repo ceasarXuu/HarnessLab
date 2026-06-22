@@ -1,0 +1,20 @@
+# GitHub Pages legacy branch deploy still invokes Jekyll for this repository.
+# Keep Pages from rendering source docs and diagnostic artifacts as Liquid.
+exclude:
+  - artifacts/
+  - coe/
+  - docs/
+  - frontend/
+  - integrations/
+  - jobs/
+  - lib/
+  - npm/
+  - ornnlab/
+  - scripts/
+  - target/
+  - tests/
+  - vs_review/
+  - uv.lock
+  - pyproject.toml
+  - package.json
+  - package-lock.json

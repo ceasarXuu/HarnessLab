@@ -22,12 +22,13 @@
   - E-001: GitHub Pages is configured as legacy build from `main:/`.
   - E-002: The failing system workflow invokes Jekyll with `source: .`.
   - E-003: Jekyll fails on Liquid syntax inside a Markdown code sample.
-  - E-004: `.nojekyll` is present after repair to disable Jekyll processing for Pages.
+  - E-004: `.nojekyll` is present at the source root but legacy Pages still invoked Jekyll for the next queued build.
+  - E-005: `_config.yml` excludes source docs and diagnostic artifacts from Jekyll rendering.
 - Ruled out:
   - The repository `CI` workflow is not the source of these emails; recent failures are from `pages-build-deployment`.
 - Fix criteria:
   - A push to `main` includes `.nojekyll`.
-  - GitHub Pages no longer runs Jekyll/Liquid processing for this repository root.
+  - A push to `main` includes `_config.yml` exclusions for source docs and diagnostic artifacts.
   - No new `CI` push workflow is introduced.
 - Current conclusion: The root cause is GitHub Pages legacy Jekyll processing over the repository root, not the project CI workflow.
 - Related hypotheses:
@@ -74,9 +75,10 @@
   - E-002
   - E-003
   - E-004
+  - E-005
 - Conclusion: confirmed
 - Repair design readiness: ready
-- Next step: push `.nojekyll` and verify the next Pages run outcome.
+- Next step: push `_config.yml` exclusions and verify the next Pages run outcome.
 - Blocker:
   - none
 - Close reason:
@@ -141,21 +143,46 @@
 - Interpretation: The direct failure mechanism is Jekyll treating code sample braces as Liquid syntax.
 - Time: 2026-06-23 00:55
 
-## Evidence E-004: Repair adds root `.nojekyll`
+## Evidence E-004: Root `.nojekyll` did not stop legacy Jekyll build
+- Related hypotheses:
+  - H-001
+- Direction: neutral
+- Type: fix-validation
+- Source: `.nojekyll` and `gh run view 27968933528 --log-failed`
+- Prediction or plan link:
+  - H-001 repair expected Pages to stop Jekyll/Liquid processing when `.nojekyll` is present at the source root.
+- Matched signal:
+  - Root `.nojekyll` exists remotely, but the next legacy Pages run still invoked Jekyll and failed while rendering source Markdown.
+- Correlation keys:
+  - path=.nojekyll
+  - run_id=27968933528
+- Raw content:
+  ```text
+  Remote .nojekyll exists at main with size=1.
+  Run actions/jekyll-build-pages@v1
+  source: .
+  Liquid Exception: Liquid syntax error (line 139) in coe/2026-06-23-00-55-pages-jekyll-liquid-failure.md
+  ```
+- Interpretation: `.nojekyll` alone is insufficient for this repository's current legacy Pages behavior, so the repair must prevent Jekyll from rendering source documentation through configuration.
+- Time: 2026-06-23 00:58
+
+## Evidence E-005: Repair excludes source documentation and diagnostics from Jekyll
 - Related hypotheses:
   - H-001
 - Direction: supports
 - Type: fix-validation
-- Source: `.nojekyll`
+- Source: `_config.yml`
 - Prediction or plan link:
-  - H-001 repair expects Pages to stop Jekyll/Liquid processing when `.nojekyll` is present at the source root.
+  - H-001 repair expects Pages to avoid Liquid parsing failures by excluding non-site source trees from Jekyll rendering.
 - Matched signal:
-  - Root `.nojekyll` exists in the Pages source path.
+  - `_config.yml` excludes `docs/` and `coe/` from the GitHub Pages Jekyll source scan.
 - Correlation keys:
-  - path=.nojekyll
+  - path=_config.yml
 - Raw content:
   ```text
-  .nojekyll
+  exclude:
+    - coe/
+    - docs/
   ```
-- Interpretation: The Pages source root now carries the standard marker that disables Jekyll processing for GitHub Pages branch deploys.
-- Time: 2026-06-23 00:55
+- Interpretation: The directories known to contain literal Liquid-like snippets are no longer Jekyll render inputs.
+- Time: 2026-06-23 00:58
