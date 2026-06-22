@@ -40,10 +40,9 @@ async def run_experiment(
         service = ExperimentService(request.app.state.settings)
         service.enqueue(experiment_id)
         worker = request.app.state.worker
+        worker.start()
         if wait:
-            await worker.wait_until_idle()
-        else:
-            worker.start()
+            await worker.wait_experiment_terminal(experiment_id)
         return service.get(experiment_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="experiment not found") from exc
@@ -104,14 +103,62 @@ def list_events(experiment_id: str, request: Request, after: int = 0) -> list[di
     return [event.model_dump() for event in service.list_after(experiment_id, after)]
 
 
+TERMINAL_EXPERIMENT_STATUSES = {
+    "completed",
+    "failed",
+    "partially_failed",
+    "cancelled",
+    "interrupted",
+}
+
+
+def _format_sse(event) -> str:
+    return (
+        f"id: {event.id}\n"
+        f"event: {event.event_type}\n"
+        f"data: {event.model_dump_json()}\n\n"
+    )
+
+
+def _experiment_terminal(state: dict) -> bool:
+    return state["experiment"]["status"] in TERMINAL_EXPERIMENT_STATUSES
+
+
 @router.get("/{experiment_id}/events/stream")
 async def event_stream(experiment_id: str, request: Request, after: int = 0) -> StreamingResponse:
-    service = EventService(request.app.state.settings)
+    settings = request.app.state.settings
 
     async def stream():
-        for event in service.list_after(experiment_id, after):
-            yield f"id: {event.id}\nevent: {event.event_type}\ndata: {event.model_dump_json()}\n\n"
-        await asyncio.sleep(0.01)
+        cursor = after
+        while True:
+            if await request.is_disconnected():
+                break
+
+            exp_service = ExperimentService(settings)
+            try:
+                state = exp_service.get(experiment_id)
+            except KeyError:
+                yield 'event: stream.error\ndata: {"detail":"experiment not found"}\n\n'
+                break
+
+            aggregate_ids = [experiment_id, *[run["id"] for run in state["runs"]]]
+            service = EventService(settings)
+            events = service.list_after_many(aggregate_ids, cursor)
+            for event in events:
+                cursor = event.id
+                yield _format_sse(event)
+
+            if _experiment_terminal(state):
+                await asyncio.sleep(0.1)
+                service = EventService(settings)
+                remaining = service.list_after_many(aggregate_ids, cursor)
+                for event in remaining:
+                    cursor = event.id
+                    yield _format_sse(event)
+                yield f"event: stream.end\ndata: {{\"status\": \"{state['experiment']['status']}\"}}\n\n"
+                break
+
+            await asyncio.sleep(0.5)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 

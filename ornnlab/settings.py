@@ -16,6 +16,7 @@ class Settings:
     home: Path
     host: str = "127.0.0.1"
     port: int = 8765
+    worker_max_concurrent: int = 2
 
     @property
     def db_path(self) -> Path:
@@ -53,7 +54,10 @@ class Settings:
     def from_env(cls) -> Settings:
         ornnlab_home = os.environ.get("ORNNLAB_HOME")
         home = Path(ornnlab_home).expanduser() if ornnlab_home else DEFAULT_HOME.expanduser()
-        return cls(home=home)
+        max_concurrent = int(os.environ.get("ORNNLAB_WORKER_MAX_CONCURRENT", "2"))
+        if max_concurrent < 1:
+            raise ValueError("ORNNLAB_WORKER_MAX_CONCURRENT must be >= 1")
+        return cls(home=home, worker_max_concurrent=max_concurrent)
 
     def ensure_dirs(self) -> None:
         for path in [

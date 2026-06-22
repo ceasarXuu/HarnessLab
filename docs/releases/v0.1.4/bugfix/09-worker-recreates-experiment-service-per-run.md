@@ -76,11 +76,11 @@ async def _run_until_no_queued_runs(self, experiment_id: str | None = None) -> i
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] worker 调度循环不再每轮都创建完整执行 service 只为 dequeue。
-- [ ] 每个 run task 拥有独立执行上下文，避免并行 run 状态串扰。
-- [ ] 文档不再声称总 service 实例数从 N 降为 `1 + max_concurrent`。
-- [ ] 与 BUG-10 的并行执行模型兼容。
-- [ ] 现有 worker/experiment 测试无回归。
+- [x] worker 调度循环不再每轮都创建完整执行 service 只为 dequeue。
+- [x] 每个 run task 拥有独立执行上下文，避免并行 run 状态串扰。
+- [x] 文档不再声称总 service 实例数从 N 降为 `1 + max_concurrent`。
+- [x] 与 BUG-10 的并行执行模型兼容。
+- [x] 现有 worker/experiment 测试无回归。
 
 ## 测试计划
 

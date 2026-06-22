@@ -68,12 +68,12 @@ v0.1.4 可接受的约束是：
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] `_mirror` 使用 JSONL 追加写，不再读取并重写全量文件。
-- [ ] 文档和代码注释不再用 `PIPE_BUF` 作为普通文件 append 的并发安全依据。
-- [ ] DB 仍是 event source of truth；SSE 和 API 查询不依赖 mirror 文件。
-- [ ] 单进程并发追加测试下，JSONL 行完整且可解析。
-- [ ] 1000 条事件 mirror 写入表现为线性增长。
-- [ ] 现有 event service 测试无回归。
+- [x] `_mirror` 使用 JSONL 追加写，不再读取并重写全量文件。
+- [x] 文档和代码注释不再用 `PIPE_BUF` 作为普通文件 append 的并发安全依据。
+- [x] DB 仍是 event source of truth；SSE 和 API 查询不依赖 mirror 文件。
+- [x] 单进程并发追加测试下，JSONL 行完整且可解析。
+- [x] 1000 条事件 mirror 写入表现为线性增长。
+- [x] 现有 event service 测试无回归。
 
 ## 测试计划
 

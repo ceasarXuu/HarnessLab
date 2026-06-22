@@ -134,8 +134,8 @@ class ExperimentService:
         self.events.append("experiment", experiment_id, "experiment.queued", {})
         return {"experiment": self.get(experiment_id)["experiment"], "queue": queued}
 
-    def dequeue_next_run(self) -> dict | None:
-        return self.queue.dequeue_next()
+    def dequeue_next_run(self, experiment_id: str | None = None) -> dict | None:
+        return self.queue.dequeue_next(experiment_id)
 
     async def run_queued_until_idle(self, experiment_id: str | None = None) -> None:
         while True:
@@ -345,14 +345,6 @@ class ExperimentService:
                 return
             await self._mark_run_failed(run, job_dir, exc)
             return
-        if self._is_run_cancelled(run["id"]):
-            self.events.append(
-                "run",
-                run["id"],
-                "harbor.job.cancelled",
-                {"source": "cancelled_during_engine_run"},
-            )
-            return
         report_path = self.reports.write_summary(
             run["id"],
             result["status"],
@@ -362,21 +354,44 @@ class ExperimentService:
         finished = now_iso()
         with sqlite.connect(self.settings) as conn:
             conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, result_path = ?, report_path = ?, "
-                "score = ?, harbor_job_id = ?, updated_at = ? WHERE id = ?",
+                "UPDATE runs SET "
+                "result_path = COALESCE(result_path, ?), "
+                "score = COALESCE(score, ?), "
+                "harbor_job_id = COALESCE(harbor_job_id, ?), "
+                "updated_at = ? "
+                "WHERE id = ?",
                 (
-                    result["status"],
-                    finished,
                     result["result_path"],
-                    report_path,
                     result.get("score"),
                     result.get("harbor_job_id"),
                     finished,
                     run["id"],
                 ),
             )
-        self.queue.finish(run["id"], result["status"])
-        self.events.append("run", run["id"], "harbor.job.completed", result)
+            cursor = conn.execute(
+                "UPDATE runs SET status = ?, "
+                "finished_at = COALESCE(finished_at, ?), "
+                "report_path = COALESCE(report_path, ?), "
+                "updated_at = ? "
+                "WHERE id = ? AND status NOT IN ('cancelled', 'failed', 'interrupted')",
+                (result["status"], finished, report_path, finished, run["id"]),
+            )
+        if cursor.rowcount == 0:
+            self.events.append(
+                "run",
+                run["id"],
+                "harbor.job.completed_but_cancelled",
+                {
+                    "score": result.get("score"),
+                    "status": result["status"],
+                    "result_path": result["result_path"],
+                    "report_path": report_path,
+                },
+                severity="warning",
+            )
+        else:
+            self.queue.finish(run["id"], result["status"])
+            self.events.append("run", run["id"], "harbor.job.completed", result)
 
     def _mark_run_running(
         self,

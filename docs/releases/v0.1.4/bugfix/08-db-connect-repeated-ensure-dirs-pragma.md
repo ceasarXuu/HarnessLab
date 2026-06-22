@@ -72,12 +72,12 @@ BUG-10 引入并行 run 后，SQLite 写事务会串行化。`busy_timeout=5000`
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] `ensure_dirs` 对同一个 `Settings.home` 不再每次连接都重复执行。
-- [ ] `PRAGMA journal_mode = WAL` 从 `connect` 移到 DB 初始化阶段。
-- [ ] `PRAGMA foreign_keys = ON` 每次连接仍正确设置。
-- [ ] `PRAGMA busy_timeout = 5000` 每次连接设置。
-- [ ] 测试覆盖不同临时 home，避免缓存污染。
-- [ ] 现有 storage/experiment/worker 测试无回归。
+- [x] `ensure_dirs` 对同一个 `Settings.home` 不再每次连接都重复执行。
+- [x] `PRAGMA journal_mode = WAL` 从 `connect` 移到 DB 初始化阶段。
+- [x] `PRAGMA foreign_keys = ON` 每次连接仍正确设置。
+- [x] `PRAGMA busy_timeout = 5000` 每次连接设置。
+- [x] 测试覆盖不同临时 home，避免缓存污染。
+- [x] 现有 storage/experiment/worker 测试无回归。
 
 ## 测试计划
 

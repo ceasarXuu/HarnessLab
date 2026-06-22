@@ -6,6 +6,7 @@ from typing import Any
 
 from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
+from ornnlab.services.experiment_utils import derive_experiment_status
 from ornnlab.services.report_service import ReportService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -23,9 +24,10 @@ class RunRecoveryService:
 
     def reconcile_startup(self) -> dict[str, int]:
         running = self._running_runs()
+        orphaned = self._orphaned_queue_items()
         counts = {"recovered": 0, "interrupted": 0}
         experiment_ids: set[str] = set()
-        for run in running:
+        for run in [*running, *orphaned]:
             experiment_ids.add(run["experiment_id"])
             decision = self._reconcile_run(run)
             counts[decision] += 1
@@ -43,6 +45,17 @@ class RunRecoveryService:
             return sqlite.rows(
                 conn,
                 "SELECT * FROM runs WHERE status = 'running' ORDER BY started_at, id",
+            )
+
+    def _orphaned_queue_items(self) -> list[dict]:
+        with sqlite.connect(self.settings) as conn:
+            return sqlite.rows(
+                conn,
+                "SELECT r.* FROM queue_items q JOIN runs r ON r.id = q.run_id "
+                "WHERE q.state = 'running' "
+                "AND r.status NOT IN ('completed', 'failed', 'cancelled', 'interrupted') "
+                "AND r.status != 'running' "
+                "ORDER BY q.dequeued_at, r.id",
             )
 
     def _reconcile_run(self, run: dict) -> str:
@@ -117,7 +130,7 @@ class RunRecoveryService:
                 "SELECT status FROM runs WHERE experiment_id = ?",
                 (experiment_id,),
             )
-            status = _derive_experiment_status([row["status"] for row in rows])
+            status = derive_experiment_status(row["status"] for row in rows)
             conn.execute(
                 "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
                 (status, now_iso(), experiment_id),
@@ -214,20 +227,4 @@ def _score_from_result_payload(result: dict[str, Any]) -> float | None:
     return None
 
 
-def _derive_experiment_status(statuses: list[str]) -> str:
-    unique = set(statuses)
-    if unique == {"completed"}:
-        return "completed"
-    if "completed" in unique and "failed" in unique:
-        return "partially_failed"
-    if "failed" in unique:
-        return "failed"
-    if "cancelled" in unique:
-        return "cancelled"
-    if "interrupted" in unique:
-        return "interrupted"
-    if "running" in unique:
-        return "running"
-    if "queued" in unique:
-        return "queued"
-    return "draft"
+

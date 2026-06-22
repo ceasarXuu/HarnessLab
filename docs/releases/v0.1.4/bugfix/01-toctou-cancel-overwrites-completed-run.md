@@ -162,11 +162,11 @@ else:
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] `engine.run` 成功返回后，即使 DB 已被标记 `cancelled`，`result_path`、`score`、`harbor_job_id` 仍被保留。
-- [ ] 如果 DB 已是 `cancelled`，run 终态不被覆盖为 `completed`。
-- [ ] cancelled-but-completed 场景追加 `harbor.job.completed_but_cancelled` warning 事件，并包含 result/report 路径。
-- [ ] `CancelledError` 仍然正确触发取消或 interrupted 路径。
-- [ ] 覆盖竞态单测，现有 experiment/worker 测试无回归。
+- [x] `engine.run` 成功返回后，即使 DB 已被标记 `cancelled`，`result_path`、`score`、`harbor_job_id` 仍被保留。
+- [x] 如果 DB 已是 `cancelled`，run 终态不被覆盖为 `completed`。
+- [x] cancelled-but-completed 场景追加 `harbor.job.completed_but_cancelled` warning 事件，并包含 result/report 路径。
+- [x] `CancelledError` 仍然正确触发取消或 interrupted 路径。
+- [x] 覆盖竞态单测，现有 experiment/worker 测试无回归。
 
 ## 测试计划
 

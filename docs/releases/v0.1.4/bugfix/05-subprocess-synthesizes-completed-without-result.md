@@ -107,11 +107,11 @@ def _read_or_write_result(path: Path, return_code: int) -> dict[str, Any]:
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] 完成 Harbor 成功路径契约验证，并记录结果。
-- [ ] 若验证通过，exit 0 且缺失 `result.json` 时不再合成 `completed`。
-- [ ] 合成异常结果包含 `failure_class`、`failure_code` 和 warning。
-- [ ] 有 `result.json` 的 exit 0 路径行为不变，读取真实 result。
-- [ ] 覆盖 subprocess smoke/mocked 测试，现有 harbor_subprocess 测试无回归。
+- [x] 完成 Harbor 成功路径契约验证，并记录结果。
+- [x] 若验证通过，exit 0 且缺失 `result.json` 时不再合成 `completed`。
+- [x] 合成异常结果包含 `failure_class`、`failure_code` 和 warning。
+- [x] 有 `result.json` 的 exit 0 路径行为不变，读取真实 result。
+- [x] 覆盖 subprocess smoke/mocked 测试，现有 harbor_subprocess 测试无回归。
 
 ## 测试计划
 

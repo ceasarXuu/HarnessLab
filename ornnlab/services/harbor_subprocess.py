@@ -138,7 +138,14 @@ async def _ignore_cancelled(task: asyncio.Task[str]) -> None:
 def _read_or_write_result(path: Path, return_code: int) -> dict[str, Any]:
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    result = {"status": "completed", "score": None, "subprocess_returncode": return_code}
+    result = {
+        "status": "interrupted",
+        "score": None,
+        "subprocess_returncode": return_code,
+        "failure_class": "harbor_protocol",
+        "failure_code": "missing_result_json_after_success_exit",
+        "warning": "harbor exited 0 but did not produce result.json",
+    }
     atomic_write_text(path, json.dumps(result, indent=2, sort_keys=True))
     return result
 

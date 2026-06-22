@@ -52,18 +52,31 @@ class EventService:
                 "SELECT * FROM experiment_events WHERE aggregate_id = ? AND id > ? ORDER BY id",
                 (aggregate_id, after),
             )
-        return [
-            EventRecord(
-                id=row["id"],
-                aggregate_type=row["aggregate_type"],
-                aggregate_id=row["aggregate_id"],
-                ts=row["ts"],
-                event_type=row["event_type"],
-                severity=row["severity"],
-                payload=json.loads(row["payload_json"]),
+        return [self._record(row) for row in rows]
+
+    def list_after_many(self, aggregate_ids: list[str], after: int = 0) -> list[EventRecord]:
+        if not aggregate_ids:
+            return []
+        placeholders = ",".join("?" for _ in aggregate_ids)
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                f"SELECT * FROM experiment_events "
+                f"WHERE aggregate_id IN ({placeholders}) AND id > ? ORDER BY id",
+                (*aggregate_ids, after),
             )
-            for row in rows
-        ]
+        return [self._record(row) for row in rows]
+
+    def _record(self, row: dict) -> EventRecord:
+        return EventRecord(
+            id=row["id"],
+            aggregate_type=row["aggregate_type"],
+            aggregate_id=row["aggregate_id"],
+            ts=row["ts"],
+            event_type=row["event_type"],
+            severity=row["severity"],
+            payload=json.loads(row["payload_json"]),
+        )
 
     def _mirror(
         self,
@@ -89,5 +102,6 @@ class EventService:
             },
             sort_keys=True,
         )
-        previous = path.read_text(encoding="utf-8") if path.exists() else ""
-        atomic_write_text(Path(path), f"{previous}{line}\n")
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(f"{line}\n")
+            handle.flush()

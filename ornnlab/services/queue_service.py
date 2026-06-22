@@ -60,6 +60,11 @@ class QueueService:
                 "UPDATE queue_items SET state = ?, dequeued_at = ? WHERE run_id = ?",
                 ("running", now, run["id"]),
             )
+            conn.execute(
+                "UPDATE runs SET status = ?, updated_at = ? WHERE id = ?",
+                ("running", now, run["id"]),
+            )
+            run["status"] = "running"
             return run
 
     def finish(self, run_id: str, state: str) -> None:

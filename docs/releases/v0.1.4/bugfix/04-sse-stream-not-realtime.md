@@ -148,12 +148,12 @@ def _experiment_terminal(state: dict) -> bool:
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] SSE 流在 experiment 非 terminal 时保持连接，并持续发送新增事件。
-- [ ] SSE 同时包含 experiment aggregate 和该 experiment 下所有 run aggregate 的事件。
-- [ ] 客户端断开连接后服务器停止轮询。
-- [ ] experiment terminal 后发送剩余事件，再发送 `stream.end` 并关闭连接。
-- [ ] experiment 不存在时返回 `stream.error` 或等价错误语义，不进入无限循环。
-- [ ] 现有 `/events` 非流式 API 保持兼容。
+- [x] SSE 流在 experiment 非 terminal 时保持连接，并持续发送新增事件。
+- [x] SSE 同时包含 experiment aggregate 和该 experiment 下所有 run aggregate 的事件。
+- [x] 客户端断开连接后服务器停止轮询。
+- [x] experiment terminal 后发送剩余事件，再发送 `stream.end` 并关闭连接。
+- [x] experiment 不存在时返回 `stream.error` 或等价错误语义，不进入无限循环。
+- [x] 现有 `/events` 非流式 API 保持兼容。
 
 ## 测试计划
 

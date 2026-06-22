@@ -8,18 +8,24 @@ from ornnlab.settings import Settings
 
 MIGRATIONS_DIR = Path(__file__).with_name("migrations")
 
+_ensured_dirs: set[str] = set()
+
 
 def connect(settings: Settings) -> sqlite3.Connection:
-    settings.ensure_dirs()
+    home_str = str(settings.home)
+    if home_str not in _ensured_dirs:
+        settings.ensure_dirs()
+        _ensured_dirs.add(home_str)
     conn = sqlite3.connect(settings.db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
 def initialize(settings: Settings) -> int:
     with connect(settings) as conn:
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute(
             "CREATE TABLE IF NOT EXISTS schema_migrations("
             "version text primary key, applied_at text not null default CURRENT_TIMESTAMP)"

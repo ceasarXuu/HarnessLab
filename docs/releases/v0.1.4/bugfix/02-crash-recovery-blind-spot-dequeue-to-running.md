@@ -149,12 +149,12 @@ def _orphaned_queue_items(self) -> list[dict]:
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] `dequeue_next` 在同一事务中同时更新 `queue_items.state` 和 `runs.status` 为 `running`。
-- [ ] `_mark_run_running` 对已为 `running` 的 run 保持幂等。
-- [ ] `reconcile_startup` 能发现并修复 `queue_items.state='running'` 但 `runs.status` 非 terminal 且非 running 的孤儿记录。
-- [ ] orphan recovery 的 `counts` 使用 `_reconcile_run` 返回值，不把 interrupted 误计为 recovered。
-- [ ] 模拟 dequeue 后崩溃再重启，run 被正确恢复为 `interrupted` 或 `recovered`。
-- [ ] 现有 queue/recovery/experiment 测试全部通过。
+- [x] `dequeue_next` 在同一事务中同时更新 `queue_items.state` 和 `runs.status` 为 `running`。
+- [x] `_mark_run_running` 对已为 `running` 的 run 保持幂等。
+- [x] `reconcile_startup` 能发现并修复 `queue_items.state='running'` 但 `runs.status` 非 terminal 且非 running 的孤儿记录。
+- [x] orphan recovery 的 `counts` 使用 `_reconcile_run` 返回值，不把 interrupted 误计为 recovered。
+- [x] 模拟 dequeue 后崩溃再重启，run 被正确恢复为 `interrupted` 或 `recovered`。
+- [x] 现有 queue/recovery/experiment 测试全部通过。
 
 ## 测试计划
 

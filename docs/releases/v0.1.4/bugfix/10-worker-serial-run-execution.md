@@ -151,15 +151,15 @@ def dequeue_next_run(self, experiment_id: str | None = None) -> dict | None:
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] worker 支持有界并行执行 run。
-- [ ] `worker_max_concurrent` 默认值为 2，可通过 `ORNNLAB_WORKER_MAX_CONCURRENT` 配置。
-- [ ] `worker_max_concurrent < 1` 会被拒绝并给出清晰错误。
-- [ ] 并行 task 完成后调用 `task.result()` 或等价逻辑消费异常。
-- [ ] `cancel_run` 仍能取消 active run task。
-- [ ] `ExperimentService.dequeue_next_run` 支持可选 `experiment_id` 参数。
-- [ ] SQLite 连接设置 `busy_timeout=5000`。
-- [ ] 并行执行时 run 状态、事件和 report 不串扰。
-- [ ] 现有 worker/experiment/storage 测试无回归。
+- [x] worker 支持有界并行执行 run。
+- [x] `worker_max_concurrent` 默认值为 2，可通过 `ORNNLAB_WORKER_MAX_CONCURRENT` 配置。
+- [x] `worker_max_concurrent < 1` 会被拒绝并给出清晰错误。
+- [x] 并行 task 完成后调用 `task.result()` 或等价逻辑消费异常。
+- [x] `cancel_run` 仍能取消 active run task。
+- [x] `ExperimentService.dequeue_next_run` 支持可选 `experiment_id` 参数。
+- [x] SQLite 连接设置 `busy_timeout=5000`。
+- [x] 并行执行时 run 状态、事件和 report 不串扰。
+- [x] 现有 worker/experiment/storage 测试无回归。
 
 ## 测试计划
 

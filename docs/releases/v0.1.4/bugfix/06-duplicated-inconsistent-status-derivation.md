@@ -62,11 +62,11 @@ status = derive_experiment_status(row["status"] for row in rows)
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] recovery service 不再维护第二套 experiment 状态派生逻辑。
-- [ ] recovery service 统一调用 `derive_experiment_status`。
-- [ ] `derive_experiment_status` 覆盖 draft、queued、running、completed、failed、cancelled、interrupted、partially_failed 的状态矩阵测试。
-- [ ] BUG-02、BUG-03、BUG-04 可复用同一状态语义。
-- [ ] 现有 recovery/experiment 测试全部通过。
+- [x] recovery service 不再维护第二套 experiment 状态派生逻辑。
+- [x] recovery service 统一调用 `derive_experiment_status`。
+- [x] `derive_experiment_status` 覆盖 draft、queued、running、completed、failed、cancelled、interrupted、partially_failed 的状态矩阵测试。
+- [x] BUG-02、BUG-03、BUG-04 可复用同一状态语义。
+- [x] 现有 recovery/experiment 测试全部通过。
 
 ## 测试计划
 

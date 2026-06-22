@@ -41,6 +41,6 @@ def derive_experiment_status(statuses: Iterable[str]) -> str:
         return "interrupted"
     if "running" in unique:
         return "running"
-    if "draft" in unique:
-        return "draft"
-    return "queued"
+    if "queued" in unique:
+        return "queued"
+    return "draft"

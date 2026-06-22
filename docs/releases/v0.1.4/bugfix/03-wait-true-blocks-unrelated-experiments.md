@@ -132,11 +132,11 @@ v0.1.4 非目标：不新增公开 API 参数，只修正当前 wait 语义。
 
 ## Acceptance Criteria（目标，未完成）
 
-- [ ] `run?wait=true` 不再等待无关 experiment 的 run 完成。
-- [ ] `wait=true` 路径会启动后台 worker，并等待当前 experiment 的 run 全部 terminal。
-- [ ] `wait=false` 行为保持不变：enqueue 后立即返回并启动后台 worker。
-- [ ] 如果后台 worker 已在处理全局队列，当前 experiment terminal 后 `wait=true` 可返回，不必等 worker 全局 idle。
-- [ ] 现有 experiment API 和 worker 测试无回归。
+- [x] `run?wait=true` 不再等待无关 experiment 的 run 完成。
+- [x] `wait=true` 路径会启动后台 worker，并等待当前 experiment 的 run 全部 terminal。
+- [x] `wait=false` 行为保持不变：enqueue 后立即返回并启动后台 worker。
+- [x] 如果后台 worker 已在处理全局队列，当前 experiment terminal 后 `wait=true` 可返回，不必等 worker 全局 idle。
+- [x] 现有 experiment API 和 worker 测试无回归。
 
 ## 测试计划
 
