@@ -4,9 +4,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  # Auto CI disabled per user request; only manual dispatch remains.
+  # pull_request:
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       real_harbor_smoke:
