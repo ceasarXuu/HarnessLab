@@ -1,0 +1,265 @@
+# Subagent VS Review: v0.1.4 web-connectivity 接入方案
+
+- Created: 2026-06-23T00:00:00+08:00
+- Updated: 2026-06-23T00:00:00+08:00
+- Report schema: adversarial-v1
+- Task: 评审 `docs/releases/v0.1.4/web-connectivity/` 中的前后端调通方案（README + 01..05 五份子文档）
+- Report path: `vs_review/2026-06-23-web-connectivity-plan-review.md`
+- Review mode: **degraded — fresh internal subagent mechanism unavailable in current runtime**
+- Source session policy: 见下方 "Reviewer Launch Records"，本轮采用 main-agent self-adversarial pass，按 skill 协议如实标注为降级
+- Status: blocked (degraded review — awaiting user decision)
+
+## Round 1: 接入方案的对抗性评审（降级）
+
+### Review Input
+
+#### Objective
+
+把 v0.1.4 的前端（Vue 3 控制台）与已实现的 FastAPI 后端真正调通，使界面显示真实数据，且具备最小的 loading/error/empty 体验与回归测试。
+
+#### Review Target
+
+工程修复立项计划（设计 + 计划 + 验收），共 6 份文档：
+
+- [docs/releases/v0.1.4/web-connectivity/README.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/README.md)
+- [01-vite-dev-proxy-missing.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/01-vite-dev-proxy-missing.md)
+- [02-views-not-consuming-api.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/02-views-not-consuming-api.md)
+- [03-contract-gap-vs-backend.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/03-contract-gap-vs-backend.md)
+- [04-loading-error-empty-states.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/04-loading-error-empty-states.md)
+- [05-integration-test-gap.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/05-integration-test-gap.md)
+
+#### Target Locations
+
+- 前端：[frontend/vite.config.ts](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/vite.config.ts)、[frontend/src/api/client.ts](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/api/client.ts)、[frontend/src/types/console.ts](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/types/console.ts)、`frontend/src/views/*.vue`、[frontend/src/App.vue](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/App.vue)、[frontend/src/data/consoleSnapshot.ts](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/data/consoleSnapshot.ts)
+- 后端：[ornnlab/app.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/app.py)、`ornnlab/api/*.py`、[ornnlab/settings.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/settings.py)、[ornnlab/cli.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/cli.py)
+- 脚手架：[scripts/test-after-change-web.sh](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/scripts/test-after-change-web.sh)、[frontend/playwright.config.ts](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/playwright.config.ts)
+
+#### Change Introduction
+
+立项 5 个修复子项：dev/preview proxy、View 切换到 `ornnLabApi`、契约对齐 + mapper 层、统一 async-state、API/View 集成测试与 CI 编排。Phase 顺序：0 契约梳理 → 1 proxy → 2（03→02+04）→ 3 测试基建。SSE 实时接入与生产部署形态显式延后。
+
+#### Risk Focus
+
+- 默认端口与启动命令是否与后端真实配置一致
+- mapper / async-state / `StatePanel` 是否过度工程（针对 4 个静态页面）
+- "Views 切到真实数据" 与 "loading/error/empty" 同 PR 的耦合是否会让 PR 过大不可 review
+- 契约对齐策略：UI 模型 vs 后端 schema 演化时由谁负责更新
+- 测试基建是否会受 `consoleSnapshot.ts` 迁移路径影响
+
+#### User-Perspective Review Focus
+
+- 开发者本地启动顺序文档是否充分（FastAPI 必须先起？端口冲突？）
+- 错误态文案是否会泄露技术栈/SQL/堆栈
+- 空态文案能否引导用户到正确动作（"去创建 experiment"）
+
+#### Implementation Completeness Focus
+
+- BUG-WEB-01 的 proxy `target` 默认值是否与代码中真实端口一致
+- BUG-WEB-03 中"补齐 agents/system/benchmarks 客户端"是否枚举了**所有**已有 router（`runs / templates / agents/validate / agents/{id}/compile`...）
+- BUG-WEB-04 中 `ApiError`（已存在于 client.ts）与新引入的 `AsyncState.error` 是否会出现职责重叠
+- BUG-WEB-05 中是否充分覆盖 SSE 的"显式不在范围"边界
+
+#### Target Benefit Focus
+
+文档宣称"调通"，但没有定义"调通"的可观测目标（请求成功率？首屏耗时？错误覆盖率？）。这是 benefit warning。
+
+#### Assumptions To Attack
+
+- 假设后端默认监听 `http://127.0.0.1:8000` —— **可疑**：[ornnlab/cli.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/cli.py) 默认 `--port 8765`、[ornnlab/settings.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/settings.py) 默认 `port: int = 8765`
+- 假设 Vite dev server 端口 4173 与 Playwright preview 4174 互不干扰 —— [frontend/package.json](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/package.json) 的 e2e 脚本用 4174，但 dev/preview 均为 4173，需澄清
+- 假设 mapper 层一定值得引入（4 个页面是否构成"分层成本必要"）
+- 假设 `consoleSnapshot.ts` 可以"作为 fixture 保留"——但当前类型是 UI 模型而非后端 schema，作 fixture 价值有限
+
+#### Adversarial Lenses
+
+architecture, implementation-completeness, maintenance, testing, user-perspective (developer onboarding)
+
+#### Verification Status
+
+- 文档检查：本人直接读了所有 6 份 markdown、`vite.config.ts`、`api/client.ts`、`settings.py`、`cli.py`、所有 router 文件。
+- 静态分析：grep 确认 `@/api` 零引用。
+- 未执行：未实际跑 `npm run dev` 或 `npm run e2e`；未启动 FastAPI 验证 proxy 行为。
+
+#### Reviewer Instructions
+
+不适用（见下方 launch record，无 fresh subagent）。
+
+### Reviewer Timeout Policy
+
+| Complexity | Initial Wait | Extension | Max Attempts Per Role | Blocking Closure Behavior |
+|---|---:|---:|---:|---|
+| normal | n/a (degraded) | n/a | n/a | cannot pass if review is unavailable; user decision required |
+
+### Reviewer Selection
+
+| Reviewer | Reason Selected | Risk Area |
+|---|---|---|
+| architecture-adversary（**未实际启动**） | 计划文档同时涉及分层（mapper / AsyncState）、契约演化与可执行性，架构视角最能挑战是否过度工程或漏项 | 架构边界 + 实现完备性 + 可执行性 |
+
+### Reviewer Launch Records
+
+| Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
+|---|---|---|---|---|---|---|---|
+| architecture-adversary | **unavailable** — current Trae runtime exposes no fresh internal subagent / Task tool; only `Skill` invocation is available, which does not isolate context | n/a | n/a | n/a | Round 1 Review Input (intended) | n/a | n/a |
+
+按 skill 协议 #11：runtime 不支持 fresh internal subagent 时不得伪造独立评审。本轮以 **main-agent self-adversarial pass** 给出诚实的降级评审视图，结论仅供参考，不能等同于独立评审。
+
+### Reviewer Timeout Records
+
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---|---:|---|---:|---|---|---|
+| self-pass-1 | architecture-adversary（degraded） | 1 | n/a | 0 | blocked_due_to_review_unavailable | runtime 无 fresh subagent 机制 | user decision required |
+
+### User Decision After Failed Review
+
+- 必须由用户决定：retry（等待 runtime 支持 / 让我用其他可用 reviewer 工具） / narrow scope / change reviewer type（如调用外部 CLI 评审） / accept risk（接受仅 self-pass 结论） / blocked
+- User-visible reason: Trae 内置 agent 没有 fresh internal subagent；可用的 `Skill` 只能加载 prompt，不隔离 main-agent 上下文，按协议不算独立评审。
+
+### Reviewer Outputs
+
+#### self-pass-1 （main-agent self-adversarial pass，**不构成独立评审**）
+
+##### Summary
+
+按 architecture-adversary 视角对方案做自检，发现 **2 个 blocking 事实性错误** 与 **5 个 non-blocking 风险**。最重的问题是 BUG-WEB-01 默认 API target 与实际后端端口不一致，会让"按文档照做"的 dev 联调直接失败；其次是 BUG-WEB-03 没有枚举 runs / templates / agents 子端点，可能导致"客户端补齐"工作再次留半。
+
+##### Blocking Findings
+
+- F1: BUG-WEB-01 把 proxy target 默认写成 `http://127.0.0.1:8000`，但后端代码默认端口是 `8765`
+  - Broken assumption: 后端默认端口 = 8000
+  - Failure scenario: 工程师按文档配置后，`/api` proxy 指向 8000，FastAPI 实际监听 8765；所有请求返回 ECONNREFUSED，BUG-WEB-02/04/05 的所有验收都无法通过
+  - Trigger condition: 任何按文档默认值进行的首次联调
+  - Impact: Phase 1 立即失败，连带 Phase 2/3 阻塞；让此修复计划本身丧失"调通"目标
+  - Proof needed: 修改文档默认值为 `http://127.0.0.1:8765`，并显式引用 [ornnlab/cli.py#L24](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/cli.py#L24) 与 [ornnlab/settings.py#L18-L19](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/settings.py#L18-L19) 作为来源；或把端口变量统一从环境变量 `ORNNLAB_PORT` 读取
+
+- F2: BUG-WEB-03 "补齐缺失访问器" 不完备，遗漏了 runs / templates / agents 的细分操作
+  - Broken assumption: 现有 `ornnLabApi` 只缺 agents/system/benchmarks
+  - Failure scenario: 文档列出的需要补齐项有 agents/system/benchmarks，但 [ornnlab/api/agents.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/agents.py) 还有 `POST /api/agents`（create）、`PUT /{id}`（update）、`DELETE /{id}`（soft delete）、`POST /validate`、`POST /{id}/compile`；[ornnlab/api/runs.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/runs.py) 还有 `GET /{id}/events`；当前 `ornnLabApi` 的 `templates()` 也只覆盖 list/create，但 [ornnlab/api/templates.py] 可能还有 update/delete（未一一核对）。BUG-WEB-02 切 View 时若 Agents View 需要展示 + 操作 agents，会再次发现客户端缺方法
+  - Trigger condition: View 进入到 Agents 增删改流程
+  - Impact: 计划再度出现"补齐又遗漏"的循环，违背立项目的
+  - Proof needed: 在 BUG-WEB-03 增加一张完整端点清单表，逐一列出 method + path + 客户端方法名 + 已覆盖/待补齐状态；以 router 文件为契约源
+
+##### Non-blocking Risks
+
+- R1: BUG-WEB-02 与 BUG-WEB-04 强绑同 PR，可能让 PR 过大、不可 review
+  - Broken assumption: "同 PR 提交" 一定优于分两步落地
+  - Failure scenario: 一个 PR 改 4 个 view + AsyncState 原语 + StatePanel + fixture 迁移，diff 行数大，回归面广
+  - Trigger condition: 实际执行时
+  - Impact: review 时间长、回滚成本高
+  - Proof needed: 改为先合并 04（仅引入 AsyncState + StatePanel，不动 view），再用一个 view 单独切换作为示范 PR，再批量推进余下 view
+
+- R2: AsyncState 与现有 `ApiError` 职责重叠
+  - Broken assumption: 需要新建一个 `AsyncState` discriminated union
+  - Failure scenario: `client.ts` 已经定义了 `ApiError`，加上 `AsyncState.error` 后会有两层错误抽象；mapper 层抛错 vs fetch 抛错的归一化路径不清晰
+  - Trigger condition: mapper 抛业务错误时
+  - Impact: 维护成本上升、错误处理路径分叉
+  - Proof needed: 明确"`ApiError` 只表网络/HTTP 层；mapper 抛 `MapperError` 或直接复用 `ApiError`；UI 层只看 `AsyncState`" 的边界
+
+- R3: mapper 层对 4 个静态页面是否过度工程
+  - Broken assumption: 必须引入 mapper 才能解耦
+  - Failure scenario: 当前 view 实际只渲染少量字段，mapper 层多写一份 viewmodel 类型，长期可能再被 inline
+  - Trigger condition: view 字段需求与后端 schema 接近时
+  - Impact: 增加冗余文件，违背"最小化"
+  - Proof needed: 给出每个 view 真实使用的字段清单；如果 ≤ 5 个字段且语义对齐，允许直接消费 `ornnLabApi` 类型而不引入 mapper；mapper 仅对 KPI 派生这种"多对一聚合"使用
+
+- R4: BUG-WEB-05 把 SSE 测试推迟，但 BUG-WEB-04 / BUG-WEB-02 没有显式声明"本轮不测 SSE"
+  - Broken assumption: SSE 不在本立项范围已经写在 README，子文档读者会自然继承
+  - Failure scenario: 实施 02/04 时被诱导临时加 EventSource 接入
+  - Trigger condition: 在 02/04 PR 中触手可及看到 SSE 端点
+  - Impact: 范围蔓延、与 bugfix/04 重复劳动
+  - Proof needed: 在 02 和 04 的"不在范围"小节里显式提一句"SSE 实时事件等待 bugfix/04"
+
+- R5: "调通"缺乏可观测指标（benefit warning）
+  - Broken assumption: 验收里有"显示真实数据"已经足够
+  - Failure scenario: 实施后没有量化目标，难以判断"再调一调还是收尾"
+  - Trigger condition: 评审 PR 时
+  - Impact: 推进节奏不清晰
+  - Proof needed: 在 README "验收" 补一条"`scripts/test-after-change-web.sh` 退出码 0；e2e smoke 中至少 1 个真实 API 请求返回 2xx"
+
+##### User-Perspective Checks
+
+- Usability：风险 → 见 R1（PR 过大不可 review）
+- Ease of use：风险 → 见 F1（默认端口错，按文档照做无法成功）
+- Ease of understanding：通过（README 结构清晰、phase 图直观）
+
+##### Implementation Completeness Checks
+
+| Plan Item | Expected Behavior | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status | Finding Link |
+|---|---|---|---|---|---|---|---|---|
+| Vite proxy 默认 target | dev/preview `/api` 命中后端 | `frontend/vite.config.ts` (missing) | n/a | missing | missing | none | not-started | F1 |
+| 客户端补齐 agents/system/benchmarks | `ornnLabApi.*` 暴露完整端点 | `frontend/src/api/client.ts`（待改） | n/a | missing | missing | none | partial (枚举不全) | F2 |
+| View 切到真实 API | 4 个 view 用 `ornnLabApi` | `frontend/src/views/*.vue`（待改） | n/a | missing | missing | snapshot blocks completion | not-started | n/a (计划文档完整) |
+| mapper 层 | viewmodel 派生 | `frontend/src/api/mappers/`（待建） | n/a | missing | missing | none | not-started | R3 (是否需要) |
+| AsyncState + StatePanel | 三态 UI | `frontend/src/utils/asyncState.ts` + `frontend/src/components/StatePanel.vue`（待建） | n/a | missing | missing | none | not-started | R2 |
+| 集成测试 + 脚本编排 | typecheck/lint/vitest/e2e 串起 | `scripts/test-after-change-web.sh`（待改） | n/a | missing | missing | none | not-started | n/a |
+
+##### Target Benefit Checks
+
+| Claimed Benefit | Baseline | Target | Measurement Method | Comparison Evidence | Result | Regression / Side Effect | Status | Finding Link |
+|---|---|---|---|---|---|---|---|---|
+| 前端可见真实后端数据 | 当前 0%（全 snapshot） | 4/4 view 渲染真实数据 | 浏览器 Network + e2e 断言 | missing | unmeasured | UI 在后端不可用时可能空白（被 BUG-WEB-04 兜底） | unmeasured | R5 |
+| 错误态不再裸露异常 | 当前无错误处理 | 任一接口 5xx → UI 显示用户级文案 | 手动 smoke + 单测 | missing | unmeasured | 错误文案泄露 SQL/栈的反向风险 | unmeasured | R5 |
+| dev 联调一行命令可达 | 当前缺 proxy | `npm run dev` 即可联调 | 手动 | missing | unmeasured | 端口冲突 | unmeasured | F1 |
+
+##### Required Fixes
+
+- 修正 BUG-WEB-01 默认 target 端口为 8765 并引用 settings/cli 源码（对应 F1）
+- 在 BUG-WEB-03 增加端点清单表，覆盖 runs/events、templates 全集、agents 增删改与 compile/validate（对应 F2）
+- 在 BUG-WEB-04 显式定义 `ApiError` 与 `AsyncState.error` 的归一化边界（对应 R2）
+
+##### Missing Tests
+
+- 没有为 proxy 配置准备 smoke：建议在 e2e 中加一条"GET `/api/system/status` 返回 200"断言（对应 R5）
+
+##### Missing Logs / Observability
+
+- 验收里没有要求前端发出统一的 `console.error` 或 Sentry-like 钩子；本立项可不引入第三方，但应记录"未配置前端 telemetry 是已知缺口"
+
+##### Evidence
+
+- [ornnlab/cli.py#L24](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/cli.py#L24) — `web.add_argument("--port", type=int, default=8765)`
+- [ornnlab/settings.py#L18-L19](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/settings.py#L18-L19) — `port: int = 8765`
+- [ornnlab/api/agents.py#L11-L58](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/agents.py#L11-L58) — 列出 list/create/get/compile/validate/update/delete 全集
+- [ornnlab/api/runs.py#L29-L31](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/runs.py#L29-L31) — `GET /runs/{id}/events` 未在 `ornnLabApi` 中
+- [frontend/src/api/client.ts#L134-L172](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/api/client.ts#L134-L172) — 当前 `ornnLabApi` 仅覆盖部分端点
+- [frontend/vite.config.ts#L1-L22](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/vite.config.ts#L1-L22) — 无 proxy
+- [docs/releases/v0.1.4/web-connectivity/01-vite-dev-proxy-missing.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/docs/releases/v0.1.4/web-connectivity/01-vite-dev-proxy-missing.md) — 文档示例 `'http://127.0.0.1:8000'`
+
+### Main Agent Response
+
+| Reviewer | Finding | Broken Assumption / Failure Scenario | Severity | Decision | Evidence / Reason | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|
+| self-pass-1 | F1: proxy 默认端口错 | 后端默认 8765，文档写 8000，导致首次联调失败 | blocking | accept | [cli.py#L24](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/cli.py#L24) | 待用户决策评审路径后修订 BUG-WEB-01 默认值 + 引用源码 | 触发对修订后文档的 closure review |
+| self-pass-1 | F2: 客户端补齐枚举不全 | 漏 runs/events、agents 增删改/compile/validate、templates update/delete | blocking | accept | [agents.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/agents.py)、[runs.py](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/ornnlab/api/runs.py) | 修订 BUG-WEB-03 增加完整端点清单表 | closure review |
+| self-pass-1 | R1: 02+04 同 PR 过大 | 一次提交改动面太广 | major | accept | 经验判断 | 修订 02/04，允许"先 04 原语 + 1 个 view 示范"分两步 | 在 README/02/04 标注 |
+| self-pass-1 | R2: ApiError 与 AsyncState.error 边界 | 抽象重叠 | major | accept | [client.ts#L1-L10](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/frontend/src/api/client.ts#L1-L10) | 在 BUG-WEB-04 增"错误抽象边界"小节 | n/a |
+| self-pass-1 | R3: mapper 层过度 | 4 个 view 不一定需要 mapper | major | accept (limited) | 当前 view 字段较少 | 在 BUG-WEB-03 改为"原则上不引入 mapper；仅在多对一聚合（KPI）时新增" | n/a |
+| self-pass-1 | R4: SSE 边界 | 范围蔓延风险 | minor | accept | README 已说，但 02/04 没复述 | 在 02/04 各加一句"SSE 见 bugfix/04" | n/a |
+| self-pass-1 | R5: benefit 量化缺失 | 调通缺可观测目标 | target-benefit warning | accept | README "验收" 缺指标 | 在 README "验收" 增加"e2e smoke 含 ≥1 个真实 API 2xx 断言；脚本退出码 0" | n/a |
+
+### Closure Status
+
+- Blocking findings found: yes（F1、F2）
+- Accepted blocking findings fixed: no（等待用户对评审降级的决策后再统一改文档）
+- Blocking re-review completed: no
+- Blocking re-review passed: n/a
+- Blocking re-review round links: n/a
+- Blocking re-review launch records: n/a
+- Rejected findings backed by evidence: n/a
+- Deferred findings documented: n/a
+- Implementation completeness gaps resolved or accepted by user: no
+- Target benefit warnings recorded: yes (R5)
+- Blocked reason: 1) fresh internal subagent 不可用；2) F1/F2 是 self-pass 发现的事实性缺陷，仍需用户确认是否信任降级评审结论
+- Allowed to proceed: no（按 skill 协议）
+
+## Final Conclusion
+
+本轮评审为 **降级（degraded）**，因为 Trae 当前 runtime 不提供 fresh internal subagent 机制。按 skill 规则不得据此声明"通过独立评审"。
+
+self-pass 已发现 2 个 blocking 事实性错误（F1 默认端口、F2 客户端枚举不全）与 5 个非阻塞风险。这些发现独立于评审机制都成立，建议先按 main-agent response 中的 Action Taken 修订文档；评审本身需要用户决策：
+
+- (A) 接受 self-pass 结论并按修订意见更新文档
+- (B) 让我尝试用外部 CLI 评审（agent-vs-censorship skill / claude-ds-pro 等）执行真正的独立评审
+- (C) 接受降级风险，按当前方案推进实施
+- (D) 暂缓
+
