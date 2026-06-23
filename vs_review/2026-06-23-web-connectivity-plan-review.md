@@ -5,9 +5,11 @@
 - Report schema: adversarial-v1
 - Task: 评审 `docs/releases/v0.1.4/web-connectivity/` 中的前后端调通方案（README + 01..05 五份子文档）
 - Report path: `vs_review/2026-06-23-web-connectivity-plan-review.md`
-- Review mode: **degraded — fresh internal subagent mechanism unavailable in current runtime**
-- Source session policy: 见下方 "Reviewer Launch Records"，本轮采用 main-agent self-adversarial pass，按 skill 协议如实标注为降级
-- Status: blocked (degraded review — awaiting user decision)
+- Review mode: Round 1 = main-agent self-adversarial pass (degraded);
+  Round 2 = external CLI independent review via `claude-ds-pro` (per
+  agent-vs-censorship skill, user-approved replacement path)
+- Source session policy: Round 1 不构成独立评审；Round 2 由用户明确选择"调用外部 CLI 独立评审"后启用
+- Status: blocked — 4 blocking findings accepted, awaiting documentation fixes + closure review
 
 ## Round 1: 接入方案的对抗性评审（降级）
 
@@ -254,12 +256,133 @@ architecture, implementation-completeness, maintenance, testing, user-perspectiv
 
 ## Final Conclusion
 
-本轮评审为 **降级（degraded）**，因为 Trae 当前 runtime 不提供 fresh internal subagent 机制。按 skill 规则不得据此声明"通过独立评审"。
+Round 1 = degraded self-pass；Round 2 = `claude-ds-pro` 独立评审已完成，见下方 Round 2 详细记录。两轮合并共 **4 个 blocking** + **10 个 non-blocking**，全部由 main agent 给出 `accept` 决定，**未实施前评审尚未 close**。需要在更新 6 份文档后做一次 closure review。
 
-self-pass 已发现 2 个 blocking 事实性错误（F1 默认端口、F2 客户端枚举不全）与 5 个非阻塞风险。这些发现独立于评审机制都成立，建议先按 main-agent response 中的 Action Taken 修订文档；评审本身需要用户决策：
+---
 
-- (A) 接受 self-pass 结论并按修订意见更新文档
-- (B) 让我尝试用外部 CLI 评审（agent-vs-censorship skill / claude-ds-pro 等）执行真正的独立评审
-- (C) 接受降级风险，按当前方案推进实施
-- (D) 暂缓
+## Round 2: External CLI independent review (claude-ds-pro)
+
+### Review Input
+
+与 Round 1 完全相同的 review packet，但通过 stdin 传给独立的 `claude-ds-pro` CLI 进程，不共享本会话上下文。
+
+完整 prompt 保存在 [.codex_tmp/claude-reviews/prompt.txt](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/.codex_tmp/claude-reviews/prompt.txt)，输出保存在 [.codex_tmp/claude-reviews/2026-06-23-web-connectivity-external-review.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/.codex_tmp/claude-reviews/2026-06-23-web-connectivity-external-review.md)。
+
+### Reviewer Timeout Policy
+
+| Complexity | Initial Wait | Extension | Max Attempts Per Role | Blocking Closure Behavior |
+|---|---:|---:|---:|---|
+| normal | 8 min | none used | 1 | cannot pass while blocking findings unresolved |
+
+### Reviewer Selection
+
+| Reviewer | Reason Selected | Risk Area |
+|---|---|---|
+| external-architecture-adversary (claude-ds-pro) | 用户明确选择「调用外部 CLI 独立评审」；独立进程、独立 LLM、独立上下文，能挑战 self-pass 可能继承的盲点 | 架构边界 + 实现完备性 + 契约对齐 |
+
+### Reviewer Launch Records
+
+| Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
+|---|---|---|---|---|---|---|---|
+| external-architecture-adversary | `claude-ds-pro -p --permission-mode dontAsk --max-budget-usd 5.00`，通过 stdin 传 prompt | command_id `8512ac84-c09b-4e8b-8f3a-a93a9f537b02`；claude session id `0f542f0a-b91b-47e3-8b34-3496fac0ef61` | `.codex_tmp/claude-reviews/run.log`（stdout 末尾 `REVIEW_WRITTEN:` 行） | fork_context=false（独立 CLI 进程） | prompt.txt 完整内容 | main-agent 会话历史、推理、self-pass 结论（在 prompt 中明确写明"不要被它绑架，鼓励独立得出可能更严厉的结论"） | yes（指令"只读，禁止修改任何源码或文档"） |
+
+### Reviewer Timeout Records
+
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---|---:|---|---:|---|---|---|
+| external-1 | external-architecture-adversary | 1 | 0f542f0a-... | ~3 min | completed | review written to disk | completed |
+
+### Reviewer Outputs
+
+#### external-1
+
+完整输出见 [.codex_tmp/claude-reviews/2026-06-23-web-connectivity-external-review.md](file:///Volumes/XU-1TB-NPM/projects/HarnessLab/.codex_tmp/claude-reviews/2026-06-23-web-connectivity-external-review.md)。以下是按 skill 模板的关键提取。
+
+##### Summary
+
+发现 **4 个 blocking** + **10 个 non-blocking**。Verdict: `blocked`。同意 self-pass 的 F1/F2/R1/R2/R4/R5，新增 F3、F4 两个 blocking 与 R6-R10 五个 non-blocking。对 self-pass 的 R3（mapper 过度）持部分不同意意见。
+
+##### Blocking Findings
+
+- **F1** (与 self-pass F1 一致)：BUG-WEB-01 proxy default target `8000` vs 后端真实 `8765`
+  - Evidence: `ornnlab/cli.py:24`、`ornnlab/settings.py:18`、`01-vite-dev-proxy-missing.md:54`
+- **F2** (扩展 self-pass F2)：BUG-WEB-03 端点枚举遗漏 **11 个**：`system.dockerOrphans`、`agents.create/validate/update/delete`、`experiments.create/delete/listEvents/listRuns`、`runs.listEvents`、`templates.delete`；后端 31 端点对照 ornnLabApi 13 已覆盖 + 计划补 6 个，仍漏 11
+  - Evidence: 7 个 router 文件逐行列出（见外部报告内表格）
+- **F3 (NEW)**：UI viewmodel 字段在后端**无数据源**
+  - `ExperimentRecord.owner` / `target` 后端无；`AgentRecord.health` 三态枚举、`queue`、`lastHeartbeat` 后端无；`LeaderboardSeed.successRate / experiments` 后端无；`ExperimentState` 仅 3 态但后端 7+ 态
+  - Trigger: mapper 实现时逐字段对齐 → 字段无输入 → UI 空白或 undefined
+  - Evidence: `frontend/src/types/console.ts:3,20-45`、`ornnlab/models/experiment.py:25-33`、`frontend/src/api/client.ts:51-61`
+- **F4 (NEW)**：`apiClient.post` 无法传递 query param
+  - `system.doctor(logs=true)` 实际是 `POST /api/system/doctor?logs=true`（FastAPI 把原始类型默认参数解析为 query）；当前 `post()` 把参数当 body
+  - Evidence: `frontend/src/api/client.ts:122-129`、`ornnlab/api/system.py:15-17`、`ornnlab/api/experiments.py:100-101`
+
+##### Non-blocking Risks
+
+- R1 (与 self-pass 一致)：02+04 同 PR 过大；明确建议 04 基础设施独立 PR 先合
+- R2 (扩展 self-pass)：`ApiError` vs `AsyncState.error` 边界；建议统一为 `ApiError`，移除 `| Error` 回退
+- R3 (与 self-pass **不同意**)：mapper 层判据更细——枚举映射/字段重命名仍应保留 mapper；仅 1:1 复制可消除
+- R4 (与 self-pass 一致)：SSE 边界需在 BUG-WEB-03 显式声明 deferred
+- R5 (与 self-pass 一致)：benefit 量化；补充覆盖率/退出码/typecheck/真实 API 2xx 断言
+- **R6 (NEW)**：`vite.config.ts` preview port 4173 与 e2e CLI 覆写 4174 的关系未在文档说明
+- **R7 (NEW)**：`ExperimentRun` 缺 `job_dir` 字段（后端 `RunView` 有）
+- **R8 (NEW)**：BUG-WEB-01 把"后端启动文档"defer 出范围，但 AC 又依赖后端已启动，造成首次开发体验断裂
+- **R9 (NEW maintenance warning)**：无 OpenAPI 自动类型生成方案，长期 schema 演化漂移风险
+- **R10 (NEW)**：BUG-WEB-05 测试断言深度可能退化为占位测试；缺"特定输入→特定 DOM 内容"的深度断言要求
+
+##### Disagreements With Self-Pass
+
+外部 reviewer 对 self-pass 在 R3（mapper 过度工程）的结论持**部分不同意**：完全去除 mapper 会让 View 中散落 inline 转换，建议保留枚举映射 / 字段重命名场景下的 mapper，仅消除 1:1 复制。
+
+外部 reviewer 还指出 self-pass 把 degraded 评审视为"不可据此通过"的论断**说服力不足**：F1–F4 都有独立于评审机制的代码证据，修正后可直接 `pass-with-fixes`。
+
+##### Evidence
+
+完整证据见外部报告。所有关键 finding 已交叉验证 `ornnlab/cli.py`、`ornnlab/settings.py`、`ornnlab/api/*.py`、`frontend/src/api/client.ts`、`frontend/src/types/console.ts`。
+
+### Main Agent Response (Round 2)
+
+| Reviewer | Finding | Broken Assumption / Failure Scenario | Severity | Decision | Evidence / Reason | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|
+| external-1 | F1 | 后端默认 8765 而文档写 8000 | blocking | accept (与 R1 self-pass F1 合并) | `cli.py:24` | 待修订 BUG-WEB-01 | closure review |
+| external-1 | F2 | 11 个端点遗漏 | blocking | accept (扩展 R1 self-pass F2) | 31 端点对照表 | 修订 BUG-WEB-03 增加完整端点清单 | closure review |
+| external-1 | F3 | UI viewmodel 字段无后端源 | blocking | accept | `types/console.ts:20-45` 等 | 在 BUG-WEB-03 增"viewmodel 字段数据源决策"节，逐字段给出 删除/派生/后端补 决定 | closure review |
+| external-1 | F4 | apiClient.post 无 query param | blocking | accept | `client.ts:122-129` | 在 BUG-WEB-03 增 apiClient 能力扩展条款 | closure review |
+| external-1 | R1 | 02+04 同 PR 过大 | major | accept | self-pass 同意 | 在 README/02/04 改"04 基础设施独立 PR 先合" | n/a |
+| external-1 | R2 | ApiError 边界 | major | accept (升级 self-pass R2) | self-pass 同意 | 在 BUG-WEB-04 增"错误抽象边界"节，统一为 ApiError | n/a |
+| external-1 | R3 | mapper 判据更细 | major | accept (修正 self-pass R3) | external 论据合理 | BUG-WEB-03 mapper 判据改为"仅 1:1 复制可消除；枚举/聚合/重命名保留" | n/a |
+| external-1 | R4 | SSE 子文档需复述 | minor | accept | self-pass 同意 | BUG-WEB-03 端点表标注 Deferred | n/a |
+| external-1 | R5 | benefit 量化 | target-benefit warning | accept | self-pass 同意 | README 验收加可观测项 | n/a |
+| external-1 | R6 | preview port 误导 | minor | accept | `vite.config.ts:18-20` | BUG-WEB-01 加端口布局说明 | n/a |
+| external-1 | R7 | ExperimentRun 缺 job_dir | minor | accept | `models/experiment.py:48` | BUG-WEB-03 在端点表内标注；本次不直接改 client.ts（plan-only） | n/a |
+| external-1 | R8 | 后端启动文档 defer | minor | accept | 01 AC 与依赖错配 | BUG-WEB-01 增"启动后端一行命令"AC 项 | n/a |
+| external-1 | R9 | 无 OpenAPI 自动类型 | maintenance warning | defer | v0.1.5 PRD 范畴 | 在 BUG-WEB-03 增"maintenance follow-up"节，记录 openapi-typescript 评估 | tracked to v0.1.5 |
+| external-1 | R10 | 测试断言深度 | major | accept | `05:37-38` 只规定数量 | BUG-WEB-05 增"≥1 个 view 测试需做特定输入→特定 DOM 文本"要求 | n/a |
+
+### Closure Status (Round 2)
+
+- Blocking findings found: yes（F1、F2、F3、F4）
+- Accepted blocking findings fixed: no（需修订 6 份计划文档）
+- Blocking re-review completed: no
+- Blocking re-review passed: n/a
+- Implementation completeness gaps resolved or accepted by user: no
+- Target benefit warnings recorded: yes (R5)
+- Rejected findings backed by evidence: n/a (no reject)
+- Deferred findings documented: yes (R9 → v0.1.5)
+- Allowed to proceed: no（按协议必须先修订文档并跑一次 closure review）
+
+## Final Conclusion (overall)
+
+外部独立评审在 self-pass 基础上**新增 2 个 blocking + 5 个 non-blocking**，并对 self-pass 的 R3 mapper 判据做了重要修正。共需对 6 份计划文档做以下修订才能进入实施：
+
+1. **[P0]** 修正 `01` 的 default port → 8765，加端口布局与启动命令说明
+2. **[P0]** 在 `03` 增加 31 端点完整清单表 + viewmodel 字段数据源决策 + apiClient query-param 能力扩展条款
+3. **[P0]** 修正 `03` mapper 判据
+4. **[P1]** 在 `02/04/README` 拆 PR 切片；`04` 明确 `ApiError` 边界
+5. **[P2]** `05` 增加测试断言深度要求；`README` 增加量化验收
+6. **[P2]** R9 (OpenAPI auto types) defer 到 v0.1.5 并在 `03` 记录
+
+修订完成后跑一次 closure review（再调一次 `claude-ds-pro`），如均 pass 则 verdict 升为 `pass-with-fixes`，进入 Phase 1 实施。
+
+**当前状态：blocked。需要你确认是否进行上述文档修订。**
+
 
