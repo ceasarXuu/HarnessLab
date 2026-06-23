@@ -1,14 +1,15 @@
 # v0.1.4 Web 服务调通修复计划
 
 - Created: 2026-06-23
-- Updated: 2026-06-23
-- Version: 1.0
+- Updated: 2026-06-24
+- Version: 1.1
 - Status: Draft
 - Owner / Responsible: project maintainer
 - Related Systems: frontend (Vue 3 + Vite), ornnlab FastAPI backend, dev server proxy
 - Related Links: [bugfix/README](../bugfix/README.md), [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts), [ornnlab/app.py](../../../../ornnlab/app.py)
 - Risk Level: Medium
 - Plan Type: Standard
+- Revision Notes: v1.1 拆 PR 切片（R1）：04 基础设施独立 PR 先行；新增量化验收指标（R5）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md
 
 ## 状态说明
 
@@ -43,8 +44,8 @@ v0.1.4 阶段已经存在：
 
 | 文档对 | 冲突类型 | 说明 | 整改决策 |
 |--------|----------|------|----------|
-| BUG-WEB-02 ↔ BUG-WEB-03 | 数据模型 | UI 类型 `ConsoleSnapshot` 与后端 `Experiment / LeaderboardEntryResponse` 字段不一致 | 以后端 schema 为契约源；UI 模型作为派生 view-model，由 mapper 层负责转换 |
-| BUG-WEB-02 ↔ BUG-WEB-04 | 改动面 | View 切到真实数据的同时必须有 loading/error UI，否则首版 UX 倒退 | 02 与 04 一并提交，不允许 02 单独 land |
+| BUG-WEB-02 ↔ BUG-WEB-03 | 数据模型 | UI 类型 `ConsoleSnapshot` 与后端 `Experiment / LeaderboardEntryResponse` 字段不一致 | 以后端 schema 为契约源；UI 模型作为派生 view-model，由 mapper 层负责转换（mapper 判据见 [BUG-WEB-03 R3](03-contract-gap-vs-backend.md#3-mapper-层r3-修正判据)） |
+| BUG-WEB-02 ↔ BUG-WEB-04 | 改动面 | View 切到真实数据的同时必须有 loading/error UI，否则首版 UX 倒退 | **R1 修正**：04 基础设施（`asyncState` + `StatePanel`）独立 PR 先行合并；View 切换在同 PR 或后续 PR，避免单 PR 过大 |
 | BUG-WEB-01 ↔ 运行时部署 | 部署形态 | dev 用 proxy，生产由谁托管前端静态资源尚未决定 | 本计划只交付 dev/preview proxy；生产部署形态在 v0.1.5 PRD 决定 |
 | BUG-WEB-05 ↔ bugfix/04 (SSE) | 测试依赖 | 真实 SSE 集成测试需等 BUG-04 SSE 修复 land | 05 仅覆盖 REST endpoint，SSE 测试推迟到 bugfix/04 完成后再追加 |
 
@@ -60,8 +61,9 @@ Phase 1: 通路打通
 
 Phase 2: 数据接入
   BUG-WEB-03 (契约对齐 + mapper) → 为 02 提供干净的数据形态
-  BUG-WEB-02 (Views 切换到 ornnLabApi)
-  BUG-WEB-04 (加载/错误/空态) → 与 02 同 PR 提交
+  BUG-WEB-04 PR-A (asyncState + StatePanel 基础设施) → 独立 PR，不依赖 02/03
+  BUG-WEB-02 (Views 切换到 ornnLabApi) → 依赖 03 + 04 PR-A
+  BUG-WEB-04 PR-B (View 接入 StatePanel) → 与 02 同 PR 或紧随其后
 
 Phase 3: 测试基建
   BUG-WEB-05 (API client 单测 + view 集成测试 + e2e smoke)
@@ -69,6 +71,7 @@ Phase 3: 测试基建
 Deferred:
   - SSE 实时事件流接入：依赖 bugfix/04 修复完成
   - 生产部署形态（静态托管 / FastAPI StaticFiles / 反向代理）：v0.1.5 PRD 决定
+  - OpenAPI 自动类型生成（openapi-typescript）：v0.1.5 PRD 评估（见 [BUG-WEB-03 Maintenance Follow-up](03-contract-gap-vs-backend.md#maintenance-follow-upr9-defer-到-v0115)）
 ```
 
 ## Phase 依赖关系图
@@ -80,7 +83,10 @@ Phase 0 (契约梳理)
 Phase 1 ── BUG-WEB-01 (proxy)
         │
         ▼
-Phase 2 ── BUG-WEB-03 ──► BUG-WEB-02 ◄── BUG-WEB-04
+Phase 2 ── BUG-WEB-03 ──► BUG-WEB-02 ◄── BUG-WEB-04 PR-B
+        │                  ▲
+        │                  │
+        └── BUG-WEB-04 PR-A (基础设施，独立先行)
         │
         ▼
 Phase 3 ── BUG-WEB-05
@@ -94,6 +100,15 @@ Phase 3 ── BUG-WEB-05
 - [ ] 后端响应与前端类型在 `BUG-WEB-03` 中逐字段对齐，存在偏差时以后端为准并提供 mapper。
 - [ ] 新增 API client 单测、至少一个 View 级集成测试与一条 e2e smoke，CI 全绿。
 - [ ] 文档与 [bugfix/README](../bugfix/README.md) 交叉链接清晰，便于后续 v0.1.4 收尾汇总。
+
+### 量化验收指标（R5 新增）
+
+"调通"需有可观测目标，避免"再调一调还是收尾"的模糊地带：
+
+- [ ] `scripts/test-after-change-web.sh` 退出码 0（typecheck + lint + vitest + e2e 全绿）。
+- [ ] e2e smoke 中至少 1 个真实 API 请求返回 2xx（如 `GET /api/system/status` → 200）。
+- [ ] e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）。
+- [ ] ≥1 个 View 集成测试包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）。
 
 ## 不在本计划范围内
 
