@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { idle, loading, ready, empty, error } from './asyncState'
+import { idle, loading, ready, empty, error, type AsyncState } from './asyncState'
 
 describe('asyncState', () => {
   it('idle returns status idle', () => {
@@ -22,20 +22,26 @@ describe('asyncState', () => {
 
   it('error wraps error', () => {
     const err = new Error('boom')
-    const s = error(err)
+    const s = error<unknown, Error>(err)
     expect(s.status).toBe('error')
     if (s.status === 'error') expect(s.error).toBe(err)
   })
 
   it('discriminated union narrows correctly', () => {
-    const states = [idle<string>(), loading<string>(), ready('ok'), empty<string>(), error<string>(new Error('fail'))]
+    const states: AsyncState<string>[] = [
+      idle<string>(),
+      loading<string>(),
+      ready<string>('ok'),
+      empty<string>(),
+      error<string, Error>(new Error('fail')),
+    ]
     const labels = states.map((s) => {
       switch (s.status) {
         case 'idle': return 'i'
         case 'loading': return 'l'
         case 'ready': return `r:${s.data}`
         case 'empty': return 'e'
-        case 'error': return `x:${s.error.message}`
+        case 'error': return `x:${(s.error as Error).message}`
       }
     })
     expect(labels).toEqual(['i', 'l', 'r:ok', 'e', 'x:fail'])

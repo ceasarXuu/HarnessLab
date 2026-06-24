@@ -174,7 +174,7 @@ export const createApiClient = (basePath = '/api'): ApiClient => {
     if (!text) return undefined as unknown as TResponse
     try {
       return JSON.parse(text) as TResponse
-    } catch (err) {
+    } catch {
       throw new ApiError(`API response is not valid JSON for ${path}`, response.status, text)
     }
   }

@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 
-import type { ConsoleSnapshot } from '@/types/console'
-
-const props = defineProps<{
-  snapshot: ConsoleSnapshot
-}>()
+import { ApiError, ornnLabApi, type AgentResponse, type Experiment } from '@/api/client'
 
 const route = useRoute()
 
@@ -17,19 +13,38 @@ const navItems = [
   { name: 'leaderboard', label: 'Leaderboard', to: '/leaderboard' },
 ]
 
+const experiments = ref<Experiment[]>([])
+const agents = ref<AgentResponse[]>([])
+const summaryError = ref<string | null>(null)
+
 const pageTitle = computed(
-  () => route.meta.title?.toString() ?? props.snapshot.headline,
+  () => route.meta.title?.toString() ?? 'Operations Console',
 )
 
 const statusLine = computed(() => {
-  const runningCount = props.snapshot.experiments.filter(
-    (experiment) => experiment.state === 'running',
-  ).length
-  const blockedCount = props.snapshot.agents.filter(
-    (agent) => agent.health === 'blocked',
-  ).length
+  if (summaryError.value) return summaryError.value
+  const runningCount = experiments.value.filter((e) => e.status === 'running').length
+  const blockedCount = agents.value.filter((a) => a.status !== 'compiled' && a.status !== 'draft').length
 
-  return `${props.snapshot.agents.length} agents live · ${runningCount} active experiments · ${blockedCount} blocked queues`
+  return `${agents.value.length} agents live · ${runningCount} active experiments · ${blockedCount} blocked queues`
+})
+
+onMounted(async () => {
+  try {
+    // 并行拉两个端点；任一失败均退到摘要错误态，不阻塞子 view 自己的状态管理
+    const [exps, ags] = await Promise.all([
+      ornnLabApi.experiments(),
+      ornnLabApi.agents.list(),
+    ])
+    experiments.value = exps
+    agents.value = ags
+  } catch (err) {
+    if (err instanceof ApiError) {
+      summaryError.value = `Live posture unavailable (HTTP ${err.status})`
+    } else {
+      summaryError.value = 'Live posture unavailable'
+    }
+  }
 })
 </script>
 
@@ -78,13 +93,7 @@ const statusLine = computed(() => {
         </div>
       </header>
 
-      <RouterView v-slot="{ Component }">
-        <component
-          :is="Component"
-          :snapshot="snapshot"
-        />
-      </RouterView>
+      <RouterView />
     </main>
   </div>
 </template>
-
