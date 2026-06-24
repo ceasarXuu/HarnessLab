@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import StatePanel from '@/components/StatePanel.vue'
 import { ApiError, ornnLabApi, type Experiment } from '@/api/client'
 import { toExperimentRecord } from '@/api/mappers'
 import { idle, loading, ready, empty, error, type AsyncState } from '@/utils/asyncState'
 import type { ExperimentRecord } from '@/types/console'
+
+const { t } = useI18n()
 
 const state = ref<AsyncState<ExperimentRecord[]>>(idle())
 
@@ -29,7 +32,7 @@ onMounted(fetchExperiments)
 <template>
   <StatePanel
     :state="state"
-    empty-message="No experiments yet. Create one to get started."
+    :empty-message="t('empty.experiments')"
     @retry="fetchExperiments"
   >
     <template #default="{ data }">
@@ -37,13 +40,10 @@ onMounted(fetchExperiments)
         <section class="panel stack">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Experiment ledger</p>
-              <h3>Execution lanes</h3>
+              <p class="eyebrow">{{ t('experiments.ledgerEyebrow') }}</p>
+              <h3>{{ t('experiments.ledgerTitle') }}</h3>
             </div>
-            <p class="muted">
-              Queue-focused view for tracking benchmark targets and recent
-              movement.
-            </p>
+            <p class="muted">{{ t('experiments.ledgerHint') }}</p>
           </div>
 
           <!-- BUG-WEB-02 处置：删除 Owner 行（无后端源） -->
@@ -62,15 +62,15 @@ onMounted(fetchExperiments)
               </div>
               <dl class="detail-grid">
                 <div>
-                  <dt>Target</dt>
+                  <dt>{{ t('experiments.target') }}</dt>
                   <dd>{{ experiment.target }}</dd>
                 </div>
                 <div>
-                  <dt>Updated</dt>
+                  <dt>{{ t('experiments.updated') }}</dt>
                   <dd>{{ experiment.updatedAt }}</dd>
                 </div>
                 <div>
-                  <dt>Success</dt>
+                  <dt>{{ t('experiments.success') }}</dt>
                   <dd>{{ experiment.successRate }}</dd>
                 </div>
               </dl>

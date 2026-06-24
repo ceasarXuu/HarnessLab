@@ -1,37 +1,48 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 import { ApiError, ornnLabApi, type AgentResponse, type Experiment } from '@/api/client'
 
 const route = useRoute()
+const { t } = useI18n()
 
 const navItems = [
-  { name: 'dashboard', label: 'Dashboard', to: '/' },
-  { name: 'agents', label: 'Agents', to: '/agents' },
-  { name: 'experiments', label: 'Experiments', to: '/experiments' },
-  { name: 'leaderboard', label: 'Leaderboard', to: '/leaderboard' },
-]
+  { name: 'dashboard', key: 'nav.dashboard', to: '/' },
+  { name: 'agents', key: 'nav.agents', to: '/agents' },
+  { name: 'experiments', key: 'nav.experiments', to: '/experiments' },
+  { name: 'leaderboard', key: 'nav.leaderboard', to: '/leaderboard' },
+] as const
 
 const experiments = ref<Experiment[]>([])
 const agents = ref<AgentResponse[]>([])
-const summaryError = ref<string | null>(null)
+const summaryError = ref<{ http?: number } | null>(null)
 
-const pageTitle = computed(
-  () => route.meta.title?.toString() ?? 'Operations Console',
-)
+const pageTitle = computed(() => {
+  const key = route.meta.titleKey
+  return key ? t(key) : t('app.subtitle')
+})
 
 const statusLine = computed(() => {
-  if (summaryError.value) return summaryError.value
+  if (summaryError.value) {
+    return summaryError.value.http
+      ? t('nav.postureUnavailableHttp', { status: summaryError.value.http })
+      : t('nav.postureUnavailable')
+  }
   const runningCount = experiments.value.filter((e) => e.status === 'running').length
-  const blockedCount = agents.value.filter((a) => a.status !== 'compiled' && a.status !== 'draft').length
-
-  return `${agents.value.length} agents live · ${runningCount} active experiments · ${blockedCount} blocked queues`
+  const blockedCount = agents.value.filter(
+    (a) => a.status !== 'compiled' && a.status !== 'draft',
+  ).length
+  return t('nav.postureLine', {
+    agents: agents.value.length,
+    running: runningCount,
+    blocked: blockedCount,
+  })
 })
 
 onMounted(async () => {
   try {
-    // 并行拉两个端点；任一失败均退到摘要错误态，不阻塞子 view 自己的状态管理
     const [exps, ags] = await Promise.all([
       ornnLabApi.experiments(),
       ornnLabApi.agents.list(),
@@ -39,11 +50,7 @@ onMounted(async () => {
     experiments.value = exps
     agents.value = ags
   } catch (err) {
-    if (err instanceof ApiError) {
-      summaryError.value = `Live posture unavailable (HTTP ${err.status})`
-    } else {
-      summaryError.value = 'Live posture unavailable'
-    }
+    summaryError.value = err instanceof ApiError ? { http: err.status } : {}
   }
 })
 </script>
@@ -52,17 +59,14 @@ onMounted(async () => {
   <div class="console-shell">
     <aside class="console-shell__nav panel">
       <div>
-        <p class="eyebrow">OrnnLab</p>
-        <h1 class="nav-title">Operations Console</h1>
-        <p class="muted">
-          Focused front-end scaffold for operators managing agents, experiments,
-          and benchmark performance.
-        </p>
+        <p class="eyebrow">{{ t('app.title') }}</p>
+        <h1 class="nav-title">{{ t('app.subtitle') }}</h1>
+        <p class="muted">{{ t('app.description') }}</p>
       </div>
 
       <nav
         class="nav-links"
-        aria-label="Primary"
+        :aria-label="t('nav.primary')"
       >
         <RouterLink
           v-for="item in navItems"
@@ -71,12 +75,12 @@ onMounted(async () => {
           class="nav-link"
           active-class="nav-link--active"
         >
-          {{ item.label }}
+          {{ t(item.key) }}
         </RouterLink>
       </nav>
 
       <section class="nav-summary">
-        <p class="eyebrow">Live posture</p>
+        <p class="eyebrow">{{ t('nav.livePosture') }}</p>
         <p class="muted">{{ statusLine }}</p>
       </section>
     </aside>
@@ -84,12 +88,12 @@ onMounted(async () => {
     <main class="console-shell__content">
       <header class="page-header panel">
         <div>
-          <p class="eyebrow">Operator view</p>
+          <p class="eyebrow">{{ t('app.operatorView') }}</p>
           <h2>{{ pageTitle }}</h2>
         </div>
         <div class="page-header__meta">
           <span class="status-dot"></span>
-          <span>API client primed for `/api`</span>
+          <span>{{ t('app.apiPrimed') }}</span>
         </div>
       </header>
 

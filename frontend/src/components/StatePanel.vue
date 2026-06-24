@@ -1,4 +1,6 @@
 <script setup lang="ts" generic="T">
+import { useI18n } from 'vue-i18n'
+
 import type { AsyncState } from '@/utils/asyncState'
 import { ApiError } from '@/api/client'
 
@@ -11,33 +13,35 @@ const emit = defineEmits<{
   retry: []
 }>()
 
+const { t } = useI18n()
+
 const errorSummary = (err: ApiError | Error): string => {
   if (err instanceof ApiError) {
-    if (err.status === 404) return 'Resource not found'
-    if (err.status >= 500) return 'Service temporarily unavailable'
-    return `Request failed (HTTP ${err.status})`
+    if (err.status === 404) return t('state.apiError404')
+    if (err.status >= 500) return t('state.apiError5xx')
+    return t('state.apiErrorOther', { status: err.status })
   }
-  return err.message || 'An unexpected error occurred'
+  return err.message || t('state.unknown')
 }
 </script>
 
 <template>
   <div>
     <section v-if="state.status === 'loading'" class="state-panel state-panel--loading">
-      <p class="muted">Loading…</p>
+      <p class="muted">{{ t('state.loading') }}</p>
     </section>
 
     <section v-else-if="state.status === 'error'" class="state-panel state-panel--error">
       <p class="state-panel__message">{{ errorSummary(state.error) }}</p>
-      <button class="btn" @click="emit('retry')">Retry</button>
+      <button class="btn" @click="emit('retry')">{{ t('state.retry') }}</button>
     </section>
 
     <section v-else-if="state.status === 'empty'" class="state-panel state-panel--empty">
-      <p class="muted">{{ emptyMessage ?? 'No data yet.' }}</p>
+      <p class="muted">{{ emptyMessage ?? t('state.noData') }}</p>
     </section>
 
     <section v-else-if="state.status === 'idle'" class="state-panel state-panel--idle">
-      <p class="muted">Waiting…</p>
+      <p class="muted">{{ t('state.waiting') }}</p>
     </section>
 
     <slot v-else-if="state.status === 'ready'" :data="state.data" />
@@ -55,8 +59,8 @@ const errorSummary = (err: ApiError | Error): string => {
 }
 
 .state-panel--error {
-  border-left: 3px solid var(--color-danger, #e03131);
-  background: var(--color-danger-bg, rgba(224, 49, 49, 0.06));
+  border-left: 3px solid var(--bad);
+  background: var(--accent-soft);
 }
 
 .state-panel__message {

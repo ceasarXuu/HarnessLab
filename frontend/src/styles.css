@@ -3,23 +3,54 @@
   font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background:
-    radial-gradient(circle at top left, rgba(246, 186, 90, 0.18), transparent 30%),
-    linear-gradient(180deg, #f4f1e8 0%, #ebe6db 100%);
-  color: #172126;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ---- Light theme tokens (default) ---- */
+  --bg-page:
+    radial-gradient(circle at top left, rgba(246, 186, 90, 0.18), transparent 30%),
+    linear-gradient(180deg, #f4f1e8 0%, #ebe6db 100%);
+  --ink: #172126;
+  --ink-soft: #51606c;
   --panel-bg: rgba(255, 252, 247, 0.86);
   --panel-border: rgba(23, 33, 38, 0.12);
   --panel-shadow: 0 24px 48px rgba(39, 47, 55, 0.08);
-  --ink-soft: #51606c;
   --accent: #d97706;
   --accent-soft: rgba(217, 119, 6, 0.12);
   --good: #1f7a4c;
   --warn: #8b5e10;
   --bad: #9f2f2f;
+  --header-bg: rgba(255, 252, 247, 0.92);
+  --control-bg: rgba(255, 252, 247, 0.7);
+  --control-border: rgba(23, 33, 38, 0.18);
+  --control-hover: rgba(217, 119, 6, 0.12);
+
+  background: var(--bg-page);
+  color: var(--ink);
+}
+
+/* ---- Dark theme tokens (activated by <html data-theme="dark">) ---- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-page:
+    radial-gradient(circle at top left, rgba(246, 186, 90, 0.10), transparent 30%),
+    linear-gradient(180deg, #14181d 0%, #0d1115 100%);
+  --ink: #e8ecef;
+  --ink-soft: #9fb0bd;
+  --panel-bg: rgba(28, 33, 39, 0.78);
+  --panel-border: rgba(232, 236, 239, 0.10);
+  --panel-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+  --accent: #f6a823;
+  --accent-soft: rgba(246, 168, 35, 0.16);
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --header-bg: rgba(20, 24, 29, 0.92);
+  --control-bg: rgba(28, 33, 39, 0.7);
+  --control-border: rgba(232, 236, 239, 0.18);
+  --control-hover: rgba(246, 168, 35, 0.18);
 }
 
 * {
@@ -361,3 +392,82 @@ h4 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- App header ---- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--panel-border);
+  backdrop-filter: blur(16px);
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.app-header__brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--ink);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.header-control:hover {
+  background: var(--control-hover);
+  border-color: var(--accent);
+}
+
+.header-control[aria-busy='true'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.header-control__icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.header-control__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Layout: page = header on top, then sidebar + main below */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+

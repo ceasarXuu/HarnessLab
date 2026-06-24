@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import KpiCard from '@/components/KpiCard.vue'
 import StatePanel from '@/components/StatePanel.vue'
@@ -17,6 +18,8 @@ import {
 import { rankLeaderboard } from '@/utils/leaderboard'
 import { idle, loading, ready, empty, error, type AsyncState } from '@/utils/asyncState'
 import type { ExperimentRecord, KpiMetric, LeaderboardEntry } from '@/types/console'
+
+const { t } = useI18n()
 
 interface DashboardData {
   metrics: KpiMetric[]
@@ -55,7 +58,7 @@ onMounted(fetchDashboard)
 <template>
   <StatePanel
     :state="state"
-    empty-message="No experiments or leaderboard data yet."
+    :empty-message="t('empty.dashboard')"
     @retry="fetchDashboard"
   >
     <template #default="{ data }">
@@ -73,15 +76,15 @@ onMounted(fetchDashboard)
         <section class="panel stack">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Experiment focus</p>
-              <h3>Current pipeline</h3>
+              <p class="eyebrow">{{ t('dashboard.experimentFocusEyebrow') }}</p>
+              <h3>{{ t('dashboard.experimentFocusTitle') }}</h3>
             </div>
           </div>
           <div class="table-list">
             <div class="table-list__head">
-              <span>Experiment</span>
-              <span>State</span>
-              <span>Success</span>
+              <span>{{ t('table.experiment') }}</span>
+              <span>{{ t('table.state') }}</span>
+              <span>{{ t('table.success') }}</span>
             </div>
             <div
               v-for="experiment in (data as DashboardData).experiments"
@@ -101,8 +104,8 @@ onMounted(fetchDashboard)
         <section class="panel stack">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Top performers</p>
-              <h3>Leaderboard snapshot</h3>
+              <p class="eyebrow">{{ t('dashboard.topPerformersEyebrow') }}</p>
+              <h3>{{ t('dashboard.topPerformersTitle') }}</h3>
             </div>
           </div>
           <div class="leaderboard-list">
@@ -112,7 +115,7 @@ onMounted(fetchDashboard)
               class="leaderboard-list__row"
             >
               <div>
-                <p class="eyebrow">Rank {{ entry.rank }}</p>
+                <p class="eyebrow">{{ t('dashboard.rank', { n: entry.rank }) }}</p>
                 <strong>{{ entry.agent }}</strong>
               </div>
               <div class="leaderboard-list__score">

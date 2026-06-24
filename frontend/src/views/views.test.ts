@@ -15,6 +15,12 @@ import DashboardView from './DashboardView.vue'
 import AgentsView from './AgentsView.vue'
 import ExperimentsView from './ExperimentsView.vue'
 import LeaderboardView from './LeaderboardView.vue'
+import { i18n, setLocale } from '@/i18n'
+
+// 测试统一使用英文 locale，便于做 DOM 文本断言（不影响 mapper 行为）
+setLocale('en')
+
+const mountOpts = { global: { plugins: [i18n] } }
 
 const mockFetch = vi.fn()
 const originalFetch = globalThis.fetch
@@ -78,7 +84,7 @@ describe('DashboardView', () => {
         ]),
     })
 
-    const wrapper = mount(DashboardView)
+    const wrapper = mount(DashboardView, mountOpts)
     await flushPromises()
 
     const text = wrapper.text()
@@ -94,14 +100,14 @@ describe('DashboardView', () => {
       '/api/experiments': () => okJson([]),
       '/api/leaderboard': () => okJson([]),
     })
-    const wrapper = mount(DashboardView)
+    const wrapper = mount(DashboardView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('No experiments or leaderboard data yet.')
   })
 
   it('error path: shows error state when fetch fails', async () => {
     mockFetch.mockImplementation(async () => new Response('boom', { status: 500 }))
-    const wrapper = mount(DashboardView)
+    const wrapper = mount(DashboardView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('Service temporarily unavailable')
   })
@@ -129,7 +135,7 @@ describe('AgentsView', () => {
         ]),
     })
 
-    const wrapper = mount(AgentsView)
+    const wrapper = mount(AgentsView, mountOpts)
     await flushPromises()
     const text = wrapper.text()
     expect(text).toContain('harbor-prod') // agent name from API
@@ -138,14 +144,14 @@ describe('AgentsView', () => {
 
   it('empty path: shows empty message when no agents', async () => {
     routeFetch({ '/api/agents': () => okJson([]) })
-    const wrapper = mount(AgentsView)
+    const wrapper = mount(AgentsView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('No agents registered yet.')
   })
 
   it('error path: shows error state on 404', async () => {
     mockFetch.mockResolvedValue(new Response('', { status: 404 }))
-    const wrapper = mount(AgentsView)
+    const wrapper = mount(AgentsView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('Resource not found')
   })
@@ -171,7 +177,7 @@ describe('ExperimentsView', () => {
         ]),
     })
 
-    const wrapper = mount(ExperimentsView)
+    const wrapper = mount(ExperimentsView, mountOpts)
     await flushPromises()
     const text = wrapper.text()
     expect(text).toContain('exp-001') // id eyebrow
@@ -183,14 +189,14 @@ describe('ExperimentsView', () => {
 
   it('empty path: shows hint to create experiment', async () => {
     routeFetch({ '/api/experiments': () => okJson([]) })
-    const wrapper = mount(ExperimentsView)
+    const wrapper = mount(ExperimentsView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('No experiments yet. Create one to get started.')
   })
 
   it('error path: generic message on unclassified error', async () => {
     mockFetch.mockResolvedValue(new Response('bad request', { status: 400 }))
-    const wrapper = mount(ExperimentsView)
+    const wrapper = mount(ExperimentsView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('Request failed (HTTP 400)')
   })
@@ -228,7 +234,7 @@ describe('LeaderboardView', () => {
         ]),
     })
 
-    const wrapper = mount(LeaderboardView)
+    const wrapper = mount(LeaderboardView, mountOpts)
     await flushPromises()
     const text = wrapper.text()
     expect(text).toContain('beta') // higher score
@@ -241,14 +247,14 @@ describe('LeaderboardView', () => {
 
   it('empty path: shows empty message', async () => {
     routeFetch({ '/api/leaderboard': () => okJson([]) })
-    const wrapper = mount(LeaderboardView)
+    const wrapper = mount(LeaderboardView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('Leaderboard is empty.')
   })
 
   it('error path: 500 → service unavailable', async () => {
     mockFetch.mockResolvedValue(new Response('boom', { status: 500 }))
-    const wrapper = mount(LeaderboardView)
+    const wrapper = mount(LeaderboardView, mountOpts)
     await flushPromises()
     expect(wrapper.text()).toContain('Service temporarily unavailable')
   })
