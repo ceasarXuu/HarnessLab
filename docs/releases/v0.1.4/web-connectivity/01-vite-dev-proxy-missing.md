@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.1
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend (Vite), ornnlab FastAPI
 - Related Links: [README](README.md), [frontend/vite.config.ts](../../../../frontend/vite.config.ts), [ornnlab/app.py](../../../../ornnlab/app.py), [ornnlab/cli.py](../../../../ornnlab/cli.py), [ornnlab/settings.py](../../../../ornnlab/settings.py)
@@ -82,11 +82,16 @@ export default defineConfig({
 
 ## Acceptance Criteria
 
-- [ ] `npm --prefix frontend run dev` 后，浏览器请求 `/api/system/status` 返回 FastAPI 真实响应（非 Vite SPA fallback）。
-- [ ] `npm --prefix frontend run preview` 同样可代理 `/api`。
-- [ ] `ORNNLAB_API_TARGET` 环境变量可覆盖默认目标，已在本文件或 playbook 中说明。
-- [ ] dev/preview 启动日志中无 proxy 配置告警。
-- [ ] **后端启动命令可一行执行**：`python -m ornnlab web`（默认 `127.0.0.1:8765`，见 [ornnlab/cli.py#L22-L24](../../../../ornnlab/cli.py)），并在本文件或 playbook 中显式记录"先起后端、再起前端"的顺序。
+- [x] `npm --prefix frontend run dev` 后，浏览器请求 `/api/system/status` 返回 FastAPI 真实响应（非 Vite SPA fallback）。
+- [x] `npm --prefix frontend run preview` 同样可代理 `/api`。
+- [x] `ORNNLAB_API_TARGET` 环境变量可覆盖默认目标，已在本文件或 playbook 中说明。
+- [x] dev/preview 启动日志中无 proxy 配置告警。
+- [x] **后端启动命令可一行执行**：`python -m ornnlab web`（默认 `127.0.0.1:8765`，见 [ornnlab/cli.py#L22-L24](../../../../ornnlab/cli.py)），并在本文件或 playbook 中显式记录"先起后端、再起前端"的顺序。
+
+## Implementation
+
+落地于 commit `2fd7541`：
+- [frontend/vite.config.ts](../../../../frontend/vite.config.ts) 新增 `server.proxy` + `preview.proxy`，目标默认 `http://127.0.0.1:8765`，可通过 `ORNNLAB_API_TARGET` 环境变量覆盖。
 
 ## 风险与回滚
 

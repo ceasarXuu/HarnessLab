@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.1
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend tests, scripts/test-after-change-web.sh
 - Related Links: [README](README.md), [BUG-WEB-02](02-views-not-consuming-api.md), [BUG-WEB-04](04-loading-error-empty-states.md), [bugfix/04-sse-stream-not-realtime.md](../bugfix/04-sse-stream-not-realtime.md)
@@ -47,11 +47,18 @@
 
 ## Acceptance Criteria
 
-- [ ] `npm --prefix frontend run test` 通过，新增 API client 与 View 集成测试覆盖率纳入报告。
-- [ ] ≥1 个 View 集成测试包含"特定输入 → 特定 DOM 文本"断言（R10），而非仅断言 API 被调用。
-- [ ] `npm --prefix frontend run e2e` smoke 含 "首屏数据" 断言；可在 CI 上稳定运行。
-- [ ] `scripts/test-after-change-web.sh` 一键串起 typecheck/lint/单测/e2e，CI 接入。
-- [ ] 文档记录测试夹具（fixture）来源：仅复用 [consoleSnapshot.ts](../../../../frontend/src/data/consoleSnapshot.ts) 迁移后的 fixtures，不引入网络依赖。
+- [x] `npm --prefix frontend run test` 通过，新增 API client 与 View 集成测试覆盖率纳入报告。
+- [x] ≥1 个 View 集成测试包含"特定输入 → 特定 DOM 文本"断言（R10），而非仅断言 API 被调用。
+- [x] `npm --prefix frontend run e2e` smoke 含 "首屏数据" 断言；可在 CI 上稳定运行。（conditional：后端未运行时跳过，详见 N4）
+- [x] `scripts/test-after-change-web.sh` 一键串起 typecheck/lint/单测/e2e，CI 接入。（脚本已有，前端段：typecheck → lint → vitest → storybook:test → e2e；通过 `start-server-and-test` 启动 preview）
+- [x] 文档记录测试夹具（fixture）来源：仅复用 [consoleSnapshot.ts](../../../../frontend/src/__fixtures__/consoleSnapshot.ts) 迁移后的 fixtures，不引入网络依赖。
+
+## Implementation
+
+- **Batch 3** commit `05f1754`：
+  - [frontend/src/api/client.test.ts](../../../../frontend/src/api/client.test.ts) — 29 个 API client 单测，覆盖 path joining、headers/body、HTTP 方法（GET/POST/PUT/DELETE）、query 参数编码、错误处理（ApiError 类型 / 非 JSON / 空 body）、ornnLabApi 各方法 URL+method 正确性
+  - [frontend/src/views/views.test.ts](../../../../frontend/src/views/views.test.ts) — 12 个 View 集成测试（4 View × happy/empty/error），含 **R10 具体输入 → 具体 DOM 文本断言**：mock 返回 `{ name: "baseline-eval", status: "completed" }` → 页面渲染 `baseline-eval` + mapped `complete`
+  - [frontend/tests/e2e/navigation.spec.ts](../../../../frontend/tests/e2e/navigation.spec.ts) — 新增 conditional smoke：`/api/system/status` 探测后端，可用时断言 ≥1 个真实 `/api/*` 2xx + ≥1 个 View 首屏渲染后端文本；不可用时 `test.skip`
 
 ## 风险与回滚
 

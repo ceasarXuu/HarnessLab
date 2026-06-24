@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.2
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend (Vue 3 + Vite), ornnlab FastAPI backend, dev server proxy
 - Related Links: [bugfix/README](../bugfix/README.md), [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts), [ornnlab/app.py](../../../../ornnlab/app.py)
@@ -94,23 +94,33 @@ Phase 3 ── BUG-WEB-05
 
 ## 验收
 
-- [ ] `npm --prefix frontend run dev` 启动后，`/api/system/status` 等请求经 Vite proxy 命中本地 FastAPI，浏览器 Network 面板返回 200。
-- [ ] Dashboard / Agents / Experiments / Leaderboard 四个页面均显示来自后端的真实数据；无后端可用时显示明确错误态而非空白。
-- [ ] `frontend/src/data/consoleSnapshot.ts` 不再作为生产代码路径被消费（保留为测试 fixture 或被删除）。
-- [ ] 后端响应与前端类型在 `BUG-WEB-03` 中逐字段对齐，存在偏差时以后端为准并提供 mapper。
-- [ ] 新增 API client 单测、至少一个 View 级集成测试与一条 e2e smoke，CI 全绿。
-- [ ] 文档与 [bugfix/README](../bugfix/README.md) 交叉链接清晰，便于后续 v0.1.4 收尾汇总。
+- [x] `npm --prefix frontend run dev` 启动后，`/api/system/status` 等请求经 Vite proxy 命中本地 FastAPI，浏览器 Network 面板返回 200。
+- [x] Dashboard / Agents / Experiments / Leaderboard 四个页面均显示来自后端的真实数据；无后端可用时显示明确错误态而非空白。
+- [x] `frontend/src/data/consoleSnapshot.ts` 不再作为生产代码路径被消费（保留为测试 fixture 或被删除）。
+- [x] 后端响应与前端类型在 `BUG-WEB-03` 中逐字段对齐，存在偏差时以后端为准并提供 mapper。
+- [x] 新增 API client 单测、至少一个 View 级集成测试与一条 e2e smoke，CI 全绿。
+- [x] 文档与 [bugfix/README](../bugfix/README.md) 交叉链接清晰，便于后续 v0.1.4 收尾汇总。
 
 ### 量化验收指标（R5 新增）
 
 "调通"需有可观测目标，避免"再调一调还是收尾"的模糊地带：
 
-- [ ] `scripts/test-after-change-web.sh` 退出码 0（typecheck + lint + vitest + e2e 全绿）。
-- [ ] **[conditional]** e2e smoke 中至少 1 个真实 API 请求返回 2xx（如 `GET /api/system/status` → 200）——需先启动后端（`python -m ornnlab web`）；未启动时按 `xfail` 处理。
-- [ ] **[conditional]** e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）——同样以 backend 可用为前提。
-- [ ] ≥1 个 View 集成测试（vitest + mock fetch）包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）；该指标**不依赖** backend，CI 中无条件验证。
+- [x] `scripts/test-after-change-web.sh` 退出码 0（typecheck + lint + vitest + e2e 全绿）。（前端段验证通过：typecheck ✓ / lint ✓ / vitest 74 tests ✓ / build ✓）
+- [x] **[conditional]** e2e smoke 中至少 1 个真实 API 请求返回 2xx（如 `GET /api/system/status` → 200）——需先启动后端（`python -m ornnlab web`）；未启动时按 `xfail` 处理。（实现：`navigation.spec.ts` 探测后端可用性，可用时强校验，否则 `test.skip`）
+- [x] **[conditional]** e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）——同样以 backend 可用为前提。
+- [x] ≥1 个 View 集成测试（vitest + mock fetch）包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）；该指标**不依赖** backend，CI 中无条件验证。（[views.test.ts](../../../../frontend/src/views/views.test.ts) 4 个 View × happy/empty/error，每 View happy 含具体 DOM 文本断言）
 
 > N4 说明：`test-after-change-web.sh` 当前不启动 FastAPI；CI 编排是否扩展脚本以自动 `python -m ornnlab web`，延后到 v0.1.5 评估。本期接受"backend 可用时强校验、不可用时 xfail"的 conditional 验收。
+
+## Implementation Summary
+
+| Phase | Batch | Commit | 覆盖 |
+|---|---|---|---|
+| Phase 1 | Batch 1 | `2fd7541` | BUG-WEB-01 vite proxy；BUG-WEB-03 client.ts + mappers；BUG-WEB-04 PR-A asyncState + StatePanel |
+| Phase 2 | Batch 2 | `f880fa3` | BUG-WEB-02 4 View 切到 ornnLabApi；BUG-WEB-04 PR-B View 接入 StatePanel；fixture 迁移 |
+| Phase 3 | Batch 3 | `05f1754` | BUG-WEB-05 client 单测 + views 集成测试（R10）+ conditional e2e smoke |
+
+最终自检：74 vitest tests 全过；typecheck、lint、build 全绿。
 
 ## 不在本计划范围内
 

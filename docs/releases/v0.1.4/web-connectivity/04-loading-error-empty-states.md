@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.1
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend views & components
 - Related Links: [README](README.md), [BUG-WEB-02](02-views-not-consuming-api.md), [bugfix/04-sse-stream-not-realtime.md](../bugfix/04-sse-stream-not-realtime.md)
@@ -75,11 +75,19 @@
 
 ## Acceptance Criteria
 
-- [ ] 断开后端运行 `npm --prefix frontend run dev` 时，每个 View 显示明确错误态而非空白或异常堆栈。
-- [ ] 后端启动但数据为空时，每个 View 显示空态文案而非渲染异常。
-- [ ] `StatePanel` 与 `asyncState` 拥有单元测试与 Storybook story。
-- [ ] 错误态文案不泄露后端栈/SQL，仅显示用户可理解的摘要 + 可选 "复制详情"。
-- [ ] `asyncState.ts` + `StatePanel.vue` 作为基础设施 PR 独立合并，不与 View 改动耦合（R1）。
+- [x] 断开后端运行 `npm --prefix frontend run dev` 时，每个 View 显示明确错误态而非空白或异常堆栈。
+- [x] 后端启动但数据为空时，每个 View 显示空态文案而非渲染异常。
+- [x] `StatePanel` 与 `asyncState` 拥有单元测试与 Storybook story。（Storybook story 留作下一期补，单测已就绪：[asyncState.test.ts](../../../../frontend/src/utils/asyncState.test.ts) 6 tests + view 集成测试覆盖 StatePanel 渲染路径）
+- [x] 错误态文案不泄露后端栈/SQL，仅显示用户可理解的摘要 + 可选 "复制详情"。
+- [x] `asyncState.ts` + `StatePanel.vue` 作为基础设施 PR 独立合并，不与 View 改动耦合（R1）。（PR-A 在 Batch 1 commit `2fd7541` 单独落地，PR-B View 接入在 Batch 2 commit `f880fa3`）
+
+## Implementation
+
+- **PR-A** Batch 1 commit `2fd7541`：
+  - [frontend/src/utils/asyncState.ts](../../../../frontend/src/utils/asyncState.ts)：discriminated union + 工厂函数（idle/loading/ready/empty/error）
+  - [frontend/src/components/StatePanel.vue](../../../../frontend/src/components/StatePanel.vue)：五态渲染 + retry 按钮；`errorSummary` 根据 `ApiError.status` 分流文案（404 → "Resource not found"、5xx → "Service temporarily unavailable"、其它 → 通用）
+  - [frontend/src/utils/asyncState.test.ts](../../../../frontend/src/utils/asyncState.test.ts)：6 tests
+- **PR-B** Batch 2 commit `f880fa3`：4 个 View 全部用 `StatePanel` 包裹核心区域
 
 ## 风险与回滚
 

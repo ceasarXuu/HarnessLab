@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.2
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend views, frontend api client
 - Related Links: [README](README.md), [BUG-WEB-03](03-contract-gap-vs-backend.md), [BUG-WEB-04](04-loading-error-empty-states.md), [bugfix/04-sse-stream-not-realtime.md](../bugfix/04-sse-stream-not-realtime.md)
@@ -60,11 +60,15 @@ $ rg "from '@/api" frontend/src   # 0 matches
 
 ## Acceptance Criteria
 
-- [ ] 四个 View 在挂载后均会调用 `ornnLabApi` 并把响应映射到 UI；后端响应变更时刷新页面可见到变化。
-- [ ] `frontend/src/data/consoleSnapshot.ts` 在生产路径上无引用（grep 验证）；如保留则迁移至 fixtures 目录。
-- [ ] `npm --prefix frontend run typecheck` 通过。
-- [ ] 至少一个 View 拥有"挂载即调用 API"的单元/集成测试（细节在 [BUG-WEB-05](05-integration-test-gap.md)）。
-- [ ] View 切换 PR 中 loading / error / empty 三态均可在浏览器手动复现（依赖 [BUG-WEB-04](04-loading-error-empty-states.md) 基础设施已先行合并）。
+- [x] 四个 View 在挂载后均会调用 `ornnLabApi` 并把响应映射到 UI；后端响应变更时刷新页面可见到变化。
+- [x] `frontend/src/data/consoleSnapshot.ts` 在生产路径上无引用（grep 验证）；如保留则迁移至 fixtures 目录。
+- [x] `npm --prefix frontend run typecheck` 通过。
+- [x] 至少一个 View 拥有"挂载即调用 API"的单元/集成测试（细节在 [BUG-WEB-05](05-integration-test-gap.md)）。
+- [x] View 切换 PR 中 loading / error / empty 三态均可在浏览器手动复现（依赖 [BUG-WEB-04](04-loading-error-empty-states.md) 基础设施已先行合并）。
+
+## Implementation
+
+- **Batch 2** commit `f880fa3`：4 个 View 切换到 `ornnLabApi`，全部包裹 `StatePanel`，按处置表删除模板段落（Priority alerts、Owner、Queue、Heartbeat、Success/Experiments 列）；`consoleSnapshot.ts` 已从 `data/` 迁移到 `__fixtures__/`；`App.vue` / `AppShell.vue` 不再传 `snapshot` prop，`AppShell` 自行拉 experiments + agents 给 Live posture 摘要。
 
 ## 风险与回滚
 

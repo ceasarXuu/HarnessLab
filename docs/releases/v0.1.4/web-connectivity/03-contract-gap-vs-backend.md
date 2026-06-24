@@ -3,7 +3,7 @@
 - Created: 2026-06-23
 - Updated: 2026-06-24
 - Version: 1.2
-- Status: Draft
+- Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend types & api client, ornnlab API routers
 - Related Links: [README](README.md), [BUG-WEB-02](02-views-not-consuming-api.md), [bugfix/04-sse-stream-not-realtime.md](../bugfix/04-sse-stream-not-realtime.md)
@@ -203,12 +203,18 @@ UI 枚举（如 `ExperimentState`）按后端实际状态集扩展，或在 mapp
 
 ## Acceptance Criteria
 
-- [ ] `ornnLabApi` 暴露 `agents / system / benchmarks` 命名空间，与后端实际端点一一对应（31 端点表全覆盖，SSE stream 显式 Deferred）。
-- [ ] `ApiClient.get / post` 支持 `query` 参数；`runExperiment(id, wait?)` 可传递 `wait` query param。
-- [ ] `ExperimentRun` 接口包含 `job_dir: string | null` 字段（R7）。
-- [ ] 所有 mapper 函数有对应单测，覆盖典型 + 边界（空数组、缺失字段、未知 status）。
-- [ ] 文档（本文件）列出最终的字段映射表与 viewmodel 数据源决策，便于 review。
-- [ ] `npm --prefix frontend run typecheck` 通过；类型上 UI view-model 不直接 import 后端 Response 类型（依赖在 mapper 层）。
+- [x] `ornnLabApi` 暴露 `agents / system / benchmarks` 命名空间，与后端实际端点一一对应（31 端点表全覆盖，SSE stream 显式 Deferred）。
+- [x] `ApiClient.get / post` 支持 `query` 参数；`runExperiment(id, wait?)` 可传递 `wait` query param。
+- [x] `ExperimentRun` 接口包含 `job_dir: string | null` 字段（R7）。
+- [x] 所有 mapper 函数有对应单测，覆盖典型 + 边界（空数组、缺失字段、未知 status）。
+- [x] 文档（本文件）列出最终的字段映射表与 viewmodel 数据源决策，便于 review。
+- [x] `npm --prefix frontend run typecheck` 通过；类型上 UI view-model 不直接 import 后端 Response 类型（依赖在 mapper 层）。
+
+## Implementation
+
+- **Batch 1** commit `2fd7541`：
+  - [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts) `ApiClient` 扩展 get/post/put/delete + query 参数（`URLSearchParams`）；`ornnLabApi` 新增 17 个访问器（`system / agents / benchmarks` 命名空间 + 实验/runs/templates 缺口）；`ExperimentRun` 补 `job_dir: string | null`；空 body DELETE 返回 undefined
+  - [frontend/src/api/mappers.ts](../../../../frontend/src/api/mappers.ts) + [frontend/src/api/mappers.test.ts](../../../../frontend/src/api/mappers.test.ts)：4 个 mapper（`toExperimentRecord` / `toAgentRecord` / `toKpiMetrics` / `toLeaderboardSeed`）+ 26 个 vitest 测试，覆盖枚举映射、N3 空值约定、边界场景
 
 ## 风险与回滚
 
