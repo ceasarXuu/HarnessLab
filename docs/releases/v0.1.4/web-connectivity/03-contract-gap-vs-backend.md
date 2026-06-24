@@ -2,7 +2,7 @@
 
 - Created: 2026-06-23
 - Updated: 2026-06-24
-- Version: 1.1
+- Version: 1.2
 - Status: Draft
 - Owner / Responsible: project maintainer
 - Related Systems: frontend types & api client, ornnlab API routers
@@ -10,7 +10,7 @@
 - Risk Level: Medium
 - Plan Type: Standard
 - Phase: 2（数据接入，前置）
-- Revision Notes: v1.1 增加 31 端点完整清单表（F2）、viewmodel 字段数据源决策节（F3）、apiClient query-param 能力扩展条款（F4）；修正 mapper 判据（R3）；SSE 端点标注 Deferred（R4）；标注 ExperimentRun.job_dir 缺失（R7）；新增 maintenance follow-up 节评估 openapi-typescript（R9）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md
+- Revision Notes: v1.1 31 端点表（F2）+ viewmodel 字段决策（F3）+ query-param（F4）+ mapper 判据（R3）+ SSE Deferred（R4）+ job_dir gap（R7）+ openapi-typescript defer（R9）。v1.2 新增删除字段实施约定（Round 3 N3，mapper 输出 `""` 保持类型不变）+ SSE 行补 `after` query param（Round 3 N1）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md + vs_review/2026-06-24-closure-review-round3.md
 
 ## 状态说明
 
@@ -63,7 +63,7 @@
 | 19 | experiments | POST | `/api/experiments/{id}/save-template` | — | ✅ `saveExperimentTemplate(id, name)` | 已覆盖 |
 | 20 | experiments | GET | `/api/experiments/{id}/report` | — | ✅ `experimentReport(id)` | 已覆盖 |
 | 21 | experiments | GET | `/api/experiments/{id}/events` | `after: int = 0` | ❌ | 待补 `experimentEvents(id, after)` |
-| 22 | experiments | GET | `/api/experiments/{id}/events/stream` | — | ❌ | **Deferred**（SSE，见 [bugfix/04](../bugfix/04-sse-stream-not-realtime.md)） |
+| 22 | experiments | GET | `/api/experiments/{id}/events/stream` | `after: int = 0` | ❌ | **Deferred**（SSE，见 [bugfix/04](../bugfix/04-sse-stream-not-realtime.md)；实施时勿漏 `after` query param） |
 | 23 | experiments | GET | `/api/experiments/{id}/runs` | — | ❌ | 待补 `experimentRuns(id)` |
 | 24 | runs | GET | `/api/runs/{run_id}` | — | ✅ `run(id)` | 已覆盖 |
 | 25 | runs | POST | `/api/runs/{run_id}/cancel` | — | ✅ `cancelRun(id)` | 已覆盖 |
@@ -138,6 +138,14 @@
 - **派生（枚举映射）**：`state←status`、`health←status`
 - **派生（聚合）**：`successRate`、`activeRuns`、`KpiMetric.*`
 - **保留（直传）**：`id`、`name`、`score`
+
+#### 删除字段的实施约定（N3 澄清）
+
+本 PR（[BUG-WEB-03](03-contract-gap-vs-backend.md)）**不修改** [frontend/src/types/console.ts](../../../../frontend/src/types/console.ts) 的字段定义（见本文件 §修复方案 4 范围边界）。为了兼容"类型不动 + 字段无后端源"的张力，**mapper 输出统一规则**：
+
+- mapper 函数返回的 viewmodel 对象中，**被标记为"删除"的字段填充 `""`（字符串）/`0`（数值）/`[]`（数组）**，保持类型签名不变。
+- 这些字段的**模板渲染由 [BUG-WEB-02](02-views-not-consuming-api.md) View 切换 PR 负责**：要么删除对应模板段落（如 `AgentsView` 的 Queue/Heartbeat 列、`DashboardView` 的 Priority alerts 区块），要么改为占位文案（`"—"`）。
+- 真正从 `types/console.ts` 移除已删除字段，留到 v0.1.5 PRD（与 OpenAPI 自动类型生成一并评估）。这样本期可保持类型稳定，View 改动局限在模板层，符合"分层成本最小"原则。
 
 ## 修复方案
 

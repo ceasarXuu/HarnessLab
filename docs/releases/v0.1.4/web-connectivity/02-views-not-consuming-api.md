@@ -2,7 +2,7 @@
 
 - Created: 2026-06-23
 - Updated: 2026-06-24
-- Version: 1.1
+- Version: 1.2
 - Status: Draft
 - Owner / Responsible: project maintainer
 - Related Systems: frontend views, frontend api client
@@ -10,7 +10,7 @@
 - Risk Level: High
 - Plan Type: Standard
 - Phase: 2（数据接入，主线）
-- Revision Notes: v1.1 拆 PR 切片（R1）：04 基础设施独立 PR 先合，View 切换可在同 PR 或后续 PR；引用 BUG-WEB-03 viewmodel 字段决策；显式声明 SSE 不在本立项范围（R4）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md
+- Revision Notes: v1.1 拆 PR 切片（R1）+ viewmodel 字段决策引用 + SSE 范围声明（R4）。v1.2 修订 PR 切片措辞去除歧义（Round 3 N2）+ 新增删除字段对应模板段落处置清单（Round 3 N5）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md + vs_review/2026-06-24-closure-review-round3.md
 
 ## 状态说明
 
@@ -45,8 +45,18 @@ $ rg "from '@/api" frontend/src   # 0 matches
    - `ExperimentsView` ← `ornnLabApi.experiments()`
    - `LeaderboardView` ← `ornnLabApi.leaderboard()`
 3. 把 [consoleSnapshot.ts](../../../../frontend/src/data/consoleSnapshot.ts) 移到 `frontend/src/__fixtures__/` 或 `tests/fixtures/`，作为 Storybook / 单测的 fixture，不再作为运行时数据源。
-4. **PR 切片策略（R1 修正）**：[BUG-WEB-04](04-loading-error-empty-states.md) 的基础设施（`StatePanel` + `asyncState`）应**独立于 View 改动先行合并**；View 切换可在同一 PR（含 04 基础设施）或后续 PR 中进行。避免一个 PR 同时改 4 个 View + AsyncState 原语 + StatePanel + fixture 迁移导致 diff 过大不可 review。
+4. **PR 切片策略（R1 修正）**：[BUG-WEB-04](04-loading-error-empty-states.md) 的基础设施 PR-A（`StatePanel` + `asyncState`）必须**先于本 PR 合并**。本 PR（View 切换）以 04 PR-A 已合并为前置依赖；可与 04 PR-B（View 接入 StatePanel）合并为同一 PR，也可独立为后续 PR。**不要**把 04 PR-A 与本 PR 合并到同一个 PR，避免 diff 过大不可 review。
 5. **SSE 实时事件流不在本立项范围**（R4）：View 切换时若触手可及看到 `/events/stream` 端点，不要临时接入 EventSource；SSE 接入等 [bugfix/04](../bugfix/04-sse-stream-not-realtime.md) 落地后再追加。
+6. **删除字段对应的模板段落处置（N5 新增）**：根据 [BUG-WEB-03 §删除字段的实施约定](03-contract-gap-vs-backend.md#删除字段的实施约定n3-澄清)，mapper 对"删除"字段输出 `""`，类型不变；本 PR 需明确处理以下模板段落：
+
+| View 文件 | 模板段落 | 处置 |
+|---|---|---|
+| [DashboardView.vue](../../../../frontend/src/views/DashboardView.vue) | "Priority alerts" 区块（渲染 `snapshot.alerts`） | **整段删除**；原位置以空状态文案或简介替代（避免布局塌陷） |
+| [DashboardView.vue](../../../../frontend/src/views/DashboardView.vue) | 实验表格的 `Owner` 列（表头 + 单元格） | **删除列** |
+| [ExperimentsView.vue](../../../../frontend/src/views/ExperimentsView.vue) | 详情网格中的 `Owner` 行（`<dt>Owner</dt><dd>...</dd>`） | **删除行** |
+| [AgentsView.vue](../../../../frontend/src/views/AgentsView.vue) | `Queue` 列、`Heartbeat` 列 | **删除列** |
+| [AgentsView.vue](../../../../frontend/src/views/AgentsView.vue) | agent 名下的 owner subtitle（`<small>{{ agent.owner }}</small>`） | **删除该 small 标签** |
+| [LeaderboardView.vue](../../../../frontend/src/views/LeaderboardView.vue) | `Success` / `Experiments` 列 | 若 mapper 输出聚合值则保留，否则删除列 |
 
 ## Acceptance Criteria
 

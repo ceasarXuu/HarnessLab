@@ -2,14 +2,14 @@
 
 - Created: 2026-06-23
 - Updated: 2026-06-24
-- Version: 1.1
+- Version: 1.2
 - Status: Draft
 - Owner / Responsible: project maintainer
 - Related Systems: frontend (Vue 3 + Vite), ornnlab FastAPI backend, dev server proxy
 - Related Links: [bugfix/README](../bugfix/README.md), [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts), [ornnlab/app.py](../../../../ornnlab/app.py)
 - Risk Level: Medium
 - Plan Type: Standard
-- Revision Notes: v1.1 拆 PR 切片（R1）：04 基础设施独立 PR 先行；新增量化验收指标（R5）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md
+- Revision Notes: v1.1 拆 PR 切片（R1）+ 量化验收指标（R5）。v1.2 R5 #2/#3 标为 conditional（Round 3 N4：CI 是否启动 backend 延后到 v0.1.5 评估）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md + vs_review/2026-06-24-closure-review-round3.md
 
 ## 状态说明
 
@@ -106,9 +106,11 @@ Phase 3 ── BUG-WEB-05
 "调通"需有可观测目标，避免"再调一调还是收尾"的模糊地带：
 
 - [ ] `scripts/test-after-change-web.sh` 退出码 0（typecheck + lint + vitest + e2e 全绿）。
-- [ ] e2e smoke 中至少 1 个真实 API 请求返回 2xx（如 `GET /api/system/status` → 200）。
-- [ ] e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）。
-- [ ] ≥1 个 View 集成测试包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）。
+- [ ] **[conditional]** e2e smoke 中至少 1 个真实 API 请求返回 2xx（如 `GET /api/system/status` → 200）——需先启动后端（`python -m ornnlab web`）；未启动时按 `xfail` 处理。
+- [ ] **[conditional]** e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）——同样以 backend 可用为前提。
+- [ ] ≥1 个 View 集成测试（vitest + mock fetch）包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）；该指标**不依赖** backend，CI 中无条件验证。
+
+> N4 说明：`test-after-change-web.sh` 当前不启动 FastAPI；CI 编排是否扩展脚本以自动 `python -m ornnlab web`，延后到 v0.1.5 评估。本期接受"backend 可用时强校验、不可用时 xfail"的 conditional 验收。
 
 ## 不在本计划范围内
 
