@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# OrnnLab 本地开发联调启动器
+#
+# 同时启动 FastAPI 后端（默认 8765）和 Vite 前端 dev server，自动捕获
+# 前端打印的真实 Local URL 并高亮显示。Ctrl-C 一次性停掉两个子进程。
+#
+# 用法：
+#   bash run_dev.sh                       # 后端 8765，前端默认 4173
+#   ORNNLAB_PORT=9000 bash run_dev.sh     # 自定义后端端口（同时透传给 Vite proxy）
+#
+# 依赖：uv、npm、Node.js 22+（详见 docs/playbooks/install-quickstart.md）
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+BACKEND_HOST="${ORNNLAB_HOST:-127.0.0.1}"
+BACKEND_PORT="${ORNNLAB_PORT:-8765}"
+BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}"
+
+LOG_DIR="${TMPDIR:-/tmp}/ornnlab-dev"
+mkdir -p "$LOG_DIR"
+BACKEND_LOG="$LOG_DIR/backend.log"
+FRONTEND_LOG="$LOG_DIR/frontend.log"
+: > "$BACKEND_LOG"
+: > "$FRONTEND_LOG"
+
+BACKEND_PID=""
+FRONTEND_PID=""
+
+cleanup() {
+  local exit_code=$?
+  echo
+  echo "[run_dev] 收到退出信号，停止子进程..."
+  if [[ -n "$FRONTEND_PID" ]] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
+    kill "$FRONTEND_PID" 2>/dev/null || true
+    wait "$FRONTEND_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+    kill "$BACKEND_PID" 2>/dev/null || true
+    wait "$BACKEND_PID" 2>/dev/null || true
+  fi
+  echo "[run_dev] 已停止。日志保留在 $LOG_DIR/"
+  exit "$exit_code"
+}
+trap cleanup INT TERM EXIT
+
+# ---- 启动后端 ----
+echo "[run_dev] 启动后端 FastAPI @ ${BACKEND_URL} ..."
+(
+  exec uv run ornnlab web --host "$BACKEND_HOST" --port "$BACKEND_PORT" \
+    >>"$BACKEND_LOG" 2>&1
+) &
+BACKEND_PID=$!
+
+# 等后端进入可用状态（最多 30s）
+for i in {1..60}; do
+  if curl -sf "${BACKEND_URL}/api/system/status" >/dev/null 2>&1; then
+    echo "[run_dev] ✓ 后端 ${BACKEND_URL}/api/system/status 已就绪"
+    break
+  fi
+  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    echo "[run_dev] ✗ 后端进程异常退出，日志："
+    tail -n 50 "$BACKEND_LOG" || true
+    exit 1
+  fi
+  sleep 0.5
+  if [[ "$i" -eq 60 ]]; then
+    echo "[run_dev] ✗ 后端 30s 内未就绪，日志："
+    tail -n 50 "$BACKEND_LOG" || true
+    exit 1
+  fi
+done
+
+# ---- 启动前端 ----
+# 通过 ORNNLAB_API_TARGET 让 Vite proxy 指向当前后端（默认即 8765）。
+echo "[run_dev] 启动前端 Vite dev server ..."
+(
+  cd "$REPO_ROOT/frontend"
+  ORNNLAB_API_TARGET="$BACKEND_URL" exec npm run dev -- --host "$BACKEND_HOST" \
+    >>"$FRONTEND_LOG" 2>&1
+) &
+FRONTEND_PID=$!
+
+# 从 Vite stdout 解析真实 Local URL（避免端口被换时硬编码错）。最多等 30s。
+FRONTEND_URL=""
+for i in {1..60}; do
+  if [[ -s "$FRONTEND_LOG" ]]; then
+    # Vite 输出形如 "  ➜  Local:   http://127.0.0.1:4173/"
+    FRONTEND_URL="$(grep -Eo 'http://[^[:space:]]+' "$FRONTEND_LOG" \
+      | grep -v "$BACKEND_URL" \
+      | head -n 1 || true)"
+    if [[ -n "$FRONTEND_URL" ]]; then
+      break
+    fi
+  fi
+  if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+    echo "[run_dev] ✗ 前端进程异常退出，日志："
+    tail -n 50 "$FRONTEND_LOG" || true
+    exit 1
+  fi
+  sleep 0.5
+done
+
+if [[ -z "$FRONTEND_URL" ]]; then
+  echo "[run_dev] ✗ 未能在 30s 内解析到前端 Local URL，日志："
+  tail -n 50 "$FRONTEND_LOG" || true
+  exit 1
+fi
+
+# ---- 输出摘要 ----
+cat <<EOF
+
+╔══════════════════════════════════════════════════════════════╗
+║  OrnnLab dev 已启动                                          ║
+╠══════════════════════════════════════════════════════════════╣
+║  前端主页 : ${FRONTEND_URL}
+║  后端 API : ${BACKEND_URL}/api
+║  后端日志 : ${BACKEND_LOG}
+║  前端日志 : ${FRONTEND_LOG}
+╚══════════════════════════════════════════════════════════════╝
+
+Ctrl-C 一次性停掉前后端。
+
+EOF
+
+# 把两个进程的日志 tail 到当前终端，方便观察请求
+tail -n 0 -F "$BACKEND_LOG" "$FRONTEND_LOG" &
+TAIL_PID=$!
+
+# 任意一个子进程退出 → 整体退出（兼容 macOS 默认 bash 3.2，未使用 wait -n）
+while kill -0 "$BACKEND_PID" 2>/dev/null && kill -0 "$FRONTEND_PID" 2>/dev/null; do
+  sleep 1
+done
+
+kill "$TAIL_PID" 2>/dev/null || true
