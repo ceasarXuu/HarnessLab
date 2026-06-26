@@ -5,7 +5,7 @@
  * - 失败时 stars.value 保持 null，组件按设计展示占位
  * - 结果在 sessionStorage 缓存 5 分钟，避免页面切换重复请求
  */
-import { ref } from 'vue'
+import { readonly, ref } from 'vue'
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 const CACHE_KEY_PREFIX = 'ornnlab.stars.'
@@ -74,7 +74,12 @@ export const useGithubStars = (repo: string) => {
     }
   }
 
-  return { stars, loading, error, fetchStars }
+  return {
+    stars: readonly(stars),
+    loading: readonly(loading),
+    error: readonly(error),
+    fetchStars,
+  }
 }
 
 export const formatStars = (count: number): string => {

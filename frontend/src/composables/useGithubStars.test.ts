@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { isReadonly } from 'vue'
 import { useGithubStars, formatStars } from './useGithubStars'
 
 const mockFetch = vi.fn()
@@ -33,6 +34,14 @@ describe('formatStars', () => {
 })
 
 describe('useGithubStars', () => {
+  it('exposes readonly state and an explicit fetch action', () => {
+    const { stars, loading, error, fetchStars } = useGithubStars('owner/repo')
+    expect(isReadonly(stars)).toBe(true)
+    expect(isReadonly(loading)).toBe(true)
+    expect(isReadonly(error)).toBe(true)
+    expect(fetchStars).toEqual(expect.any(Function))
+  })
+
   it('fetches stars from GitHub REST API', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ stargazers_count: 42 }), {

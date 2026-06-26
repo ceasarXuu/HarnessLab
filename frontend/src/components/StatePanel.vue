@@ -27,20 +27,39 @@ const errorSummary = (err: ApiError | Error): string => {
 
 <template>
   <div>
-    <section v-if="state.status === 'loading'" class="state-panel state-panel--loading">
+    <section
+      v-if="state.status === 'loading'"
+      class="state-panel state-panel--loading"
+      role="status"
+      aria-live="polite"
+    >
       <p class="muted">{{ t('state.loading') }}</p>
     </section>
 
-    <section v-else-if="state.status === 'error'" class="state-panel state-panel--error">
+    <section
+      v-else-if="state.status === 'error'"
+      class="state-panel state-panel--error"
+      role="alert"
+    >
       <p class="state-panel__message">{{ errorSummary(state.error) }}</p>
-      <button class="btn" @click="emit('retry')">{{ t('state.retry') }}</button>
+      <button class="btn" type="button" @click="emit('retry')">{{ t('state.retry') }}</button>
     </section>
 
-    <section v-else-if="state.status === 'empty'" class="state-panel state-panel--empty">
+    <section
+      v-else-if="state.status === 'empty'"
+      class="state-panel state-panel--empty"
+      role="status"
+      aria-live="polite"
+    >
       <p class="muted">{{ emptyMessage ?? t('state.noData') }}</p>
     </section>
 
-    <section v-else-if="state.status === 'idle'" class="state-panel state-panel--idle">
+    <section
+      v-else-if="state.status === 'idle'"
+      class="state-panel state-panel--idle"
+      role="status"
+      aria-live="polite"
+    >
       <p class="muted">{{ t('state.waiting') }}</p>
     </section>
 

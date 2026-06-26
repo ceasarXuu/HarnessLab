@@ -3,6 +3,7 @@ export default {
     title: 'OrnnLab',
     subtitle: '运维控制台',
     description: '面向运维的前端脚手架，统一管理 Agent、实验与基准性能。',
+    skipToMain: '跳到主内容',
     operatorView: '操作视图',
     apiPrimed: 'API 客户端已就绪：`/api`',
   },

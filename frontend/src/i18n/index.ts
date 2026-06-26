@@ -25,9 +25,11 @@ const detectInitialLocale = (): AppLocale => {
   return nav.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 }
 
+const initialLocale = detectInitialLocale()
+
 export const i18n = createI18n({
   legacy: false,
-  locale: detectInitialLocale(),
+  locale: initialLocale,
   fallbackLocale: 'en',
   messages: { en, zh },
 })
@@ -42,4 +44,8 @@ export const setLocale = (locale: AppLocale) => {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'
   }
+}
+
+export const initializeLocale = () => {
+  setLocale(i18n.global.locale.value as AppLocale)
 }

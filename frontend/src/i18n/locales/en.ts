@@ -4,6 +4,7 @@ export default {
     subtitle: 'Operations Console',
     description:
       'Focused front-end scaffold for operators managing agents, experiments, and benchmark performance.',
+    skipToMain: 'Skip to main content',
     operatorView: 'Operator view',
     apiPrimed: 'API client primed for `/api`',
   },

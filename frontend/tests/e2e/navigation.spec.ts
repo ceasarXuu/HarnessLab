@@ -15,6 +15,21 @@ test('navigates the primary console views', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Benchmark Leaderboard' })).toBeVisible()
 })
 
+test('keyboard users can skip repeated navigation and 320px layout does not overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/')
+
+  await page.keyboard.press('Tab')
+  const skipLink = page.getByRole('link', { name: 'Skip to main content' })
+  await expect(skipLink).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  await expect(page.locator('main#main-content')).toBeFocused()
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+  expect(overflow).toBe(false)
+})
+
 /**
  * Conditional smoke: 仅在后端可用时校验。
  *

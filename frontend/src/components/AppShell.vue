@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import { ApiError, ornnLabApi, type AgentResponse, type Experiment } from '@/api/client'
+import { useLivePostureSummary } from '@/composables/useLivePostureSummary'
 
 const route = useRoute()
 const { t } = useI18n()
+const { statusLine } = useLivePostureSummary()
 
 const navItems = [
   { name: 'dashboard', key: 'nav.dashboard', to: '/' },
@@ -15,43 +16,9 @@ const navItems = [
   { name: 'leaderboard', key: 'nav.leaderboard', to: '/leaderboard' },
 ] as const
 
-const experiments = ref<Experiment[]>([])
-const agents = ref<AgentResponse[]>([])
-const summaryError = ref<{ http?: number } | null>(null)
-
 const pageTitle = computed(() => {
   const key = route.meta.titleKey
   return key ? t(key) : t('app.subtitle')
-})
-
-const statusLine = computed(() => {
-  if (summaryError.value) {
-    return summaryError.value.http
-      ? t('nav.postureUnavailableHttp', { status: summaryError.value.http })
-      : t('nav.postureUnavailable')
-  }
-  const runningCount = experiments.value.filter((e) => e.status === 'running').length
-  const blockedCount = agents.value.filter(
-    (a) => a.status !== 'compiled' && a.status !== 'draft',
-  ).length
-  return t('nav.postureLine', {
-    agents: agents.value.length,
-    running: runningCount,
-    blocked: blockedCount,
-  })
-})
-
-onMounted(async () => {
-  try {
-    const [exps, ags] = await Promise.all([
-      ornnLabApi.experiments(),
-      ornnLabApi.agents.list(),
-    ])
-    experiments.value = exps
-    agents.value = ags
-  } catch (err) {
-    summaryError.value = err instanceof ApiError ? { http: err.status } : {}
-  }
 })
 </script>
 
@@ -85,14 +52,18 @@ onMounted(async () => {
       </section>
     </aside>
 
-    <main class="console-shell__content">
+    <main
+      id="main-content"
+      class="console-shell__content"
+      tabindex="-1"
+    >
       <header class="page-header panel">
         <div>
           <p class="eyebrow">{{ t('app.operatorView') }}</p>
           <h2>{{ pageTitle }}</h2>
         </div>
         <div class="page-header__meta">
-          <span class="status-dot"></span>
+          <span class="status-dot" aria-hidden="true"></span>
           <span>{{ t('app.apiPrimed') }}</span>
         </div>
       </header>

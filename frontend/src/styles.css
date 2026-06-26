@@ -57,10 +57,15 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 a {
@@ -73,10 +78,34 @@ input,
 select,
 textarea {
   font: inherit;
+  touch-action: manipulation;
 }
 
 #app {
   min-height: 100vh;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  inset-block-start: calc(0.75rem + env(safe-area-inset-top));
+  inset-inline-start: calc(0.75rem + env(safe-area-inset-left));
+  z-index: 100;
+  transform: translateY(-160%);
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--panel-bg);
+  font-weight: 700;
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .console-shell {
@@ -84,7 +113,11 @@ textarea {
   grid-template-columns: minmax(250px, 300px) 1fr;
   gap: 1.5rem;
   min-height: 100vh;
-  padding: 1.5rem;
+  padding:
+    calc(1.5rem + env(safe-area-inset-top))
+    calc(1.5rem + env(safe-area-inset-right))
+    calc(1.5rem + env(safe-area-inset-bottom))
+    calc(1.5rem + env(safe-area-inset-left));
 }
 
 .panel {
@@ -93,6 +126,7 @@ textarea {
   border: 1px solid var(--panel-border);
   border-radius: 24px;
   box-shadow: var(--panel-shadow);
+  min-width: 0;
 }
 
 .console-shell__nav {
@@ -108,6 +142,8 @@ h2,
 h3,
 h4 {
   margin: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .nav-links {
@@ -120,6 +156,7 @@ h4 {
   border-radius: 16px;
   border: 1px solid transparent;
   color: var(--ink-soft);
+  overflow-wrap: anywhere;
   transition: 150ms ease;
 }
 
@@ -139,6 +176,7 @@ h4 {
 .console-shell__content {
   display: grid;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .page-header {
@@ -147,6 +185,7 @@ h4 {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem 1.5rem;
+  min-width: 0;
 }
 
 .page-header__meta {
@@ -198,12 +237,14 @@ h4 {
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+  min-width: 0;
 }
 
 .kpi-card__value {
   display: block;
   margin: 1rem 0 0.35rem;
   font-size: clamp(1.8rem, 4vw, 2.5rem);
+  overflow-wrap: anywhere;
 }
 
 .eyebrow {
@@ -218,6 +259,7 @@ h4 {
 .muted {
   margin: 0;
   color: var(--ink-soft);
+  overflow-wrap: anywhere;
 }
 
 .pill {
@@ -233,6 +275,7 @@ h4 {
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;
+  overflow-wrap: anywhere;
 }
 
 .pill--up {
@@ -312,12 +355,49 @@ h4 {
 
 .table-list__head--agents,
 .table-list__row--agents {
-  grid-template-columns: minmax(180px, 1.6fr) repeat(5, minmax(90px, 1fr));
+  grid-template-columns: minmax(180px, 1.6fr) repeat(3, minmax(90px, 1fr));
 }
 
 .table-list__head--leaderboard,
 .table-list__row--leaderboard {
   grid-template-columns: repeat(5, minmax(90px, 1fr));
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.75rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.data-table th {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.data-table tbody tr {
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.data-table tbody td:first-child {
+  border-radius: 18px 0 0 18px;
+}
+
+.data-table tbody td:last-child {
+  border-radius: 0 18px 18px 0;
+}
+
+.data-table__numeric {
+  font-variant-numeric: tabular-nums;
 }
 
 .leaderboard-list {
@@ -360,7 +440,11 @@ h4 {
 
 @media (max-width: 780px) {
   .console-shell {
-    padding: 1rem;
+    padding:
+      calc(1rem + env(safe-area-inset-top))
+      calc(1rem + env(safe-area-inset-right))
+      calc(1rem + env(safe-area-inset-bottom))
+      calc(1rem + env(safe-area-inset-left));
   }
 
   .console-shell__nav {
@@ -391,18 +475,31 @@ h4 {
   .table-list__row--leaderboard {
     grid-template-columns: 1fr;
   }
+
+  .data-table {
+    border-spacing: 0 0.5rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem;
+  }
 }
 
 /* ---- App header ---- */
 .app-header {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top);
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1.5rem;
+  padding:
+    0.75rem
+    calc(1.5rem + env(safe-area-inset-right))
+    0.75rem
+    calc(1.5rem + env(safe-area-inset-left));
   background: var(--header-bg);
   border-bottom: 1px solid var(--panel-border);
   backdrop-filter: blur(16px);
@@ -414,6 +511,8 @@ h4 {
   gap: 0.5rem;
   font-weight: 600;
   color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .app-header__brand-dot {
@@ -441,6 +540,7 @@ h4 {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
+  touch-action: manipulation;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
@@ -471,3 +571,18 @@ h4 {
   min-height: 100vh;
 }
 
+@media (max-width: 520px) {
+  .app-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .app-header__brand,
+  .app-header__controls {
+    width: 100%;
+  }
+
+  .app-header__controls {
+    flex-wrap: wrap;
+  }
+}

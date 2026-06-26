@@ -1,15 +1,15 @@
 # v0.1.4 Web 服务调通修复计划
 
 - Created: 2026-06-23
-- Updated: 2026-06-24
-- Version: 1.2
+- Updated: 2026-06-26
+- Version: 1.3
 - Status: Implemented
 - Owner / Responsible: project maintainer
 - Related Systems: frontend (Vue 3 + Vite), ornnlab FastAPI backend, dev server proxy
 - Related Links: [bugfix/README](../bugfix/README.md), [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts), [ornnlab/app.py](../../../../ornnlab/app.py)
 - Risk Level: Medium
 - Plan Type: Standard
-- Revision Notes: v1.1 拆 PR 切片（R1）+ 量化验收指标（R5）。v1.2 R5 #2/#3 标为 conditional（Round 3 N4：CI 是否启动 backend 延后到 v0.1.5 评估）。来源：vs_review/2026-06-23-web-connectivity-plan-review.md + vs_review/2026-06-24-closure-review-round3.md
+- Revision Notes: v1.1 拆 PR 切片（R1）+ 量化验收指标（R5）。v1.2 R5 #2/#3 标为 conditional（Round 3 N4：CI 是否启动 backend 延后到 v0.1.5 评估）。v1.3 追加并完成 BUG-WEB-06 Web 设计最佳实践收口。
 
 ## 状态说明
 
@@ -39,6 +39,7 @@ v0.1.4 阶段已经存在：
 | 03 | [契约错位与缺失端点](03-contract-gap-vs-backend.md) | 中 | 正确性 | frontend/src/types/console.ts, frontend/src/api/client.ts, ornnlab/api/* | 对齐前端 UI 模型与后端 schema；补齐 agents/system 相关访问器 |
 | 04 | [加载/错误/空态缺失](04-loading-error-empty-states.md) | 中 | 体验 | frontend/src/views/*.vue, frontend/src/components/* | 引入统一的 async 状态原语（loading / error / empty / stale） |
 | 05 | [集成测试缺口](05-integration-test-gap.md) | 中 | 测试 | frontend/tests/**, scripts/test-after-change-web.sh | 增加 API client 单测、MSW 级 view 集成测试与 e2e smoke |
+| 06 | [Web 设计最佳实践缺口](06-web-design-best-practices.md) | 中 | 体验 / 可访问性 / 组件边界 | frontend/src/components/*, frontend/src/composables/*, frontend/src/styles.css, frontend/.storybook/* | 补齐 focus/skip/live region/theme-color/readonly composable/Storybook smoke |
 
 ## 跨文档冲突
 
@@ -90,6 +91,8 @@ Phase 2 ── BUG-WEB-03 ──► BUG-WEB-02 ◄── BUG-WEB-04 PR-B
         │
         ▼
 Phase 3 ── BUG-WEB-05
+
+Phase 4 ── BUG-WEB-06 (Web 设计最佳实践收口)
 ```
 
 ## 验收
@@ -100,6 +103,7 @@ Phase 3 ── BUG-WEB-05
 - [x] 后端响应与前端类型在 `BUG-WEB-03` 中逐字段对齐，存在偏差时以后端为准并提供 mapper。
 - [x] 新增 API client 单测、至少一个 View 级集成测试与一条 e2e smoke，CI 全绿。
 - [x] 文档与 [bugfix/README](../bugfix/README.md) 交叉链接清晰，便于后续 v0.1.4 收尾汇总。
+- [x] Web 设计最佳实践缺口完成收口：键盘可达、读屏状态、窄屏布局、i18n/theme 元信息、Vue composable 状态边界、Storybook smoke 均有对应代码与测试证据。
 
 ### 量化验收指标（R5 新增）
 
@@ -119,8 +123,9 @@ Phase 3 ── BUG-WEB-05
 | Phase 1 | Batch 1 | `2fd7541` | BUG-WEB-01 vite proxy；BUG-WEB-03 client.ts + mappers；BUG-WEB-04 PR-A asyncState + StatePanel |
 | Phase 2 | Batch 2 | `f880fa3` | BUG-WEB-02 4 View 切到 ornnLabApi；BUG-WEB-04 PR-B View 接入 StatePanel；fixture 迁移 |
 | Phase 3 | Batch 3 | `05f1754` | BUG-WEB-05 client 单测 + views 集成测试（R10）+ conditional e2e smoke |
+| Phase 4 | Batch 4 | 当前提交 | BUG-WEB-06 focus/skip/live region/theme-color/readonly composable/AppShell composable/Storybook/e2e 320px smoke |
 
-最终自检：74 vitest tests 全过；typecheck、lint、build 全绿。
+最终自检：100 vitest tests 全过；typecheck、lint、storybook smoke、e2e 全绿。
 
 ## 不在本计划范围内
 

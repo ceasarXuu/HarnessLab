@@ -236,6 +236,13 @@ describe('LeaderboardView', () => {
 
     const wrapper = mount(LeaderboardView, mountOpts)
     await flushPromises()
+    const rows = wrapper.findAll('tbody tr')
+    expect(wrapper.find('table').exists()).toBe(true)
+    expect(wrapper.findAll('th').map((th) => th.text())).toEqual(['Rank', 'Agent', 'Score'])
+    expect(rows).toHaveLength(2)
+    expect(rows[0].text()).toContain('beta')
+    expect(rows[1].text()).toContain('alpha')
+
     const text = wrapper.text()
     expect(text).toContain('beta') // higher score
     expect(text).toContain('0.92')

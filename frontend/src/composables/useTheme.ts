@@ -4,7 +4,7 @@
  * 优先级：localStorage('ornnlab.theme') > prefers-color-scheme > 'light'
  * 通过 <html data-theme="dark|light"> 切换 CSS 变量。
  */
-import { ref, watch } from 'vue'
+import { readonly, ref, watch } from 'vue'
 
 export type Theme = 'light' | 'dark'
 
@@ -26,6 +26,10 @@ const detectInitialTheme = (): Theme => {
 const applyTheme = (theme: Theme) => {
   if (typeof document === 'undefined') return
   document.documentElement.setAttribute('data-theme', theme)
+  const themeColor = theme === 'dark' ? '#14181d' : '#f4f1e8'
+  document
+    .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    ?.setAttribute('content', themeColor)
 }
 
 const theme = ref<Theme>(detectInitialTheme())
@@ -42,7 +46,7 @@ watch(theme, (next) => {
 
 export const useTheme = () => {
   return {
-    theme,
+    theme: readonly(theme),
     toggleTheme: () => {
       theme.value = theme.value === 'dark' ? 'light' : 'dark'
     },

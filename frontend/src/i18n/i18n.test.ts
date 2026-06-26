@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { i18n, setLocale } from './index'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { i18n, initializeLocale, setLocale } from './index'
 
 describe('i18n', () => {
   beforeEach(() => {
@@ -9,6 +9,17 @@ describe('i18n', () => {
 
   it('initial locale is en when not set', () => {
     expect(i18n.global.locale.value).toBe('en')
+  })
+
+  it('initializes locale through setLocale so html lang is synchronized', () => {
+    setLocale('zh')
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    initializeLocale()
+
+    expect(i18n.global.locale.value).toBe('zh')
+    expect(document.documentElement.lang).toBe('zh-CN')
+    expect(setItem).toHaveBeenCalledWith('ornnlab.locale', 'zh')
+    setItem.mockRestore()
   })
 
   it('setLocale switches locale', () => {

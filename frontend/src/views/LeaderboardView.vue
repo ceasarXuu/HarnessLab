@@ -45,23 +45,25 @@ onMounted(fetchLeaderboard)
               <h3>{{ t('leaderboard.postureTitle') }}</h3>
             </div>
           </div>
-          <!-- BUG-WEB-02 处置：Success / Experiments 列移除（mapper 派生为 0，无意义） -->
-          <div class="table-list">
-            <div class="table-list__head table-list__head--leaderboard">
-              <span>{{ t('leaderboard.headRank') }}</span>
-              <span>{{ t('leaderboard.headAgent') }}</span>
-              <span>{{ t('leaderboard.headScore') }}</span>
-            </div>
-            <div
-              v-for="entry in (data as LeaderboardEntry[])"
-              :key="entry.agent"
-              class="table-list__row table-list__row--leaderboard"
-            >
-              <span>#{{ entry.rank }}</span>
-              <span>{{ entry.agent }}</span>
-              <span>{{ entry.score }}</span>
-            </div>
-          </div>
+          <table class="data-table data-table--leaderboard">
+            <thead>
+              <tr>
+                <th scope="col">{{ t('leaderboard.headRank') }}</th>
+                <th scope="col">{{ t('leaderboard.headAgent') }}</th>
+                <th scope="col">{{ t('leaderboard.headScore') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="entry in (data as LeaderboardEntry[])"
+                :key="entry.agent"
+              >
+                <td>#{{ entry.rank }}</td>
+                <td>{{ entry.agent }}</td>
+                <td class="data-table__numeric">{{ entry.score }}</td>
+              </tr>
+            </tbody>
+          </table>
         </section>
       </section>
     </template>
