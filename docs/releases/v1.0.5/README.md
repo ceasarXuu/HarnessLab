@@ -8,6 +8,7 @@
 - UI architecture companions:
   - [Harbor CLI-to-UI 替代架构](harbor-cli-to-ui-architecture.md)
   - [v1.0.5 前端重建架构决策](frontend-rebuild-architecture.md)
+  - [Harbor WebUI 功能覆盖清单](harbor-webui-feature-coverage-checklist.md)
 
 ## Requester Review Summary
 
@@ -102,7 +103,7 @@ benchmark 执行的默认环境前提。
   - Harbor 版本、Docker daemon、context、orphan containers、stale runs；
   - agent config 编译错误、dataset resolution 错误、verifier 错误。
 - CLI-to-UI replacement:
-  - `harbor run`：由 JobConfig 向导、Review 确认、Run 按钮、实时状态和 cancel/retry 交互替代；
+  - `harbor run`：由单页 JobConfig 表单、配置预览、Run 按钮、实时状态和 cancel/retry 交互替代；
   - `harbor dataset` / `harbor task`：由 Datasets catalog、Dataset detail、内嵌 task 列表、task filter 和任务预览替代；
   - `harbor view`：由 Job detail 内的 artifacts/trials 浏览、trajectory 链接和原始路径入口替代；
   - `harbor adapter` / agent import path 配置：由 Agents 页展示内置与 custom agents，并把选择结果用于 JobConfig；
@@ -148,14 +149,20 @@ benchmark 执行的默认环境前提。
   - 列表页沿用官方 `/datasets` 的标题、搜索框、表格、分页和空/加载骨架布局语言。
   - Jobs、Datasets、Agents 的详情不常驻占用右栏；用户点击列表行后，详情从右侧 drawer 滑出。
   - 任何暂未接入真实能力的官方 UI 元素不得做成误导性假入口；若保留入口，必须明确指向真实本地路径、外部官方路径或禁用状态。
-- JobConfig UI 应分步组织，不把 Harbor 参数一次性平铺：
-  - Agent
-  - Dataset
+- JobConfig UI 应采用单页铺开表单，基础字段直接可见：
+  - Dataset / Task source
+  - Agent / Model
   - Environment
-  - Verification
-  - Runtime
-  - Review
-- 每个高级参数默认折叠，但必须可见、可解释、可复制为原始 JobConfig。
+  - Attempts / Concurrency
+  - Generated JobConfig / equivalent CLI preview
+- Harbor 的高级配置按区域折叠，不再使用无实际价值的步骤条或流程说明栏：
+  - Task filters
+  - Verifier
+  - Retry / Timeout
+  - Artifacts
+  - Plugins
+  - Hub upload/share
+- 每个高级参数必须可见、可解释、可复制为原始 JobConfig。
 - Web 页面必须始终保留原始 Harbor artifact 链接，避免产品层摘要掩盖事实。
 - UI 中的每个主要操作都应回答“这替代了哪条 CLI 命令、会生成什么配置、失败后怎么恢复”。
 - Frontend architecture:
@@ -203,7 +210,7 @@ benchmark 执行的默认环境前提。
 ## 10. Acceptance Criteria
 
 - Given Docker daemon 可用，when 用户在 Web 创建并运行 Harbor job，then Web 生成的 `harbor.config.json` 可被 `harbor run --config` 直接执行。
-- Given 用户不懂 Harbor CLI 参数，when 用户完成 JobConfig 向导，then Web 展示可理解摘要和原始 JobConfig。
+- Given 用户不懂 Harbor CLI 参数，when 用户完成单页 JobConfig 表单，then Web 展示可理解摘要和原始 JobConfig。
 - Given 用户需要完成 Harbor 日常 run workflow，when 用户只使用 Web 表单、按钮和状态视图，then 不需要手动输入 `harbor run`、dataset/task filter 或 cancel 命令。
 - Given run 正在执行，when 用户点击 cancel，then Harbor subprocess 被终止并写入清理证据。
 - Given run 完成，when 用户打开 report，then 能看到 score、result、job log、trial artifacts 和原始路径。
