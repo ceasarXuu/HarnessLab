@@ -1,9 +1,9 @@
 export default {
   app: {
-    title: 'OrnnLab',
-    subtitle: 'Operations Console',
+    title: 'Harbor Hub',
+    subtitle: 'Local WebUI',
     description:
-      'Focused front-end scaffold for operators managing agents, experiments, and benchmark performance.',
+      'Find, run, and share Harbor tasks for training and evaluation.',
     skipToMain: 'Skip to main content',
     operatorView: 'Operator view',
     apiPrimed: 'API client primed for `/api`',
@@ -15,9 +15,9 @@ export default {
     githubLabel: 'Stars',
   },
   nav: {
-    dashboard: 'Dashboard',
+    dashboard: 'Datasets',
     agents: 'Agents',
-    experiments: 'Experiments',
+    experiments: 'Jobs',
     leaderboard: 'Leaderboard',
     primary: 'Primary',
     livePosture: 'Live posture',
@@ -26,10 +26,10 @@ export default {
     postureUnavailableHttp: 'Live posture unavailable (HTTP {status})',
   },
   pageTitle: {
-    dashboard: 'Operations Dashboard',
-    agents: 'Agent Fleet',
-    experiments: 'Experiment Pipeline',
-    leaderboard: 'Benchmark Leaderboard',
+    dashboard: 'Harbor Hub',
+    agents: 'Agents',
+    experiments: 'Jobs',
+    leaderboard: 'Leaderboard',
   },
   state: {
     loading: 'Loading…',
@@ -48,6 +48,11 @@ export default {
     leaderboard: 'Leaderboard is empty. Run an experiment to populate scores.',
   },
   dashboard: {
+    publishTitle: 'Publish your first dataset',
+    publishDescription: 'Add the Harbor skill to your coding agent, then run',
+    installSkillTitle: '1. Install the Harbor skill',
+    runPublishTitle: '2. Run /publish in your agent',
+    copyDataset: 'Copy {name}',
     metricLabelTotal: 'Total experiments',
     metricLabelBestScore: 'Best leaderboard score',
     metricLabelActiveAgents: 'Active agents',
@@ -83,6 +88,8 @@ export default {
     headScore: 'Score',
   },
   table: {
+    dataset: 'Dataset',
+    tasks: 'Tasks',
     experiment: 'Experiment',
     state: 'State',
     success: 'Success',

@@ -1,8 +1,8 @@
 export default {
   app: {
-    title: 'OrnnLab',
-    subtitle: '运维控制台',
-    description: '面向运维的前端脚手架，统一管理 Agent、实验与基准性能。',
+    title: 'Harbor Hub',
+    subtitle: '本地 WebUI',
+    description: '查找、运行和分享用于训练与评测的 Harbor tasks。',
     skipToMain: '跳到主内容',
     operatorView: '操作视图',
     apiPrimed: 'API 客户端已就绪：`/api`',
@@ -14,9 +14,9 @@ export default {
     githubLabel: 'Stars',
   },
   nav: {
-    dashboard: '总览',
+    dashboard: '数据集',
     agents: '智能体',
-    experiments: '实验',
+    experiments: 'Jobs',
     leaderboard: '榜单',
     primary: '主导航',
     livePosture: '实时态势',
@@ -25,10 +25,10 @@ export default {
     postureUnavailableHttp: '实时态势不可用（HTTP {status}）',
   },
   pageTitle: {
-    dashboard: '运维总览',
-    agents: 'Agent 编队',
-    experiments: '实验流水线',
-    leaderboard: '基准榜单',
+    dashboard: 'Harbor Hub',
+    agents: 'Agents',
+    experiments: 'Jobs',
+    leaderboard: 'Leaderboard',
   },
   state: {
     loading: '加载中…',
@@ -47,6 +47,11 @@ export default {
     leaderboard: '榜单为空。运行实验后会出现分数。',
   },
   dashboard: {
+    publishTitle: '发布第一个数据集',
+    publishDescription: '将 Harbor skill 添加到你的 coding agent，然后运行',
+    installSkillTitle: '1. 安装 Harbor skill',
+    runPublishTitle: '2. 在 agent 中运行 /publish',
+    copyDataset: '复制 {name}',
     metricLabelTotal: '实验总数',
     metricLabelBestScore: '榜单最高分',
     metricLabelActiveAgents: '活跃 Agent',
@@ -82,6 +87,8 @@ export default {
     headScore: '分数',
   },
   table: {
+    dataset: 'Dataset',
+    tasks: 'Tasks',
     experiment: '实验',
     state: '状态',
     success: '成功率',

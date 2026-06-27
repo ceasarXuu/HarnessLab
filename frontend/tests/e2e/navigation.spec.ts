@@ -3,16 +3,16 @@ import { expect, test } from '@playwright/test'
 test('navigates the primary console views', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'Operations Dashboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Harbor Hub' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Agents' }).click()
-  await expect(page.getByRole('heading', { name: 'Agent Fleet' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Experiments' }).click()
-  await expect(page.getByRole('heading', { name: 'Experiment Pipeline' })).toBeVisible()
+  await page.getByRole('link', { name: 'Jobs' }).click()
+  await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Leaderboard' }).click()
-  await expect(page.getByRole('heading', { name: 'Benchmark Leaderboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible()
 })
 
 test('keyboard users can skip repeated navigation and 320px layout does not overflow', async ({ page }) => {
@@ -60,7 +60,7 @@ test('dashboard fetches real backend data when backend is available', async ({ p
 
   await page.goto('/')
   // 等待 Dashboard 完成数据加载
-  await expect(page.getByRole('heading', { name: 'Operations Dashboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Harbor Hub' })).toBeVisible()
 
   // 等待页面进入 ready/empty/error 状态（StatePanel 必然渲染其中之一）
   await page.waitForLoadState('networkidle')
@@ -68,10 +68,10 @@ test('dashboard fetches real backend data when backend is available', async ({ p
   // 至少 1 个真实 2xx API 调用（R5 #2）
   expect(apiResponses.some((s) => s >= 200 && s < 300)).toBe(true)
 
-  // 真实数据文本：要么 KPI 卡片显示，要么空态文案显示（两者都来自后端响应路径）
+  // 真实数据文本：要么 Harbor-style 表格显示，要么空态文案显示（两者都来自后端响应路径）
   const bodyText = await page.locator('body').innerText()
   const hasBackendBackedText =
-    bodyText.includes('Total experiments') || // KPI 标签来自 mapper（说明 mapper 跑完了）
+    bodyText.includes('Dataset') || // ready 态渲染 Harbor-style table
     bodyText.includes('No experiments or leaderboard data yet.') // empty 态来自空数据响应
   expect(hasBackendBackedText).toBe(true)
 })

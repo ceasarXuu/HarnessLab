@@ -15,7 +15,7 @@ const { theme, toggleTheme } = useTheme()
     @click="toggleTheme"
   >
     <span class="header-control__icon" aria-hidden="true">
-      {{ theme === 'dark' ? '🌙' : '☀️' }}
+      {{ theme === 'dark' ? '◐' : '○' }}
     </span>
   </button>
 </template>

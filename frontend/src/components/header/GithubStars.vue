@@ -24,7 +24,7 @@ const ariaLabel = computed(() =>
 
 <template>
   <a
-    class="header-control"
+    class="header-control header-control--primary"
     :href="href"
     target="_blank"
     rel="noopener noreferrer"
@@ -32,7 +32,7 @@ const ariaLabel = computed(() =>
     :aria-busy="loading"
     :title="ariaLabel"
   >
-    <span class="header-control__icon" aria-hidden="true">★</span>
+    <span class="header-control__icon" aria-hidden="true">GitHub</span>
     <span class="header-control__count">{{ displayCount }}</span>
     <span class="visually-hidden">{{ t('header.githubLabel') }}</span>
   </a>

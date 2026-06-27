@@ -18,7 +18,6 @@ const toggle = () => {
     :title="t('header.toggleLanguage')"
     @click="toggle"
   >
-    <span class="header-control__icon" aria-hidden="true">🌐</span>
     <span>{{ locale === 'zh' ? '中' : 'EN' }}</span>
   </button>
 </template>

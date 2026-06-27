@@ -25,9 +25,9 @@ describe('i18n', () => {
   it('setLocale switches locale', () => {
     setLocale('zh')
     expect(i18n.global.locale.value).toBe('zh')
-    expect(i18n.global.t('app.subtitle')).toBe('运维控制台')
+    expect(i18n.global.t('app.subtitle')).toBe('本地 WebUI')
     setLocale('en')
-    expect(i18n.global.t('app.subtitle')).toBe('Operations Console')
+    expect(i18n.global.t('app.subtitle')).toBe('Local WebUI')
   })
 
   it('setLocale persists to localStorage', () => {

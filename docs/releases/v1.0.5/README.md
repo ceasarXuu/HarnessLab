@@ -12,6 +12,7 @@
   - v1.0.5 的版本目标定义为 Harbor WebUI 产品化，不再只是 OrnnLab 自身实验控制台的增量迭代。
   - Harbor 继续负责 benchmark 执行、agent 执行、环境生命周期、验证和原始 artifacts。
   - OrnnLab Web 负责把 Harbor 的核心 CLI/API 能力产品化为本地单用户 WebUI。
+  - v1.0.5 UI 以官方 Harbor Hub (`https://hub.harborframework.com/`) 为视觉和信息结构基准。
 - Important exceptions:
   - 不重写 Harbor core，不 fork Harbor，不把 v1.0.5 做成多租户云平台。
   - “完全接管”指用户日常使用 Harbor 的主要操作不再必须回到 CLI；不是覆盖 Harbor 内部所有维护命令。
@@ -102,13 +103,20 @@ benchmark 执行的默认环境前提。
 ## 6. Interaction And Information Design
 
 - Navigation:
+  - Datasets
+  - Tasks
+  - Organizations
+  - Jobs
   - System
   - Agents
-  - Datasets
-  - Jobs / Experiments
   - Artifacts
   - Leaderboard
   - Templates
+- Visual baseline:
+  - 复刻官方 Harbor Hub 的顶部导航、白底/深色模式、monospace 字体、细边框表格、黑色主按钮、胶囊式模式切换和代码块样式。
+  - 首页优先呈现 Harbor-style `Dataset / Tasks` 表格和 `Publish your first dataset` 指引，不再使用重卡片式运营仪表盘作为第一视觉。
+  - 列表页沿用官方 `/datasets` 的标题、搜索框、表格、分页和空/加载骨架布局语言。
+  - 任何暂未接入真实能力的官方 UI 元素不得做成误导性假入口；若保留入口，必须明确指向真实本地路径、外部官方路径或禁用状态。
 - JobConfig UI 应分步组织，不把 Harbor 参数一次性平铺：
   - Agent
   - Dataset
@@ -177,6 +185,7 @@ benchmark 执行的默认环境前提。
 |---|---|---|---|
 | Version direction | v1.0.5 先做 Harbor WebUI 产品 | 用户明确要求该版本定义为 Harbor WebUI | Initial request |
 | Product boundary | OrnnLab Web 接管 Harbor 日常工作流，不重写 Harbor core | 保留 Harbor 执行权威，Web 做产品层 | Initial inference |
+| Official UI baseline | 复刻官方 Harbor Hub 的导航、表格、代码块和整体视觉密度 | 用户要求直接参考官方界面并尽量一致 | UI follow-up |
 | Status | Draft | Hub 范围、首发 backend 范围和 launch slice 仍需确认 | Initial inference |
 
 ## 13. Open Questions And Risks

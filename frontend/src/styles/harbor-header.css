@@ -1,0 +1,135 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-page) 86%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 80rem;
+  height: 3.5rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.app-header__brand {
+  flex: 0 0 auto;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.app-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-left: 2rem;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.app-header__nav-link {
+  transition: color 120ms ease;
+}
+
+.app-header__nav-link:hover,
+.app-header__nav-link--active {
+  color: var(--ink);
+}
+
+.app-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.app-header__mode-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  min-height: 2.4rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+}
+
+.header-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.header-control:hover {
+  background: var(--bg-muted);
+}
+
+.header-control[aria-busy='true'] {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.header-control--primary {
+  height: 2.3rem;
+  padding: 0 0.85rem;
+  border-radius: 0;
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+.header-control--primary:hover {
+  background: color-mix(in srgb, var(--primary) 82%, var(--bg-page));
+}
+
+.header-control__count {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 840px) {
+  .app-header__inner {
+    height: auto;
+    min-height: 3.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-block: 0.75rem;
+  }
+
+  .app-header__nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.1rem;
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-header__controls {
+    width: 100%;
+  }
+
+  .app-header__mode-group {
+    margin-left: auto;
+  }
+}

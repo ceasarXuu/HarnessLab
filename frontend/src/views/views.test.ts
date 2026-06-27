@@ -53,7 +53,7 @@ const routeFetch = (handlers: Record<string, () => Response>) => {
 // ─── DashboardView ──────────────────────────────────────────
 
 describe('DashboardView', () => {
-  it('happy path: renders experiment names and leaderboard scores from API (R10)', async () => {
+  it('happy path: renders dataset-style experiment rows from API (R10)', async () => {
     routeFetch({
       '/api/experiments': () =>
         okJson([
@@ -62,24 +62,10 @@ describe('DashboardView', () => {
             name: 'baseline-eval',
             kind: 'batch',
             status: 'completed',
-            requested_run_count: 1,
+            requested_run_count: 89,
             mode: 'tb',
             created_at: '',
             updated_at: '2026-06-01',
-          },
-        ]),
-      '/api/leaderboard': () =>
-        okJson([
-          {
-            id: 'lb-1',
-            agent_id: 'harbor-v1',
-            benchmark_name: 'tb',
-            benchmark_version: null,
-            split: null,
-            finished_at: null,
-            score: 0.92,
-            comparability_key: 'k',
-            report_path: null,
           },
         ]),
     })
@@ -90,15 +76,13 @@ describe('DashboardView', () => {
     const text = wrapper.text()
     // R10 specific-input → specific-DOM-text assertions
     expect(text).toContain('baseline-eval') // experiment name from API
-    expect(text).toContain('complete') // mapped state (completed → complete)
-    expect(text).toContain('harbor-v1') // leaderboard agent id
-    expect(text).toContain('0.92') // best leaderboard score
+    expect(text).toContain('89') // requested_run_count rendered as Tasks
+    expect(text).toContain('Publish your first dataset') // official Harbor Hub section
   })
 
   it('empty path: shows empty message when both APIs return []', async () => {
     routeFetch({
       '/api/experiments': () => okJson([]),
-      '/api/leaderboard': () => okJson([]),
     })
     const wrapper = mount(DashboardView, mountOpts)
     await flushPromises()

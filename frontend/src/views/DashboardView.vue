@@ -2,29 +2,23 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import KpiCard from '@/components/KpiCard.vue'
 import StatePanel from '@/components/StatePanel.vue'
 import {
   ApiError,
   ornnLabApi,
   type Experiment,
-  type LeaderboardEntryResponse,
 } from '@/api/client'
-import {
-  toExperimentRecord,
-  toKpiMetrics,
-  toLeaderboardSeed,
-} from '@/api/mappers'
-import { rankLeaderboard } from '@/utils/leaderboard'
 import { idle, loading, ready, empty, error, type AsyncState } from '@/utils/asyncState'
-import type { ExperimentRecord, KpiMetric, LeaderboardEntry } from '@/types/console'
 
 const { t } = useI18n()
 
+interface DatasetRow {
+  name: string
+  tasks: number
+}
+
 interface DashboardData {
-  metrics: KpiMetric[]
-  experiments: ExperimentRecord[]
-  topAgents: LeaderboardEntry[]
+  datasets: DatasetRow[]
 }
 
 const state = ref<AsyncState<DashboardData>>(idle())
@@ -32,24 +26,26 @@ const state = ref<AsyncState<DashboardData>>(idle())
 const fetchDashboard = async () => {
   state.value = loading()
   try {
-    const [exps, lb]: [Experiment[], LeaderboardEntryResponse[]] = await Promise.all([
-      ornnLabApi.experiments(),
-      ornnLabApi.leaderboard(),
-    ])
+    const exps: Experiment[] = await ornnLabApi.experiments()
 
-    if (exps.length === 0 && lb.length === 0) {
+    if (exps.length === 0) {
       state.value = empty()
       return
     }
 
     state.value = ready<DashboardData>({
-      metrics: toKpiMetrics(exps, lb),
-      experiments: exps.map((e) => toExperimentRecord(e)),
-      topAgents: rankLeaderboard(lb.map(toLeaderboardSeed)).slice(0, 3),
+      datasets: exps.map((experiment) => ({
+        name: experiment.name,
+        tasks: experiment.requested_run_count,
+      })),
     })
   } catch (err) {
     state.value = error(err instanceof ApiError ? err : new Error(String(err)))
   }
+}
+
+const copyText = async (value: string) => {
+  await navigator.clipboard?.writeText(value)
 }
 
 onMounted(fetchDashboard)
@@ -62,69 +58,64 @@ onMounted(fetchDashboard)
     @retry="fetchDashboard"
   >
     <template #default="{ data }">
-      <section class="page-grid">
-        <section class="kpi-grid">
-          <KpiCard
-            v-for="metric in (data as DashboardData).metrics"
-            :key="metric.label"
-            :metric="metric"
-          />
-        </section>
-
-        <!-- Priority alerts 区块按 BUG-WEB-02 处置表删除（无后端源） -->
-
-        <section class="panel stack">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">{{ t('dashboard.experimentFocusEyebrow') }}</p>
-              <h3>{{ t('dashboard.experimentFocusTitle') }}</h3>
-            </div>
-          </div>
-          <div class="table-list">
-            <div class="table-list__head">
-              <span>{{ t('table.experiment') }}</span>
-              <span>{{ t('table.state') }}</span>
-              <span>{{ t('table.success') }}</span>
-            </div>
-            <div
-              v-for="experiment in (data as DashboardData).experiments"
-              :key="experiment.id"
-              class="table-list__row"
+      <div class="home-table">
+        <table class="data-table data-table--datasets">
+          <colgroup>
+            <col class="data-table__dataset-col" />
+            <col class="data-table__tasks-col" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">{{ t('table.dataset') }}</th>
+              <th scope="col">{{ t('table.tasks') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="dataset in (data as DashboardData).datasets"
+              :key="dataset.name"
             >
-              <span>
-                <strong>{{ experiment.name }}</strong>
-                <small>{{ experiment.target }}</small>
-              </span>
-              <span class="pill">{{ experiment.state }}</span>
-              <span>{{ experiment.successRate }}</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel stack">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">{{ t('dashboard.topPerformersEyebrow') }}</p>
-              <h3>{{ t('dashboard.topPerformersTitle') }}</h3>
-            </div>
-          </div>
-          <div class="leaderboard-list">
-            <article
-              v-for="entry in (data as DashboardData).topAgents"
-              :key="entry.agent"
-              class="leaderboard-list__row"
-            >
-              <div>
-                <p class="eyebrow">{{ t('dashboard.rank', { n: entry.rank }) }}</p>
-                <strong>{{ entry.agent }}</strong>
-              </div>
-              <div class="leaderboard-list__score">
-                <strong>{{ entry.score }}</strong>
-              </div>
-            </article>
-          </div>
-        </section>
-      </section>
+              <td>
+                <span class="dataset-cell">
+                  <span>{{ dataset.name }}</span>
+                  <button
+                    type="button"
+                    class="copy-button"
+                    :aria-label="t('dashboard.copyDataset', { name: dataset.name })"
+                    @click="copyText(dataset.name)"
+                  >
+                    ⧉
+                  </button>
+                </span>
+              </td>
+              <td class="data-table__numeric">{{ dataset.tasks.toLocaleString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </template>
   </StatePanel>
+
+  <section class="publish-section" aria-labelledby="publish-title">
+    <div class="publish-section__heading">
+      <h2 id="publish-title">{{ t('dashboard.publishTitle') }}</h2>
+      <p class="muted">
+        {{ t('dashboard.publishDescription') }} <code>/publish</code>.
+      </p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <span>{{ t('dashboard.installSkillTitle') }}</span>
+      </div>
+      <pre><code>npx skills add harbor-framework/harbor --skill publish</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block__header">
+        <span>{{ t('dashboard.runPublishTitle') }}</span>
+      </div>
+      <pre><code>/publish</code></pre>
+    </div>
+  </section>
 </template>
