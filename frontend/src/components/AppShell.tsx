@@ -2,13 +2,11 @@ import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } fr
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 
-export type PageKey = 'datasets' | 'jobs' | 'tasks' | 'trials' | 'system'
+export type PageKey = 'datasets' | 'jobs' | 'system'
 
 const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
   { key: 'datasets', label: 'datasets' },
-  { key: 'tasks', label: 'tasks' },
   { key: 'jobs', label: 'jobs' },
-  { key: 'trials', label: 'trials' },
   { key: 'system', label: 'system' },
 ]
 

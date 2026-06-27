@@ -1,14 +1,15 @@
-import { AlertTriangle, Box, CheckCircle2, FileJson, Square, Terminal } from 'lucide-react'
-import type { EventLog, HarborJob } from '../data/demo'
+import { AlertTriangle, CheckCircle2, FileJson, FlaskConical, Square, Terminal } from 'lucide-react'
+import type { EventLog, HarborJob, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
 interface DetailRailProps {
   job: HarborJob
   events: EventLog[]
+  trials: TrialRow[]
   t: Translate
 }
 
-export function DetailRail({ job, events, t }: DetailRailProps) {
+export function DetailRail({ job, events, trials, t }: DetailRailProps) {
   return (
     <aside className="detail-rail">
       <section className="surface rail-card">
@@ -32,6 +33,24 @@ export function DetailRail({ job, events, t }: DetailRailProps) {
             {t('cancel')}
           </button>
           <button className="secondary-button">{t('retry')}</button>
+        </div>
+      </section>
+
+      <section className="surface rail-card">
+        <div className="rail-title">
+          <FlaskConical aria-hidden="true" />
+          <h3>{t('jobTrials')}</h3>
+        </div>
+        <div className="mini-table">
+          {trials.map((trial) => (
+            <div key={trial.id} className="mini-row trial-row">
+              <span>{trial.task}</span>
+              <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
+              <span>{trial.score}</span>
+              <span>{trial.duration}</span>
+              <span>{trial.cost}</span>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -93,26 +112,5 @@ function Metric({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
-  )
-}
-
-export function TaskPreview({ rows }: { rows: string[][] }) {
-  return (
-    <section className="surface task-preview" id="tasks">
-      <div className="rail-title">
-        <Box aria-hidden="true" />
-        <h2>Tasks</h2>
-      </div>
-      <div className="mini-table">
-        {rows.map(([name, os, state, duration]) => (
-          <div key={name} className="mini-row">
-            <span>{name}</span>
-            <span>{os}</span>
-            <span>{state}</span>
-            <span>{duration}</span>
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }

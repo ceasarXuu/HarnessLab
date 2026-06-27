@@ -1,18 +1,25 @@
-import { Database, Search } from 'lucide-react'
-import type { DatasetRow } from '../data/demo'
+import { Box, Database, Download, Play, Search } from 'lucide-react'
+import type { DatasetRow, TaskRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {
   rows: DatasetRow[]
   search: string
+  taskRows: TaskRow[]
   t: Translate
+  onNewJob: () => void
   onSearch: (value: string) => void
 }
 
-export function DatasetsPage({ rows, search, t, onSearch }: DatasetsPageProps) {
+export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: DatasetsPageProps) {
+  const selected = rows[0]
+  const selectedTasks = selected
+    ? taskRows.filter((row) => row.dataset === selected.name || row.dataset === `${selected.name}@${selected.version}`)
+    : []
+
   return (
-    <main className="workspace single-page">
-      <section className="surface">
+    <main className="workspace datasets-workspace">
+      <section className="surface dataset-catalog">
         <div className="section-header">
           <div>
             <h1>{t('datasetCatalog')}</h1>
@@ -46,8 +53,8 @@ export function DatasetsPage({ rows, search, t, onSearch }: DatasetsPageProps) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={`${row.name}-${row.version}`}>
+              {rows.map((row, index) => (
+                <tr key={`${row.name}-${row.version}`} className={index === 0 ? 'selected-row' : undefined}>
                   <td>
                     <span className="cell-title">
                       <Database aria-hidden="true" />
@@ -72,6 +79,65 @@ export function DatasetsPage({ rows, search, t, onSearch }: DatasetsPageProps) {
           </table>
         </div>
       </section>
+      <aside className="detail-rail dataset-detail">
+        {selected && (
+          <>
+            <section className="surface rail-card">
+              <p className="panel-kicker">{t('selectedDataset')}</p>
+              <div className="rail-heading">
+                <div>
+                  <h2>{selected.name}</h2>
+                  <p>{selected.version}</p>
+                </div>
+                <span className={`status-dot ${selected.visibility === 'public' ? 'success' : 'queued'}`}>
+                  {selected.visibility}
+                </span>
+              </div>
+              <div className="metric-grid">
+                <Metric label={t('tasksCount')} value={String(selected.tasks)} />
+                <Metric label={t('sourceRef')} value={selected.source} />
+                <Metric label={t('digest')} value={selected.digest} />
+                <Metric label={t('updated')} value={selected.updated} />
+              </div>
+              <div className="button-row tight">
+                <button className="secondary-button">
+                  <Download aria-hidden="true" />
+                  {t('download')}
+                </button>
+                <button className="primary-button" onClick={onNewJob}>
+                  <Play aria-hidden="true" />
+                  {t('newJob')}
+                </button>
+              </div>
+            </section>
+            <section className="surface rail-card">
+              <div className="rail-title">
+                <Box aria-hidden="true" />
+                <h3>{t('datasetTasks')}</h3>
+              </div>
+              <div className="mini-table">
+                {selectedTasks.map((row) => (
+                  <div key={row.name} className="mini-row task-row">
+                    <span>{row.name}</span>
+                    <span>{row.os}</span>
+                    <span>{row.description}</span>
+                    <button className="row-action">{t('runSingleTask')}</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </aside>
     </main>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   )
 }

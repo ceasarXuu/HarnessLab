@@ -15,8 +15,6 @@ import { JobsPage } from './pages/JobsPage'
 import { DatasetsPage } from './pages/DatasetsPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { SystemPage } from './pages/SystemPage'
-import { TasksPage } from './pages/TasksPage'
-import { TrialsPage } from './pages/TrialsPage'
 
 type JobView = 'list' | 'new'
 
@@ -25,7 +23,7 @@ interface RouteState {
   page: PageKey
 }
 
-const pageKeys = new Set<PageKey>(['datasets', 'jobs', 'tasks', 'trials', 'system'])
+const pageKeys = new Set<PageKey>(['datasets', 'jobs', 'system'])
 
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
@@ -132,7 +130,14 @@ export function App() {
       onTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
     >
       {route.page === 'datasets' && (
-        <DatasetsPage rows={filteredDatasets} search={datasetSearch} t={t} onSearch={setDatasetSearch} />
+        <DatasetsPage
+          rows={filteredDatasets}
+          search={datasetSearch}
+          taskRows={taskRows}
+          t={t}
+          onNewJob={() => navigate('jobs', 'new')}
+          onSearch={setDatasetSearch}
+        />
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (
         <JobsPage
@@ -140,6 +145,7 @@ export function App() {
           jobs={filteredJobs}
           search={search}
           selected={selected}
+          trialRows={trialRows}
           t={t}
           onNewJob={() => navigate('jobs', 'new')}
           onSearch={setSearch}
@@ -157,8 +163,6 @@ export function App() {
           onStep={setActiveStep}
         />
       )}
-      {route.page === 'tasks' && <TasksPage rows={taskRows} t={t} />}
-      {route.page === 'trials' && <TrialsPage rows={trialRows} t={t} />}
       {route.page === 'system' && <SystemPage rows={systemRows} t={t} />}
     </AppShell>
   )

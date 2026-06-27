@@ -17,6 +17,12 @@
 .jobs-workspace {
   grid-template-columns: minmax(0, 1fr) clamp(500px, 28vw, 680px);
 }
+.datasets-workspace {
+  grid-template-columns: minmax(0, 1fr) clamp(520px, 30vw, 720px);
+}
+.dataset-catalog table {
+  min-width: 860px;
+}
 .two-column-page {
   grid-template-columns: minmax(0, 1fr) 348px;
 }
@@ -79,11 +85,48 @@
   align-items: center;
   gap: 8px;
 }
+.mini-table {
+  display: grid;
+  gap: 8px;
+}
+.mini-row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+.mini-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-row,
+.trial-row {
+  grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) max-content;
+  align-items: center;
+}
+.trial-row {
+  grid-template-columns: 1fr 92px 64px 72px 72px;
+}
+.row-action {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+}
+.row-action:hover {
+  background: var(--subtle);
+}
 .healthy {
   color: var(--success);
 }
 @media (max-width: 1180px) {
   .jobs-workspace,
+  .datasets-workspace,
   .two-column-page {
     grid-template-columns: 1fr;
   }
@@ -91,6 +134,13 @@
 @media (max-width: 820px) {
   .header-select {
     min-width: 64px;
+  }
+  .task-row,
+  .trial-row {
+    grid-template-columns: 1fr;
+  }
+  .mini-row span {
+    white-space: normal;
   }
   .breadcrumb-nav {
     overflow: auto;

@@ -31,6 +31,8 @@ export interface RunDraft {
 
 export interface TaskRow {
   name: string
+  dataset: string
+  description: string
   jobId: string
   os: string
   state: string
@@ -47,6 +49,7 @@ export interface TrialRow {
   score: string
   retries: number
   duration: string
+  cost: string
   logPath: string
 }
 
@@ -181,6 +184,8 @@ export const events: EventLog[] = [
 export const taskRows: TaskRow[] = [
   {
     name: 'apt-setup',
+    dataset: 'terminal-bench',
+    description: 'Install packages and verify shell setup.',
     jobId: 'job_91a7',
     os: 'linux',
     state: 'ok',
@@ -190,6 +195,8 @@ export const taskRows: TaskRow[] = [
   },
   {
     name: 'git-rebase-conflict',
+    dataset: 'terminal-bench',
+    description: 'Resolve a conflicted git rebase in a repo.',
     jobId: 'job_91a7',
     os: 'linux',
     state: 'running',
@@ -199,6 +206,8 @@ export const taskRows: TaskRow[] = [
   },
   {
     name: 'sqlite-log-repair',
+    dataset: 'terminal-bench',
+    description: 'Repair corrupt logs and preserve SQLite rows.',
     jobId: 'job_118b',
     os: 'linux',
     state: 'queued',
@@ -208,6 +217,8 @@ export const taskRows: TaskRow[] = [
   },
   {
     name: 'python-env-pin',
+    dataset: 'terminal-bench',
+    description: 'Pin Python dependencies for reproducible tests.',
     jobId: 'job_118b',
     os: 'linux',
     state: 'queued',
@@ -226,6 +237,7 @@ export const trialRows: TrialRow[] = [
     score: '1.00',
     retries: 0,
     duration: '45s',
+    cost: '$0.11',
     logPath: 'trials/job_91a7/apt-setup.log',
   },
   {
@@ -236,6 +248,7 @@ export const trialRows: TrialRow[] = [
     score: '-',
     retries: 1,
     duration: '2m',
+    cost: '$0.34',
     logPath: 'trials/job_91a7/git-rebase-conflict.log',
   },
   {
@@ -246,6 +259,7 @@ export const trialRows: TrialRow[] = [
     score: '0.00',
     retries: 2,
     duration: '38s',
+    cost: '$0.63',
     logPath: 'trials/job_55e9/hello-world.log',
   },
   {
@@ -256,6 +270,7 @@ export const trialRows: TrialRow[] = [
     score: '0.41',
     retries: 0,
     duration: '6m',
+    cost: '$1.92',
     logPath: 'trials/job_74c1/django-migration.log',
   },
 ]

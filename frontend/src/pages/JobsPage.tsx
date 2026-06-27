@@ -1,6 +1,6 @@
 import { DetailRail } from '../components/DetailRail'
 import { JobsTable } from '../components/JobsTable'
-import type { EventLog, HarborJob } from '../data/demo'
+import type { EventLog, HarborJob, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
 interface JobsPageProps {
@@ -8,13 +8,14 @@ interface JobsPageProps {
   jobs: HarborJob[]
   search: string
   selected: HarborJob
+  trialRows: TrialRow[]
   t: Translate
   onNewJob: () => void
   onSearch: (value: string) => void
   onSelect: (job: HarborJob) => void
 }
 
-export function JobsPage({ events, jobs, search, selected, t, onNewJob, onSearch, onSelect }: JobsPageProps) {
+export function JobsPage({ events, jobs, search, selected, trialRows, t, onNewJob, onSearch, onSelect }: JobsPageProps) {
   return (
     <main className="workspace jobs-workspace">
       <div className="content-column">
@@ -28,7 +29,7 @@ export function JobsPage({ events, jobs, search, selected, t, onNewJob, onSearch
           onSelect={onSelect}
         />
       </div>
-      <DetailRail job={selected} events={events} t={t} />
+      <DetailRail job={selected} events={events} trials={trialRows.filter((row) => row.jobId === selected.id)} t={t} />
     </main>
   )
 }

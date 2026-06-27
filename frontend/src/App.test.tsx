@@ -12,7 +12,10 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Dataset catalog' })).toBeInTheDocument()
-    expect(screen.getByText('terminal-bench')).toBeInTheDocument()
+    expect(screen.getAllByText('terminal-bench').length).toBeGreaterThan(0)
+    expect(screen.getByText('Selected dataset')).toBeInTheDocument()
+    expect(screen.getByText('Dataset tasks')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Run single task' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
   })
 
@@ -23,6 +26,8 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
     expect(screen.getAllByText('terminal-bench-smoke').length).toBeGreaterThan(0)
     expect(screen.getByText('Selected job')).toBeInTheDocument()
+    expect(screen.getByText('Job trials')).toBeInTheDocument()
+    expect(screen.getByText('apt-setup')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'System doctor' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'New Run' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'New Run' })).not.toBeInTheDocument()
@@ -40,15 +45,15 @@ describe('App', () => {
     expect(within(jobsTable).queryByText('terminal-bench-smoke')).not.toBeInTheDocument()
   })
 
-  it('navigates to the other Harbor demo pages', () => {
+  it('keeps task and trial concepts nested under datasets and jobs', () => {
     render(<App />)
 
-    fireEvent.click(screen.getByRole('link', { name: 'Tasks' }))
-    expect(screen.getByRole('heading', { name: 'Task queue' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Tasks' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Trials' })).not.toBeInTheDocument()
+    expect(screen.getByText('Dataset tasks')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Trials' }))
-    expect(screen.getByRole('heading', { name: 'Trial matrix' })).toBeInTheDocument()
-
+    fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
+    expect(screen.getByText('Job trials')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'System' }))
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
   })

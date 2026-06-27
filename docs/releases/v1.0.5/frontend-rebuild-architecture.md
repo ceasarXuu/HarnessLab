@@ -39,7 +39,7 @@ Harbor WebUI 的正式基础：
 
 - 与 Harbor 官方 Viewer 的 React/shadcn/TanStack 技术栈不一致；
 - 不能直接复用官方 Viewer 的组件、表格、路由和交互模型；
-- 已有页面仍围绕 OrnnLab demo dashboard，而不是 Harbor Jobs/Tasks/Trials 主路径；
+- 已有页面仍围绕 OrnnLab demo dashboard，而不是 Harbor Dataset/Job 嵌套模型；
 - 继续保留会让后续开发误以为要在 Vue demo 上做增量演进。
 
 ## 3. 官方架构观察
@@ -67,12 +67,11 @@ FastAPI 产品形态兼容。
 
 重建后的前端应优先对齐 Harbor 官方 Viewer 的信息架构：
 
-- Home / Jobs
-- New Run
-- Job detail
-- Task definitions
-- Task detail
-- Trial detail
+- Datasets catalog
+- Dataset detail with task definitions
+- Jobs
+- New Job
+- Job detail with trial list/detail
 - Compare
 - Auth status
 
@@ -107,14 +106,14 @@ OrnnLab 仍可保留自己的产品组织层：
 - `/api/run-status`
 - `/api/auth/status`
 
-OrnnLab 自有 API 可以保留，但需要逐步收敛到 Harbor Jobs/Tasks/Trials 的用户模型。
+OrnnLab 自有 API 可以保留，但需要逐步收敛到 Harbor Dataset/Task 与 Job/Trial 的嵌套用户模型。
 
 ## 7. 迁移策略
 
 1. 删除旧 Vue demo，清理启动脚本、CI 和验证脚本中的 Vue/Vite 假设。
 2. 以 Harbor `apps/viewer` 为参考重建 `frontend/`。
-3. 先恢复最小 P0 闭环：Jobs list、New Run、Job detail、System doctor。
-4. 再补 Task definitions、Trial detail、artifact viewer、auth/upload/share。
+3. 先恢复最小 P0 闭环：Datasets catalog/detail、Jobs list、New Job、Job detail、System doctor。
+4. 再补 Dataset 内 task detail、Job 内 trial detail、artifact viewer、auth/upload/share。
 5. 每个页面从 Storybook、unit test、Playwright smoke 和 FastAPI contract 开始建立测试。
 
 ## 8. 验收原则

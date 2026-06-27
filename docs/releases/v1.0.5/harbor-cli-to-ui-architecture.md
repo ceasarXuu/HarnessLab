@@ -23,8 +23,8 @@ terminal 执行。
 ```mermaid
 flowchart TD
   A["Harbor operations"] --> B["Run jobs"]
-  A --> C["Manage datasets and tasks"]
-  A --> D["Inspect trials and artifacts"]
+  A --> C["Manage datasets and child tasks"]
+  A --> D["Inspect jobs, child trials, and artifacts"]
   A --> E["Publish and share"]
   A --> F["Diagnose and maintain"]
   A --> G["Develop packages and adapters"]
@@ -34,11 +34,11 @@ flowchart TD
   B --> B3["Status stream and recovery"]
 
   C --> C1["Dataset catalog"]
-  C --> C2["Task browser"]
+  C --> C2["Dataset detail task browser"]
   C --> C3["Dataset editor"]
 
-  D --> D1["Artifact browser"]
-  D --> D2["Trial viewer"]
+  D --> D1["Job detail trial browser"]
+  D --> D2["Artifact viewer"]
   D --> D3["Analysis report"]
 
   E --> E1["Auth status"]
@@ -70,15 +70,15 @@ flowchart TD
 | 数据集初始化 | `harbor dataset init`, `harbor init --dataset` | 创建 dataset skeleton | Dataset create wizard | P2 |
 | 数据集下载 | `harbor dataset download`, `harbor download` | 下载 registry dataset | Dataset detail 的 Download action | P1 |
 | 数据集可见性 | `harbor dataset visibility` | 切换 public/private | Dataset settings visibility control | P2 |
-| task 初始化 | `harbor task init`, `harbor init --task` | 创建 task skeleton | Task create wizard | P2 |
-| task 下载 | `harbor task download`, `harbor download` | 下载 registry task | Task detail 的 Download action | P1 |
-| task 环境启动 | `harbor task start-env` | 单独启动 task 环境调试 | Task detail 的 Start Environment panel | P1/P2 |
-| task debug/check | `harbor task debug`, `harbor task check`, `harbor check` | 检查 task 质量与失败原因 | Task diagnostics report | P1 |
-| task 更新/注释/迁移 | `harbor task update/annotate/migrate` | 维护 task package | Task authoring tools | P3 |
+| task 初始化 | `harbor task init`, `harbor init --task` | 创建 task skeleton | Dataset detail 内的 Task create wizard | P2 |
+| task 下载 | `harbor task download`, `harbor download` | 下载 registry task | Dataset detail 的 task action | P1 |
+| task 环境启动 | `harbor task start-env` | 单独启动 task 环境调试 | Dataset detail / Task detail 的 Start Environment panel | P1/P2 |
+| task debug/check | `harbor task debug`, `harbor task check`, `harbor check` | 检查 task 质量与失败原因 | Dataset detail 内的 Task diagnostics report | P1 |
+| task 更新/注释/迁移 | `harbor task update/annotate/migrate` | 维护 task package | Dataset detail 内的 Task authoring tools | P3 |
 | 编辑 dataset manifest | `harbor add/remove/sync` | 向 dataset.toml 添加、移除、同步 digest | Dataset editor，显示 manifest diff + confirm | P1 |
-| 浏览 artifacts | `harbor view` | 打开 jobs/tasks 轨迹浏览器 | Artifacts/Trials 内嵌浏览入口或受管 viewer launcher | P0/P1 |
-| trial 运行 | `harbor trial start` | 单 trial 调试 | Trial detail / Task detail 的 Run single trial | P2 |
-| trial 总结/下载 | `harbor trial summarize/download` | 分析或拉取单 trial | Trial viewer action menu | P2 |
+| 浏览 artifacts | `harbor view` | 打开 jobs/tasks 轨迹浏览器 | Job detail 内的 artifacts/trials 入口或受管 viewer launcher | P0/P1 |
+| trial 运行 | `harbor trial start` | 单 trial 调试 | Dataset task detail 的 Run single task，结果进入 Job detail 的 trial list | P2 |
+| trial 总结/下载 | `harbor trial summarize/download` | 分析或拉取单 trial | Job detail 内的 Trial action menu | P2 |
 | trajectory 分析 | `harbor analyze` | 分析 job/trial 轨迹 | Analysis report generator | P1 |
 | 插件列表 | `harbor plugins list` | 查看可用 job plugins | JobConfig Integrations picker | P1 |
 | adapter 初始化/审查 | `harbor adapter init/review` | 开发 Harbor adapter | Adapter developer tools | P3 |
@@ -106,26 +106,23 @@ flowchart TD
 
 - Catalog：官方 Harbor Hub 风格表格，支持搜索、分页、registry source。
 - Dataset detail：task 列表、版本、manifest 路径、下载/同步/发布入口。
+- Task 是 Dataset 的子概念，不作为 v1.0.5 一级页面。所有 task 浏览、搜索、描述、下载、
+  check/debug、start-env、run single task 都从 Dataset detail 进入。
 - Dataset editor：替代 `add/remove/sync`，所有 manifest 修改都先展示 diff。
-
-### Tasks
-
-- Task list/detail：展示 task metadata、package source、local path、environment readiness。
-- Task diagnostics：替代 `task check/debug` 和 `check`。
-- Start environment：高风险操作，默认放在 detail 的高级面板。
 
 ### Jobs
 
 - Job list：本地 jobs 与可导入 Hub jobs。
 - New job：JobConfig wizard。
 - Job detail：events、logs、trials、artifacts、config、summary、upload/share、resume/cancel/retry。
+- Trial 是 Job 的子概念，不作为 v1.0.5 一级页面。所有 trial 进度、得分、耗时、token 成本、
+  retries、log path 和 artifact evidence 都从 Job detail 进入。
 - Job recovery：失败分类、原始错误、可执行恢复动作。
 
-### Trials / Artifacts
+### Artifacts
 
-- Trial list：按 task、attempt、status、reward/score 过滤。
-- Trial detail：trajectory、logs、artifacts、analysis。
-- Viewer strategy：v1.0.5 可以先受管启动 `harbor view`，但 UI 必须表现为 OrnnLab 的 Artifacts/Trials 入口。
+- Artifact viewer：从 Job detail 或 Trial detail 进入，展示 trajectory、logs、artifacts、analysis。
+- Viewer strategy：v1.0.5 可以先受管启动 `harbor view`，但 UI 必须表现为 Job/Trial detail 内的 artifacts 入口。
 
 ### System
 
