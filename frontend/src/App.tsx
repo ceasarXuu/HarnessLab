@@ -16,11 +16,24 @@ import { SystemPage } from './pages/SystemPage'
 import { TasksPage } from './pages/TasksPage'
 import { TrialsPage } from './pages/TrialsPage'
 
-const pageKeys = new Set<PageKey>(['jobs', 'new-run', 'tasks', 'trials', 'system'])
+type JobView = 'list' | 'new'
 
-function readPageFromHash(): PageKey {
+interface RouteState {
+  jobView: JobView
+  page: PageKey
+}
+
+const pageKeys = new Set<PageKey>(['jobs', 'tasks', 'trials', 'system'])
+
+function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
-  return pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs'
+  if (hash === 'jobs/new' || hash === 'new-run') {
+    return { page: 'jobs', jobView: 'new' }
+  }
+  return {
+    page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs',
+    jobView: 'list',
+  }
 }
 
 function readLocale(): Locale {
@@ -32,7 +45,7 @@ function readTheme(): 'light' | 'dark' {
 }
 
 export function App() {
-  const [activePage, setActivePage] = useState<PageKey>(readPageFromHash)
+  const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
   const [selected, setSelected] = useState(seedJobs[0])
   const [search, setSearch] = useState('')
@@ -53,7 +66,7 @@ export function App() {
   }, [jobs, search])
 
   useEffect(() => {
-    const onHashChange = () => setActivePage(readPageFromHash())
+    const onHashChange = () => setRoute(readRouteFromHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -65,10 +78,12 @@ export function App() {
     window.localStorage.setItem('ornnlab.locale', language)
   }, [language, theme])
 
-  function navigate(page: PageKey) {
-    setActivePage(page)
-    if (window.location.hash !== `#${page}`) {
-      window.history.pushState(null, '', `#${page}`)
+  function navigate(page: PageKey, jobView: JobView = 'list') {
+    const nextRoute: RouteState = { page, jobView: page === 'jobs' ? jobView : 'list' }
+    const nextHash = nextRoute.page === 'jobs' && nextRoute.jobView === 'new' ? '#jobs/new' : `#${nextRoute.page}`
+    setRoute(nextRoute)
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash)
     }
   }
 
@@ -89,32 +104,33 @@ export function App() {
     setJobs((current) => [newJob, ...current])
     setSelected(newJob)
     setActiveStep('Review')
-    navigate('jobs')
+    navigate('jobs', 'list')
   }
 
   return (
     <AppShell
-      activePage={activePage}
+      activePage={route.page}
       language={language}
       theme={theme}
       t={t}
       onLanguage={setLanguage}
       onNavigate={navigate}
+      onNewJob={() => navigate('jobs', 'new')}
       onTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
     >
-      {activePage === 'jobs' && (
+      {route.page === 'jobs' && route.jobView === 'list' && (
         <JobsPage
           events={events}
           jobs={filteredJobs}
           search={search}
           selected={selected}
           t={t}
-          onNewJob={() => navigate('new-run')}
+          onNewJob={() => navigate('jobs', 'new')}
           onSearch={setSearch}
           onSelect={setSelected}
         />
       )}
-      {activePage === 'new-run' && (
+      {route.page === 'jobs' && route.jobView === 'new' && (
         <NewRunPage
           activeStep={activeStep}
           draft={draft}
@@ -124,9 +140,9 @@ export function App() {
           onStep={setActiveStep}
         />
       )}
-      {activePage === 'tasks' && <TasksPage rows={taskRows} t={t} />}
-      {activePage === 'trials' && <TrialsPage rows={trialRows} t={t} />}
-      {activePage === 'system' && <SystemPage rows={systemRows} t={t} />}
+      {route.page === 'tasks' && <TasksPage rows={taskRows} t={t} />}
+      {route.page === 'trials' && <TrialsPage rows={trialRows} t={t} />}
+      {route.page === 'system' && <SystemPage rows={systemRows} t={t} />}
     </AppShell>
   )
 }

@@ -9,7 +9,6 @@ const messages = {
   en: {
     harbor: 'Harbor',
     jobs: 'Jobs',
-    newRun: 'New Run',
     tasks: 'Tasks',
     trials: 'Trials',
     system: 'System',
@@ -44,7 +43,7 @@ const messages = {
     eventLog: 'Event log',
     systemDoctor: 'System doctor',
     artifactPaths: 'Artifact paths',
-    newRunDesc: 'Create a JobConfig, review the resolved command, then run it.',
+    newJobDesc: 'Create a JobConfig, review the resolved command, then run it.',
     source: 'Source',
     environment: 'Environment',
     runtime: 'Runtime',
@@ -84,7 +83,6 @@ const messages = {
   zh: {
     harbor: 'Harbor',
     jobs: 'Jobs',
-    newRun: 'New Run',
     tasks: 'Tasks',
     trials: 'Trials',
     system: 'System',
@@ -119,7 +117,7 @@ const messages = {
     eventLog: '事件日志',
     systemDoctor: '系统诊断',
     artifactPaths: '产物路径',
-    newRunDesc: '先创建 JobConfig，确认解析后的命令，再执行运行。',
+    newJobDesc: '先创建 JobConfig，确认解析后的命令，再执行运行。',
     source: '来源',
     environment: '环境',
     runtime: '运行时',

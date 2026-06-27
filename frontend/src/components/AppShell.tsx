@@ -2,11 +2,10 @@ import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } fr
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 
-export type PageKey = 'jobs' | 'new-run' | 'tasks' | 'trials' | 'system'
+export type PageKey = 'jobs' | 'tasks' | 'trials' | 'system'
 
 const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
   { key: 'jobs', label: 'jobs' },
-  { key: 'new-run', label: 'newRun' },
   { key: 'tasks', label: 'tasks' },
   { key: 'trials', label: 'trials' },
   { key: 'system', label: 'system' },
@@ -20,6 +19,7 @@ interface AppShellProps {
   t: Translate
   onLanguage: (language: Locale) => void
   onNavigate: (page: PageKey) => void
+  onNewJob: () => void
   onTheme: () => void
 }
 
@@ -31,6 +31,7 @@ export function AppShell({
   t,
   onLanguage,
   onNavigate,
+  onNewJob,
   onTheme,
 }: AppShellProps) {
   return (
@@ -85,7 +86,7 @@ export function AppShell({
           <button className="icon-button" aria-label={theme === 'light' ? t('dark') : t('light')} onClick={onTheme}>
             {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
           </button>
-          <button className="primary-button" onClick={() => onNavigate('new-run')}>
+          <button className="primary-button" onClick={onNewJob}>
             <Play aria-hidden="true" />
             {t('runJob')}
           </button>

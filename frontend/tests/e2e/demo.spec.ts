@@ -11,8 +11,10 @@ test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
 test('launch action creates a queued draft job', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Run job' }).click()
-  await expect(page.getByRole('heading', { name: 'New Run' })).toBeVisible()
-  await page.locator('#new-run').getByRole('button', { name: 'Run job' }).click()
+  await expect(page).toHaveURL(/#jobs\/new$/)
+  await expect(page.getByRole('link', { name: 'Jobs' })).toHaveClass(/active/)
+  await expect(page.getByRole('heading', { name: 'New Job' })).toBeVisible()
+  await page.locator('#new-job').getByRole('button', { name: 'Run job' }).click()
   await expect(page.getByRole('button', { name: 'terminal-bench-draft' })).toBeVisible()
 })
 

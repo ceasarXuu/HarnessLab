@@ -16,6 +16,11 @@ export function NewRunPage({ activeStep, draft, t, onDraft, onLaunch, onStep }: 
   return (
     <main className="workspace two-column-page">
       <div className="content-column">
+        <div className="hierarchy-strip" aria-label="Job creation hierarchy">
+          <span>{t('jobRegistry')}</span>
+          <span>{t('newJob')}</span>
+          <span>{t('runJob')}</span>
+        </div>
         <RunBuilder
           activeStep={activeStep}
           draft={draft}

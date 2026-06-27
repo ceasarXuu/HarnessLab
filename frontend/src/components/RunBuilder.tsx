@@ -21,11 +21,11 @@ interface RunBuilderProps {
 
 export function RunBuilder({ draft, activeStep, t, onStep, onDraft, onLaunch }: RunBuilderProps) {
   return (
-    <section className="surface run-builder" id="new-run">
+    <section className="surface run-builder" id="new-job">
       <div className="section-header compact">
         <div>
-          <h1>{t('newRun')}</h1>
-          <p>{t('newRunDesc')}</p>
+          <h1>{t('newJob')}</h1>
+          <p>{t('newJobDesc')}</p>
         </div>
         <button className="secondary-button">
           <Copy aria-hidden="true" />
