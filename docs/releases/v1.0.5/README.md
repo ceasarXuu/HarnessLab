@@ -9,7 +9,7 @@
 ## Requester Review Summary
 
 - Key decisions:
-  - v1.0.5 的版本目标定义为 Harbor WebUI 产品化，不再只是 OrnnLab 自身实验控制台的增量迭代。
+  - OrnnLab 仍然是基于 Harbor 的实验控制台；v1.0.5 版本优先补齐 Harbor WebUI 能力。
   - Harbor 继续负责 benchmark 执行、agent 执行、环境生命周期、验证和原始 artifacts。
   - OrnnLab Web 负责把 Harbor 的核心 CLI/API 能力产品化为本地单用户 WebUI。
   - v1.0.5 UI 以官方 Harbor Hub (`https://hub.harborframework.com/`) 为视觉和信息结构基准。
@@ -32,9 +32,10 @@ subprocess 执行。
 完整配置、trial/trajectory 浏览、upload/share、leaderboard submit、plugins、
 environment resource 参数等核心能力仍主要由 CLI 暴露。
 
-v1.0.5 的产品意图是：把 OrnnLab 从“基于 Harbor 的实验控制台”升级为
-“Harbor 的本地 WebUI 产品”。用户应能通过 Web 完成 Harbor 日常工作流，
-CLI 退回为高级用户、调试和自动化入口。
+v1.0.5 的产品意图是：在 OrnnLab 仍作为“基于 Harbor 的实验控制台”的前提下，
+先把 Harbor 的日常工作流补成可用的 WebUI。用户应能通过 Web 完成 Harbor
+主要操作，CLI 退回为高级用户、调试和自动化入口；后续版本继续围绕实验控制台
+做更完整的产品化改造。
 
 ## 2. Goals And Success Criteria
 
@@ -183,7 +184,7 @@ benchmark 执行的默认环境前提。
 
 | Topic | Decision | Rationale | Source Round |
 |---|---|---|---|
-| Version direction | v1.0.5 先做 Harbor WebUI 产品 | 用户明确要求该版本定义为 Harbor WebUI | Initial request |
+| Version direction | v1.0.5 先做 Harbor WebUI 能力 | 用户明确要求该版本先做 Harbor WebUI，同时 OrnnLab 仍是基于 Harbor 的实验控制台 | Initial request + correction |
 | Product boundary | OrnnLab Web 接管 Harbor 日常工作流，不重写 Harbor core | 保留 Harbor 执行权威，Web 做产品层 | Initial inference |
 | Official UI baseline | 复刻官方 Harbor Hub 的导航、表格、代码块和整体视觉密度 | 用户要求直接参考官方界面并尽量一致 | UI follow-up |
 | Status | Draft | Hub 范围、首发 backend 范围和 launch slice 仍需确认 | Initial inference |
