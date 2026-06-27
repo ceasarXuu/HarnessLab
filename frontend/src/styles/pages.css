@@ -219,21 +219,6 @@
   font-weight: 600;
   text-transform: uppercase;
 }
-.stage-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
-}
-.stage-list span {
-  padding: 9px 10px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-.stage-list span.active {
-  border-color: var(--border-strong);
-  background: var(--subtle);
-  color: var(--foreground);
-}
 .cell-title {
   display: inline-flex;
   align-items: center;

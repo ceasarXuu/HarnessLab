@@ -57,7 +57,6 @@ export function App() {
   const [selected, setSelected] = useState<HarborJob | null>(null)
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [activeStep, setActiveStep] = useState('Source')
   const [draft, setDraft] = useState(initialDraft)
   const [language, setLanguage] = useState<Locale>(readLocale)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
@@ -126,7 +125,6 @@ export function App() {
     setJobs((current) => [newJob, ...current])
     setSelected(newJob)
     setJobDrawerOpen(true)
-    setActiveStep('Review')
     navigate('jobs', 'list')
   }
 
@@ -183,13 +181,11 @@ export function App() {
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (
         <NewRunPage
-          activeStep={activeStep}
           draft={draft}
           t={t}
           onDraft={setDraft}
           onJobs={() => navigate('jobs', 'list')}
           onLaunch={launchDraft}
-          onStep={setActiveStep}
         />
       )}
       {route.page === 'system' && <SystemPage rows={systemRows} t={t} />}

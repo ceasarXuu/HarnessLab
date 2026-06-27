@@ -185,8 +185,7 @@ svg {
 .primary-button,
 .secondary-button,
 .icon-button,
-.status-chip,
-.step-tabs button {
+.status-chip {
   height: 34px;
   min-height: 32px;
   border: 1px solid var(--border-strong);
@@ -208,8 +207,7 @@ svg {
   color: var(--primary-foreground);
 }
 .secondary-button:hover,
-.icon-button:hover,
-.step-tabs button:hover {
+.icon-button:hover {
   background: var(--subtle);
 }
 .icon-button {
@@ -305,22 +303,6 @@ td:first-child {
 .completed,
 .info {
   color: var(--info);
-}
-.step-tabs {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  border-bottom: 1px solid var(--border);
-}
-.step-tabs button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-width: 0 1px 0 0;
-}
-.step-tabs button.active {
-  background: var(--foreground);
-  color: var(--background);
 }
 .run-grid {
   display: grid;

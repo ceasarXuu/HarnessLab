@@ -1,26 +1,16 @@
-import { Check, Copy, Play, Plus, RotateCcw } from 'lucide-react'
+import { Copy, Play, Plus, RotateCcw } from 'lucide-react'
 import type { RunDraft } from '../data/demo'
-import type { MessageKey, Translate } from '../i18n'
+import type { Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
-
-const steps: Array<{ key: string; label: MessageKey }> = [
-  { key: 'Source', label: 'source' },
-  { key: 'Agent', label: 'agent' },
-  { key: 'Environment', label: 'environment' },
-  { key: 'Runtime', label: 'runtime' },
-  { key: 'Review', label: 'review' },
-]
 
 interface RunBuilderProps {
   draft: RunDraft
-  activeStep: string
   t: Translate
-  onStep: (step: string) => void
   onDraft: (draft: RunDraft) => void
   onLaunch: () => void
 }
 
-export function RunBuilder({ draft, activeStep, t, onStep, onDraft, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
   return (
     <section className="surface run-builder" id="new-job">
       <div className="section-header compact">
@@ -32,18 +22,6 @@ export function RunBuilder({ draft, activeStep, t, onStep, onDraft, onLaunch }: 
           <Copy aria-hidden="true" />
           {t('jobConfig')}
         </button>
-      </div>
-      <div className="step-tabs" role="tablist" aria-label="JobConfig sections">
-        {steps.map((step) => (
-          <button
-            key={step.key}
-            className={step.key === activeStep ? 'active' : undefined}
-            onClick={() => onStep(step.key)}
-          >
-            {step.key === activeStep && <Check aria-hidden="true" />}
-            {t(step.label)}
-          </button>
-        ))}
       </div>
       <div className="run-grid">
         <label>
