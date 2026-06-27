@@ -89,11 +89,12 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Select dataset')).toHaveValue('terminal-bench@2.0')
+    expect(screen.getByLabelText('Select dataset')).toHaveTextContent('terminal-bench@2.0')
     expect(screen.getByText('claude-code')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
-    fireEvent.change(screen.getByLabelText('Select dataset'), { target: { value: 'swe-bench-lite@2026.06' } })
+    fireEvent.click(screen.getByLabelText('Select dataset'))
+    fireEvent.click(screen.getByRole('option', { name: 'swe-bench-lite@2026.06' }))
     expect(screen.getByText('job_74c1')).toBeInTheDocument()
     expect(screen.getByText('claude-sonnet-4-5')).toBeInTheDocument()
     expect(screen.getByText('gpt-5.1')).toBeInTheDocument()
@@ -103,7 +104,8 @@ describe('App', () => {
   it('switches language and theme from the header', () => {
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'zh' } })
+    fireEvent.click(screen.getByLabelText('Language'))
+    fireEvent.click(screen.getByRole('option', { name: '中' }))
     expect(screen.getByRole('heading', { name: 'Job 管理' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '深色' }))

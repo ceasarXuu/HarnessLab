@@ -21,6 +21,7 @@
   background: transparent;
 }
 .toolbar-select {
+  position: relative;
   display: inline-flex;
   flex-direction: row;
   align-items: center;
@@ -31,8 +32,9 @@
   border: 1px solid var(--border-strong);
   color: var(--foreground);
 }
-.toolbar-select span {
+.toolbar-select > span {
   color: var(--muted);
+  white-space: nowrap;
 }
 .toolbar-select select {
   min-height: 32px;
@@ -55,6 +57,74 @@
 .toolbar-select option {
   background: var(--surface);
   color: var(--foreground);
+}
+.custom-select {
+  position: relative;
+  display: flex;
+  width: 100%;
+  padding-right: 0;
+}
+.select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+.header-select.custom-select,
+.toolbar-select.custom-select {
+  width: auto;
+}
+.header-select .select-trigger {
+  min-width: 48px;
+  padding: 0;
+}
+.toolbar-select .select-trigger {
+  min-width: 210px;
+  padding: 0 8px 0 0;
+}
+.select-trigger svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+.select-trigger span {
+  color: var(--foreground);
+  white-space: nowrap;
+}
+.select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: -1px;
+  left: -1px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+.select-menu button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+.select-menu button:last-child {
+  border-bottom: 0;
+}
+.select-menu button:hover,
+.select-menu button.active {
+  background: var(--subtle);
 }
 .jobs-workspace {
   grid-template-columns: minmax(0, 1fr) clamp(500px, 28vw, 680px);

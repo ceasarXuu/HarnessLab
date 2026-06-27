@@ -1,4 +1,5 @@
 import { Search, Trophy } from 'lucide-react'
+import { CustomSelect } from '../components/CustomSelect'
 import type { DatasetRow, LeaderboardRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -48,19 +49,17 @@ export function LeaderboardPage({
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
-            <label className="toolbar-select">
-              <span>{t('dataset')}</span>
-              <select aria-label={t('selectDataset')} value={dataset} onChange={(event) => onDataset(event.target.value)}>
-                {selectableDatasets.map((row) => {
-                  const value = `${row.name}@${row.version}`
-                  return (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  )
-                })}
-              </select>
-            </label>
+            <CustomSelect
+              ariaLabel={t('selectDataset')}
+              className="toolbar-select"
+              visibleLabel={t('dataset')}
+              value={dataset}
+              options={selectableDatasets.map((row) => {
+                const value = `${row.name}@${row.version}`
+                return { label: value, value }
+              })}
+              onChange={onDataset}
+            />
           </div>
         </div>
         <div className="table-wrap">

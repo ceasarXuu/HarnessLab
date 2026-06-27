@@ -1,6 +1,7 @@
 import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
+import { CustomSelect } from './CustomSelect'
 
 export type PageKey = 'jobs' | 'datasets' | 'agents' | 'leaderboard' | 'system'
 
@@ -77,13 +78,17 @@ export function AppShell({
           <button className="icon-button" aria-label={t('github')}>
             <Github aria-hidden="true" />
           </button>
-          <label className="header-select">
-            <Languages aria-hidden="true" />
-            <select aria-label="Language" value={language} onChange={(event) => onLanguage(event.target.value as Locale)}>
-              <option value="en">EN</option>
-              <option value="zh">中</option>
-            </select>
-          </label>
+          <CustomSelect
+            ariaLabel="Language"
+            className="header-select"
+            leadingIcon={<Languages aria-hidden="true" />}
+            value={language}
+            options={[
+              { label: 'EN', value: 'en' },
+              { label: '中', value: 'zh' },
+            ]}
+            onChange={(value) => onLanguage(value as Locale)}
+          />
           <button className="icon-button" aria-label={theme === 'light' ? t('dark') : t('light')} onClick={onTheme}>
             {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
           </button>

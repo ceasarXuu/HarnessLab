@@ -1,6 +1,7 @@
 import { Check, Copy, Play, Plus, RotateCcw } from 'lucide-react'
 import type { RunDraft } from '../data/demo'
 import type { MessageKey, Translate } from '../i18n'
+import { CustomSelect } from './CustomSelect'
 
 const steps: Array<{ key: string; label: MessageKey }> = [
   { key: 'Source', label: 'source' },
@@ -47,19 +48,29 @@ export function RunBuilder({ draft, activeStep, t, onStep, onDraft, onLaunch }: 
       <div className="run-grid">
         <label>
           {t('source')}
-          <select value={draft.source} onChange={(event) => onDraft({ ...draft, source: event.target.value })}>
-            <option>terminal-bench@2.0</option>
-            <option>swe-bench-lite</option>
-            <option>harbor/hello-world</option>
-          </select>
+          <CustomSelect
+            ariaLabel={t('source')}
+            value={draft.source}
+            options={[
+              { label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
+              { label: 'swe-bench-lite', value: 'swe-bench-lite' },
+              { label: 'harbor/hello-world', value: 'harbor/hello-world' },
+            ]}
+            onChange={(value) => onDraft({ ...draft, source: value })}
+          />
         </label>
         <label>
           {t('agent')}
-          <select value={draft.agent} onChange={(event) => onDraft({ ...draft, agent: event.target.value })}>
-            <option>claude-code</option>
-            <option>codex-cli</option>
-            <option>oracle</option>
-          </select>
+          <CustomSelect
+            ariaLabel={t('agent')}
+            value={draft.agent}
+            options={[
+              { label: 'claude-code', value: 'claude-code' },
+              { label: 'codex-cli', value: 'codex-cli' },
+              { label: 'oracle', value: 'oracle' },
+            ]}
+            onChange={(value) => onDraft({ ...draft, agent: value })}
+          />
         </label>
         <label>
           {t('model')}
@@ -67,13 +78,15 @@ export function RunBuilder({ draft, activeStep, t, onStep, onDraft, onLaunch }: 
         </label>
         <label>
           {t('environment')}
-          <select
+          <CustomSelect
+            ariaLabel={t('environment')}
             value={draft.environment}
-            onChange={(event) => onDraft({ ...draft, environment: event.target.value })}
-          >
-            <option>docker</option>
-            <option>local</option>
-          </select>
+            options={[
+              { label: 'docker', value: 'docker' },
+              { label: 'local', value: 'local' },
+            ]}
+            onChange={(value) => onDraft({ ...draft, environment: value })}
+          />
         </label>
         <label>
           {t('concurrency')}
