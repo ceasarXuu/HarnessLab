@@ -54,7 +54,6 @@ export function App() {
   const [datasetSearch, setDatasetSearch] = useState('')
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
-  const [leaderboardSearch, setLeaderboardSearch] = useState('')
   const [selected, setSelected] = useState(seedJobs[0])
   const [search, setSearch] = useState('')
   const [activeStep, setActiveStep] = useState('Source')
@@ -84,15 +83,8 @@ export function App() {
   }, [datasetSearch])
 
   const filteredLeaderboard = useMemo(() => {
-    const query = leaderboardSearch.trim().toLowerCase()
-    return leaderboardRows
-      .filter((row) => row.dataset === leaderboardDataset)
-      .filter((row) =>
-        !query
-          ? true
-          : [row.agent, row.model, row.jobId].some((value) => value.toLowerCase().includes(query)),
-      )
-  }, [leaderboardDataset, leaderboardSearch])
+    return leaderboardRows.filter((row) => row.dataset === leaderboardDataset)
+  }, [leaderboardDataset])
 
   useEffect(() => {
     const onHashChange = () => setRoute(readRouteFromHash())
@@ -164,11 +156,9 @@ export function App() {
           datasetSearch={leaderboardDatasetSearch}
           datasets={datasetRows}
           rows={filteredLeaderboard}
-          search={leaderboardSearch}
           t={t}
           onDataset={setLeaderboardDataset}
           onDatasetSearch={setLeaderboardDatasetSearch}
-          onSearch={setLeaderboardSearch}
         />
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (

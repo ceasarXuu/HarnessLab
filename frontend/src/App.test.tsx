@@ -84,9 +84,9 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.change(screen.getByLabelText('Select dataset'), { target: { value: 'swe-bench-lite@2026.06' } })
     expect(screen.getByText('job_74c1')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Search leaderboard'), { target: { value: 'sonnet' } })
     expect(screen.getByText('claude-sonnet-4-5')).toBeInTheDocument()
-    expect(screen.queryByText('gpt-5.1')).not.toBeInTheDocument()
+    expect(screen.getByText('gpt-5.1')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
 
   it('switches language and theme from the header', () => {

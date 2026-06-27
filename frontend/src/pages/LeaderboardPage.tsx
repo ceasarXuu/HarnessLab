@@ -7,11 +7,9 @@ interface LeaderboardPageProps {
   datasetSearch: string
   datasets: DatasetRow[]
   rows: LeaderboardRow[]
-  search: string
   t: Translate
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
-  onSearch: (value: string) => void
 }
 
 export function LeaderboardPage({
@@ -19,11 +17,9 @@ export function LeaderboardPage({
   datasetSearch,
   datasets,
   rows,
-  search,
   t,
   onDataset,
   onDatasetSearch,
-  onSearch,
 }: LeaderboardPageProps) {
   const selectedDataset = datasets.find((row) => `${row.name}@${row.version}` === dataset)
   const visibleDatasets = datasets.filter((row) =>
@@ -64,15 +60,6 @@ export function LeaderboardPage({
                   )
                 })}
               </select>
-            </label>
-            <label className="search-field">
-              <Search aria-hidden="true" />
-              <input
-                aria-label={t('searchLeaderboard')}
-                value={search}
-                onChange={(event) => onSearch(event.target.value)}
-                placeholder={t('searchLeaderboardPlaceholder')}
-              />
             </label>
           </div>
         </div>

@@ -136,7 +136,6 @@ flowchart TD
 
 - 一级页面：展示各 dataset 下的得分排名。
 - 一次只展示一个 dataset 的 ranking，用户通过 dataset 搜索框过滤下拉列表并切换。
-- 支持搜索 agent、model、job id。
 - 行级指标包含 rank、agent、model、score、trials、cost、duration、job id。
 
 ### Artifacts

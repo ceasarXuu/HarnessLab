@@ -2,22 +2,25 @@
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  min-height: 32px;
+  height: 34px;
+  min-height: 34px;
   gap: 6px;
   padding: 0 8px;
   border: 1px solid var(--border-strong);
   color: var(--foreground);
 }
 .header-select select {
-  min-height: 28px;
+  min-height: 32px;
   padding: 0;
   border: 0;
   background: transparent;
 }
 .toolbar-select {
+  display: inline-flex;
   flex-direction: row;
   align-items: center;
-  min-height: 32px;
+  height: 34px;
+  min-height: 34px;
   gap: 8px;
   padding: 0 8px;
   border: 1px solid var(--border-strong);
@@ -27,7 +30,7 @@
   color: var(--muted);
 }
 .toolbar-select select {
-  min-height: 28px;
+  min-height: 32px;
   min-width: 210px;
   padding: 0;
   border: 0;
@@ -45,11 +48,8 @@
 .leaderboard-page table {
   min-width: 920px;
 }
-.leaderboard-toolbar .search-field {
-  width: min(320px, 24vw);
-}
 .leaderboard-toolbar .dataset-filter {
-  width: min(260px, 18vw);
+  width: min(320px, 24vw);
 }
 .two-column-page {
   grid-template-columns: minmax(0, 1fr) 348px;
