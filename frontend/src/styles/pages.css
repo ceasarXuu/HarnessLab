@@ -9,6 +9,11 @@
   border: 1px solid var(--border-strong);
   color: var(--foreground);
 }
+.header-select:focus-within,
+.toolbar-select:focus-within {
+  border-color: var(--foreground);
+  background: var(--subtle);
+}
 .header-select select {
   min-height: 32px;
   padding: 0;
@@ -35,6 +40,21 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+.header-select select,
+.toolbar-select select {
+  color-scheme: inherit;
+  color: var(--foreground);
+  outline: none;
+}
+.header-select select:focus-visible,
+.toolbar-select select:focus-visible {
+  outline: none;
+}
+.header-select option,
+.toolbar-select option {
+  background: var(--surface);
+  color: var(--foreground);
 }
 .jobs-workspace {
   grid-template-columns: minmax(0, 1fr) clamp(500px, 28vw, 680px);
