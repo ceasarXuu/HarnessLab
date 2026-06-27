@@ -37,7 +37,6 @@ export function LeaderboardPage({
         <div className="section-header">
           <div>
             <h1>{t('leaderboardTitle')}</h1>
-            <p>{t('leaderboardDesc')}</p>
           </div>
           <div className="toolbar leaderboard-toolbar">
             <label className="search-field dataset-filter">

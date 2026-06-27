@@ -19,7 +19,6 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('agentsCatalog')}</h1>
-            <p>{t('agentsCatalogDesc')}</p>
           </div>
           <div className="toolbar">
             <button className="secondary-button">

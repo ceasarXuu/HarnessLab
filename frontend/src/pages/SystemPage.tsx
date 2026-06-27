@@ -14,7 +14,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('systemHealth')}</h1>
-            <p>{t('systemHealthDesc')}</p>
           </div>
           <button className="primary-button">{t('systemDoctor')}</button>
         </div>

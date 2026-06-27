@@ -30,7 +30,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
         <div className="section-header">
           <div>
             <h1>{t('datasetCatalog')}</h1>
-            <p>{t('datasetCatalogDesc')}</p>
           </div>
           <div className="toolbar">
             <label className="search-field">

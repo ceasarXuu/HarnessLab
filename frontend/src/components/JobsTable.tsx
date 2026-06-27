@@ -25,7 +25,6 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
       <div className="section-header">
         <div>
           <h1>{t('jobRegistry')}</h1>
-          <p>{t('jobRegistryDesc')}</p>
         </div>
         <div className="toolbar">
           <label className="search-field">
