@@ -5,7 +5,9 @@
 - Updated: 2026-06-28
 - Owner / requester: project maintainer
 - Source request: v1.0.5 版本先做 Harbor 的 WebUI 产品，可完全接管 Harbor 服务。
-- UI architecture companion: [Harbor CLI-to-UI 替代架构](harbor-cli-to-ui-architecture.md)
+- UI architecture companions:
+  - [Harbor CLI-to-UI 替代架构](harbor-cli-to-ui-architecture.md)
+  - [v1.0.5 前端重建架构决策](frontend-rebuild-architecture.md)
 
 ## Requester Review Summary
 
@@ -13,10 +15,12 @@
   - OrnnLab 仍然是基于 Harbor 的实验控制台；v1.0.5 版本优先补齐 Harbor WebUI 能力。
   - Harbor 继续负责 benchmark 执行、agent 执行、环境生命周期、验证和原始 artifacts。
   - OrnnLab Web 负责把 Harbor 的核心 CLI/API 能力产品化为本地单用户 WebUI。
-  - v1.0.5 UI 以官方 Harbor Hub (`https://hub.harborframework.com/`) 为视觉和信息结构基准。
+  - v1.0.5 前端删除现有 Vue demo，重建为与 Harbor 官方 `apps/viewer` 一致的 React/Vite/React Router/Tailwind/shadcn 架构。
+  - v1.0.5 UI 以 Harbor 官方 Viewer 为产品架构基准，以官方 Harbor Hub (`https://hub.harborframework.com/`) 为视觉参考。
   - 产品核心不是展示 Harbor 信息，而是用 UI 交互替代 Harbor 日常 CLI 操作。
 - Important exceptions:
   - 不重写 Harbor core，不 fork Harbor，不把 v1.0.5 做成多租户云平台。
+  - 不在旧 Vue demo 上继续增量开发 Harbor WebUI。
   - “完全接管”指用户日常使用 Harbor 的主要操作不再必须回到 CLI；不是覆盖 Harbor 内部所有维护命令。
 - Must-confirm before implementation:
   - v1.0.5 首发是否必须覆盖 Harbor Hub upload/share/leaderboard submit。
@@ -138,6 +142,10 @@ benchmark 执行的默认环境前提。
 - 每个高级参数默认折叠，但必须可见、可解释、可复制为原始 JobConfig。
 - Web 页面必须始终保留原始 Harbor artifact 链接，避免产品层摘要掩盖事实。
 - UI 中的每个主要操作都应回答“这替代了哪条 CLI 命令、会生成什么配置、失败后怎么恢复”。
+- Frontend architecture:
+  - v1.0.5 前端必须重建，不沿用旧 Vue demo；
+  - 技术栈与 Harbor 官方 Viewer 对齐：React、React Router、Vite、Tailwind、shadcn/ui、Radix、TanStack Query/Table、lucide-react；
+  - 生产形态仍保持本地 FastAPI 服务静态 SPA 的方向，避免引入 Next SSR 作为首版复杂度。
 
 ## 7. Product Rules And State Logic
 
@@ -201,6 +209,7 @@ benchmark 执行的默认环境前提。
 | Version direction | v1.0.5 先做 Harbor WebUI 能力 | 用户明确要求该版本先做 Harbor WebUI，同时 OrnnLab 仍是基于 Harbor 的实验控制台 | Initial request + correction |
 | Product boundary | OrnnLab Web 接管 Harbor 日常工作流，不重写 Harbor core | 保留 Harbor 执行权威，Web 做产品层 | Initial inference |
 | Official UI baseline | 复刻官方 Harbor Hub 的导航、表格、代码块和整体视觉密度 | 用户要求直接参考官方界面并尽量一致 | UI follow-up |
+| Frontend architecture | 删除旧 Vue demo，重建为与 Harbor 官方 `apps/viewer` 一致的 React/Vite 架构 | 旧 demo 不能直接复用官方组件，会干扰正式开发 | Frontend architecture follow-up |
 | Interaction priority | 用 UI 交互替代 Harbor 日常 CLI 操作 | 用户明确指出关键在于替代 CLI 操作 | CLI replacement correction |
 | Status | Draft | Hub 范围、首发 backend 范围和 launch slice 仍需确认 | Initial inference |
 

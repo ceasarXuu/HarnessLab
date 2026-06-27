@@ -42,7 +42,7 @@ guidance from being read as current direction.
 
 - Architecture diagram (v0.1.4): `architecture-v0.1.4.mmd` / `architecture-v0.1.4.png`
 - Backend package: `../../ornnlab/`
-- Frontend package: `../../frontend/`
+- Frontend package: pending v1.0.5 rebuild; see `../releases/v1.0.5/frontend-rebuild-architecture.md`
 - Web gate: `../../scripts/test-after-change-web.sh`
 - Web test registry: `../../tests/WEB_TEST_REGISTRY.toml`
 - Release gate: `../releases/v0.1.3/checklist.md`

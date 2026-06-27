@@ -5,6 +5,7 @@
 - Updated: 2026-06-28
 - Harbor CLI baseline: `0.13.2`
 - Source: 本机 `harbor --help` 与主要子命令 help。
+- Frontend decision: [v1.0.5 前端重建架构决策](frontend-rebuild-architecture.md)
 
 ## 1. 核心判断
 
@@ -13,6 +14,9 @@ v1.0.5 的关键不是把 Harbor CLI 命令搬到 Web 上显示，而是把 Harb
 
 CLI 仍保留为高级调试、自动化和审计入口。Web 的主路径不得要求用户复制一段命令再回到
 terminal 执行。
+
+前端实现不沿用旧 Vue demo。v1.0.5 应重建为与 Harbor 官方 `apps/viewer`
+一致的 React/Vite/React Router/Tailwind/shadcn 架构，并用 Harbor Hub 作为视觉参考。
 
 ## 2. 操作域架构
 
@@ -166,6 +170,8 @@ P2 决定是否进入 Hub 闭环：
 3. Dataset editor 是否进入 v1.0.5？如果进入，它会明显扩大前端表单和 manifest diff 工作量。
 4. `harbor view` 是先作为受管 viewer 启动，还是首版自研完整 Trial/Artifact viewer？
 5. Jobs 导航是否完全替代当前 Experiments 导航，但内部仍保留 Experiment 作为 OrnnLab 的产品组织层？
+
+已决策：旧 Vue demo 不作为演进基线，正式前端必须重建并对齐 Harbor 官方 Viewer 架构。
 
 ## 8. 验收原则
 

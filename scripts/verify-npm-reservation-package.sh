@@ -13,11 +13,10 @@ fi
 node bin/ornnlab.js --help | grep -q 'ornnlab                    Bootstrap if needed'
 node bin/ornnlab.js --help | grep -q 'ornnlab install            Install prerequisites'
 node bin/ornnlab.js --help | grep -q 'ornnlab setup              Alias for install'
-node bin/ornnlab.js --help | grep -q 'ORNNLAB_FRONTEND_PORT'
 node bin/ornnlab.js --help | grep -q 'ORNNLAB_INSTALL_DOCKER'
 node bin/ornnlab.js --help | grep -q 'Required tools are git, uv, Node.js, and npm'
 node bin/ornnlab.js --help | grep -q 'does not'
-node bin/ornnlab.js --help | grep -q 'Frontend: http://'
+node bin/ornnlab.js --help | grep -q 'Backend API: http://'
 node bin/ornnlab.js path >/dev/null
 
 if node bin/ornnlab.js unexpected-command >/dev/null 2>&1; then

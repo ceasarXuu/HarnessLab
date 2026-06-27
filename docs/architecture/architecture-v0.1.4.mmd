@@ -72,10 +72,10 @@ flowchart TB
         Docker["Docker 容器<br/>(benchmark 运行环境)"]:::engine
     end
 
-    subgraph Frontend["前端 (frontend/) — Vue 3 + TypeScript"]
-        Vite["Vite dev server<br/>127.0.0.1:5173"]:::frontend
-        Views["Views:<br/>Dashboard / Agents / Experiments / Leaderboard"]:::frontend
-        ApiClient["api/client.ts<br/>HTTP + SSE"]:::frontend
+    subgraph Frontend["前端 — v1.0.5 待重建"]
+        Vite["React + React Router + Vite<br/>Harbor Viewer-aligned"]:::frontend
+        Views["Views:<br/>Jobs / New Run / Tasks / Trials"]:::frontend
+        ApiClient["API client<br/>Harbor Jobs/Tasks/Trials + System Doctor"]:::frontend
     end
 
     subgraph Integration["集成"]
@@ -95,7 +95,7 @@ flowchart TB
     Bootstrap --> SourceMgmt
     SourceMgmt --> Dev
     Dev --> CliEntry
-    Dev --> Vite
+    Dev -. v1.0.5 rebuild .-> Vite
 
     %% CLI → App
     CliEntry -->|web| App

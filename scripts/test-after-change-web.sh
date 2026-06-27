@@ -20,13 +20,17 @@ if violations:
     raise SystemExit("Files exceed 500 lines:\n" + "\n".join(violations))
 PY
 
+bash scripts/verify-harnesslab-transition-package.sh
+bash scripts/verify-npm-reservation-package.sh
+
 if [ -f frontend/package.json ]; then
-  bash scripts/verify-harnesslab-transition-package.sh
   npm --prefix frontend run typecheck
   npm --prefix frontend run lint
   npm --prefix frontend run test
   npm --prefix frontend run storybook:test
   npm --prefix frontend run e2e
+else
+  echo "frontend/package.json absent: legacy Vue frontend removed; v1.0.5 rebuild pending."
 fi
 
 git diff --check

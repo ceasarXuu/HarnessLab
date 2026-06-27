@@ -48,8 +48,9 @@ active npm launcher for the OrnnLab Harbor WebUI source workflow.
 `ornnlab@0.1.2` added recoverable blank-machine bootstrap for required tools and
 optional Docker capability handling. The prepared `ornnlab@0.1.3` release keeps
 Docker install lightweight and core-only, avoids Docker Desktop, versions
-bootstrap state, and verifies Harbor/backend/frontend readiness after dependency
-sync. The product name for that active path is OrnnLab.
+bootstrap state, and verifies Harbor/backend readiness after dependency sync.
+The product name for that active path is OrnnLab. The old Vue frontend has since
+been removed so v1.0.5 can rebuild against Harbor's official Viewer architecture.
 
 ## Preflight
 
@@ -94,8 +95,8 @@ npm install --prefix "$tmpdir/install" "$tmpdir/$tarball"
 Expected signals:
 
 - `ornnlab --version` prints the package version.
-- `ornnlab --help` explains that plain `ornnlab` starts the local WebUI and
-  prints the frontend URL.
+- `ornnlab --help` explains that plain `ornnlab` starts the local backend API
+  while the v1.0.5 frontend rebuild is pending.
 - The tarball contents are limited by `package.json` `files`.
 
 ## Publish Active `ornnlab` Package

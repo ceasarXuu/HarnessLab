@@ -22,10 +22,12 @@ verification, and raw job artifacts. OrnnLab owns the local product layer:
 declarative agent registration, experiment/run management, diagnostics, report
 summaries, and leaderboard views.
 
-The v1.0.5 product direction is to make OrnnLab the local Harbor WebUI product:
-ordinary Harbor job setup, execution, observation, artifact review, diagnostics,
-and recovery should be usable from Web without returning to CLI for the main
-workflow.
+The v1.0.5 product direction keeps OrnnLab as the Harbor-powered experiment
+console while first filling Harbor WebUI capability: ordinary Harbor job setup,
+execution, observation, artifact review, diagnostics, and recovery should be
+usable from Web without returning to CLI for the main workflow. The previous
+Vue demo frontend has been removed; v1.0.5 will rebuild the UI against Harbor's
+official Viewer architecture.
 
 ## Install With npm
 
@@ -45,10 +47,10 @@ launch and can be installed or skipped during setup.
 
 The launcher stores its managed source checkout under `~/.ornnlab/launcher/source` by
 default. OrnnLab product data remains under `~/.ornnlab/data`.
-When the app starts, the terminal prints the frontend URL:
+Until the v1.0.5 frontend rebuild lands, the launcher starts the backend API:
 
 ```text
-Frontend: http://127.0.0.1:5173/
+Backend API: http://127.0.0.1:8765/
 ```
 
 For version authority and release documentation rules, see
@@ -58,7 +60,8 @@ For version authority and release documentation rules, see
 
 This repository still contains the previous Rust workspace and npm reservation
 package materials. They are legacy/reference assets. The active implementation
-path is the new Python/FastAPI backend and Vue frontend.
+path is the Python/FastAPI backend plus a pending v1.0.5 frontend rebuild
+aligned with Harbor's official Viewer architecture.
 
 Implemented rewrite foundation:
 
@@ -71,16 +74,15 @@ Implemented rewrite foundation:
 - Docker orphan doctor scan with dry-run cleanup plans
 - local `ornnlab backup export` / `ornnlab backup import` archives
 - safe `ornnlab cleanup plan` / `ornnlab cleanup archive` for stale local artifacts
-- Vue operations-console scaffold under `frontend/`
 - Python/Web gate script: `scripts/test-after-change-web.sh`
-- GitHub Actions CI for Python Web, frontend Web, and opt-in real Harbor Docker smoke
+- GitHub Actions CI for Python Web and opt-in real Harbor Docker smoke
 
 ## Planned Local App
 
 The intended MVP stack is:
 
 - Python + FastAPI backend
-- Vue 3 + TypeScript frontend
+- React + React Router + Vite frontend aligned with Harbor official Viewer
 - SQLite metadata index
 - File-based artifacts under `~/.ornnlab/data`
 - Harbor `0.13.x` as the execution engine
@@ -93,12 +95,8 @@ uv sync --group dev
 uv run ornnlab web
 ```
 
-Frontend development command:
-
-```bash
-npm --prefix frontend ci
-npm --prefix frontend run dev -- --host 127.0.0.1
-```
+Frontend development will resume after the v1.0.5 React/Vite rebuild creates a
+new `frontend/` package. Do not use the removed Vue demo as a development base.
 
 See `docs/playbooks/install-quickstart.md` for the full fresh-checkout flow.
 

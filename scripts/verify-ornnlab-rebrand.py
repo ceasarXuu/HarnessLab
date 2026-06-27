@@ -46,6 +46,7 @@ DOC_INVENTORY = {
     "docs/releases/v0.1.4/web-connectivity/06-web-design-best-practices.md": "rename-now",
     "docs/releases/v1.0.5/README.md": "rename-now",
     "docs/releases/v1.0.5/harbor-cli-to-ui-architecture.md": "rename-now",
+    "docs/releases/v1.0.5/frontend-rebuild-architecture.md": "rename-now",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",
@@ -203,12 +204,16 @@ def _check_version_folder_contract() -> dict[str, Any]:
 
 def _check_product_metadata() -> dict[str, Any]:
     root_package = _json(ROOT / "package.json")
-    frontend_package = _json(ROOT / "frontend/package.json")
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    frontend_package_path = ROOT / "frontend/package.json"
+    frontend_name = None
+    if frontend_package_path.exists():
+        frontend_package = _json(frontend_package_path)
+        frontend_name = frontend_package.get("name")
     passed = (
         root_package["name"] == "ornnlab"
         and root_package["bin"] == {"ornnlab": "bin/ornnlab.js"}
-        and frontend_package["name"] == "@ceasarxuu/ornnlab-frontend"
+        and frontend_name in {None, "@ceasarxuu/ornnlab-frontend"}
         and 'name = "ornnlab"' in pyproject
         and 'ornnlab = "ornnlab.cli:main"' in pyproject
     )
@@ -218,7 +223,8 @@ def _check_product_metadata() -> dict[str, Any]:
         passed,
         {
             "npm_name": root_package.get("name"),
-            "frontend_name": frontend_package.get("name"),
+            "frontend_name": frontend_name,
+            "frontend_status": "present" if frontend_package_path.exists() else "pending-v1.0.5-rebuild",
             "python_project": "ornnlab" if 'name = "ornnlab"' in pyproject else None,
         },
     )

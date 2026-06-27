@@ -6,6 +6,7 @@
 |---|---|---|---|
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined Python/Web-first test strategy for the Harbor WebUI rewrite. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked test strategy to document version governance. |
+| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Removed Vue frontend gate as current strategy after deleting the demo; frontend gates return with the Harbor Viewer-aligned rebuild. |
 
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
@@ -41,9 +42,9 @@ Current rewrite gates are Python/Web first:
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `ORNNLAB_REAL_HARBOR=1` and Docker availability;
 - ruff and pyright for Python static gates;
-- Vue typecheck, lint, unit tests, Storybook interaction tests, and Playwright
-  smoke tests for the frontend;
-- GitHub Actions default jobs `python-web` and `frontend-web`, plus an opt-in
+- frontend typecheck, lint, unit tests, Storybook interaction tests, and
+  Playwright smoke tests return when the v1.0.5 React/Vite package is rebuilt;
+- GitHub Actions default job `python-web`, plus an opt-in
   `real-harbor-docker-smoke` workflow dispatch job;
 - a line-count gate that fails when production source files exceed 500 lines.
 
@@ -75,16 +76,9 @@ an automatic remover. The WebUI scans labelled `ornnlab.run_id` containers
 and returns dry-run `docker rm -f` cleanup plans for manual review; execution
 needs a separate product decision because container removal is not recoverable.
 
-Operational note: Playwright e2e requires the browser cache for the installed
-frontend Playwright version. If `npm --prefix frontend run e2e` fails with a
-missing `chromium_headless_shell-*` executable, refresh the local browser cache
-with `npm --prefix frontend exec playwright install chromium` and rerun the
-full gate.
-
-Operational note: Vitest should run with `--pool threads --maxWorkers=1` for the
-current small frontend suite. The default fork pool can time out while starting
-workers on this local environment before any test file runs, which makes the
-gate flaky without increasing coverage.
+Operational note: the old Vue frontend suite is intentionally gone. Reintroduce
+Playwright/Vitest/Storybook guidance with the new Harbor Viewer-aligned frontend
+package instead of carrying forward Vue-specific commands.
 
 Operational note: CI keeps real Harbor Docker smoke out of the default required
 jobs. Use workflow dispatch with `real_harbor_smoke=true` when Docker-backed

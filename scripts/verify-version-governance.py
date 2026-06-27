@@ -55,8 +55,12 @@ def load_authority_versions() -> dict[str, str]:
     match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.MULTILINE)
     if match:
         versions["python"] = match.group(1)
-    frontend = json.loads((ROOT / "frontend/package.json").read_text(encoding="utf-8"))
-    versions["frontend"] = frontend["version"]
+    frontend_path = ROOT / "frontend/package.json"
+    if frontend_path.exists():
+        frontend = json.loads(frontend_path.read_text(encoding="utf-8"))
+        versions["frontend"] = frontend["version"]
+    else:
+        versions["frontend"] = "pending-v1.0.5-rebuild"
     return versions
 
 
