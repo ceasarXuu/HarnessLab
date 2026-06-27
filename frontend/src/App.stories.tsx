@@ -1,0 +1,16 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { App } from './App'
+import './styles/app.css'
+
+const meta = {
+  title: 'Harbor WebUI/App',
+  component: App,
+  parameters: {
+    layout: 'fullscreen',
+  },
+} satisfies Meta<typeof App>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const Default: Story = {}

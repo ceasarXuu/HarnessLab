@@ -2,7 +2,7 @@
 
 const { version: packageVersion } = require("../package.json");
 const { setup } = require("../lib/bootstrap");
-const { runDev, runBackend, runDoctor, runFrontend, backendHost, backendPort } = require("../lib/dev");
+const { runDev, runBackend, runDoctor, runFrontend, frontendHost, frontendPort, backendHost, backendPort } = require("../lib/dev");
 const { sourceDir } = require("../lib/state");
 const { repoUrl } = require("../lib/source");
 const { handleUpdate } = require("../lib/update");
@@ -11,14 +11,14 @@ const { handleUninstall } = require("../lib/uninstall");
 const help = `OrnnLab npm launcher
 
 Usage:
-  ornnlab                    Bootstrap if needed, then start the local backend API
+  ornnlab                    Bootstrap if needed, then start the local WebUI demo
   ornnlab install            Install prerequisites, clone/update source, and install dependencies
   ornnlab setup              Alias for install
   ornnlab update             Update the global launcher and managed dependencies
   ornnlab uninstall          Move launcher-managed artifacts to a dated backup
-  ornnlab dev                Start the backend development server
+  ornnlab dev                Start backend and frontend development servers
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
-  ornnlab ui [args...]       Unavailable until the v1.0.5 frontend rebuild lands
+  ornnlab ui [args...]       Start the React frontend dev server from the managed source checkout
   ornnlab doctor [args...]   Run OrnnLab doctor from the managed source checkout
   ornnlab path               Print the managed source checkout path
   ornnlab --version          Print launcher version
@@ -29,6 +29,7 @@ Environment:
   ORNNLAB_SOURCE          Default: ~/.ornnlab/launcher/source
   ORNNLAB_REPO            Default: ${repoUrl}
   ORNNLAB_BACKEND_PORT    Default: 8765
+  ORNNLAB_FRONTEND_PORT   Default: 5173
   ORNNLAB_INSTALL_DOCKER  1=yes, 0=no, unset=ask when missing
   ORNNLAB_AUTO_INSTALL    0=diagnose only; default installs missing required tools
 
@@ -42,13 +43,14 @@ Bootstrap behavior:
 
 Lifecycle commands:
   ornnlab update     Updates the global npm launcher, pulls source, syncs
-                     backend dependencies, and verifies readiness.
+                     backend and frontend dependencies, and verifies readiness.
                      User data and local run artifacts are preserved.
   ornnlab uninstall  Moves launcher-managed files to a dated backup directory.
                      User experiment data is preserved by default. No files are
                      irreversibly deleted.
 
 When the app starts, the terminal prints:
+  Frontend: http://${frontendHost}:${frontendPort}/
   Backend API: http://${backendHost}:${backendPort}/
 `;
 

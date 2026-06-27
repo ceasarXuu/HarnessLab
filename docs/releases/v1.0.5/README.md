@@ -15,7 +15,7 @@
   - OrnnLab 仍然是基于 Harbor 的实验控制台；v1.0.5 版本优先补齐 Harbor WebUI 能力。
   - Harbor 继续负责 benchmark 执行、agent 执行、环境生命周期、验证和原始 artifacts。
   - OrnnLab Web 负责把 Harbor 的核心 CLI/API 能力产品化为本地单用户 WebUI。
-  - v1.0.5 前端删除现有 Vue demo，重建为与 Harbor 官方 `apps/viewer` 一致的 React/Vite/React Router/Tailwind/shadcn 架构。
+  - v1.0.5 前端删除旧 Vue demo，并以 Harbor 官方 `apps/viewer` 对齐的 React/Vite/Tailwind/shadcn-style 架构重建 demo 入口。
   - v1.0.5 UI 以 Harbor 官方 Viewer 为产品架构基准，以官方 Harbor Hub (`https://hub.harborframework.com/`) 为视觉参考。
   - 产品核心不是展示 Harbor 信息，而是用 UI 交互替代 Harbor 日常 CLI 操作。
 - Important exceptions:

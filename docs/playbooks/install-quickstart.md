@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 1.0 | `ornnlab` npm `0.1.1`; Python app `0.2.0` | 2026-06-15 | Documented npm launcher install and local WebUI startup. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Removed stale literal versions and linked install behavior to version governance. |
-| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Removed old Vue frontend startup guidance after the v1.0.5 official-architecture rebuild decision. |
+| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced old Vue startup guidance with the v1.0.5 React/Vite frontend demo path. |
 
 This is the current developer quickstart for the Harbor WebUI rewrite.
 
@@ -20,13 +20,13 @@ ornnlab
 ```
 
 The launcher bootstraps the local machine, checks out the source repository
-under `~/.ornnlab/launcher/source` by default, installs backend dependencies,
-then starts the current FastAPI backend. The old Vue frontend has been removed;
-v1.0.5 will rebuild the UI against Harbor's official Viewer architecture.
+under `~/.ornnlab/launcher/source` by default, installs backend and frontend
+dependencies, then starts the current FastAPI backend and React/Vite frontend.
 
-The terminal prints the backend API URL before starting the server:
+The terminal prints the frontend and backend URLs before starting the servers:
 
 ```text
+Frontend: http://127.0.0.1:5173/
 Backend API: http://127.0.0.1:8765/
 ```
 
@@ -66,7 +66,7 @@ If the npm registry serves an older launcher, check `docs/releases/` and
 ## Requirements
 
 - Python 3.12 available through `uv`
-- Node.js 22 for the npm launcher and future frontend rebuild
+- Node.js 22 for the npm launcher, frontend gate, and CI parity
 - Docker for Harbor benchmark execution through the default subprocess path
 - Harbor resolved from `pyproject.toml` as `harbor>=0.13,<0.14`
 
@@ -76,6 +76,7 @@ From the repository root:
 
 ```bash
 uv sync --group dev
+npm --prefix frontend ci
 ```
 
 Verify the backend CLI:
@@ -91,8 +92,14 @@ Start the local backend:
 uv run ornnlab web --host 127.0.0.1 --port 8765
 ```
 
-The backend API listens on `http://127.0.0.1:8765`. Frontend development will
-resume after the v1.0.5 React/Vite package is rebuilt.
+In another shell, start the frontend development server:
+
+```bash
+npm --prefix frontend run dev -- --host 127.0.0.1
+```
+
+The backend API listens on `http://127.0.0.1:8765`. The Vite frontend prints
+its selected local URL.
 
 ## Quality Gate
 

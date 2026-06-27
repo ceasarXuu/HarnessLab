@@ -1,6 +1,6 @@
 # v1.0.5 前端重建架构决策
 
-- Status: Accepted
+- Status: Demo implemented
 - Created: 2026-06-28
 - Updated: 2026-06-28
 - Decision owner: project maintainer
@@ -10,7 +10,8 @@
 
 ## 1. 决策
 
-v1.0.5 前端不再延续当前 Vue demo。现有 `frontend/` 已删除，避免它作为后续开发的隐性基线。
+v1.0.5 前端不再延续旧 Vue demo。新的 `frontend/` 以 React/Vite demo 重新建立，
+作为后续 Harbor 官方 Viewer 对齐开发的入口。
 
 v1.0.5 WebUI 需要重建，并与 Harbor 官方 Viewer 保持架构一致：
 

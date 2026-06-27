@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Recorded active Harbor WebUI technology decisions after Rust runtime archive. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked technology decisions to document version governance. |
-| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue demo frontend decision with v1.0.5 Harbor official Viewer-aligned rebuild decision. |
+| 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue demo frontend decision with the v1.0.5 Harbor official Viewer-aligned React/Vite demo. |
 
 The previous Rust single-binary technology decision record was archived on
 2026-06-15.
@@ -20,14 +20,14 @@ The previous Rust single-binary technology decision record was archived on
 |---|---|
 | Execution engine | Harbor 0.13.x |
 | Backend | Python + FastAPI |
-| Frontend | Pending v1.0.5 rebuild: React + React Router + Vite |
+| Frontend | React + Vite, aligned with Harbor official Viewer |
 | Metadata | Local SQLite |
 | Artifacts | TOML/JSON/JSONL/HTML files under `~/.ornnlab/data` |
 | Live updates | Server-Sent Events for status/log streams |
 | Default local test engine | Fake Harbor engine |
 | Real execution boundary | Harbor Python API or managed Harbor subprocess |
 | Hard cancellation boundary | Managed Harbor subprocess process group |
-| Frontend component workflow | Storybook plus React/Vitest/Playwright gates after rebuild |
+| Frontend component workflow | Storybook plus React/Vitest/Playwright gates |
 | Packaging | Python package first; Rust binary is not the MVP path |
 
 ## Rationale
@@ -41,11 +41,11 @@ SQLite is used because experiments, queues, reports, and leaderboards need
 queryable local state. File artifacts remain first-class because Harbor outputs
 must be inspectable, recoverable, and linkable from reports.
 
-The old Vue operations-console demo has been removed. v1.0.5 will rebuild the
-frontend against Harbor's official Viewer architecture: React, React Router,
-Vite, Tailwind, shadcn/ui, Radix, TanStack Query/Table, and lucide-react. The
-public Harbor Hub remains a visual reference, but the local product architecture
-tracks Harbor `apps/viewer`.
+The old Vue operations-console demo has been removed. v1.0.5 frontend work now
+starts from a React/Vite demo aligned with Harbor's official Viewer architecture:
+React, Vite, Tailwind, shadcn-style primitives, Storybook, Playwright, and
+lucide-react. The public Harbor Hub remains a visual reference, but the local
+product architecture tracks Harbor `apps/viewer`.
 
 ## Execution Mode Policy
 
@@ -100,14 +100,15 @@ import command does not delete or overwrite existing user data.
 Every code change should pass `scripts/test-after-change-web.sh` unless the
 change is intentionally docs-only and the narrower evidence is stated. The gate
 uses `uv run` for Python commands so it does not depend on a system `python`
-alias. Frontend gates are re-enabled when the v1.0.5 React/Vite package lands.
+alias, and it runs the React frontend checks when `frontend/package.json` exists.
 
-GitHub Actions mirrors the WebUI gate as a required default job plus optional
+GitHub Actions mirrors the WebUI gate as two required default jobs plus optional
 real Harbor smoke:
 
 - `python-web`: `uv sync --group dev`, ruff, pyright, pytest, line-count, and
   `git diff --check`;
-- frontend CI will be added back with the rebuilt React/Vite package.
+- `frontend-web`: Node 22, `npm ci`, Playwright Chromium install, React
+  typecheck, ESLint, Vitest, Storybook smoke, and Playwright e2e.
 
 Real Harbor Docker smoke remains opt-in through `workflow_dispatch` with
 `real_harbor_smoke=true`, because it requires Docker and real benchmark runtime
