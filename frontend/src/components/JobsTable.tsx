@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import type { HarborJob, JobStatus } from '../data/demo'
+import type { Translate } from '../i18n'
 
 const statusLabels: Record<JobStatus, string> = {
   running: 'Running',
@@ -12,45 +13,49 @@ interface JobsTableProps {
   jobs: HarborJob[]
   selectedId: string
   search: string
+  t: Translate
+  onNewJob: () => void
   onSearch: (value: string) => void
   onSelect: (job: HarborJob) => void
 }
 
-export function JobsTable({ jobs, selectedId, search, onSearch, onSelect }: JobsTableProps) {
+export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
   return (
     <section className="surface jobs-surface" id="jobs">
       <div className="section-header">
         <div>
-          <h1>Jobs</h1>
-          <p>Local Harbor runs, status, results, and recovery evidence.</p>
+          <h1>{t('jobRegistry')}</h1>
+          <p>{t('jobRegistryDesc')}</p>
         </div>
         <div className="toolbar">
           <label className="search-field">
             <Search aria-hidden="true" />
             <input
-              aria-label="Search jobs"
+              aria-label={t('searchJobs')}
               value={search}
               onChange={(event) => onSearch(event.target.value)}
-              placeholder="Search jobs, datasets, agents"
+              placeholder={t('searchJobsPlaceholder')}
             />
           </label>
-          <button className="secondary-button">Import</button>
-          <button className="primary-button">New Run</button>
+          <button className="secondary-button">{t('import')}</button>
+          <button className="primary-button" onClick={onNewJob}>
+            {t('newJob')}
+          </button>
         </div>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Job</th>
-              <th>Status</th>
-              <th>Dataset</th>
-              <th>Agent</th>
-              <th>Model</th>
-              <th>Trials</th>
-              <th>Score</th>
-              <th>Cost</th>
-              <th>Updated</th>
+              <th>{t('job')}</th>
+              <th>{t('status')}</th>
+              <th>{t('dataset')}</th>
+              <th>{t('agent')}</th>
+              <th>{t('model')}</th>
+              <th>{t('trialCount')}</th>
+              <th>{t('score')}</th>
+              <th>{t('cost')}</th>
+              <th>{t('updated')}</th>
             </tr>
           </thead>
           <tbody>

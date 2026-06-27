@@ -1,0 +1,77 @@
+import { ArchiveRestore, CheckCircle2, ServerCog } from 'lucide-react'
+import type { SystemRow } from '../data/demo'
+import type { Translate } from '../i18n'
+
+interface SystemPageProps {
+  rows: SystemRow[]
+  t: Translate
+}
+
+export function SystemPage({ rows, t }: SystemPageProps) {
+  return (
+    <main className="workspace two-column-page">
+      <section className="surface">
+        <div className="section-header">
+          <div>
+            <h1>{t('systemHealth')}</h1>
+            <p>{t('systemHealthDesc')}</p>
+          </div>
+          <button className="primary-button">{t('systemDoctor')}</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{t('component')}</th>
+                <th>{t('status')}</th>
+                <th>{t('value')}</th>
+                <th>{t('evidence')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.component}>
+                  <td>
+                    <span className="cell-title">
+                      <ServerCog aria-hidden="true" />
+                      {row.component}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-dot ${row.status}`}>{row.status}</span>
+                  </td>
+                  <td>{row.value}</td>
+                  <td>
+                    <code>{row.evidence}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <aside className="detail-rail">
+        <section className="surface rail-card">
+          <div className="rail-title">
+            <ArchiveRestore aria-hidden="true" />
+            <h3>{t('recovery')}</h3>
+          </div>
+          <ul className="doctor-list">
+            <li>
+              <CheckCircle2 aria-hidden="true" />
+              interrupted runs reconciled
+            </li>
+            <li>
+              <CheckCircle2 aria-hidden="true" />
+              artifact store writable
+            </li>
+            <li>
+              <CheckCircle2 aria-hidden="true" />
+              Docker orphan scan ready
+            </li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+  )
+}

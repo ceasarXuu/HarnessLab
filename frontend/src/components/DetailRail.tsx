@@ -1,15 +1,18 @@
 import { AlertTriangle, Box, CheckCircle2, FileJson, Square, Terminal } from 'lucide-react'
 import type { EventLog, HarborJob } from '../data/demo'
+import type { Translate } from '../i18n'
 
 interface DetailRailProps {
   job: HarborJob
   events: EventLog[]
+  t: Translate
 }
 
-export function DetailRail({ job, events }: DetailRailProps) {
+export function DetailRail({ job, events, t }: DetailRailProps) {
   return (
     <aside className="detail-rail">
       <section className="surface rail-card">
+        <p className="panel-kicker">{t('selectedJob')}</p>
         <div className="rail-heading">
           <div>
             <h2>{job.name}</h2>
@@ -18,24 +21,24 @@ export function DetailRail({ job, events }: DetailRailProps) {
           <span className={`status-dot ${job.status}`}>{job.status}</span>
         </div>
         <div className="metric-grid">
-          <Metric label="Trials" value={job.trials} />
-          <Metric label="Score" value={job.score} />
-          <Metric label="Cost" value={job.cost} />
-          <Metric label="Env" value={job.environment} />
+          <Metric label={t('trialCount')} value={job.trials} />
+          <Metric label={t('score')} value={job.score} />
+          <Metric label={t('cost')} value={job.cost} />
+          <Metric label={t('environment')} value={job.environment} />
         </div>
         <div className="button-row tight">
           <button className="secondary-button">
             <Square aria-hidden="true" />
-            Cancel
+            {t('cancel')}
           </button>
-          <button className="secondary-button">Retry</button>
+          <button className="secondary-button">{t('retry')}</button>
         </div>
       </section>
 
       <section className="surface rail-card">
         <div className="rail-title">
           <Terminal aria-hidden="true" />
-          <h3>Event log</h3>
+          <h3>{t('eventLog')}</h3>
         </div>
         <ol className="event-list">
           {events.map((event) => (
@@ -50,7 +53,7 @@ export function DetailRail({ job, events }: DetailRailProps) {
       <section className="surface rail-card">
         <div className="rail-title">
           <CheckCircle2 aria-hidden="true" />
-          <h3>System doctor</h3>
+          <h3>{t('systemDoctor')}</h3>
         </div>
         <ul className="doctor-list">
           <li>
@@ -71,7 +74,7 @@ export function DetailRail({ job, events }: DetailRailProps) {
       <section className="surface rail-card">
         <div className="rail-title">
           <FileJson aria-hidden="true" />
-          <h3>Artifact paths</h3>
+          <h3>{t('artifactPaths')}</h3>
         </div>
         <div className="path-list">
           <code>harbor.config.json</code>

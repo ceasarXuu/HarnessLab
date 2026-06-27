@@ -29,6 +29,34 @@ export interface RunDraft {
   attempts: number
 }
 
+export interface TaskRow {
+  name: string
+  jobId: string
+  os: string
+  state: string
+  duration: string
+  owner: string
+  verifier: string
+}
+
+export interface TrialRow {
+  id: string
+  jobId: string
+  task: string
+  result: string
+  score: string
+  retries: number
+  duration: string
+  logPath: string
+}
+
+export interface SystemRow {
+  component: string
+  status: JobStatus | 'healthy'
+  value: string
+  evidence: string
+}
+
 export const initialDraft: RunDraft = {
   source: 'terminal-bench@2.0',
   agent: 'claude-code',
@@ -101,9 +129,111 @@ export const events: EventLog[] = [
   { time: '14:19:12', level: 'success', message: '18 trials completed, 46 still pending' },
 ]
 
-export const taskRows = [
-  ['apt-setup', 'linux', 'ok', '45s'],
-  ['git-rebase-conflict', 'linux', 'running', '2m'],
-  ['sqlite-log-repair', 'linux', 'queued', '-'],
-  ['python-env-pin', 'linux', 'queued', '-'],
+export const taskRows: TaskRow[] = [
+  {
+    name: 'apt-setup',
+    jobId: 'job_91a7',
+    os: 'linux',
+    state: 'ok',
+    duration: '45s',
+    owner: 'terminal-bench-smoke',
+    verifier: 'passed',
+  },
+  {
+    name: 'git-rebase-conflict',
+    jobId: 'job_91a7',
+    os: 'linux',
+    state: 'running',
+    duration: '2m',
+    owner: 'terminal-bench-smoke',
+    verifier: 'pending',
+  },
+  {
+    name: 'sqlite-log-repair',
+    jobId: 'job_118b',
+    os: 'linux',
+    state: 'queued',
+    duration: '-',
+    owner: 'terminal-bench-nightly',
+    verifier: 'waiting',
+  },
+  {
+    name: 'python-env-pin',
+    jobId: 'job_118b',
+    os: 'linux',
+    state: 'queued',
+    duration: '-',
+    owner: 'terminal-bench-nightly',
+    verifier: 'waiting',
+  },
+]
+
+export const trialRows: TrialRow[] = [
+  {
+    id: 'trial_001',
+    jobId: 'job_91a7',
+    task: 'apt-setup',
+    result: 'passed',
+    score: '1.00',
+    retries: 0,
+    duration: '45s',
+    logPath: 'trials/job_91a7/apt-setup.log',
+  },
+  {
+    id: 'trial_002',
+    jobId: 'job_91a7',
+    task: 'git-rebase-conflict',
+    result: 'running',
+    score: '-',
+    retries: 1,
+    duration: '2m',
+    logPath: 'trials/job_91a7/git-rebase-conflict.log',
+  },
+  {
+    id: 'trial_003',
+    jobId: 'job_55e9',
+    task: 'hello-world',
+    result: 'failed',
+    score: '0.00',
+    retries: 2,
+    duration: '38s',
+    logPath: 'trials/job_55e9/hello-world.log',
+  },
+  {
+    id: 'trial_004',
+    jobId: 'job_74c1',
+    task: 'django-migration',
+    result: 'passed',
+    score: '0.41',
+    retries: 0,
+    duration: '6m',
+    logPath: 'trials/job_74c1/django-migration.log',
+  },
+]
+
+export const systemRows: SystemRow[] = [
+  {
+    component: 'Harbor CLI',
+    status: 'healthy',
+    value: '0.13.x available',
+    evidence: '~/.ornnlab/HarnessLab/bin/harbor',
+  },
+  {
+    component: 'Docker',
+    status: 'running',
+    value: 'context colima',
+    evidence: 'docker context inspect colima',
+  },
+  {
+    component: 'Storage',
+    status: 'completed',
+    value: '~/.ornnlab/HarnessLab',
+    evidence: 'artifact store writable',
+  },
+  {
+    component: 'Verifier',
+    status: 'queued',
+    value: '1 retry pending',
+    evidence: 'event log warning',
+  },
 ]

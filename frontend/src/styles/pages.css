@@ -1,0 +1,87 @@
+.header-select {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 32px;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  color: var(--foreground);
+}
+.header-select select {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.jobs-workspace,
+.two-column-page {
+  grid-template-columns: minmax(0, 1fr) 348px;
+}
+.single-page {
+  grid-template-columns: 1fr;
+}
+.hierarchy-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+.hierarchy-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hierarchy-strip span + span::before {
+  color: var(--border-strong);
+  content: "/";
+}
+.panel-kicker {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.stage-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.stage-list span {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.stage-list span.active {
+  border-color: var(--border-strong);
+  background: var(--subtle);
+  color: var(--foreground);
+}
+.cell-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.healthy {
+  color: var(--success);
+}
+@media (max-width: 1180px) {
+  .jobs-workspace,
+  .two-column-page {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 820px) {
+  .header-select {
+    min-width: 64px;
+  }
+  .hierarchy-strip {
+    overflow: auto;
+    white-space: nowrap;
+  }
+}

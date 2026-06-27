@@ -1,38 +1,93 @@
-import { Activity, Bell, Github, Play, TerminalSquare } from 'lucide-react'
+import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
+import type { Locale, Translate } from '../i18n'
 
-const navItems = ['Jobs', 'New Run', 'Tasks', 'Trials', 'System']
+export type PageKey = 'jobs' | 'new-run' | 'tasks' | 'trials' | 'system'
 
-export function AppShell({ children }: { children: ReactNode }) {
+const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
+  { key: 'jobs', label: 'jobs' },
+  { key: 'new-run', label: 'newRun' },
+  { key: 'tasks', label: 'tasks' },
+  { key: 'trials', label: 'trials' },
+  { key: 'system', label: 'system' },
+]
+
+interface AppShellProps {
+  activePage: PageKey
+  children: ReactNode
+  language: Locale
+  theme: 'light' | 'dark'
+  t: Translate
+  onLanguage: (language: Locale) => void
+  onNavigate: (page: PageKey) => void
+  onTheme: () => void
+}
+
+export function AppShell({
+  activePage,
+  children,
+  language,
+  theme,
+  t,
+  onLanguage,
+  onNavigate,
+  onTheme,
+}: AppShellProps) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="OrnnLab home">
+        <a
+          className="brand"
+          href="#jobs"
+          aria-label="OrnnLab home"
+          onClick={(event) => {
+            event.preventDefault()
+            onNavigate('jobs')
+          }}
+        >
           <TerminalSquare aria-hidden="true" />
           <span>OrnnLab</span>
-          <small>Harbor</small>
+          <small>{t('harbor')}</small>
         </a>
         <nav className="nav-links" aria-label="Primary">
           {navItems.map((item) => (
-            <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`}>
-              {item}
+            <a
+              key={item.key}
+              className={item.key === activePage ? 'active' : undefined}
+              href={`#${item.key}`}
+              onClick={(event) => {
+                event.preventDefault()
+                onNavigate(item.key)
+              }}
+            >
+              {t(item.label)}
             </a>
           ))}
         </nav>
         <div className="topbar-actions">
           <span className="status-chip">
             <Activity aria-hidden="true" />
-            Docker ready
+            {t('dockerReady')}
           </span>
-          <button className="icon-button" aria-label="Notifications">
+          <button className="icon-button" aria-label={t('notifications')}>
             <Bell aria-hidden="true" />
           </button>
-          <button className="icon-button" aria-label="GitHub">
+          <button className="icon-button" aria-label={t('github')}>
             <Github aria-hidden="true" />
           </button>
-          <button className="primary-button">
+          <label className="header-select">
+            <Languages aria-hidden="true" />
+            <select aria-label="Language" value={language} onChange={(event) => onLanguage(event.target.value as Locale)}>
+              <option value="en">EN</option>
+              <option value="zh">中</option>
+            </select>
+          </label>
+          <button className="icon-button" aria-label={theme === 'light' ? t('dark') : t('light')} onClick={onTheme}>
+            {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
+          </button>
+          <button className="primary-button" onClick={() => onNavigate('new-run')}>
             <Play aria-hidden="true" />
-            Run job
+            {t('runJob')}
           </button>
         </div>
       </header>
