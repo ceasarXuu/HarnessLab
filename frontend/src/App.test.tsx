@@ -26,6 +26,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'System doctor' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'New Run' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'New Run' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Job creation path')).not.toBeInTheDocument()
   })
 
   it('filters jobs and keeps the table as the primary surface', () => {
@@ -69,6 +70,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run job' }))
     expect(window.location.hash).toBe('#jobs/new')
     expect(screen.getByRole('link', { name: 'Jobs' })).toHaveClass('active')
+    expect(screen.getByRole('navigation', { name: 'Job creation path' })).toBeInTheDocument()
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Job creation path' })).getByRole('button', { name: 'Jobs' }))
+    expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Run job' }))
     const runBuilder = screen.getByRole('heading', { name: 'New Job' }).closest('section')
     expect(runBuilder).not.toBeNull()
     const runButton = within(runBuilder as HTMLElement).getByRole('button', { name: 'Run job' })

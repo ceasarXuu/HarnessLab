@@ -152,6 +152,7 @@ export function App() {
           draft={draft}
           t={t}
           onDraft={setDraft}
+          onJobs={() => navigate('jobs', 'list')}
           onLaunch={launchDraft}
           onStep={setActiveStep}
         />

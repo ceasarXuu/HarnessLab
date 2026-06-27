@@ -21,7 +21,7 @@
 .single-page {
   grid-template-columns: 1fr;
 }
-.hierarchy-strip {
+.breadcrumb-nav {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -31,12 +31,22 @@
   background: var(--surface);
   color: var(--muted);
 }
-.hierarchy-strip span {
+.breadcrumb-nav button,
+.breadcrumb-nav span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.hierarchy-strip span + span::before {
+.breadcrumb-nav button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+.breadcrumb-nav button:hover {
+  text-decoration: underline;
+}
+.breadcrumb-nav span::before {
   color: var(--border-strong);
   content: "/";
 }
@@ -80,7 +90,7 @@
   .header-select {
     min-width: 64px;
   }
-  .hierarchy-strip {
+  .breadcrumb-nav {
     overflow: auto;
     white-space: nowrap;
   }

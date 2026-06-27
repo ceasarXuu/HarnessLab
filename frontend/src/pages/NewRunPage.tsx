@@ -8,19 +8,21 @@ interface NewRunPageProps {
   draft: RunDraft
   t: Translate
   onDraft: (draft: RunDraft) => void
+  onJobs: () => void
   onLaunch: () => void
   onStep: (step: string) => void
 }
 
-export function NewRunPage({ activeStep, draft, t, onDraft, onLaunch, onStep }: NewRunPageProps) {
+export function NewRunPage({ activeStep, draft, t, onDraft, onJobs, onLaunch, onStep }: NewRunPageProps) {
   return (
     <main className="workspace two-column-page">
       <div className="content-column">
-        <div className="hierarchy-strip" aria-label="Job creation hierarchy">
-          <span>{t('jobRegistry')}</span>
-          <span>{t('newJob')}</span>
-          <span>{t('runJob')}</span>
-        </div>
+        <nav className="breadcrumb-nav" aria-label="Job creation path">
+          <button type="button" onClick={onJobs}>
+            {t('jobs')}
+          </button>
+          <span aria-current="page">{t('newJob')}</span>
+        </nav>
         <RunBuilder
           activeStep={activeStep}
           draft={draft}
