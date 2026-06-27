@@ -16,7 +16,7 @@ def _create_agent(client):
     assert response.status_code == 200
 
 
-def test_experiment_create_and_fake_run(client):
+def test_experiment_create_and_run_through_harbor_subprocess(client):
     _create_agent(client)
     created = client.post(
         "/api/experiments",
@@ -46,7 +46,7 @@ def test_experiment_create_and_fake_run(client):
     assert harbor_config["job_name"] == state["runs"][0]["id"]
     assert harbor_config["agents"][0]["name"] == "oracle"
     assert harbor_config["datasets"][0]["name"] == "terminal-bench"
-    assert capability["lifecycle_mode"] == "fake"
+    assert capability["lifecycle_mode"] == "subprocess"
     assert result["status"] == "completed"
 
 
@@ -120,7 +120,7 @@ def test_failure_classification_writes_report_and_failed_status(client):
         json={
             "name": "Failure",
             "agent_ids": ["oracle"],
-            "benchmark_names": ["fake-docker-failure"],
+            "benchmark_names": ["simulated-docker-failure"],
         },
     )
     experiment_id = created.json()["experiment"]["id"]

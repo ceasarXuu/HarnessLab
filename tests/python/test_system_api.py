@@ -14,6 +14,8 @@ def test_system_status_reports_core_fields(client):
     assert "docker" in payload
     assert "ornnlab_orphans" in payload["docker"]
     assert "harbor_version" in payload
+    assert payload["harbor_engine"]["mode"] == "subprocess"
+    assert payload["harbor_engine"]["supports_cancel"] is True
 
 
 def test_system_status_warns_about_ornnlab_docker_orphans(client, monkeypatch, tmp_path):
@@ -94,7 +96,7 @@ def test_system_doctor_logs_reports_latest_failed_run(client):
         json={
             "name": "Failure",
             "agent_ids": ["oracle"],
-            "benchmark_names": ["fake-docker-failure"],
+            "benchmark_names": ["simulated-docker-failure"],
         },
     ).json()
     client.post(f"/api/experiments/{created['experiment']['id']}/run?wait=true")

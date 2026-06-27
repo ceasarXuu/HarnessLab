@@ -15,12 +15,12 @@ The Rust CLI test-engineering document was archived on 2026-06-15.
 Current rewrite gates are Python/Web first:
 
 - pytest for backend units and integration tests;
-- fake HarborEngine tests for deterministic queue, recovery, config-artifact, and
-  failure paths;
+- Harbor subprocess-boundary tests for deterministic queue, recovery,
+  config-artifact, and failure paths;
 - app-level worker tests that enqueue runs, call `QueueWorkerService.start()`,
   and wait for idle without coupling execution to a request handler;
-- cancellation tests that cancel a fake running worker job and verify the worker
-  cannot overwrite `cancelled` with a late fake-engine result;
+- cancellation tests that cancel a subprocess-backed worker job and verify the worker
+  cannot overwrite `cancelled` with a late engine result;
 - startup recovery tests that recreate the app with persisted `running` rows and
   verify deterministic `completed` or `interrupted` outcomes;
 - optional Docker-marked Harbor Python API smoke tests gated by

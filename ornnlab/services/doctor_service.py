@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ornnlab.services.docker_orphan_service import DockerOrphanService
+from ornnlab.services.harbor_engine import HarborEngine
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -18,8 +19,14 @@ class DoctorService:
         schema_version = sqlite.initialize(self.settings)
         docker_orphans = DockerOrphanService().scan_ornnlab_containers()
         stale_running_runs = RunRecoveryService(self.settings).stale_running_count()
+        harbor_capability = HarborEngine().capability_snapshot()
         status = {
             "harbor_version": self._package_version("harbor"),
+            "harbor_engine": {
+                "mode": harbor_capability.lifecycle_mode,
+                "supports_cancel": harbor_capability.supports_cancel,
+                "config_format": harbor_capability.config_format,
+            },
             "docker": {
                 "cli": docker_orphans["command"][0],
                 "available": docker_orphans["available"],

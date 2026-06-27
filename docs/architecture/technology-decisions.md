@@ -47,9 +47,9 @@ tested through typecheck, lint, Vitest, Storybook smoke, and Playwright e2e.
 
 `ORNNLAB_HARBOR_ENGINE` selects execution:
 
-- unset or `fake`: deterministic development and CI default;
+- unset, `real`, `subprocess`, or `cli`: managed `harbor run --config <file>`
+  execution. This is the official default path;
 - `python-api`: direct `Job.create(...).run()` integration;
-- `subprocess` or `cli`: managed `harbor run --config <file>` execution.
 
 `ORNNLAB_HARBOR_SUBPROCESS_COMMAND` can override the subprocess command. The
 default is `harbor run`.

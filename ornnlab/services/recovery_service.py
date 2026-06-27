@@ -53,7 +53,8 @@ class RunRecoveryService:
                 conn,
                 "SELECT r.* FROM queue_items q JOIN runs r ON r.id = q.run_id "
                 "WHERE q.state = 'running' "
-                "AND r.status NOT IN ('running', 'completed', 'failed', 'cancelled', 'interrupted') "
+                "AND r.status NOT IN "
+                "('running', 'completed', 'failed', 'cancelled', 'interrupted') "
                 "ORDER BY q.dequeued_at, r.id",
             )
 
@@ -224,6 +225,5 @@ def _score_from_result_payload(result: dict[str, Any]) -> float | None:
             if isinstance(score, int | float):
                 return float(score)
     return None
-
 
 

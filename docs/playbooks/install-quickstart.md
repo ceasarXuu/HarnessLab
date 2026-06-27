@@ -67,7 +67,7 @@ If the npm registry serves an older launcher, check `docs/releases/` and
 
 - Python 3.12 available through `uv`
 - Node.js 22 for the frontend gate and CI parity
-- Docker for opt-in real Harbor smoke only
+- Docker for Harbor benchmark execution through the default subprocess path
 - Harbor resolved from `pyproject.toml` as `harbor>=0.13,<0.14`
 
 ## Fresh Checkout
@@ -111,15 +111,18 @@ scripts/test-after-change-web.sh
 
 For docs-only changes, `git diff --check` is the minimum gate.
 
-## Optional Real Harbor Smoke
+## Real Harbor Smoke
 
-Run this only on a Docker-capable machine:
+Run this when changing Harbor execution, cancellation, or recovery behavior on a
+Docker-capable machine:
 
 ```bash
 ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_real_harbor_cancel_recovery.py
 ```
 
-The default local and CI gates intentionally skip real Docker execution.
+The standard local and CI quality gates use a subprocess-boundary simulator for
+deterministic coverage. Real benchmark execution still uses Harbor and Docker by
+default at runtime.
 
 ## Local Data
 

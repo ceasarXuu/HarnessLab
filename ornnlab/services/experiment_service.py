@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from uuid import uuid4
 
-from ornnlab.models.agent import AgentProfile
 from ornnlab.models.experiment import ExperimentCreate
+from ornnlab.services.agent_config_service import AgentConfigService
 from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_utils import (
@@ -16,7 +15,6 @@ from ornnlab.services.experiment_utils import (
 )
 from ornnlab.services.failure_classifier import classify_exception
 from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
-from ornnlab.services.profile_compiler import ProfileCompiler
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.report_service import ReportService
 from ornnlab.services.template_service import TemplateService
@@ -30,7 +28,7 @@ class ExperimentService:
         self.events = EventService(settings)
         self.builder = HarborConfigBuilder(settings)
         self.engine = HarborEngine()
-        self.compiler = ProfileCompiler(settings)
+        self.agent_configs = AgentConfigService(settings)
         self.queue = QueueService(settings)
         self.reports = ReportService(settings)
         self.templates = TemplateService(settings)
@@ -291,7 +289,7 @@ class ExperimentService:
         job_dir = str(self.settings.experiments_dir / run["id"] / "harbor-job")
         try:
             config = self.builder.build(
-                self._agent_config(run["agent_id"]),
+                self.agent_configs.config(run["agent_id"]),
                 run["benchmark_name"],
                 run["benchmark_version"],
                 run["n_tasks"],
@@ -496,14 +494,6 @@ class ExperimentService:
             {"failure_code": failure_code, "failure_summary": summary},
             severity="warning",
         )
-
-    def _agent_config(self, agent_id: str) -> dict:
-        with sqlite.connect(self.settings) as conn:
-            rows = sqlite.rows(conn, "SELECT profile_path FROM agents WHERE id = ?", (agent_id,))
-        if not rows:
-            raise KeyError(agent_id)
-        profile = AgentProfile.model_validate_json(Path(rows[0]["profile_path"]).read_text())
-        return self.compiler.compile(profile)["agent_config"]
 
     def _is_run_cancelled(self, run_id: str) -> bool:
         return self.get_run(run_id)["status"] == "cancelled"

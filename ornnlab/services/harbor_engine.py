@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 from importlib import import_module, metadata
@@ -109,27 +108,7 @@ class HarborEngine:
             return await ManagedSubprocessHarborRunner().run(config)
         if self.mode == "python-api":
             return await PythonApiHarborRunner().run(config)
-        return await FakeHarborRunner().run(config)
-
-
-class FakeHarborRunner:
-    async def run(self, config: HarborJobConfigView) -> dict:
-        if config.dataset["name"] == "fake-docker-failure":
-            raise RuntimeError("docker compose returned code -9")
-        if config.dataset["name"] == "fake-slow-cancel":
-            for _ in range(20):
-                await asyncio.sleep(0.01)
-        result = {
-            "status": "completed",
-            "score": 1.0,
-            "job_dir": config.jobs_dir,
-            "result_path": f"{config.jobs_dir}/result.json",
-        }
-        atomic_write_text(
-            Path(result["result_path"]),
-            json.dumps(result, indent=2, sort_keys=True),
-        )
-        return result
+        raise ValueError(f"unsupported Harbor engine mode: {self.mode}")
 
 
 class PythonApiHarborRunner:
@@ -159,19 +138,18 @@ def _version(package: str) -> str | None:
 
 
 def _normalize_mode(mode: str | None) -> str:
-    raw = mode or os.environ.get("ORNNLAB_HARBOR_ENGINE", "fake")
+    raw = mode or os.environ.get("ORNNLAB_HARBOR_ENGINE", "subprocess")
     normalized = raw.strip().lower().replace("_", "-")
     aliases = {
-        "fake": "fake",
         "python": "python-api",
         "python-api": "python-api",
-        "real": "python-api",
+        "real": "subprocess",
         "cli": "subprocess",
         "subprocess": "subprocess",
     }
     if normalized not in aliases:
         raise ValueError(
-            "ORNNLAB_HARBOR_ENGINE must be one of fake, python-api, subprocess, or real"
+            "ORNNLAB_HARBOR_ENGINE must be one of python-api, subprocess, cli, or real"
         )
     return aliases[normalized]
 

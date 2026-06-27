@@ -14,7 +14,7 @@ summary = "AgentProfile v2 validates and compiles built-in and custom-command ag
 id = "WEB-EXP-001"
 area = "experiments"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
-summary = "Experiments create immutable runs and can complete through a fake engine."
+summary = "Experiments create immutable runs and complete through the Harbor subprocess boundary."
 
 [[requirement]]
 id = "WEB-EXP-002"
@@ -50,7 +50,7 @@ summary = "Experiment templates can be created, listed, saved from experiments, 
 id = "WEB-HBR-001"
 area = "harbor"
 doc = "docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md"
-summary = "Runs persist Harbor JobConfig artifacts and can select fake or Python API execution adapters."
+summary = "Runs persist Harbor JobConfig artifacts and default to managed Harbor subprocess execution."
 
 [[requirement]]
 id = "WEB-RCV-001"

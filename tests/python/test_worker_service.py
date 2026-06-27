@@ -68,7 +68,7 @@ def test_api_cancel_stops_active_worker_task(client, settings):
         json={
             "name": "API cancel",
             "agent_ids": ["oracle"],
-            "benchmark_names": ["fake-slow-cancel"],
+            "benchmark_names": ["simulated-slow-cancel"],
             "n_tasks": 2,
         },
     ).json()
@@ -162,7 +162,7 @@ async def test_running_cancel_is_not_overwritten_by_worker(settings):
         ExperimentCreate(
             name="Cancelable running",
             agent_ids=["oracle"],
-            benchmark_names=["fake-slow-cancel"],
+            benchmark_names=["simulated-slow-cancel"],
             n_tasks=2,
         )
     )

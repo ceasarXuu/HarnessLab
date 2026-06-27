@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from ornnlab.models.events import EventRecord
 from ornnlab.services.clock import now_iso
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
-from ornnlab.storage.paths import atomic_write_text, ensure_parent
+from ornnlab.storage.paths import ensure_parent
 
 
 class EventService:

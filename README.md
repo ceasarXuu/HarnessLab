@@ -60,8 +60,8 @@ Implemented rewrite foundation:
 - `/api/system/status`, agents, experiments, events, benchmarks, leaderboard
 - SQLite migration and local `~/.ornnlab/data` data directory initialization
 - AgentProfile v2 validation and Harbor agent config compilation
-- fake HarborEngine path for deterministic local tests
-- managed Harbor subprocess execution with cancellation cleanup evidence
+- managed Harbor subprocess execution as the default engine path
+- cancellation cleanup evidence and doctor diagnostics for the Harbor engine
 - Docker orphan doctor scan with dry-run cleanup plans
 - local `ornnlab backup export` / `ornnlab backup import` archives
 - safe `ornnlab cleanup plan` / `ornnlab cleanup archive` for stale local artifacts

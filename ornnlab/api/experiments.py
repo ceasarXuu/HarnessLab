@@ -154,7 +154,8 @@ async def event_stream(experiment_id: str, request: Request, after: int = 0) -> 
                 for event in remaining:
                     cursor = event.id
                     yield _format_sse(event)
-                yield f"event: stream.end\ndata: {{\"status\": \"{state['experiment']['status']}\"}}\n\n"
+                status = state["experiment"]["status"]
+                yield f'event: stream.end\ndata: {{"status": "{status}"}}\n\n'
                 break
 
             await asyncio.sleep(0.5)

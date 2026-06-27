@@ -49,12 +49,14 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
     assert job_config.job_name == "run-test"
 
 
-def test_capability_snapshot_records_default_fake_adapter():
+def test_capability_snapshot_records_default_subprocess_adapter(monkeypatch):
+    monkeypatch.delenv("ORNNLAB_HARBOR_ENGINE", raising=False)
+
     snapshot = HarborEngine().capability_snapshot()
 
-    assert snapshot.lifecycle_mode == "fake"
+    assert snapshot.lifecycle_mode == "subprocess"
     assert snapshot.config_format == "harbor.models.job.config.JobConfig"
-    assert snapshot.supports_cancel is False
+    assert snapshot.supports_cancel is True
     assert "Job.run" in snapshot.api_symbols
 
 
@@ -73,3 +75,14 @@ def test_subprocess_capability_snapshot_records_cancel_support(monkeypatch):
 
     assert snapshot.lifecycle_mode == "subprocess"
     assert snapshot.supports_cancel is True
+
+
+def test_fake_engine_mode_is_rejected(monkeypatch):
+    monkeypatch.setenv("ORNNLAB_HARBOR_ENGINE", "fake")
+
+    try:
+        HarborEngine()
+    except ValueError as exc:
+        assert "python-api, subprocess, cli, or real" in str(exc)
+    else:
+        raise AssertionError("fake Harbor engine mode must not be accepted")

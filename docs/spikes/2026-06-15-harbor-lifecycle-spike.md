@@ -63,12 +63,16 @@ Observed:
 ## Decision
 
 Phase 3 must keep `HarborEngine` isolated behind a lifecycle adapter and must
-persist Harbor `JobConfig` before execution. The landed first adapter pass uses:
+persist Harbor `JobConfig` before execution. The landed first adapter pass used:
 
-- default `fake` adapter for deterministic local tests;
+- a deterministic local adapter for early tests, now superseded by managed
+  subprocess execution as the default path;
 - opt-in `python-api` adapter via `ORNNLAB_HARBOR_ENGINE=python-api`;
 - opt-in real Docker smoke via `ORNNLAB_REAL_HARBOR=1`;
 - explicit `supports_cancel=false` in capability snapshots.
+
+Current runtime policy uses the managed Harbor subprocess path by default
+because it owns the process group and can record cancellation cleanup evidence.
 
 Phase 3 must not promise hard cancellation until
 `tests/python/test_real_harbor_cancel_recovery.py` proves the following against
