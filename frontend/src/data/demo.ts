@@ -57,6 +57,16 @@ export interface SystemRow {
   evidence: string
 }
 
+export interface DatasetRow {
+  name: string
+  version: string
+  visibility: 'public' | 'private'
+  tasks: number
+  source: string
+  digest: string
+  updated: string
+}
+
 export const initialDraft: RunDraft = {
   source: 'terminal-bench@2.0',
   agent: 'claude-code',
@@ -117,6 +127,45 @@ export const jobs: HarborJob[] = [
     trials: '0 / 128',
     score: '-',
     cost: '$0.00',
+    updated: 'queued',
+  },
+]
+
+export const datasetRows: DatasetRow[] = [
+  {
+    name: 'terminal-bench',
+    version: '2.0',
+    visibility: 'public',
+    tasks: 64,
+    source: 'harbor registry',
+    digest: 'sha256:8f3a...b91c',
+    updated: '12m ago',
+  },
+  {
+    name: 'swe-bench-lite',
+    version: '2026.06',
+    visibility: 'private',
+    tasks: 300,
+    source: 'ScaleAI mirror',
+    digest: 'sha256:72aa...0f44',
+    updated: '1h ago',
+  },
+  {
+    name: 'harbor/hello-world',
+    version: 'latest',
+    visibility: 'public',
+    tasks: 8,
+    source: 'local package',
+    digest: 'sha256:100f...d6a0',
+    updated: '3h ago',
+  },
+  {
+    name: 'terminal-bench-nightly',
+    version: 'nightly',
+    visibility: 'private',
+    tasks: 128,
+    source: 'local cache',
+    digest: 'sha256:f91b...aa02',
     updated: 'queued',
   },
 ]

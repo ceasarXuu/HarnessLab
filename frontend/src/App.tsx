@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppShell, type PageKey } from './components/AppShell'
 import {
   events,
+  datasetRows,
   initialDraft,
   jobs as seedJobs,
   systemRows,
@@ -11,6 +12,7 @@ import {
 } from './data/demo'
 import { getTranslator, type Locale } from './i18n'
 import { JobsPage } from './pages/JobsPage'
+import { DatasetsPage } from './pages/DatasetsPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { SystemPage } from './pages/SystemPage'
 import { TasksPage } from './pages/TasksPage'
@@ -23,7 +25,7 @@ interface RouteState {
   page: PageKey
 }
 
-const pageKeys = new Set<PageKey>(['jobs', 'tasks', 'trials', 'system'])
+const pageKeys = new Set<PageKey>(['datasets', 'jobs', 'tasks', 'trials', 'system'])
 
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
@@ -31,7 +33,7 @@ function readRouteFromHash(): RouteState {
     return { page: 'jobs', jobView: 'new' }
   }
   return {
-    page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs',
+    page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'datasets',
     jobView: 'list',
   }
 }
@@ -47,6 +49,7 @@ function readTheme(): 'light' | 'dark' {
 export function App() {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
+  const [datasetSearch, setDatasetSearch] = useState('')
   const [selected, setSelected] = useState(seedJobs[0])
   const [search, setSearch] = useState('')
   const [activeStep, setActiveStep] = useState('Source')
@@ -64,6 +67,16 @@ export function App() {
       ),
     )
   }, [jobs, search])
+
+  const filteredDatasets = useMemo(() => {
+    const query = datasetSearch.trim().toLowerCase()
+    if (!query) return datasetRows
+    return datasetRows.filter((row) =>
+      [row.name, row.version, row.visibility, row.source, row.digest].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    )
+  }, [datasetSearch])
 
   useEffect(() => {
     const onHashChange = () => setRoute(readRouteFromHash())
@@ -118,6 +131,9 @@ export function App() {
       onNewJob={() => navigate('jobs', 'new')}
       onTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
     >
+      {route.page === 'datasets' && (
+        <DatasetsPage rows={filteredDatasets} search={datasetSearch} t={t} onSearch={setDatasetSearch} />
+      )}
       {route.page === 'jobs' && route.jobView === 'list' && (
         <JobsPage
           events={events}

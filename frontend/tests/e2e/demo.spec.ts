@@ -3,6 +3,12 @@ import { expect, test } from '@playwright/test'
 test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: /OrnnLab/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dataset catalog' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Datasets' })).toHaveClass(/active/)
+  await expect(page.getByText('terminal-bench', { exact: true })).toBeVisible()
+  await page.getByLabel('Search datasets').fill('swe')
+  await expect(page.getByText('swe-bench-lite')).toBeVisible()
+  await page.getByRole('link', { name: 'Jobs' }).click()
   await expect(page.getByRole('heading', { name: 'Job registry' })).toBeVisible()
   await expect(page.getByText('Selected job')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'System doctor' })).toBeVisible()
@@ -10,6 +16,7 @@ test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
 
 test('launch action creates a queued draft job', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('link', { name: 'Jobs' }).click()
   await page.getByRole('button', { name: 'Run job' }).click()
   await expect(page).toHaveURL(/#jobs\/new$/)
   await expect(page.getByRole('link', { name: 'Jobs' })).toHaveClass(/active/)

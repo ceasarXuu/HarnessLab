@@ -2,11 +2,12 @@ import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } fr
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 
-export type PageKey = 'jobs' | 'tasks' | 'trials' | 'system'
+export type PageKey = 'datasets' | 'jobs' | 'tasks' | 'trials' | 'system'
 
 const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
-  { key: 'jobs', label: 'jobs' },
+  { key: 'datasets', label: 'datasets' },
   { key: 'tasks', label: 'tasks' },
+  { key: 'jobs', label: 'jobs' },
   { key: 'trials', label: 'trials' },
   { key: 'system', label: 'system' },
 ]
@@ -39,11 +40,11 @@ export function AppShell({
       <header className="topbar">
         <a
           className="brand"
-          href="#jobs"
+          href="#datasets"
           aria-label="OrnnLab home"
           onClick={(event) => {
             event.preventDefault()
-            onNavigate('jobs')
+            onNavigate('datasets')
           }}
         >
           <TerminalSquare aria-hidden="true" />

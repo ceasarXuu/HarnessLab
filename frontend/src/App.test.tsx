@@ -8,9 +8,18 @@ describe('App', () => {
     window.location.hash = ''
   })
 
+  it('renders datasets as the default Harbor catalog surface', () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Dataset catalog' })).toBeInTheDocument()
+    expect(screen.getByText('terminal-bench')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
+  })
+
   it('renders the jobs hierarchy without flattening the run builder into it', () => {
     render(<App />)
 
+    fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
     expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
     expect(screen.getAllByText('terminal-bench-smoke').length).toBeGreaterThan(0)
     expect(screen.getByText('Selected job')).toBeInTheDocument()
@@ -22,6 +31,7 @@ describe('App', () => {
   it('filters jobs and keeps the table as the primary surface', () => {
     render(<App />)
 
+    fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
     fireEvent.change(screen.getByLabelText('Search jobs'), { target: { value: 'swe' } })
 
     const jobsTable = screen.getByRole('table')
@@ -46,7 +56,7 @@ describe('App', () => {
     render(<App />)
 
     fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'zh' } })
-    expect(screen.getByRole('heading', { name: 'Job 管理' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Dataset 目录' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '深色' }))
     expect(document.documentElement.dataset.theme).toBe('dark')
@@ -55,6 +65,7 @@ describe('App', () => {
   it('adds a queued job from the dedicated new run flow', () => {
     render(<App />)
 
+    fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
     fireEvent.click(screen.getByRole('button', { name: 'Run job' }))
     expect(window.location.hash).toBe('#jobs/new')
     expect(screen.getByRole('link', { name: 'Jobs' })).toHaveClass('active')
