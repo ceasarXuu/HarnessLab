@@ -9,7 +9,7 @@
 - Related Links: [bugfix/README](../bugfix/README.md), [frontend/src/api/client.ts](../../../../frontend/src/api/client.ts), [ornnlab/app.py](../../../../ornnlab/app.py)
 - Risk Level: Medium
 - Plan Type: Standard
-- Revision Notes: v1.1 拆 PR 切片（R1）+ 量化验收指标（R5）。v1.2 R5 #2/#3 标为 conditional（Round 3 N4：CI 是否启动 backend 延后到 v0.1.5 评估）。v1.3 追加并完成 BUG-WEB-06 Web 设计最佳实践收口。
+- Revision Notes: v1.1 拆 PR 切片（R1）+ 量化验收指标（R5）。v1.2 R5 #2/#3 标为 conditional（Round 3 N4：CI 是否启动 backend 延后到 v1.0.5 评估）。v1.3 追加并完成 BUG-WEB-06 Web 设计最佳实践收口。
 
 ## 状态说明
 
@@ -47,7 +47,7 @@ v0.1.4 阶段已经存在：
 |--------|----------|------|----------|
 | BUG-WEB-02 ↔ BUG-WEB-03 | 数据模型 | UI 类型 `ConsoleSnapshot` 与后端 `Experiment / LeaderboardEntryResponse` 字段不一致 | 以后端 schema 为契约源；UI 模型作为派生 view-model，由 mapper 层负责转换（mapper 判据见 [BUG-WEB-03 R3](03-contract-gap-vs-backend.md#3-mapper-层r3-修正判据)） |
 | BUG-WEB-02 ↔ BUG-WEB-04 | 改动面 | View 切到真实数据的同时必须有 loading/error UI，否则首版 UX 倒退 | **R1 修正**：04 基础设施（`asyncState` + `StatePanel`）独立 PR 先行合并；View 切换在同 PR 或后续 PR，避免单 PR 过大 |
-| BUG-WEB-01 ↔ 运行时部署 | 部署形态 | dev 用 proxy，生产由谁托管前端静态资源尚未决定 | 本计划只交付 dev/preview proxy；生产部署形态在 v0.1.5 PRD 决定 |
+| BUG-WEB-01 ↔ 运行时部署 | 部署形态 | dev 用 proxy，生产由谁托管前端静态资源尚未决定 | 本计划只交付 dev/preview proxy；生产部署形态在 v1.0.5 PRD 决定 |
 | BUG-WEB-05 ↔ bugfix/04 (SSE) | 测试依赖 | 真实 SSE 集成测试需等 BUG-04 SSE 修复 land | 05 仅覆盖 REST endpoint，SSE 测试推迟到 bugfix/04 完成后再追加 |
 
 ## 执行顺序
@@ -71,8 +71,8 @@ Phase 3: 测试基建
 
 Deferred:
   - SSE 实时事件流接入：依赖 bugfix/04 修复完成
-  - 生产部署形态（静态托管 / FastAPI StaticFiles / 反向代理）：v0.1.5 PRD 决定
-  - OpenAPI 自动类型生成（openapi-typescript）：v0.1.5 PRD 评估（见 [BUG-WEB-03 Maintenance Follow-up](03-contract-gap-vs-backend.md#maintenance-follow-upr9-defer-到-v0115)）
+  - 生产部署形态（静态托管 / FastAPI StaticFiles / 反向代理）：v1.0.5 PRD 决定
+  - OpenAPI 自动类型生成（openapi-typescript）：v1.0.5 PRD 评估（见 [BUG-WEB-03 Maintenance Follow-up](03-contract-gap-vs-backend.md#maintenance-follow-upr9-defer-到-v105)）
 ```
 
 ## Phase 依赖关系图
@@ -114,7 +114,7 @@ Phase 4 ── BUG-WEB-06 (Web 设计最佳实践收口)
 - [x] **[conditional]** e2e smoke 中至少 1 个 View 首屏渲染出来自后端的真实数据文本（非静态 snapshot）——同样以 backend 可用为前提。
 - [x] ≥1 个 View 集成测试（vitest + mock fetch）包含"特定输入 → 特定 DOM 文本"断言（见 [BUG-WEB-05 R10](05-integration-test-gap.md)）；该指标**不依赖** backend，CI 中无条件验证。（[views.test.ts](../../../../frontend/src/views/views.test.ts) 4 个 View × happy/empty/error，每 View happy 含具体 DOM 文本断言）
 
-> N4 说明：`test-after-change-web.sh` 当前不启动 FastAPI；CI 编排是否扩展脚本以自动 `python -m ornnlab web`，延后到 v0.1.5 评估。本期接受"backend 可用时强校验、不可用时 xfail"的 conditional 验收。
+> N4 说明：`test-after-change-web.sh` 当前不启动 FastAPI；CI 编排是否扩展脚本以自动 `python -m ornnlab web`，延后到 v1.0.5 评估。本期接受"backend 可用时强校验、不可用时 xfail"的 conditional 验收。
 
 ## Implementation Summary
 

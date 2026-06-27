@@ -11,6 +11,7 @@ Start here for the active OrnnLab version documentation.
 - Release and rollback checklist: `../releases/v0.1.3/checklist.md`
 - Version and documentation governance: `../releases/v0.1.3/version-governance.md`
 - Harbor upgrade procedure: `../playbooks/harbor-upgrade-procedure.md`
+- Next product PRD: `../releases/v1.0.5/README.md`
 - Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Legacy archive: `../archive/2026-06-15-pre-harbor-webui-redesign/README.md`
@@ -20,6 +21,10 @@ Start here for the active OrnnLab version documentation.
 OrnnLab is a local WebUI over Harbor. Harbor owns benchmark execution and raw
 job artifacts. OrnnLab owns agent registration, experiment/run management,
 diagnostics, report summaries, and leaderboard views.
+
+The next product direction is v1.0.5 Harbor WebUI productization: OrnnLab Web
+should cover Harbor's day-to-day job configuration, execution, observation,
+artifact review, diagnostics, and recovery workflows.
 
 Active product requirements are version-scoped. Do not create or maintain a
 single total PRD as the source of truth; create the next version folder under

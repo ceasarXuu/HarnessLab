@@ -57,7 +57,7 @@ export const apiClient = createApiClient('/api')
 ## 修复方案
 
 1. 在 `vite.config.ts` 中新增 `server.proxy` 与 `preview.proxy`，把 `/api` 转发到本地 FastAPI；目标地址从环境变量 `ORNNLAB_API_TARGET` 读取，默认 `http://127.0.0.1:8765`（与 [ornnlab/cli.py#L24](../../../../ornnlab/cli.py) 一致）。
-2. 不在生产构建产物中硬编码 API 地址；仍保留运行时相对路径 `/api`，生产部署形态在 v0.1.5 PRD 决定。
+2. 不在生产构建产物中硬编码 API 地址；仍保留运行时相对路径 `/api`，生产部署形态在 v1.0.5 PRD 决定。
 3. 在 `frontend/README` 或 `docs/playbooks/development-operations.md`（不在本 PR 范围）追加一句"启动顺序：先 FastAPI，再 `npm run dev`"的提示，**本立项只交付 vite 配置变更**。
 
 参考最小变更示例（实施时按上面方案执行）：

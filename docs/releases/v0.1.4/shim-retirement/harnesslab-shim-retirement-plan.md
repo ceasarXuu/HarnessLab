@@ -432,7 +432,7 @@ OQ-1 决议 + CI Rust 任务清单合并入 Phase 3 任务列表。
 |---|---|---|---|---|
 | AC1/AC2 残留遗漏 | Medium | grep 非 0 | 回 Phase 1/2/3 删干净 | n/a |
 | frontend `harnessLab` 残余 | Low | typecheck 红 | 复用 v0.1.4 fix plan Phase 3 流程 | n/a |
-| subagent 新风险 | Variable | review 报告 P0/P1 | Phase 4 内修复 + re-review | 延后整改为 v0.1.5 work item |
+| subagent 新风险 | Variable | review 报告 P0/P1 | Phase 4 内修复 + re-review | 延后整改为 v1.0.5 work item |
 
 #### Gate To Next Phase
 n/a (本计划结束)。

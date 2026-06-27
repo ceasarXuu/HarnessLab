@@ -145,7 +145,7 @@
 
 - mapper 函数返回的 viewmodel 对象中，**被标记为"删除"的字段填充 `""`（字符串）/`0`（数值）/`[]`（数组）**，保持类型签名不变。
 - 这些字段的**模板渲染由 [BUG-WEB-02](02-views-not-consuming-api.md) View 切换 PR 负责**：要么删除对应模板段落（如 `AgentsView` 的 Queue/Heartbeat 列、`DashboardView` 的 Priority alerts 区块），要么改为占位文案（`"—"`）。
-- 真正从 `types/console.ts` 移除已删除字段，留到 v0.1.5 PRD（与 OpenAPI 自动类型生成一并评估）。这样本期可保持类型稳定，View 改动局限在模板层，符合"分层成本最小"原则。
+- 真正从 `types/console.ts` 移除已删除字段，留到 v1.0.5 PRD（与 OpenAPI 自动类型生成一并评估）。这样本期可保持类型稳定，View 改动局限在模板层，符合"分层成本最小"原则。
 
 ## 修复方案
 
@@ -221,6 +221,6 @@ UI 枚举（如 `ExperimentState`）按后端实际状态集扩展，或在 mapp
 - 增加 mapper 层会使前端结构略复杂；按 R3 判据仅对必要场景引入，避免过度工程。
 - 类型扩展不破坏现有 View 静态使用方式（[BUG-WEB-02](02-views-not-consuming-api.md) 切换前后均兼容）。
 
-## Maintenance Follow-up（R9 defer 到 v0.1.5）
+## Maintenance Follow-up（R9 defer 到 v1.0.5）
 
-**OpenAPI 自动类型生成**：当前前端 Response 类型手工维护，与后端 schema 漂移风险高。v0.1.5 PRD 评估引入 [openapi-typescript](https://github.com/drwpow/openapi-typescript) 或同类工具，从 FastAPI 的 `/openapi.json` 自动生成 TypeScript 类型，替代手工 `Experiment / ExperimentRun / LeaderboardEntryResponse` 等接口。本期仅在本文档记录评估意向，不实施。
+**OpenAPI 自动类型生成**：当前前端 Response 类型手工维护，与后端 schema 漂移风险高。v1.0.5 PRD 评估引入 [openapi-typescript](https://github.com/drwpow/openapi-typescript) 或同类工具，从 FastAPI 的 `/openapi.json` 自动生成 TypeScript 类型，替代手工 `Experiment / ExperimentRun / LeaderboardEntryResponse` 等接口。本期仅在本文档记录评估意向，不实施。

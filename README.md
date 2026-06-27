@@ -12,6 +12,7 @@ Current source of truth:
 - Install quickstart: `docs/playbooks/install-quickstart.md`
 - Release and rollback checklist: `docs/releases/v0.1.3/checklist.md`
 - Harbor upgrade procedure: `docs/playbooks/harbor-upgrade-procedure.md`
+- Next product PRD: `docs/releases/v1.0.5/README.md`
 - Rust legacy workspace decision: `docs/archive/stubs/rust-legacy-fate.md`
 - Documentation archive: `docs/archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
@@ -20,6 +21,11 @@ Harbor owns benchmark execution, environment lifecycle, agent execution,
 verification, and raw job artifacts. OrnnLab owns the local product layer:
 declarative agent registration, experiment/run management, diagnostics, report
 summaries, and leaderboard views.
+
+The v1.0.5 product direction is to make OrnnLab the local Harbor WebUI product:
+ordinary Harbor job setup, execution, observation, artifact review, diagnostics,
+and recovery should be usable from Web without returning to CLI for the main
+workflow.
 
 ## Install With npm
 
