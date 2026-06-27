@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppShell, type PageKey } from './components/AppShell'
 import {
   events,
+  agentRows,
   datasetRows,
   initialDraft,
   jobs as seedJobs,
+  leaderboardRows,
   systemRows,
   taskRows,
   trialRows,
@@ -12,7 +14,9 @@ import {
 } from './data/demo'
 import { getTranslator, type Locale } from './i18n'
 import { JobsPage } from './pages/JobsPage'
+import { AgentsPage } from './pages/AgentsPage'
 import { DatasetsPage } from './pages/DatasetsPage'
+import { LeaderboardPage } from './pages/LeaderboardPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { SystemPage } from './pages/SystemPage'
 
@@ -23,7 +27,7 @@ interface RouteState {
   page: PageKey
 }
 
-const pageKeys = new Set<PageKey>(['datasets', 'jobs', 'system'])
+const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'leaderboard', 'system'])
 
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
@@ -31,7 +35,7 @@ function readRouteFromHash(): RouteState {
     return { page: 'jobs', jobView: 'new' }
   }
   return {
-    page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'datasets',
+    page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs',
     jobView: 'list',
   }
 }
@@ -48,6 +52,9 @@ export function App() {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
   const [datasetSearch, setDatasetSearch] = useState('')
+  const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
+  const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
+  const [leaderboardSearch, setLeaderboardSearch] = useState('')
   const [selected, setSelected] = useState(seedJobs[0])
   const [search, setSearch] = useState('')
   const [activeStep, setActiveStep] = useState('Source')
@@ -75,6 +82,17 @@ export function App() {
       ),
     )
   }, [datasetSearch])
+
+  const filteredLeaderboard = useMemo(() => {
+    const query = leaderboardSearch.trim().toLowerCase()
+    return leaderboardRows
+      .filter((row) => row.dataset === leaderboardDataset)
+      .filter((row) =>
+        !query
+          ? true
+          : [row.agent, row.model, row.jobId].some((value) => value.toLowerCase().includes(query)),
+      )
+  }, [leaderboardDataset, leaderboardSearch])
 
   useEffect(() => {
     const onHashChange = () => setRoute(readRouteFromHash())
@@ -137,6 +155,20 @@ export function App() {
           t={t}
           onNewJob={() => navigate('jobs', 'new')}
           onSearch={setDatasetSearch}
+        />
+      )}
+      {route.page === 'agents' && <AgentsPage rows={agentRows} t={t} />}
+      {route.page === 'leaderboard' && (
+        <LeaderboardPage
+          dataset={leaderboardDataset}
+          datasetSearch={leaderboardDatasetSearch}
+          datasets={datasetRows}
+          rows={filteredLeaderboard}
+          search={leaderboardSearch}
+          t={t}
+          onDataset={setLeaderboardDataset}
+          onDatasetSearch={setLeaderboardDatasetSearch}
+          onSearch={setLeaderboardSearch}
         />
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (

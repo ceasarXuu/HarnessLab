@@ -70,6 +70,28 @@ export interface DatasetRow {
   updated: string
 }
 
+export interface AgentRow {
+  name: string
+  type: 'built-in' | 'custom'
+  adapter: string
+  models: string
+  status: 'available' | 'configured' | 'needs-token'
+  source: string
+  updated: string
+}
+
+export interface LeaderboardRow {
+  dataset: string
+  rank: number
+  agent: string
+  model: string
+  score: string
+  trials: string
+  cost: string
+  duration: string
+  jobId: string
+}
+
 export const initialDraft: RunDraft = {
   source: 'terminal-bench@2.0',
   agent: 'claude-code',
@@ -97,7 +119,7 @@ export const jobs: HarborJob[] = [
     id: 'job_74c1',
     name: 'swe-bench-lite-regression',
     status: 'completed',
-    dataset: 'swe-bench-lite',
+    dataset: 'swe-bench-lite@2026.06',
     agent: 'codex-cli',
     model: 'gpt-5.1',
     environment: 'docker',
@@ -228,6 +250,45 @@ export const taskRows: TaskRow[] = [
   },
 ]
 
+export const agentRows: AgentRow[] = [
+  {
+    name: 'claude-code',
+    type: 'built-in',
+    adapter: 'harbor.adapters.claude_code',
+    models: 'claude-haiku-4-5, claude-sonnet-4-5',
+    status: 'available',
+    source: 'Harbor built-in',
+    updated: '12m ago',
+  },
+  {
+    name: 'codex-cli',
+    type: 'built-in',
+    adapter: 'harbor.adapters.codex_cli',
+    models: 'gpt-5.1',
+    status: 'configured',
+    source: 'Harbor built-in',
+    updated: '1h ago',
+  },
+  {
+    name: 'oracle',
+    type: 'built-in',
+    adapter: 'harbor.adapters.oracle',
+    models: 'local-sim',
+    status: 'available',
+    source: 'Harbor built-in',
+    updated: '3h ago',
+  },
+  {
+    name: 'local-repair-agent',
+    type: 'custom',
+    adapter: 'agents.local_repair:Agent',
+    models: 'qwen3-coder-local',
+    status: 'needs-token',
+    source: '~/.ornnlab/agents/local-repair.toml',
+    updated: 'queued',
+  },
+]
+
 export const trialRows: TrialRow[] = [
   {
     id: 'trial_001',
@@ -272,6 +333,64 @@ export const trialRows: TrialRow[] = [
     duration: '6m',
     cost: '$1.92',
     logPath: 'trials/job_74c1/django-migration.log',
+  },
+]
+
+export const leaderboardRows: LeaderboardRow[] = [
+  {
+    dataset: 'terminal-bench@2.0',
+    rank: 1,
+    agent: 'claude-code',
+    model: 'claude-haiku-4-5',
+    score: '0.72',
+    trials: '64',
+    cost: '$12.48',
+    duration: '42m',
+    jobId: 'job_91a7',
+  },
+  {
+    dataset: 'terminal-bench@2.0',
+    rank: 2,
+    agent: 'codex-cli',
+    model: 'gpt-5.1',
+    score: '0.68',
+    trials: '64',
+    cost: '$15.90',
+    duration: '47m',
+    jobId: 'job_64f2',
+  },
+  {
+    dataset: 'swe-bench-lite@2026.06',
+    rank: 1,
+    agent: 'codex-cli',
+    model: 'gpt-5.1',
+    score: '0.41',
+    trials: '300',
+    cost: '$92.18',
+    duration: '3h 20m',
+    jobId: 'job_74c1',
+  },
+  {
+    dataset: 'swe-bench-lite@2026.06',
+    rank: 2,
+    agent: 'claude-code',
+    model: 'claude-sonnet-4-5',
+    score: '0.39',
+    trials: '300',
+    cost: '$104.20',
+    duration: '3h 45m',
+    jobId: 'job_83aa',
+  },
+  {
+    dataset: 'harbor/hello-world@latest',
+    rank: 1,
+    agent: 'oracle',
+    model: 'local-sim',
+    score: '1.00',
+    trials: '8',
+    cost: '$0.00',
+    duration: '2m',
+    jobId: 'job_99ab',
   },
 ]
 

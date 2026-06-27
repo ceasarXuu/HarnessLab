@@ -28,6 +28,7 @@ flowchart TD
   A --> E["Publish and share"]
   A --> F["Diagnose and maintain"]
   A --> G["Develop packages and adapters"]
+  A --> H["Manage agents and rankings"]
 
   B --> B1["JobConfig wizard"]
   B --> B2["Run detail"]
@@ -51,6 +52,10 @@ flowchart TD
 
   G --> G1["Scaffold wizard"]
   G --> G2["Adapter review"]
+
+  H --> H1["Agents catalog"]
+  H --> H2["Custom agent profiles"]
+  H --> H3["Dataset scoped leaderboard"]
 ```
 
 ## 3. CLI 操作清单与 UI 替代形态
@@ -82,6 +87,7 @@ flowchart TD
 | trajectory 分析 | `harbor analyze` | 分析 job/trial 轨迹 | Analysis report generator | P1 |
 | 插件列表 | `harbor plugins list` | 查看可用 job plugins | JobConfig Integrations picker | P1 |
 | adapter 初始化/审查 | `harbor adapter init/review` | 开发 Harbor adapter | Adapter developer tools | P3 |
+| agent 选择/配置 | Harbor built-in agents + custom import path | 选择可运行 agent，管理本地 custom agents | Agents 页：built-in/custom agent catalog + settings | P0 |
 | cache 清理 | `harbor cache clean` | 清理 Docker/cache | System cleanup plan，必须先预览影响 | P2 |
 | publish tasks/datasets | `harbor publish` | 发布 package 到 registry | Publish wizard，tags/concurrency/visibility/no-tasks | P2 |
 
@@ -102,6 +108,16 @@ flowchart TD
 
 ## 5. 推荐的页面架构
 
+### Jobs
+
+- 默认一级页面：用户打开 WebUI 后首先进入 Jobs。
+- Job list：本地 jobs 与可导入 Hub jobs。
+- New job：JobConfig wizard。
+- Job detail：events、logs、trials、artifacts、config、summary、upload/share、resume/cancel/retry。
+- Trial 是 Job 的子概念，不作为 v1.0.5 一级页面。所有 trial 进度、得分、耗时、token 成本、
+  retries、log path 和 artifact evidence 都从 Job detail 进入。
+- Job recovery：失败分类、原始错误、可执行恢复动作。
+
 ### Datasets
 
 - Catalog：官方 Harbor Hub 风格表格，支持搜索、分页、registry source。
@@ -110,14 +126,18 @@ flowchart TD
   check/debug、start-env、run single task 都从 Dataset detail 进入。
 - Dataset editor：替代 `add/remove/sync`，所有 manifest 修改都先展示 diff。
 
-### Jobs
+### Agents
 
-- Job list：本地 jobs 与可导入 Hub jobs。
-- New job：JobConfig wizard。
-- Job detail：events、logs、trials、artifacts、config、summary、upload/share、resume/cancel/retry。
-- Trial 是 Job 的子概念，不作为 v1.0.5 一级页面。所有 trial 进度、得分、耗时、token 成本、
-  retries、log path 和 artifact evidence 都从 Job detail 进入。
-- Job recovery：失败分类、原始错误、可执行恢复动作。
+- 一级页面：管理 Harbor 支持的 built-in agents 和用户配置的 custom agents。
+- 每个 agent 显示名称、类型、adapter/import path、支持模型、配置状态、来源和更新时间。
+- New Job 的 Agent step 必须从 Agents 页的可用配置中选择，不再让用户临时拼自由文本。
+
+### Leaderboard
+
+- 一级页面：展示各 dataset 下的得分排名。
+- 一次只展示一个 dataset 的 ranking，用户通过 dataset 搜索框过滤下拉列表并切换。
+- 支持搜索 agent、model、job id。
+- 行级指标包含 rank、agent、model、score、trials、cost、duration、job id。
 
 ### Artifacts
 
@@ -140,10 +160,12 @@ flowchart TD
 P0 应覆盖“普通用户不回 CLI 即可跑完一次 Harbor job”的最短闭环：
 
 1. Datasets catalog + task preview。
-2. JobConfig wizard：Source、Filter、Agent、Environment、Runtime、Review。
-3. Run / Cancel / Retry / Resume。
-4. Job detail：events、job log、result、config、trial list、artifact path。
-5. System doctor：Harbor、Docker、dataset、agent config、orphan containers。
+2. Agents catalog：built-in/custom agents 与配置状态。
+3. JobConfig wizard：Source、Filter、Agent、Environment、Runtime、Review。
+4. Run / Cancel / Retry / Resume。
+5. Job detail：events、job log、result、config、trial list、artifact path。
+6. Leaderboard：按 dataset 展示 score 排名。
+7. System doctor：Harbor、Docker、dataset、agent config、orphan containers。
 
 P1 再覆盖“结果解释和复用”：
 

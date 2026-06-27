@@ -3,6 +3,10 @@ import { expect, test } from '@playwright/test'
 test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: /OrnnLab/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Job registry' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Jobs' })).toHaveClass(/active/)
+  await expect(page.getByText('Job trials')).toBeVisible()
+  await page.getByRole('link', { name: 'Datasets' }).click()
   await expect(page.getByRole('heading', { name: 'Dataset catalog' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Datasets' })).toHaveClass(/active/)
   await expect(page.getByRole('cell', { name: 'terminal-bench', exact: true })).toBeVisible()
@@ -19,7 +23,6 @@ test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
 
 test('launch action creates a queued draft job', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Jobs' }).click()
   await page.getByRole('button', { name: 'Run job' }).click()
   await expect(page).toHaveURL(/#jobs\/new$/)
   await expect(page.getByRole('link', { name: 'Jobs' })).toHaveClass(/active/)
@@ -36,6 +39,7 @@ test('nests task and trial concepts while toggling preferences', async ({ page }
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Tasks' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Trials' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Datasets' }).click()
   await expect(page.getByText('Dataset tasks')).toBeVisible()
   await page.getByRole('link', { name: 'Jobs' }).click()
   await expect(page.getByText('Job trials')).toBeVisible()
@@ -45,4 +49,23 @@ test('nests task and trial concepts while toggling preferences', async ({ page }
   await expect(page.getByRole('heading', { name: '系统健康' })).toBeVisible()
   await page.getByRole('button', { name: '深色' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+})
+
+test('manages agents and dataset scoped leaderboard surfaces', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Agents' }).click()
+  await expect(page.getByRole('heading', { name: 'Agent catalog' })).toBeVisible()
+  await expect(page.getByText('claude-code')).toBeVisible()
+  await expect(page.getByText('local-repair-agent')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Leaderboard' }).click()
+  await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible()
+  await expect(page.getByLabel('Select dataset')).toHaveValue('terminal-bench@2.0')
+  await expect(page.getByText('job_91a7')).toBeVisible()
+  await page.getByLabel('Search datasets').fill('swe')
+  await page.getByLabel('Select dataset').selectOption('swe-bench-lite@2026.06')
+  await expect(page.getByText('job_74c1')).toBeVisible()
+  await page.getByLabel('Search leaderboard').fill('sonnet')
+  await expect(page.getByText('claude-sonnet-4-5')).toBeVisible()
+  await expect(page.getByText('gpt-5.1')).toHaveCount(0)
 })
