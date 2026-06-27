@@ -113,7 +113,7 @@ flowchart TD
 - 默认一级页面：用户打开 WebUI 后首先进入 Jobs。
 - Job list：本地 jobs 与可导入 Hub jobs。
 - New job：JobConfig wizard。
-- Job detail：events、logs、trials、artifacts、config、summary、upload/share、resume/cancel/retry。
+- Job detail：点击 job 列表行后从右侧 drawer 滑出，展示 events、logs、trials、artifacts、config、summary、upload/share、resume/cancel/retry。
 - Trial 是 Job 的子概念，不作为 v1.0.5 一级页面。所有 trial 进度、得分、耗时、token 成本、
   retries、log path 和 artifact evidence 都从 Job detail 进入。
 - Job recovery：失败分类、原始错误、可执行恢复动作。
@@ -121,7 +121,7 @@ flowchart TD
 ### Datasets
 
 - Catalog：官方 Harbor Hub 风格表格，支持搜索、分页、registry source。
-- Dataset detail：task 列表、版本、manifest 路径、下载/同步/发布入口。
+- Dataset detail：点击 dataset 列表行后从右侧 drawer 滑出，展示 task 列表、版本、manifest 路径、下载/同步/发布入口。
 - Task 是 Dataset 的子概念，不作为 v1.0.5 一级页面。所有 task 浏览、搜索、描述、下载、
   check/debug、start-env、run single task 都从 Dataset detail 进入。
 - Dataset editor：替代 `add/remove/sync`，所有 manifest 修改都先展示 diff。
@@ -130,6 +130,7 @@ flowchart TD
 
 - 一级页面：管理 Harbor 支持的 built-in agents 和用户配置的 custom agents。
 - 每个 agent 显示名称、类型、adapter/import path、支持模型、配置状态、来源和更新时间。
+- Agent detail：点击 agent 列表行后从右侧 drawer 滑出，展示 adapter、models、source 和配置状态。
 - New Job 的 Agent step 必须从 Agents 页的可用配置中选择，不再让用户临时拼自由文本。
 
 ### Leaderboard

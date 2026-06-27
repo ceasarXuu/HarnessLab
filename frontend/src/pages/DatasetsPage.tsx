@@ -1,4 +1,6 @@
 import { Box, Database, Download, Play, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { DetailDrawer } from '../components/DetailDrawer'
 import type { DatasetRow, TaskRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -12,13 +14,18 @@ interface DatasetsPageProps {
 }
 
 export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: DatasetsPageProps) {
-  const selected = rows[0]
-  const selectedTasks = selected
-    ? taskRows.filter((row) => row.dataset === selected.name || row.dataset === `${selected.name}@${selected.version}`)
-    : []
+  const [selected, setSelected] = useState<DatasetRow | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const selectedTasks = useMemo(
+    () =>
+      selected
+        ? taskRows.filter((row) => row.dataset === selected.name || row.dataset === `${selected.name}@${selected.version}`)
+        : [],
+    [selected, taskRows],
+  )
 
   return (
-    <main className="workspace datasets-workspace">
+    <main className="workspace single-page">
       <section className="surface dataset-catalog">
         <div className="section-header">
           <div>
@@ -53,8 +60,15 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
-                <tr key={`${row.name}-${row.version}`} className={index === 0 ? 'selected-row' : undefined}>
+              {rows.map((row) => (
+                <tr
+                  key={`${row.name}-${row.version}`}
+                  className={selected?.name === row.name && selected.version === row.version ? 'selected-row' : undefined}
+                  onClick={() => {
+                    setSelected(row)
+                    setDrawerOpen(true)
+                  }}
+                >
                   <td>
                     <span className="cell-title">
                       <Database aria-hidden="true" />
@@ -79,9 +93,9 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
           </table>
         </div>
       </section>
-      <aside className="detail-rail dataset-detail">
-        {selected && (
-          <>
+      {selected && (
+        <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+          <aside className="detail-rail dataset-detail">
             <section className="surface rail-card">
               <p className="panel-kicker">{t('selectedDataset')}</p>
               <div className="rail-heading">
@@ -126,9 +140,9 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 ))}
               </div>
             </section>
-          </>
-        )}
-      </aside>
+          </aside>
+        </DetailDrawer>
+      )}
     </main>
   )
 }

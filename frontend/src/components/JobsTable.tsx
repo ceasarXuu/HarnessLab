@@ -11,7 +11,7 @@ const statusLabels: Record<JobStatus, string> = {
 
 interface JobsTableProps {
   jobs: HarborJob[]
-  selectedId: string
+  selectedId?: string
   search: string
   t: Translate
   onNewJob: () => void

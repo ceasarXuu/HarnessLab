@@ -1,4 +1,5 @@
 import { DetailRail } from '../components/DetailRail'
+import { DetailDrawer } from '../components/DetailDrawer'
 import { JobsTable } from '../components/JobsTable'
 import type { EventLog, HarborJob, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
@@ -6,22 +7,36 @@ import type { Translate } from '../i18n'
 interface JobsPageProps {
   events: EventLog[]
   jobs: HarborJob[]
+  open: boolean
   search: string
-  selected: HarborJob
+  selected: HarborJob | null
   trialRows: TrialRow[]
   t: Translate
+  onClose: () => void
   onNewJob: () => void
   onSearch: (value: string) => void
   onSelect: (job: HarborJob) => void
 }
 
-export function JobsPage({ events, jobs, search, selected, trialRows, t, onNewJob, onSearch, onSelect }: JobsPageProps) {
+export function JobsPage({
+  events,
+  jobs,
+  open,
+  search,
+  selected,
+  trialRows,
+  t,
+  onClose,
+  onNewJob,
+  onSearch,
+  onSelect,
+}: JobsPageProps) {
   return (
-    <main className="workspace jobs-workspace">
+    <main className="workspace single-page">
       <div className="content-column">
         <JobsTable
           jobs={jobs}
-          selectedId={selected.id}
+          selectedId={selected?.id}
           search={search}
           t={t}
           onNewJob={onNewJob}
@@ -29,7 +44,11 @@ export function JobsPage({ events, jobs, search, selected, trialRows, t, onNewJo
           onSelect={onSelect}
         />
       </div>
-      <DetailRail job={selected} events={events} trials={trialRows.filter((row) => row.jobId === selected.id)} t={t} />
+      {selected && (
+        <DetailDrawer label={t('selectedJob')} open={open} onClose={onClose}>
+          <DetailRail job={selected} events={events} trials={trialRows.filter((row) => row.jobId === selected.id)} t={t} />
+        </DetailDrawer>
+      )}
     </main>
   )
 }

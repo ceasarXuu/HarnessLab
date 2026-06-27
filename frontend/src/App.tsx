@@ -54,7 +54,8 @@ export function App() {
   const [datasetSearch, setDatasetSearch] = useState('')
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
-  const [selected, setSelected] = useState(seedJobs[0])
+  const [selected, setSelected] = useState<HarborJob | null>(null)
+  const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [activeStep, setActiveStep] = useState('Source')
   const [draft, setDraft] = useState(initialDraft)
@@ -124,6 +125,7 @@ export function App() {
     }
     setJobs((current) => [newJob, ...current])
     setSelected(newJob)
+    setJobDrawerOpen(true)
     setActiveStep('Review')
     navigate('jobs', 'list')
   }
@@ -165,13 +167,18 @@ export function App() {
         <JobsPage
           events={events}
           jobs={filteredJobs}
+          open={jobDrawerOpen}
           search={search}
           selected={selected}
           trialRows={trialRows}
           t={t}
+          onClose={() => setJobDrawerOpen(false)}
           onNewJob={() => navigate('jobs', 'new')}
           onSearch={setSearch}
-          onSelect={setSelected}
+          onSelect={(job) => {
+            setSelected(job)
+            setJobDrawerOpen(true)
+          }}
         />
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (

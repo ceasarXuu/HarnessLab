@@ -51,6 +51,42 @@
 .leaderboard-toolbar .dataset-filter {
   width: min(320px, 24vw);
 }
+.drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.drawer-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+.detail-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(560px, calc(100vw - 32px));
+  height: 100vh;
+  padding: 52px 16px 16px;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  animation: drawer-in 160ms ease-out;
+}
+.detail-drawer .detail-rail {
+  display: flex;
+  grid-template-columns: none;
+}
+.drawer-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}
 .two-column-page {
   grid-template-columns: minmax(0, 1fr) 348px;
 }
@@ -149,8 +185,19 @@
 .row-action:hover {
   background: var(--subtle);
 }
+tbody tr {
+  cursor: pointer;
+}
 .healthy {
   color: var(--success);
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @media (max-width: 1180px) {
   .jobs-workspace,

@@ -144,8 +144,9 @@ benchmark 执行的默认环境前提。
   - Templates（P1+）
 - Visual baseline:
   - 复刻官方 Harbor Hub 的顶部导航、白底/深色模式、monospace 字体、细边框表格、黑色主按钮、胶囊式模式切换和代码块样式。
-  - 默认首页优先呈现 Harbor-style Jobs 表格、选中 Job 详情和 Job 下属 Trials，不再使用重卡片式运营仪表盘作为第一视觉。
+  - 默认首页优先呈现 Harbor-style Jobs 表格；点击 Job 行后用右侧 drawer 展示 Job 详情和下属 Trials。
   - 列表页沿用官方 `/datasets` 的标题、搜索框、表格、分页和空/加载骨架布局语言。
+  - Jobs、Datasets、Agents 的详情不常驻占用右栏；用户点击列表行后，详情从右侧 drawer 滑出。
   - 任何暂未接入真实能力的官方 UI 元素不得做成误导性假入口；若保留入口，必须明确指向真实本地路径、外部官方路径或禁用状态。
 - JobConfig UI 应分步组织，不把 Harbor 参数一次性平铺：
   - Agent
