@@ -14,7 +14,9 @@
   border: 0;
   background: transparent;
 }
-.jobs-workspace,
+.jobs-workspace {
+  grid-template-columns: minmax(0, 1fr) clamp(500px, 28vw, 680px);
+}
 .two-column-page {
   grid-template-columns: minmax(0, 1fr) 348px;
 }
