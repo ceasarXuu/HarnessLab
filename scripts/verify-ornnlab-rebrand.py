@@ -45,6 +45,7 @@ DOC_INVENTORY = {
     "docs/releases/v0.1.4/web-connectivity/05-integration-test-gap.md": "rename-now",
     "docs/releases/v0.1.4/web-connectivity/06-web-design-best-practices.md": "rename-now",
     "docs/releases/v1.0.5/README.md": "rename-now",
+    "docs/releases/v1.0.5/harbor-cli-to-ui-architecture.md": "rename-now",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",

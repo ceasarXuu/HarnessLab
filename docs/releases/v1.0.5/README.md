@@ -5,6 +5,7 @@
 - Updated: 2026-06-28
 - Owner / requester: project maintainer
 - Source request: v1.0.5 版本先做 Harbor 的 WebUI 产品，可完全接管 Harbor 服务。
+- UI architecture companion: [Harbor CLI-to-UI 替代架构](harbor-cli-to-ui-architecture.md)
 
 ## Requester Review Summary
 
