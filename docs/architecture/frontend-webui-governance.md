@@ -47,3 +47,5 @@ Storybook 是前端组件注册和评审入口。新增或显著修改 UI 时，
 组件进入复用前应先有清晰 props 边界和 Storybook 注册。
 
 接入后端前，mock 数据字段要继续保持与 Harbor WebUI 可见能力一致，避免 demo-only 字段扩散。
+
+后续新增 API client、data hook、MSW mock 或后端接口时，必须先对齐 `frontend-api-contract.md`。如果页面新增可见操作，而契约没有对应接口，应先更新接口规范，再实现页面与服务端对接。

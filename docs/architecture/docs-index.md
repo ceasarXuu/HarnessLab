@@ -15,6 +15,7 @@ Start here for the active OrnnLab version documentation.
 - Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Harbor WebUI frontend governance: `frontend-webui-governance.md`
+- Harbor WebUI API contract: `frontend-api-contract.md`
 - Legacy archive: `../archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
 ## Current Direction
