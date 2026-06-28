@@ -188,6 +188,7 @@ export interface LeaderboardRow {
   score: string
   trials: string
   cost: string
+  tokens: string
   duration: string
   jobId: string
   split: string

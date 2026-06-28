@@ -1,14 +1,20 @@
 import { Search, Trophy } from 'lucide-react'
+import { useState } from 'react'
 import { CustomSelect } from '../components/CustomSelect'
-import type { DatasetRow, LeaderboardRow } from '../data/demo'
+import { DetailDrawer } from '../components/DetailDrawer'
+import { DetailRail } from '../components/DetailRail'
+import type { DatasetRow, EventLog, HarborJob, LeaderboardRow, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
 interface LeaderboardPageProps {
   dataset: string
   datasetSearch: string
   datasets: DatasetRow[]
+  events: EventLog[]
+  jobs: HarborJob[]
   rows: LeaderboardRow[]
   t: Translate
+  trialRows: TrialRow[]
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
 }
@@ -17,11 +23,16 @@ export function LeaderboardPage({
   dataset,
   datasetSearch,
   datasets,
+  events,
+  jobs,
   rows,
   t,
+  trialRows,
   onDataset,
   onDatasetSearch,
 }: LeaderboardPageProps) {
+  const [selectedJob, setSelectedJob] = useState<HarborJob | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const selectedDataset = datasets.find((row) => `${row.name}@${row.version}` === dataset)
   const visibleDatasets = datasets.filter((row) =>
     [row.name, row.version, `${row.name}@${row.version}`].some((value) =>
@@ -91,13 +102,10 @@ export function LeaderboardPage({
                 <th>Metric</th>
                 <th>{t('trialCount')}</th>
                 <th>{t('cost')}</th>
+                <th>Tokens (/M)</th>
                 <th>{t('duration')}</th>
                 <th>Split</th>
-                <th>Submission</th>
-                <th>Uploaded URL</th>
-                <th>{t('reproducibility')}</th>
                 <th>{t('job')}</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -116,31 +124,18 @@ export function LeaderboardPage({
                   <td>{row.metric}</td>
                   <td>{row.trials}</td>
                   <td>{row.cost}</td>
+                  <td>{row.tokens}</td>
                   <td>{row.duration}</td>
                   <td>{row.split}</td>
-                  <td>{row.submitted}</td>
                   <td>
-                    <small>{row.uploadedUrl}</small>
-                  </td>
-                  <td>
-                    <small>{row.submissionId}</small>
-                    <br />
-                    <small>{row.configHash}</small>
-                    <br />
-                    <small>{row.agentSnapshotHash}</small>
-                  </td>
-                  <td>
-                    <code>{row.jobId}</code>
-                  </td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="row-action">Open job</button>
-                      <button className="row-action">{t('openViewer')}</button>
-                      <button className="row-action">{t('download')}</button>
-                      <button className="row-action">{t('submit')}</button>
-                      <button className="row-action">{t('share')}</button>
-                    </div>
-                    <small>{row.reportPath}</small>
+                    <button className="row-button" onClick={() => {
+                      const job = jobs.find((item) => item.id === row.jobId)
+                      if (!job) return
+                      setSelectedJob(job)
+                      setDrawerOpen(true)
+                    }}>
+                      <code>{row.jobId}</code>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -148,6 +143,11 @@ export function LeaderboardPage({
           </table>
         </div>
       </section>
+      {selectedJob && (
+        <DetailDrawer label={t('selectedJob')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+          <DetailRail job={selectedJob} events={events} trials={trialRows.filter((row) => row.jobId === selectedJob.id)} t={t} />
+        </DetailDrawer>
+      )}
     </main>
   )
 }

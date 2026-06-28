@@ -154,8 +154,11 @@ export function App() {
           dataset={leaderboardDataset}
           datasetSearch={leaderboardDatasetSearch}
           datasets={datasetRows}
+          events={events}
+          jobs={jobs}
           rows={filteredLeaderboard}
           t={t}
+          trialRows={trialRows}
           onDataset={setLeaderboardDataset}
           onDatasetSearch={setLeaderboardDatasetSearch}
         />
