@@ -100,6 +100,10 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <Metric label="env readiness" value={selected.env ?? '-'} />
                 <Metric label="kwargs" value={selected.kwargs ?? '-'} />
                 <Metric label="runtime" value={selected.runtime ?? '-'} />
+                <Metric label="setup timeout" value={selected.setupTimeout ?? '-'} />
+                <Metric label="max timeout" value={selected.maxTimeout ?? '-'} />
+                <Metric label="allowed hosts" value={selected.allowedHosts ?? '-'} />
+                <Metric label="compatible models" value={selected.compatibleModels ?? '-'} />
               </div>
             </section>
             <section className="surface rail-card">
@@ -111,6 +115,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <code>{selected.adapter}</code>
                 <code>{selected.skills ?? 'skills: none'}</code>
                 <code>{selected.mcp ?? 'mcp: none'}</code>
+                <code>{selected.adapterReview ?? 'adapter review: none'}</code>
               </div>
               <div className="button-row tight">
                 <button className="secondary-button">
@@ -119,8 +124,23 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 </button>
                 <button className="secondary-button">{t('validate')}</button>
                 <button className="secondary-button">{t('compile')}</button>
+                <button className="secondary-button">Adapter init</button>
+                <button className="secondary-button">Adapter review</button>
                 <button className="secondary-button">{t('edit')}</button>
                 <button className="secondary-button">{t('delete')}</button>
+              </div>
+            </section>
+            <section className="surface rail-card">
+              <div className="rail-title">
+                <Bot aria-hidden="true" />
+                <h3>{t('adapterTools')}</h3>
+              </div>
+              <div className="path-list">
+                <code>harbor adapter init --agent {selected.name}</code>
+                <code>harbor adapter review {selected.adapter}</code>
+                <code>max_timeout_sec: {selected.maxTimeout ?? '-'}</code>
+                <code>override_setup_timeout_sec: {selected.setupTimeout ?? '-'}</code>
+                <code>extra_allowed_hosts: {selected.allowedHosts ?? '-'}</code>
               </div>
             </section>
           </aside>

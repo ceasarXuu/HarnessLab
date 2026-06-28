@@ -62,6 +62,19 @@
 
 后续仍需把这些可见入口逐项接入真实 API，并在对应表格中从 `Partial` / `Backend only` / `Missing` 更新为真实覆盖状态。
 
+## 2.2 2026-06-28 对抗性审查补齐记录
+
+根据对抗性审查，本次继续补齐上一轮仍不可见的 Harbor 能力面：
+
+1. New Job：补 debug、quiet、yes、env_file、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入命令预览。
+2. Jobs：补 Trial diagnostics，展示 progress、retries、log、analysis、verifier evidence、artifact 和 tokens；Job 操作补 clone job。
+3. Datasets / Tasks：补 manifest tools，对应 `harbor init/add/remove/sync`；补 Task config explorer，展示 schema/package/path/git/ref/source/environment/solution/steps/artifacts。
+4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
+5. Leaderboard：补 agent/status/date/comparability filters、uploaded URL、submission id、config hash、agent snapshot hash、open job/open report/download 操作。
+6. System / Header：补 Harbor auth 全局状态，以及 login/logout/status、upload、leaderboard submit、job share 的维护入口。
+
+本次仍只承诺 demo 可见性，不改变“真实 API 接管仍需后续逐项实现”的边界。
+
 ## 3. Jobs / JobConfig 覆盖清单
 
 ### 3.1 Job 列表与生命周期操作

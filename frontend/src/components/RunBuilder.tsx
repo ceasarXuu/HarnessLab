@@ -20,14 +20,59 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
     draft.taskFilter ? `--include-task-name ${draft.taskFilter}` : '',
     draft.excludeFilter ? `--exclude-task-name ${draft.excludeFilter}` : '',
     `--n-tasks ${draft.taskLimit}`,
+    draft.debug ? '--debug' : '',
+    draft.quiet ? '--quiet' : '',
+    draft.yes ? '--yes' : '',
+    draft.envFile ? `--env-file ${draft.envFile}` : '',
     `--agent ${draft.agent}`,
     draft.agentImportPath ? `--agent-import-path ${draft.agentImportPath}` : '',
     `--model ${draft.model}`,
+    draft.agentEnv ? `--agent-env ${draft.agentEnv}` : '',
+    draft.agentKwargs ? `--agent-kwarg ${draft.agentKwargs}` : '',
+    draft.allowAgentHosts ? `--allow-agent-host ${draft.allowAgentHosts}` : '',
+    draft.skills ? `--skills ${draft.skills}` : '',
+    draft.mcpConfig ? `--mcp-config ${draft.mcpConfig}` : '',
     `--env ${draft.environment}`,
+    draft.environmentImportPath ? `--environment-import-path ${draft.environmentImportPath}` : '',
+    draft.environmentEnv ? `--environment-env ${draft.environmentEnv}` : '',
+    draft.environmentKwargs ? `--environment-kwarg ${draft.environmentKwargs}` : '',
+    draft.allowEnvironmentHosts ? `--allow-environment-host ${draft.allowEnvironmentHosts}` : '',
+    draft.forceBuild ? '--force-build' : '--no-force-build',
+    draft.deleteEnvironment ? '--delete' : '--no-delete',
+    draft.suppressOverrideWarnings ? '--suppress-override-warnings' : '',
+    `--cpus ${draft.cpus}`,
+    draft.cpuOverride ? `--override-cpus ${draft.cpuOverride}` : '',
+    draft.memoryMb ? `--override-memory-mb ${draft.memoryMb}` : '',
+    draft.storageMb ? `--override-storage-mb ${draft.storageMb}` : '',
+    draft.gpus ? `--override-gpus ${draft.gpus}` : '',
+    draft.tpu ? `--override-tpu ${draft.tpu}` : '',
+    draft.mounts ? `--mount ${draft.mounts}` : '',
+    draft.dockerCompose ? `--extra-docker-compose ${draft.dockerCompose}` : '',
+    draft.verifierImportPath ? `--verifier-import-path ${draft.verifierImportPath}` : '',
+    draft.verifierEnv ? `--verifier-env ${draft.verifierEnv}` : '',
+    draft.verifierKwargs ? `--verifier-kwarg ${draft.verifierKwargs}` : '',
+    draft.disableVerifier ? '--disable-verification' : '--enable-verification',
+    draft.verifierMaxTimeoutSec ? `--verifier-max-timeout-sec ${draft.verifierMaxTimeoutSec}` : '',
     `--n-concurrent ${draft.concurrency}`,
     `--n-attempts ${draft.attempts}`,
+    `--timeout-multiplier ${draft.timeoutMultiplier}`,
+    draft.agentTimeoutMultiplier ? `--agent-timeout-multiplier ${draft.agentTimeoutMultiplier}` : '',
+    draft.verifierTimeoutMultiplier ? `--verifier-timeout-multiplier ${draft.verifierTimeoutMultiplier}` : '',
+    draft.agentSetupTimeoutMultiplier ? `--agent-setup-timeout-multiplier ${draft.agentSetupTimeoutMultiplier}` : '',
+    draft.environmentBuildTimeoutMultiplier
+      ? `--environment-build-timeout-multiplier ${draft.environmentBuildTimeoutMultiplier}`
+      : '',
     `--max-retries ${draft.maxRetries}`,
+    draft.retryInclude ? `--retry-include ${draft.retryInclude}` : '',
+    draft.retryExclude ? `--retry-exclude ${draft.retryExclude}` : '',
+    draft.retryWaitMultiplier ? `--retry-wait-multiplier ${draft.retryWaitMultiplier}` : '',
+    draft.retryMinWaitSec ? `--retry-min-wait-sec ${draft.retryMinWaitSec}` : '',
+    draft.retryMaxWaitSec ? `--retry-max-wait-sec ${draft.retryMaxWaitSec}` : '',
+    draft.artifacts ? `--artifact ${draft.artifacts}` : '',
+    draft.metric ? `--metric ${draft.metric}` : '',
+    draft.plugins ? `--plugin ${draft.plugins}` : '',
     draft.upload ? `--upload --${draft.visibility}` : '',
+    draft.shareTargets ? `--share-user ${draft.shareTargets}` : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -84,6 +129,18 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
             onChange={(event) => onDraft({ ...draft, extraInstructions: event.target.value })}
           />
         </Field>
+        <Field label="debug">
+          <Toggle checked={draft.debug} onChange={(value) => onDraft({ ...draft, debug: value })} />
+        </Field>
+        <Field label="quiet">
+          <Toggle checked={draft.quiet} onChange={(value) => onDraft({ ...draft, quiet: value })} />
+        </Field>
+        <Field label="yes">
+          <Toggle checked={draft.yes} onChange={(value) => onDraft({ ...draft, yes: value })} />
+        </Field>
+        <Field label="env_file">
+          <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
+        </Field>
         <label>
           {t('agent')}
           <CustomSelect
@@ -112,6 +169,12 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         <Field label={t('agentKwargs')}>
           <input value={draft.agentKwargs} onChange={(event) => onDraft({ ...draft, agentKwargs: event.target.value })} />
         </Field>
+        <Field label="allow_agent_host">
+          <input
+            value={draft.allowAgentHosts}
+            onChange={(event) => onDraft({ ...draft, allowAgentHosts: event.target.value })}
+          />
+        </Field>
         <Field label={t('skills')}>
           <input value={draft.skills} onChange={(event) => onDraft({ ...draft, skills: event.target.value })} />
         </Field>
@@ -129,19 +192,62 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
               { label: 'e2b', value: 'e2b' },
               { label: 'modal', value: 'modal' },
               { label: 'gke', value: 'gke' },
+              { label: 'runloop', value: 'runloop' },
+              { label: 'langsmith', value: 'langsmith' },
+              { label: 'novita', value: 'novita' },
+              { label: 'apple-container', value: 'apple-container' },
+              { label: 'singularity', value: 'singularity' },
+              { label: 'islo', value: 'islo' },
+              { label: 'tensorlake', value: 'tensorlake' },
+              { label: 'cwsandbox', value: 'cwsandbox' },
+              { label: 'wandb', value: 'wandb' },
+              { label: 'use-computer', value: 'use-computer' },
               { label: 'custom import path', value: 'custom' },
             ]}
             onChange={(value) => onDraft({ ...draft, environment: value })}
           />
         </label>
+        <Field label="environment import_path">
+          <input
+            value={draft.environmentImportPath}
+            onChange={(event) => onDraft({ ...draft, environmentImportPath: event.target.value })}
+          />
+        </Field>
+        <Field label="environment env">
+          <input
+            value={draft.environmentEnv}
+            onChange={(event) => onDraft({ ...draft, environmentEnv: event.target.value })}
+          />
+        </Field>
+        <Field label="environment kwargs">
+          <input
+            value={draft.environmentKwargs}
+            onChange={(event) => onDraft({ ...draft, environmentKwargs: event.target.value })}
+          />
+        </Field>
+        <Field label="allow_environment_host">
+          <input
+            value={draft.allowEnvironmentHosts}
+            onChange={(event) => onDraft({ ...draft, allowEnvironmentHosts: event.target.value })}
+          />
+        </Field>
         <Field label={t('forceBuild')}>
           <Toggle checked={draft.forceBuild} onChange={(value) => onDraft({ ...draft, forceBuild: value })} />
         </Field>
         <Field label={t('deleteEnvironment')}>
           <Toggle checked={draft.deleteEnvironment} onChange={(value) => onDraft({ ...draft, deleteEnvironment: value })} />
         </Field>
+        <Field label="suppress_override_warnings">
+          <Toggle
+            checked={draft.suppressOverrideWarnings}
+            onChange={(value) => onDraft({ ...draft, suppressOverrideWarnings: value })}
+          />
+        </Field>
         <Field label={t('resourcePolicy')}>
           <input value={draft.cpus} onChange={(event) => onDraft({ ...draft, cpus: event.target.value })} />
+        </Field>
+        <Field label="override_cpus">
+          <input value={draft.cpuOverride} onChange={(event) => onDraft({ ...draft, cpuOverride: event.target.value })} />
         </Field>
         <Field label={t('memoryMb')}>
           <input value={draft.memoryMb} onChange={(event) => onDraft({ ...draft, memoryMb: event.target.value })} />
@@ -151,6 +257,9 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         </Field>
         <Field label={t('gpus')}>
           <input value={draft.gpus} onChange={(event) => onDraft({ ...draft, gpus: event.target.value })} />
+        </Field>
+        <Field label="tpu">
+          <input value={draft.tpu} onChange={(event) => onDraft({ ...draft, tpu: event.target.value })} />
         </Field>
         <Field label={t('mounts')}>
           <input value={draft.mounts} onChange={(event) => onDraft({ ...draft, mounts: event.target.value })} />
@@ -175,6 +284,12 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         </Field>
         <Field label={t('disableVerifier')}>
           <Toggle checked={draft.disableVerifier} onChange={(value) => onDraft({ ...draft, disableVerifier: value })} />
+        </Field>
+        <Field label="verifier max timeout sec">
+          <input
+            value={draft.verifierMaxTimeoutSec}
+            onChange={(event) => onDraft({ ...draft, verifierMaxTimeoutSec: event.target.value })}
+          />
         </Field>
         <Field label={t('concurrency')}>
           <input
@@ -213,6 +328,18 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
             onChange={(event) => onDraft({ ...draft, verifierTimeoutMultiplier: event.target.value })}
           />
         </Field>
+        <Field label="agent setup timeout multiplier">
+          <input
+            value={draft.agentSetupTimeoutMultiplier}
+            onChange={(event) => onDraft({ ...draft, agentSetupTimeoutMultiplier: event.target.value })}
+          />
+        </Field>
+        <Field label="environment build timeout multiplier">
+          <input
+            value={draft.environmentBuildTimeoutMultiplier}
+            onChange={(event) => onDraft({ ...draft, environmentBuildTimeoutMultiplier: event.target.value })}
+          />
+        </Field>
         <Field label={t('maxRetries')}>
           <input
             type="number"
@@ -226,6 +353,24 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         </Field>
         <Field label={t('retryExclude')}>
           <input value={draft.retryExclude} onChange={(event) => onDraft({ ...draft, retryExclude: event.target.value })} />
+        </Field>
+        <Field label="retry wait multiplier">
+          <input
+            value={draft.retryWaitMultiplier}
+            onChange={(event) => onDraft({ ...draft, retryWaitMultiplier: event.target.value })}
+          />
+        </Field>
+        <Field label="retry min wait sec">
+          <input
+            value={draft.retryMinWaitSec}
+            onChange={(event) => onDraft({ ...draft, retryMinWaitSec: event.target.value })}
+          />
+        </Field>
+        <Field label="retry max wait sec">
+          <input
+            value={draft.retryMaxWaitSec}
+            onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
+          />
         </Field>
         <Field label={t('artifacts')}>
           <input value={draft.artifacts} onChange={(event) => onDraft({ ...draft, artifacts: event.target.value })} />

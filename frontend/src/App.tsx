@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppShell, type PageKey } from './components/AppShell'
 import {
   events,
-  agentRows,
-  datasetRows,
   initialDraft,
   jobs as seedJobs,
-  taskRows,
   trialRows,
   type HarborJob,
 } from './data/demo'
+import { agentRows, datasetRows, taskRows } from './data/demoCatalog'
 import { leaderboardRows, systemRows } from './data/demoSystem'
 import { getTranslator, type Locale } from './i18n'
 import { JobsPage } from './pages/JobsPage'
@@ -119,6 +117,7 @@ export function App() {
       trials: '0 / 64',
       score: '-',
       cost: '$0.00',
+      tokens: '0',
       updated: 'just now',
     }
     setJobs((current) => [newJob, ...current])

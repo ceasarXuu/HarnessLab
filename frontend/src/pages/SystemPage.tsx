@@ -71,9 +71,14 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           </ul>
           <div className="button-row tight">
             <button className="secondary-button">{t('auth')}</button>
+            <button className="secondary-button">{t('login')}</button>
+            <button className="secondary-button">{t('logout')}</button>
             <button className="secondary-button">{t('cache')}</button>
             <button className="secondary-button">{t('plugins')}</button>
             <button className="secondary-button">{t('sync')}</button>
+            <button className="secondary-button">{t('upload')}</button>
+            <button className="secondary-button">{t('submit')}</button>
+            <button className="secondary-button">{t('share')}</button>
           </div>
         </section>
         <section className="surface rail-card">
@@ -82,9 +87,14 @@ export function SystemPage({ rows, t }: SystemPageProps) {
             <h3>Harbor maintenance</h3>
           </div>
           <div className="path-list">
+            <code>harbor auth login</code>
             <code>harbor auth status</code>
+            <code>harbor auth logout</code>
             <code>harbor cache clean --dry-run</code>
             <code>harbor plugins list</code>
+            <code>harbor upload jobs/job_91a7 --private --share-user @ornn</code>
+            <code>harbor leaderboard submit job_91a7</code>
+            <code>harbor job share job_91a7 --share-org ornn</code>
             <code>docker orphan cleanup plan</code>
           </div>
         </section>

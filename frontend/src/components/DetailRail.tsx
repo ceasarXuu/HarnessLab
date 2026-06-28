@@ -35,6 +35,7 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Metric label={t('trialCount')} value={job.trials} />
           <Metric label={t('score')} value={job.score} />
           <Metric label={t('cost')} value={job.cost} />
+          <Metric label="tokens" value={job.tokens} />
           <Metric label={t('environment')} value={job.environment} />
           <Metric label="job_dir" value={job.jobDir ?? 'jobs/current'} />
           <Metric label="split" value={job.split ?? 'default'} />
@@ -45,6 +46,7 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             {t('cancel')}
           </button>
           <button className="secondary-button">{t('retry')}</button>
+          <button className="secondary-button">{t('cloneJob')}</button>
           <button className="secondary-button">
             <Play aria-hidden="true" />
             {t('resume')}
@@ -81,7 +83,27 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
               <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
               <span>{trial.score}</span>
               <span>{trial.duration}</span>
-              <span>{trial.cost}</span>
+              <span>{trial.cost} / {trial.tokens}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="surface rail-card">
+        <div className="rail-title">
+          <FlaskConical aria-hidden="true" />
+          <h3>{t('trialDiagnostics')}</h3>
+        </div>
+        <div className="path-list">
+          {trials.map((trial) => (
+            <div key={`${trial.id}-diagnostics`} className="diagnostic-block">
+              <strong>{trial.id}</strong>
+              <code>progress: {trial.progress}</code>
+              <code>retries: {trial.retries}</code>
+              <code>log: {trial.logPath}</code>
+              <code>analysis: {trial.analysisPath}</code>
+              <code>verifier: {trial.verifierEvidence}</code>
+              <code>artifact: {trial.artifactPath}</code>
             </div>
           ))}
         </div>

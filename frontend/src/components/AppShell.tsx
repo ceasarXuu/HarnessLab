@@ -1,4 +1,4 @@
-import { Activity, Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
+import { Activity, Bell, Github, Languages, LogIn, LogOut, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
@@ -68,6 +68,18 @@ export function AppShell({
           ))}
         </nav>
         <div className="topbar-actions">
+          <span className="status-chip auth-chip">
+            <Github aria-hidden="true" />
+            {t('harborAuthReady')}
+          </span>
+          <button className="secondary-button compact-action">
+            <LogIn aria-hidden="true" />
+            {t('login')}
+          </button>
+          <button className="secondary-button compact-action">
+            <LogOut aria-hidden="true" />
+            {t('logout')}
+          </button>
           <span className="status-chip">
             <Activity aria-hidden="true" />
             {t('dockerReady')}

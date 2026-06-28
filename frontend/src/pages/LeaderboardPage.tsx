@@ -61,6 +61,24 @@ export function LeaderboardPage({
             />
           </div>
         </div>
+        <div className="filter-strip">
+          <label>
+            Agent filter
+            <input aria-label="Agent filter" placeholder="agent/model" />
+          </label>
+          <label>
+            Status filter
+            <input aria-label="Status filter" placeholder="submitted, local, pending" />
+          </label>
+          <label>
+            Date range
+            <input aria-label="Date range" placeholder="last 7 days" />
+          </label>
+          <label>
+            Comparability key
+            <input aria-label="Comparability key" value={rows[0]?.comparabilityKey ?? ''} readOnly />
+          </label>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
@@ -75,6 +93,8 @@ export function LeaderboardPage({
                 <th>{t('duration')}</th>
                 <th>Split</th>
                 <th>Submission</th>
+                <th>Uploaded URL</th>
+                <th>{t('reproducibility')}</th>
                 <th>{t('job')}</th>
                 <th>Actions</th>
               </tr>
@@ -98,11 +118,24 @@ export function LeaderboardPage({
                   <td>{row.split}</td>
                   <td>{row.submitted}</td>
                   <td>
+                    <small>{row.uploadedUrl}</small>
+                  </td>
+                  <td>
+                    <small>{row.submissionId}</small>
+                    <br />
+                    <small>{row.configHash}</small>
+                    <br />
+                    <small>{row.agentSnapshotHash}</small>
+                  </td>
+                  <td>
                     <code>{row.jobId}</code>
                   </td>
                   <td>
                     <div className="row-actions">
+                      <button className="row-action">Open job</button>
                       <button className="row-action">{t('openViewer')}</button>
+                      <button className="row-action">Open report</button>
+                      <button className="row-action">{t('download')}</button>
                       <button className="row-action">{t('submit')}</button>
                       <button className="row-action">{t('share')}</button>
                     </div>

@@ -222,6 +222,12 @@ svg {
   color: var(--foreground);
   background: var(--subtle);
 }
+.auth-chip {
+  max-width: 240px;
+}
+.compact-action {
+  padding: 0 8px;
+}
 .search-field {
   display: flex;
   flex-direction: row;
@@ -426,6 +432,16 @@ code {
   border: 1px solid var(--border);
   background: var(--surface-muted);
 }
+.diagnostic-block {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.diagnostic-block strong {
+  font-size: 12px;
+}
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -459,6 +475,9 @@ code {
   .toolbar,
   .topbar-actions {
     flex-wrap: wrap;
+  }
+  .auth-chip {
+    max-width: none;
   }
   .search-field {
     width: 100%;

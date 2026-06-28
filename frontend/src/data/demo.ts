@@ -11,6 +11,7 @@ export interface HarborJob {
   trials: string
   score: string
   cost: string
+  tokens: string
   updated: string
   jobDir?: string
   split?: string
@@ -31,34 +32,52 @@ export interface RunDraft {
   excludeFilter: string
   taskLimit: number
   extraInstructions: string
+  debug: boolean
+  quiet: boolean
+  yes: boolean
+  envFile: string
   agent: string
   model: string
   agentImportPath: string
   agentEnv: string
   agentKwargs: string
+  allowAgentHosts: string
   skills: string
   mcpConfig: string
   environment: string
+  environmentImportPath: string
+  environmentEnv: string
+  environmentKwargs: string
+  allowEnvironmentHosts: string
   forceBuild: boolean
   deleteEnvironment: boolean
+  suppressOverrideWarnings: boolean
   cpus: string
+  cpuOverride: string
   memoryMb: string
   storageMb: string
   gpus: string
+  tpu: string
   mounts: string
   dockerCompose: string
   verifierImportPath: string
   verifierEnv: string
   verifierKwargs: string
   disableVerifier: boolean
+  verifierMaxTimeoutSec: string
   concurrency: number
   attempts: number
   timeoutMultiplier: number
   agentTimeoutMultiplier: string
   verifierTimeoutMultiplier: string
+  agentSetupTimeoutMultiplier: string
+  environmentBuildTimeoutMultiplier: string
   maxRetries: number
   retryInclude: string
   retryExclude: string
+  retryWaitMultiplier: string
+  retryMinWaitSec: string
+  retryMaxWaitSec: string
   artifacts: string
   metric: string
   plugins: string
@@ -77,6 +96,17 @@ export interface TaskRow {
   duration: string
   owner: string
   verifier: string
+  path: string
+  gitUrl: string
+  gitCommitId: string
+  ref: string
+  source: string
+  schemaVersion: string
+  packageInfo: string
+  environment: string
+  solution: string
+  steps: string
+  artifacts: string
 }
 
 export interface TrialRow {
@@ -88,7 +118,12 @@ export interface TrialRow {
   retries: number
   duration: string
   cost: string
+  tokens: string
+  progress: string
   logPath: string
+  analysisPath: string
+  verifierEvidence: string
+  artifactPath: string
 }
 
 export interface SystemRow {
@@ -112,6 +147,9 @@ export interface DatasetRow {
   manifestPath?: string
   taskInclude?: string
   taskExclude?: string
+  ref?: string
+  path?: string
+  overwrite?: boolean
 }
 
 export interface AgentRow {
@@ -127,6 +165,11 @@ export interface AgentRow {
   skills?: string
   mcp?: string
   runtime?: string
+  setupTimeout?: string
+  maxTimeout?: string
+  allowedHosts?: string
+  compatibleModels?: string
+  adapterReview?: string
 }
 
 export interface LeaderboardRow {
@@ -143,6 +186,11 @@ export interface LeaderboardRow {
   metric: string
   submitted: string
   reportPath: string
+  comparabilityKey: string
+  uploadedUrl: string
+  submissionId: string
+  configHash: string
+  agentSnapshotHash: string
 }
 
 export const initialDraft: RunDraft = {
@@ -153,34 +201,52 @@ export const initialDraft: RunDraft = {
   excludeFilter: 'flaky-*',
   taskLimit: 64,
   extraInstructions: 'instructions/hardening.md',
+  debug: false,
+  quiet: false,
+  yes: true,
+  envFile: '.env.harbor',
   agent: 'claude-code',
   model: 'anthropic/claude-haiku-4-5',
   agentImportPath: '',
   agentEnv: 'ANTHROPIC_API_KEY',
   agentKwargs: 'temperature=0',
+  allowAgentHosts: 'api.anthropic.com,hub.harborframework.com',
   skills: '~/.ornnlab/skills/terminal-bench',
   mcpConfig: '~/.ornnlab/mcp/claude.mcp.json',
   environment: 'docker',
+  environmentImportPath: '',
+  environmentEnv: 'HTTP_PROXY=',
+  environmentKwargs: 'reuse_layers=true',
+  allowEnvironmentHosts: 'pypi.org,github.com',
   forceBuild: false,
   deleteEnvironment: true,
+  suppressOverrideWarnings: false,
   cpus: 'auto',
+  cpuOverride: '4',
   memoryMb: '4096',
   storageMb: '20480',
   gpus: '0',
+  tpu: '',
   mounts: '[{"source":"./cache","target":"/cache"}]',
   dockerCompose: 'compose.gpu.yaml',
   verifierImportPath: '',
   verifierEnv: 'PYTEST_ADDOPTS=-q',
   verifierKwargs: 'max_failures=1',
   disableVerifier: false,
+  verifierMaxTimeoutSec: '900',
   concurrency: 4,
   attempts: 1,
   timeoutMultiplier: 1,
   agentTimeoutMultiplier: '',
   verifierTimeoutMultiplier: '',
+  agentSetupTimeoutMultiplier: '',
+  environmentBuildTimeoutMultiplier: '',
   maxRetries: 1,
   retryInclude: 'TimeoutError',
   retryExclude: 'ValidationError',
+  retryWaitMultiplier: '1.5',
+  retryMinWaitSec: '2',
+  retryMaxWaitSec: '30',
   artifacts: '/workspace/result.json,/workspace/logs',
   metric: 'mean',
   plugins: 'harbor.plugins.cost:CostPlugin',
@@ -201,6 +267,7 @@ export const jobs: HarborJob[] = [
     trials: '18 / 64',
     score: '0.72',
     cost: '$3.42',
+    tokens: '18.4k',
     updated: '2m ago',
     jobDir: 'jobs/terminal-bench-smoke',
     split: 'test',
@@ -216,6 +283,7 @@ export const jobs: HarborJob[] = [
     trials: '300 / 300',
     score: '0.41',
     cost: '$92.18',
+    tokens: '1.8M',
     updated: '1h ago',
     jobDir: 'jobs/swe-bench-lite-regression',
     split: 'verified',
@@ -231,6 +299,7 @@ export const jobs: HarborJob[] = [
     trials: '3 / 8',
     score: '-',
     cost: '$0.63',
+    tokens: '3.2k',
     updated: '3h ago',
     jobDir: 'jobs/harbor-hello-world',
     split: 'smoke',
@@ -247,69 +316,10 @@ export const jobs: HarborJob[] = [
     trials: '0 / 128',
     score: '-',
     cost: '$0.00',
+    tokens: '-',
     updated: 'queued',
     jobDir: 'jobs/terminal-bench-nightly',
     split: 'nightly',
-  },
-]
-
-export const datasetRows: DatasetRow[] = [
-  {
-    name: 'terminal-bench',
-    version: '2.0',
-    visibility: 'public',
-    tasks: 64,
-    source: 'harbor registry',
-    digest: 'sha256:8f3a...b91c',
-    updated: '12m ago',
-    registryUrl: 'https://hub.harborframework.com',
-    registryPath: 'registry/datasets/terminal-bench',
-    downloadDir: '~/.cache/harbor/datasets/terminal-bench',
-    manifestPath: 'dataset.toml',
-    taskInclude: 'apt-*',
-    taskExclude: 'flaky-*',
-  },
-  {
-    name: 'swe-bench-lite',
-    version: '2026.06',
-    visibility: 'private',
-    tasks: 300,
-    source: 'ScaleAI mirror',
-    digest: 'sha256:72aa...0f44',
-    updated: '1h ago',
-    registryUrl: 'https://hub.harborframework.com',
-    registryPath: 'registry/datasets/swe-bench-lite',
-    downloadDir: '~/.cache/harbor/datasets/swe-bench-lite',
-    manifestPath: 'dataset.toml',
-    taskInclude: 'django-*',
-    taskExclude: 'large-*',
-  },
-  {
-    name: 'harbor/hello-world',
-    version: 'latest',
-    visibility: 'public',
-    tasks: 8,
-    source: 'local package',
-    digest: 'sha256:100f...d6a0',
-    updated: '3h ago',
-    registryUrl: 'local',
-    registryPath: './examples/hello-world',
-    downloadDir: './datasets/hello-world',
-    manifestPath: 'dataset.toml',
-  },
-  {
-    name: 'terminal-bench-nightly',
-    version: 'nightly',
-    visibility: 'private',
-    tasks: 128,
-    source: 'local cache',
-    digest: 'sha256:f91b...aa02',
-    updated: 'queued',
-    registryUrl: 'local',
-    registryPath: './nightly/terminal-bench',
-    downloadDir: '~/.cache/harbor/datasets/nightly',
-    manifestPath: 'dataset.toml',
-    taskExclude: 'unstable-*',
   },
 ]
 
@@ -319,112 +329,6 @@ export const events: EventLog[] = [
   { time: '14:18:26', level: 'info', message: 'Trial terminal-bench/apt-setup started' },
   { time: '14:19:04', level: 'warning', message: 'Verifier retry scheduled for flaky shell assertion' },
   { time: '14:19:12', level: 'success', message: '18 trials completed, 46 still pending' },
-]
-
-export const taskRows: TaskRow[] = [
-  {
-    name: 'apt-setup',
-    dataset: 'terminal-bench',
-    description: 'Install packages and verify shell setup.',
-    jobId: 'job_91a7',
-    os: 'linux',
-    state: 'ok',
-    duration: '45s',
-    owner: 'terminal-bench-smoke',
-    verifier: 'passed',
-  },
-  {
-    name: 'git-rebase-conflict',
-    dataset: 'terminal-bench',
-    description: 'Resolve a conflicted git rebase in a repo.',
-    jobId: 'job_91a7',
-    os: 'linux',
-    state: 'running',
-    duration: '2m',
-    owner: 'terminal-bench-smoke',
-    verifier: 'pending',
-  },
-  {
-    name: 'sqlite-log-repair',
-    dataset: 'terminal-bench',
-    description: 'Repair corrupt logs and preserve SQLite rows.',
-    jobId: 'job_118b',
-    os: 'linux',
-    state: 'queued',
-    duration: '-',
-    owner: 'terminal-bench-nightly',
-    verifier: 'waiting',
-  },
-  {
-    name: 'python-env-pin',
-    dataset: 'terminal-bench',
-    description: 'Pin Python dependencies for reproducible tests.',
-    jobId: 'job_118b',
-    os: 'linux',
-    state: 'queued',
-    duration: '-',
-    owner: 'terminal-bench-nightly',
-    verifier: 'waiting',
-  },
-]
-
-export const agentRows: AgentRow[] = [
-  {
-    name: 'claude-code',
-    type: 'built-in',
-    adapter: 'harbor.adapters.claude_code',
-    models: 'claude-haiku-4-5, claude-sonnet-4-5',
-    status: 'available',
-    source: 'Harbor built-in',
-    updated: '12m ago',
-    env: 'ANTHROPIC_API_KEY ready',
-    kwargs: 'temperature=0',
-    skills: '~/.ornnlab/skills/terminal-bench',
-    mcp: '~/.ornnlab/mcp/claude.mcp.json',
-    runtime: 'docker / 3600s',
-  },
-  {
-    name: 'codex-cli',
-    type: 'built-in',
-    adapter: 'harbor.adapters.codex_cli',
-    models: 'gpt-5.1',
-    status: 'configured',
-    source: 'Harbor built-in',
-    updated: '1h ago',
-    env: 'OPENAI_API_KEY ready',
-    kwargs: 'reasoning_effort=medium',
-    skills: '~/.ornnlab/skills/swe',
-    mcp: '~/.ornnlab/mcp/codex.mcp.json',
-    runtime: 'docker / 3600s',
-  },
-  {
-    name: 'oracle',
-    type: 'built-in',
-    adapter: 'harbor.adapters.oracle',
-    models: 'local-sim',
-    status: 'available',
-    source: 'Harbor built-in',
-    updated: '3h ago',
-    env: 'none',
-    kwargs: 'mode=expected',
-    skills: 'none',
-    mcp: 'none',
-    runtime: 'local / 600s',
-  },
-  {
-    name: 'local-repair-agent',
-    type: 'custom',
-    adapter: 'agents.local_repair:Agent',
-    models: 'qwen3-coder-local',
-    status: 'needs-token',
-    source: '~/.ornnlab/agents/local-repair.toml',
-    updated: 'queued',
-    env: 'LOCAL_MODEL_URL missing',
-    kwargs: 'temperature=0.2',
-    skills: '~/.ornnlab/skills/repair',
-    mcp: '~/.ornnlab/mcp/local.mcp.json',
-    runtime: 'docker / 1800s',
-  },
 ]
 
 export const trialRows: TrialRow[] = [
@@ -437,7 +341,12 @@ export const trialRows: TrialRow[] = [
     retries: 0,
     duration: '45s',
     cost: '$0.11',
+    tokens: '620',
+    progress: 'completed',
     logPath: 'trials/job_91a7/apt-setup.log',
+    analysisPath: 'trials/job_91a7/apt-setup.analysis.json',
+    verifierEvidence: 'pytest passed',
+    artifactPath: 'trials/job_91a7/apt-setup/result.json',
   },
   {
     id: 'trial_002',
@@ -448,7 +357,12 @@ export const trialRows: TrialRow[] = [
     retries: 1,
     duration: '2m',
     cost: '$0.34',
+    tokens: '1.9k',
+    progress: 'running 62%',
     logPath: 'trials/job_91a7/git-rebase-conflict.log',
+    analysisPath: 'pending',
+    verifierEvidence: 'verifier pending',
+    artifactPath: 'trials/job_91a7/git-rebase-conflict/',
   },
   {
     id: 'trial_003',
@@ -459,7 +373,12 @@ export const trialRows: TrialRow[] = [
     retries: 2,
     duration: '38s',
     cost: '$0.63',
+    tokens: '3.2k',
+    progress: 'failed',
     logPath: 'trials/job_55e9/hello-world.log',
+    analysisPath: 'trials/job_55e9/hello-world.analysis.json',
+    verifierEvidence: 'assertion failed',
+    artifactPath: 'trials/job_55e9/hello-world/result.json',
   },
   {
     id: 'trial_004',
@@ -470,6 +389,11 @@ export const trialRows: TrialRow[] = [
     retries: 0,
     duration: '6m',
     cost: '$1.92',
+    tokens: '24.1k',
+    progress: 'completed',
     logPath: 'trials/job_74c1/django-migration.log',
+    analysisPath: 'trials/job_74c1/django-migration.analysis.json',
+    verifierEvidence: 'resolved mean evidence',
+    artifactPath: 'trials/job_74c1/django-migration/result.json',
   },
 ]
