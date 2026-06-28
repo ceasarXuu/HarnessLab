@@ -113,7 +113,6 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         <DetailDrawer label={t('selectedAgent')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <aside className="detail-rail agent-detail">
             <section className="surface rail-card">
-              <p className="panel-kicker">{t('selectedAgent')}</p>
               <div className="rail-heading">
                 <div>
                   <h2>{selected.agentName}</h2>

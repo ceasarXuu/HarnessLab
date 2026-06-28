@@ -184,7 +184,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
         <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <aside className="detail-rail dataset-detail">
             <section className="surface rail-card">
-              <p className="panel-kicker">{t('selectedDataset')}</p>
               <div className="rail-heading">
                 <div>
                   <h2>{selected.name}</h2>

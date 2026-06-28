@@ -13,7 +13,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
   return (
     <aside className="detail-rail">
       <section className="surface rail-card">
-        <p className="panel-kicker">{t('selectedJob')}</p>
         <div className="rail-heading">
           <div>
             <h2>{job.name}</h2>
