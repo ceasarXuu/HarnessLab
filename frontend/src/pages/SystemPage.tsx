@@ -10,10 +10,6 @@ interface SystemPageProps {
 export function SystemPage({ rows, t }: SystemPageProps) {
   const actionGroups = [
     {
-      title: t('authCommands'),
-      actions: [t('status'), t('login'), t('logout')],
-    },
-    {
       title: t('cacheCommands'),
       actions: [t('cache'), t('plugins')],
     },

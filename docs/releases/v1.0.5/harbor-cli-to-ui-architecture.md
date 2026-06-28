@@ -69,7 +69,7 @@ flowchart TD
 | 上传 job | `harbor upload`, `harbor run --upload` | 把本地结果上传到 Hub | Upload dialog，选择 visibility/share target | P1/P2 待定 |
 | 分享 job | `harbor job share` | 给 org/user 添加访问权限 | Share dialog，org/user token chips + confirmation | P1/P2 待定 |
 | 提交榜单 | `harbor leaderboard submit` | 将已上传 job 提交 leaderboard | Leaderboard submission wizard | P1/P2 待定 |
-| 认证 | `harbor auth login/status/logout` | 登录、查看账号、退出 | Header auth status + System auth actions | P1 |
+| 认证 | `harbor auth login/status/logout` | 登录、查看账号、退出 | Header 全局 Hub auth status/action；System 不重复放登录登出 | P1 |
 | 数据集列表 | `harbor dataset list` | 浏览 registry 数据集 | Datasets catalog，搜索/分页/详情 | P0 |
 | 数据集初始化 | `harbor dataset init`, `harbor init --dataset` | 创建 dataset skeleton | Dataset create wizard | P2 |
 | 数据集下载 | `harbor dataset download`, `harbor download` | 下载 registry dataset | Dataset detail 的 Download action | P1 |
