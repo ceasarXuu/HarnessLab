@@ -221,31 +221,13 @@
   color: var(--muted);
   font-size: 12px;
 }
-.cache-option-grid {
+.cleanup-impact-list {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
-.cache-option-grid label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  min-height: 30px;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  color: var(--foreground);
-  cursor: pointer;
-}
-.cache-option-grid input {
-  width: 14px;
-  height: 14px;
-  min-height: 14px;
+  gap: 8px;
   margin: 0;
-  padding: 0;
-  flex: none;
+  padding-left: 18px;
+  color: var(--foreground);
+  font-size: 13px;
 }
 .confirm-actions {
   justify-content: flex-end;

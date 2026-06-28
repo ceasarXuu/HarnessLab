@@ -272,11 +272,6 @@ tbody tr:hover,
 .selected-row {
   background: var(--surface-muted);
 }
-td:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
 .row-button {
   padding: 0;
   border: 0;

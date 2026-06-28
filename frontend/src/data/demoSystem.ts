@@ -117,6 +117,12 @@ export const systemRows: SystemRow[] = [
     evidence: 'docker context inspect colima',
   },
   {
+    component: 'Local cache',
+    status: 'healthy',
+    value: '0.01 MB',
+    evidence: '~/.cache/harbor',
+  },
+  {
     component: 'Storage',
     status: 'completed',
     value: '~/.ornnlab/HarnessLab',

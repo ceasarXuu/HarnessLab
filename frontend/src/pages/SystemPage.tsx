@@ -8,12 +8,21 @@ interface SystemPageProps {
   t: Translate
 }
 
-type CacheCleanupMode = 'all' | 'local' | 'docker'
+type CleanupScope = 'docker' | 'local'
 
 export function SystemPage({ rows, t }: SystemPageProps) {
-  const actions = [t('cleanCache')]
-  const [showCacheDialog, setShowCacheDialog] = useState(false)
-  const [cacheMode, setCacheMode] = useState<CacheCleanupMode>('all')
+  const [cleanupScope, setCleanupScope] = useState<CleanupScope | null>(null)
+  const cleanupContent = cleanupScope === 'docker'
+    ? {
+        title: t('dockerCacheCleanupTitle'),
+        body: t('dockerCacheCleanupBody'),
+        impact: [t('dockerCacheImpactImages'), t('dockerCacheImpactRebuild')],
+      }
+    : {
+        title: t('localCacheCleanupTitle'),
+        body: t('localCacheCleanupBody'),
+        impact: [t('localCacheImpactDirectory'), t('localCacheImpactRecreate')],
+      }
 
   return (
     <main className="workspace single-page">
@@ -21,11 +30,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('systemHealth')}</h1>
-          </div>
-          <div className="system-header-actions" aria-label={t('systemActions')}>
-            {actions.map((action) => (
-              <button key={action} className="secondary-button" onClick={() => setShowCacheDialog(true)}>{action}</button>
-            ))}
           </div>
         </div>
         <div className="table-wrap">
@@ -36,6 +40,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                 <th>{t('status')}</th>
                 <th>{t('value')}</th>
                 <th>{t('evidence')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -54,49 +59,38 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                   <td>
                     <code>{row.evidence}</code>
                   </td>
+                  <td>
+                    {row.component === 'Docker' && (
+                      <button className="secondary-button compact-action" onClick={() => setCleanupScope('docker')}>
+                        {t('cleanCache')}
+                      </button>
+                    )}
+                    {row.component === 'Local cache' && (
+                      <button className="secondary-button compact-action" onClick={() => setCleanupScope('local')}>
+                        {t('clean')}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
-      {showCacheDialog && (
+      {cleanupScope && (
         <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('cacheCleanupDialog')}>
+          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={cleanupContent.title}>
             <div className="confirm-heading">
-              <h2>{t('cacheCleanupDialog')}</h2>
+              <h2>{cleanupContent.title}</h2>
+              <p>{cleanupContent.body}</p>
             </div>
-            <div className="cache-option-grid">
-              <label>
-                <input
-                  type="radio"
-                  name="cache-cleanup-mode"
-                  checked={cacheMode === 'all'}
-                  onChange={() => setCacheMode('all')}
-                />
-                <span>{t('cacheCleanAll')}</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="cache-cleanup-mode"
-                  checked={cacheMode === 'local'}
-                  onChange={() => setCacheMode('local')}
-                />
-                <span>{t('cacheCleanLocal')}</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="cache-cleanup-mode"
-                  checked={cacheMode === 'docker'}
-                  onChange={() => setCacheMode('docker')}
-                />
-                <span>{t('cacheCleanDocker')}</span>
-              </label>
-            </div>
+            <ul className="cleanup-impact-list">
+              {cleanupContent.impact.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
             <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setShowCacheDialog(false)}>{t('cancel')}</button>
+              <button className="secondary-button" onClick={() => setCleanupScope(null)}>{t('cancel')}</button>
               <button className="primary-button">{t('confirmCleanup')}</button>
             </div>
           </section>
