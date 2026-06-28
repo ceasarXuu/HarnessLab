@@ -1,5 +1,5 @@
-import { Bot } from 'lucide-react'
-import { useState } from 'react'
+import { Bot, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { DetailDrawer } from '../components/DetailDrawer'
 import type { AgentRow } from '../data/demo'
 import type { Translate } from '../i18n'
@@ -12,6 +12,16 @@ interface AgentsPageProps {
 export function AgentsPage({ rows, t }: AgentsPageProps) {
   const [selected, setSelected] = useState<AgentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return rows
+    return rows.filter((row) =>
+      [row.name, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    )
+  }, [rows, search])
 
   return (
     <main className="workspace single-page">
@@ -19,6 +29,18 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('agentsCatalog')}</h1>
+          </div>
+          <div className="toolbar">
+            <label className="search-field">
+              <Search aria-hidden="true" />
+              <input
+                aria-label={t('searchAgents')}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('searchAgentsPlaceholder')}
+              />
+            </label>
+            <button className="primary-button">{t('newAgent')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -35,7 +57,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr
                   key={row.name}
                   className={selected?.name === row.name ? 'selected-row' : undefined}
