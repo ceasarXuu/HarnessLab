@@ -27,6 +27,7 @@ describe('App', () => {
     expect(within(jobsTable).getByText('0.0184/M')).toBeInTheDocument()
     expect(within(jobsTable).getByText('00:42:18')).toBeInTheDocument()
     expect(within(jobsTable).getByText('2026-06-29 03:46:12')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'terminal-bench-smoke' }).closest('.job-identity')).not.toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Selected job' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'terminal-bench-smoke' }))
     expect(screen.getByRole('dialog', { name: 'Selected job' })).toBeInTheDocument()

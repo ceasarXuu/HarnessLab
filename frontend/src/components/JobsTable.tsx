@@ -66,8 +66,10 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
                 onClick={() => onSelect(job)}
               >
                 <td>
-                  <button className="row-button">{job.name}</button>
-                  <small>{job.id}</small>
+                  <span className="job-identity">
+                    <button className="row-button">{job.name}</button>
+                    <small>{job.id}</small>
+                  </span>
                 </td>
                 <td>
                   <span className={`status-dot ${job.status}`}>{statusLabels[job.status]}</span>
