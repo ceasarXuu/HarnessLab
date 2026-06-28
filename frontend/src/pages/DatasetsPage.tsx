@@ -197,6 +197,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
               <div className="metric-grid">
                 <Metric label={t('tasksCount')} value={String(selected.tasks)} />
                 <Metric label={t('sourceRef')} value={selected.source} />
+                <Metric label={t('splits')} value={selected.splits?.join(', ') ?? '-'} />
                 <Metric label={t('digest')} value={selected.digest} />
                 <Metric label={t('updated')} value={selected.updated} />
                 <Metric label="registry_url" value={selected.registryUrl ?? '-'} />

@@ -21,6 +21,7 @@ export const datasetRows: DatasetRow[] = [
     ref: 'terminal-bench@2.0',
     path: '~/.cache/harbor/datasets/terminal-bench',
     overwrite: false,
+    splits: ['test'],
   },
   {
     name: 'swe-bench-lite',
@@ -40,6 +41,7 @@ export const datasetRows: DatasetRow[] = [
     ref: 'swe-bench-lite@2026.06',
     path: '~/.cache/harbor/datasets/swe-bench-lite',
     overwrite: false,
+    splits: ['verified'],
   },
   {
     name: 'harbor/hello-world',
@@ -59,6 +61,7 @@ export const datasetRows: DatasetRow[] = [
     ref: 'harbor/hello-world@latest',
     path: './examples/hello-world',
     overwrite: true,
+    splits: ['smoke'],
   },
   {
     name: 'terminal-bench-nightly',
@@ -77,6 +80,7 @@ export const datasetRows: DatasetRow[] = [
     ref: 'terminal-bench-nightly@nightly',
     path: './nightly/terminal-bench',
     overwrite: false,
+    splits: ['nightly'],
   },
 ]
 

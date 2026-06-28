@@ -30,6 +30,7 @@ export interface RunDraft {
   jobName: string
   jobsDir: string
   source: string
+  split: string
   taskFilter: string
   excludeFilter: string
   taskLimit: number
@@ -156,6 +157,7 @@ export interface DatasetRow {
   ref?: string
   path?: string
   overwrite?: boolean
+  splits?: string[]
 }
 
 export interface AgentRow {
@@ -206,6 +208,7 @@ export const initialDraft: RunDraft = {
   jobName: 'terminal-bench-smoke',
   jobsDir: 'jobs/terminal-bench-smoke',
   source: 'terminal-bench@2.0',
+  split: 'test',
   taskFilter: 'apt-*',
   excludeFilter: 'flaky-*',
   taskLimit: 64,

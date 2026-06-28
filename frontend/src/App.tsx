@@ -121,6 +121,7 @@ export function App() {
       tokenUsage: '0M',
       runtimeDuration: '00:00:00',
       createdAt: '2026-06-29 04:30:00',
+      split: draft.split,
     }
     setJobs((current) => [newJob, ...current])
     setSelected(newJob)
@@ -183,6 +184,7 @@ export function App() {
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (
         <NewRunPage
+          datasets={datasetRows}
           draft={draft}
           t={t}
           onDraft={setDraft}

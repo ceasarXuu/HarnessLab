@@ -1,12 +1,13 @@
 import { Copy, Play, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
-import type { RunDraft } from '../data/demo'
+import type { DatasetRow, RunDraft } from '../data/demo'
 import type { Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Field, TabPanel, Toggle } from './RunBuilderChrome'
 import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 
 interface RunBuilderProps {
+  datasets: DatasetRow[]
   draft: RunDraft
   t: Translate
   onDraft: (draft: RunDraft) => void
@@ -15,8 +16,13 @@ interface RunBuilderProps {
 
 type RunBuilderTab = 'core' | 'agent' | 'environment' | 'verifier' | 'runtime' | 'hub'
 
-export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
+const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
+
+export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
+  const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
+  const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
+  const availableSplits = selectedDataset?.splits ?? []
   const tabs: Array<{ key: RunBuilderTab; label: string }> = [
     { key: 'core', label: t('runTabCore') },
     { key: 'agent', label: t('runTabAgent') },
@@ -30,6 +36,7 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
     `--job-name ${draft.jobName}`,
     `--jobs-dir ${draft.jobsDir}`,
     `--dataset ${draft.source}`,
+    draft.split ? `--split ${draft.split}` : '',
     draft.taskFilter ? `--include-task-name ${draft.taskFilter}` : '',
     draft.excludeFilter ? `--exclude-task-name ${draft.excludeFilter}` : '',
     `--n-tasks ${draft.taskLimit}`,
@@ -129,14 +136,24 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
             <CustomSelect
               ariaLabel={t('source')}
               value={draft.source}
-              options={[
-                { label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
-                { label: 'swe-bench-lite', value: 'swe-bench-lite' },
-                { label: 'harbor/hello-world', value: 'harbor/hello-world' },
-              ]}
-              onChange={(value) => onDraft({ ...draft, source: value })}
+              options={datasetOptions}
+              onChange={(value) => {
+                const nextDataset = datasets.find((row) => datasetValue(row) === value)
+                onDraft({ ...draft, source: value, split: nextDataset?.splits?.[0] ?? '' })
+              }}
             />
           </label>
+          {availableSplits.length > 0 && (
+            <label>
+              {t('split')}
+              <CustomSelect
+                ariaLabel={t('split')}
+                value={draft.split}
+                options={availableSplits.map((split) => ({ label: split, value: split }))}
+                onChange={(value) => onDraft({ ...draft, split: value })}
+              />
+            </label>
+          )}
           <Field label={t('taskInclude')}>
             <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
           </Field>
