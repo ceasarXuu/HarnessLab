@@ -117,15 +117,9 @@ export const systemRows: SystemRow[] = [
     path: 'docker context: colima',
   },
   {
-    component: 'Local cache',
-    status: 'healthy',
-    value: '0.01 MB',
-    path: '~/.cache/harbor',
-  },
-  {
     component: 'Storage',
     status: 'completed',
-    value: '~/.ornnlab/HarnessLab',
-    path: '~/.ornnlab/HarnessLab',
+    value: '0.01 MB cache',
+    path: '~/.cache/harbor',
   },
 ]

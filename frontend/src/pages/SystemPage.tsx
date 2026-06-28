@@ -65,9 +65,9 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                         {t('cleanCache')}
                       </button>
                     )}
-                    {row.component === 'Local cache' && (
+                    {row.component === 'Storage' && (
                       <button className="secondary-button compact-action" onClick={() => setCleanupScope('local')}>
-                        {t('clean')}
+                        {t('cleanCache')}
                       </button>
                     )}
                   </td>
