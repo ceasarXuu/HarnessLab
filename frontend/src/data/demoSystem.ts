@@ -128,10 +128,4 @@ export const systemRows: SystemRow[] = [
     value: '~/.ornnlab/HarnessLab',
     evidence: 'artifact store writable',
   },
-  {
-    component: 'Verifier',
-    status: 'queued',
-    value: '1 retry pending',
-    evidence: 'event log warning',
-  },
 ]

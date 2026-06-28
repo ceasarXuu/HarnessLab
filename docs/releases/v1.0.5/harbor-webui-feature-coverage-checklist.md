@@ -231,7 +231,7 @@
 | Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task 按钮 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
-| System | 查看 Harbor/Docker/Storage/Verifier 状态、System doctor 按钮 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
+| System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
 
 ## 9. 建议的实现优先级
 
