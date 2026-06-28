@@ -173,7 +173,8 @@ export const taskRows: TaskRow[] = [
 
 export const agentRows: AgentRow[] = [
   {
-    name: 'claude-code',
+    agentName: 'Claude Code default',
+    harness: 'claude-code',
     type: 'built-in',
     adapter: 'harbor.adapters.claude_code',
     models: 'claude-haiku-4-5, claude-sonnet-4-5',
@@ -192,7 +193,8 @@ export const agentRows: AgentRow[] = [
     adapterReview: 'harbor adapter review passed',
   },
   {
-    name: 'codex-cli',
+    agentName: 'Codex CLI default',
+    harness: 'codex-cli',
     type: 'built-in',
     adapter: 'harbor.adapters.codex_cli',
     models: 'gpt-5.1',
@@ -211,7 +213,8 @@ export const agentRows: AgentRow[] = [
     adapterReview: 'harbor adapter review pending',
   },
   {
-    name: 'oracle',
+    agentName: 'Oracle baseline',
+    harness: 'oracle',
     type: 'built-in',
     adapter: 'harbor.adapters.oracle',
     models: 'local-sim',
@@ -230,7 +233,8 @@ export const agentRows: AgentRow[] = [
     adapterReview: 'built-in oracle',
   },
   {
-    name: 'local-repair-agent',
+    agentName: 'Local repair agent',
+    harness: 'custom-harness',
     type: 'custom',
     adapter: 'agents.local_repair:Agent',
     models: 'qwen3-coder-local',

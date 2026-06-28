@@ -17,7 +17,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
     const query = search.trim().toLowerCase()
     if (!query) return rows
     return rows.filter((row) =>
-      [row.name, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
+      [row.agentName, row.harness, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
@@ -47,7 +47,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
           <table>
             <thead>
               <tr>
-                <th>{t('agent')}</th>
+                <th>{t('agentName')}</th>
+                <th>{t('harness')}</th>
                 <th>{t('agentType')}</th>
                 <th>{t('adapter')}</th>
                 <th>{t('models')}</th>
@@ -59,8 +60,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
             <tbody>
               {filteredRows.map((row) => (
                 <tr
-                  key={row.name}
-                  className={selected?.name === row.name ? 'selected-row' : undefined}
+                  key={row.harness}
+                  className={selected?.harness === row.harness ? 'selected-row' : undefined}
                   onClick={() => {
                     setSelected(row)
                     setDrawerOpen(true)
@@ -69,9 +70,10 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                   <td>
                     <span className="cell-title">
                       <Bot aria-hidden="true" />
-                      {row.name}
+                      {row.agentName}
                     </span>
                   </td>
+                  <td>{row.harness}</td>
                   <td>{row.type}</td>
                   <td>
                     <code>{row.adapter}</code>
@@ -97,14 +99,16 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
               <p className="panel-kicker">{t('selectedAgent')}</p>
               <div className="rail-heading">
                 <div>
-                  <h2>{selected.name}</h2>
-                  <p>{selected.type}</p>
+                  <h2>{selected.agentName}</h2>
+                  <p>{selected.harness}</p>
                 </div>
                 <span className={`status-dot ${selected.status === 'needs-token' ? 'warning' : 'success'}`}>
                   {selected.status}
                 </span>
               </div>
               <div className="metric-grid">
+                <Metric label={t('agentName')} value={selected.agentName} />
+                <Metric label={t('harness')} value={selected.harness} />
                 <Metric label={t('agentType')} value={selected.type} />
                 <Metric label={t('models')} value={selected.models} />
                 <Metric label={t('sourceRef')} value={selected.source} />
@@ -140,7 +144,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <h3>{t('adapterTools')}</h3>
               </div>
               <div className="path-list">
-                <code>harbor adapter init --agent {selected.name}</code>
+                <code>harbor adapter init --agent {selected.harness}</code>
                 <code>harbor adapter review {selected.adapter}</code>
                 <code>max_timeout_sec: {selected.maxTimeout ?? '-'}</code>
                 <code>override_setup_timeout_sec: {selected.setupTimeout ?? '-'}</code>

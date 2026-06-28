@@ -159,7 +159,8 @@ export interface DatasetRow {
 }
 
 export interface AgentRow {
-  name: string
+  agentName: string
+  harness: string
   type: 'built-in' | 'custom'
   adapter: string
   models: string
