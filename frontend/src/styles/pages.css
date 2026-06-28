@@ -311,42 +311,28 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-.command-groups {
+.action-groups {
   display: grid;
   gap: 14px;
 }
-.command-group {
+.action-group {
   display: grid;
   gap: 8px;
 }
-.command-group h4 {
+.action-group h4 {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
 }
-.command-list {
-  display: grid;
+.action-list {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.command-row {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-.command-row .secondary-button {
-  width: 100%;
+.action-list .secondary-button {
+  min-width: 86px;
   justify-content: center;
-}
-.command-row code {
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 tbody tr {
   cursor: pointer;
@@ -375,7 +361,6 @@ tbody tr {
   }
   .task-row,
   .trial-row,
-  .command-row,
   .filter-strip {
     grid-template-columns: 1fr;
   }

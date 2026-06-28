@@ -1,4 +1,4 @@
-import { CheckCircle2, ServerCog, TerminalSquare } from 'lucide-react'
+import { CheckCircle2, ServerCog, Wrench } from 'lucide-react'
 import type { SystemRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -8,35 +8,22 @@ interface SystemPageProps {
 }
 
 export function SystemPage({ rows, t }: SystemPageProps) {
-  const commandGroups = [
+  const actionGroups = [
     {
       title: t('authCommands'),
-      commands: [
-        { label: t('status'), command: 'harbor auth status' },
-        { label: t('login'), command: 'harbor auth login' },
-        { label: t('logout'), command: 'harbor auth logout' },
-      ],
+      actions: [t('status'), t('login'), t('logout')],
     },
     {
       title: t('cacheCommands'),
-      commands: [
-        { label: t('cache'), command: 'harbor cache clean --dry-run' },
-        { label: t('plugins'), command: 'harbor plugins list' },
-      ],
+      actions: [t('cache'), t('plugins')],
     },
     {
       title: t('manifestCommands'),
-      commands: [
-        { label: t('sync'), command: 'harbor sync ./dataset.toml' },
-      ],
+      actions: [t('sync')],
     },
     {
       title: t('hubCommands'),
-      commands: [
-        { label: t('upload'), command: 'harbor upload jobs/job_91a7 --private --share-user @ornn' },
-        { label: t('submit'), command: 'harbor leaderboard submit job_91a7' },
-        { label: t('share'), command: 'harbor job share job_91a7 --share-org ornn' },
-      ],
+      actions: [t('upload'), t('submit'), t('share')],
     },
   ]
 
@@ -103,19 +90,16 @@ export function SystemPage({ rows, t }: SystemPageProps) {
         </section>
         <section className="surface rail-card">
           <div className="rail-title">
-            <TerminalSquare aria-hidden="true" />
-            <h3>{t('harborCommands')}</h3>
+            <Wrench aria-hidden="true" />
+            <h3>{t('systemActions')}</h3>
           </div>
-          <div className="command-groups">
-            {commandGroups.map((group) => (
-              <section key={group.title} className="command-group">
+          <div className="action-groups">
+            {actionGroups.map((group) => (
+              <section key={group.title} className="action-group">
                 <h4>{group.title}</h4>
-                <div className="command-list">
-                  {group.commands.map((command) => (
-                    <div key={command.command} className="command-row">
-                      <button className="secondary-button">{command.label}</button>
-                      <code>{command.command}</code>
-                    </div>
+                <div className="action-list">
+                  {group.actions.map((action) => (
+                    <button key={action} className="secondary-button">{action}</button>
                   ))}
                 </div>
               </section>
