@@ -198,10 +198,18 @@
   min-width: 96px;
   justify-content: center;
 }
+.system-health-table tbody tr {
+  height: 59px;
+}
+.system-health-table td {
+  height: 59px;
+  vertical-align: middle;
+}
 .row-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-height: 34px;
 }
 .toast {
   position: fixed;

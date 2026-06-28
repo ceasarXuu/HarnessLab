@@ -91,7 +91,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           </div>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="system-health-table">
             <thead>
               <tr>
                 <th>{t('component')}</th>
