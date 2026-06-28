@@ -1,4 +1,4 @@
-import { Bot, Plus, Settings } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { useState } from 'react'
 import { DetailDrawer } from '../components/DetailDrawer'
 import type { AgentRow } from '../data/demo'
@@ -19,16 +19,6 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('agentsCatalog')}</h1>
-          </div>
-          <div className="toolbar">
-            <button className="secondary-button">
-              <Settings aria-hidden="true" />
-              {t('agentSettings')}
-            </button>
-            <button className="primary-button">
-              <Plus aria-hidden="true" />
-              {t('addCustomAgent')}
-            </button>
           </div>
         </div>
         <div className="table-wrap">
@@ -118,16 +108,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <code>{selected.adapterReview ?? 'adapter review: none'}</code>
               </div>
               <div className="button-row tight">
-                <button className="secondary-button">
-                  <Settings aria-hidden="true" />
-                  {t('agentSettings')}
-                </button>
-                <button className="secondary-button">{t('validate')}</button>
-                <button className="secondary-button">{t('compile')}</button>
                 <button className="secondary-button">Adapter init</button>
                 <button className="secondary-button">Adapter review</button>
-                <button className="secondary-button">{t('edit')}</button>
-                <button className="secondary-button">{t('delete')}</button>
               </div>
             </section>
             <section className="surface rail-card">

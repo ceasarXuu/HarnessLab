@@ -134,7 +134,6 @@ export function LeaderboardPage({
                     <div className="row-actions">
                       <button className="row-action">Open job</button>
                       <button className="row-action">{t('openViewer')}</button>
-                      <button className="row-action">Open report</button>
                       <button className="row-action">{t('download')}</button>
                       <button className="row-action">{t('submit')}</button>
                       <button className="row-action">{t('share')}</button>

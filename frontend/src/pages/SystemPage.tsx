@@ -15,7 +15,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           <div>
             <h1>{t('systemHealth')}</h1>
           </div>
-          <button className="primary-button">{t('systemDoctor')}</button>
         </div>
         <div className="table-wrap">
           <table>
@@ -66,11 +65,11 @@ export function SystemPage({ rows, t }: SystemPageProps) {
             </li>
             <li>
               <CheckCircle2 aria-hidden="true" />
-              Docker orphan scan ready
+              Harbor cache command available
             </li>
           </ul>
           <div className="button-row tight">
-            <button className="secondary-button">{t('auth')}</button>
+            <button className="secondary-button">{t('status')}</button>
             <button className="secondary-button">{t('login')}</button>
             <button className="secondary-button">{t('logout')}</button>
             <button className="secondary-button">{t('cache')}</button>
@@ -95,7 +94,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
             <code>harbor upload jobs/job_91a7 --private --share-user @ornn</code>
             <code>harbor leaderboard submit job_91a7</code>
             <code>harbor job share job_91a7 --share-org ornn</code>
-            <code>docker orphan cleanup plan</code>
           </div>
         </section>
       </aside>

@@ -36,7 +36,6 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
               placeholder={t('searchJobsPlaceholder')}
             />
           </label>
-          <button className="secondary-button">{t('import')}</button>
           <button className="primary-button" onClick={onNewJob}>
             {t('newJob')}
           </button>

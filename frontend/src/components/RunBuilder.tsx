@@ -1,4 +1,4 @@
-import { Copy, Play, Plus, RotateCcw } from 'lucide-react'
+import { Copy, Play, RotateCcw } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { RunDraft } from '../data/demo'
 import type { Translate } from '../i18n'
@@ -407,10 +407,6 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         <button className="secondary-button">
           <RotateCcw aria-hidden="true" />
           {t('reset')}
-        </button>
-        <button className="secondary-button">
-          <Plus aria-hidden="true" />
-          {t('saveTemplate')}
         </button>
         <button className="primary-button" onClick={onLaunch}>
           <Play aria-hidden="true" />

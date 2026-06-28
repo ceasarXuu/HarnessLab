@@ -41,7 +41,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
-            <button className="secondary-button">{t('import')}</button>
             <button className="primary-button">{t('download')}</button>
           </div>
         </div>
@@ -130,7 +129,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 <button className="secondary-button">Init</button>
                 <button className="secondary-button">Add</button>
                 <button className="secondary-button">Remove</button>
-                <button className="secondary-button">Manifest diff</button>
                 <button className="secondary-button">{t('visibilityToggle')}</button>
                 <button className="secondary-button">{t('publish')}</button>
                 <button className="primary-button" onClick={onNewJob}>

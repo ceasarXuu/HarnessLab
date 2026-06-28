@@ -1,14 +1,4 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  FileJson,
-  FlaskConical,
-  Play,
-  Share2,
-  Square,
-  Terminal,
-  Upload,
-} from 'lucide-react'
+import { Download, FileJson, FlaskConical, Play, Share2, Terminal, Upload } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -42,12 +32,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
         </div>
         <div className="button-row tight">
           <button className="secondary-button">
-            <Square aria-hidden="true" />
-            {t('cancel')}
-          </button>
-          <button className="secondary-button">{t('retry')}</button>
-          <button className="secondary-button">{t('cloneJob')}</button>
-          <button className="secondary-button">
             <Play aria-hidden="true" />
             {t('resume')}
           </button>
@@ -64,6 +48,10 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <button className="secondary-button">{t('openViewer')}</button>
           <button className="secondary-button">{t('analyze')}</button>
           <button className="secondary-button">{t('upload')}</button>
+          <button className="secondary-button">
+            <Download aria-hidden="true" />
+            {t('download')}
+          </button>
           <button className="secondary-button">
             <Share2 aria-hidden="true" />
             {t('share')}
@@ -122,27 +110,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="surface rail-card">
-        <div className="rail-title">
-          <CheckCircle2 aria-hidden="true" />
-          <h3>{t('systemDoctor')}</h3>
-        </div>
-        <ul className="doctor-list">
-          <li>
-            <CheckCircle2 aria-hidden="true" />
-            Harbor 0.13.x available
-          </li>
-          <li>
-            <CheckCircle2 aria-hidden="true" />
-            Docker context colima
-          </li>
-          <li>
-            <AlertTriangle aria-hidden="true" />
-            1 verifier retry
-          </li>
-        </ul>
       </section>
 
       <section className="surface rail-card">

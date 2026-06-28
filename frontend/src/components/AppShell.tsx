@@ -72,9 +72,6 @@ export function AppShell({
             <Github aria-hidden="true" />
             {t('harborAuthReady')}
           </button>
-          <button className="icon-button" aria-label={t('github')}>
-            <Github aria-hidden="true" />
-          </button>
           <CustomSelect
             ariaLabel="Language"
             className="header-select"
