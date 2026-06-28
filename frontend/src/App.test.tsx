@@ -193,7 +193,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Status' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Logout' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cache' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clean cache' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Plugins' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Upload' })).toBeInTheDocument()
