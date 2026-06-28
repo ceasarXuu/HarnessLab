@@ -4,6 +4,7 @@ import type { RunDraft } from '../data/demo'
 import type { Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Field, TabPanel, Toggle } from './RunBuilderChrome'
+import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 
 interface RunBuilderProps {
   draft: RunDraft
@@ -435,35 +436,7 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
-        <div className="run-grid">
-        <Field label={t('artifacts')}>
-          <input value={draft.artifacts} onChange={(event) => onDraft({ ...draft, artifacts: event.target.value })} />
-        </Field>
-        <Field label={t('metric')}>
-          <input value={draft.metric} onChange={(event) => onDraft({ ...draft, metric: event.target.value })} />
-        </Field>
-        <Field label={t('plugins')}>
-          <input value={draft.plugins} onChange={(event) => onDraft({ ...draft, plugins: event.target.value })} />
-        </Field>
-        <Field label={t('uploadToHub')}>
-          <Toggle checked={draft.upload} onChange={(value) => onDraft({ ...draft, upload: value })} />
-        </Field>
-        <label>
-          {t('visibility')}
-          <CustomSelect
-            ariaLabel={t('visibility')}
-            value={draft.visibility}
-            options={[
-              { label: 'private', value: 'private' },
-              { label: 'public', value: 'public' },
-            ]}
-            onChange={(value) => onDraft({ ...draft, visibility: value as 'private' | 'public' })}
-          />
-        </label>
-        <Field label={t('shareTargets')}>
-          <input value={draft.shareTargets} onChange={(event) => onDraft({ ...draft, shareTargets: event.target.value })} />
-        </Field>
-        </div>
+        <RunBuilderHubPanel draft={draft} t={t} onDraft={onDraft} />
       </TabPanel>
       <div className="config-preview">
         <code>{command}</code>

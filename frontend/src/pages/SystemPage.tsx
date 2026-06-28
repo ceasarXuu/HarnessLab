@@ -11,7 +11,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
   const actionGroups = [
     {
       title: t('cacheCommands'),
-      actions: [t('cleanCache'), t('plugins')],
+      actions: [t('cleanCache')],
     },
     {
       title: t('manifestCommands'),
