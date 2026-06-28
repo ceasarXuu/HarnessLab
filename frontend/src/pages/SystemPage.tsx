@@ -8,22 +8,12 @@ interface SystemPageProps {
   t: Translate
 }
 
+type CacheCleanupMode = 'all' | 'local' | 'docker'
+
 export function SystemPage({ rows, t }: SystemPageProps) {
   const actions = [t('cleanCache')]
   const [showCacheDialog, setShowCacheDialog] = useState(false)
-  const [dryRun, setDryRun] = useState(true)
-  const [skipDocker, setSkipDocker] = useState(false)
-  const [skipCacheDir, setSkipCacheDir] = useState(false)
-  const [force, setForce] = useState(false)
-  const cacheCommand = [
-    'harbor cache clean',
-    dryRun ? '--dry' : '',
-    skipDocker ? '--no-docker' : '',
-    skipCacheDir ? '--no-cache-dir' : '',
-    force ? '--force' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const [cacheMode, setCacheMode] = useState<CacheCleanupMode>('all')
 
   return (
     <main className="workspace single-page">
@@ -75,33 +65,39 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('cacheCleanupDialog')}>
             <div className="confirm-heading">
               <h2>{t('cacheCleanupDialog')}</h2>
-              <p>{t('cacheCleanupDesc')}</p>
             </div>
             <div className="cache-option-grid">
               <label>
-                <input type="checkbox" checked={dryRun} onChange={(event) => setDryRun(event.target.checked)} />
-                <span>{t('cacheDryRun')}</span>
+                <input
+                  type="radio"
+                  name="cache-cleanup-mode"
+                  checked={cacheMode === 'all'}
+                  onChange={() => setCacheMode('all')}
+                />
+                <span>{t('cacheCleanAll')}</span>
               </label>
               <label>
-                <input type="checkbox" checked={skipDocker} onChange={(event) => setSkipDocker(event.target.checked)} />
-                <span>{t('cacheNoDocker')}</span>
+                <input
+                  type="radio"
+                  name="cache-cleanup-mode"
+                  checked={cacheMode === 'local'}
+                  onChange={() => setCacheMode('local')}
+                />
+                <span>{t('cacheCleanLocal')}</span>
               </label>
               <label>
-                <input type="checkbox" checked={skipCacheDir} onChange={(event) => setSkipCacheDir(event.target.checked)} />
-                <span>{t('cacheNoCacheDir')}</span>
-              </label>
-              <label>
-                <input type="checkbox" checked={force} onChange={(event) => setForce(event.target.checked)} />
-                <span>{t('cacheForce')}</span>
+                <input
+                  type="radio"
+                  name="cache-cleanup-mode"
+                  checked={cacheMode === 'docker'}
+                  onChange={() => setCacheMode('docker')}
+                />
+                <span>{t('cacheCleanDocker')}</span>
               </label>
             </div>
-            <div className="config-preview cache-command-preview">
-              <code>{cacheCommand}</code>
-            </div>
-            {!dryRun && !force && <p className="confirm-warning">{t('cacheConfirmWarning')}</p>}
             <div className="button-row confirm-actions">
               <button className="secondary-button" onClick={() => setShowCacheDialog(false)}>{t('cancel')}</button>
-              <button className="primary-button">{dryRun ? t('runDryRun') : t('confirmCleanup')}</button>
+              <button className="primary-button">{t('confirmCleanup')}</button>
             </div>
           </section>
         </div>

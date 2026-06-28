@@ -223,20 +223,29 @@
 }
 .cache-option-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 .cache-option-grid label {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 30px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
 }
-.cache-command-preview {
-  margin: 14px 0;
+.cache-option-grid input {
+  width: 14px;
+  height: 14px;
+  min-height: 14px;
+  margin: 0;
+  padding: 0;
+  flex: none;
 }
 .confirm-actions {
   justify-content: flex-end;
