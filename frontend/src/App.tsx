@@ -6,6 +6,7 @@ import {
   jobs as seedJobs,
   trialRows,
   type HarborJob,
+  type LeaderboardRow,
 } from './data/demo'
 import { agentRows, datasetRows, taskRows } from './data/demoCatalog'
 import { leaderboardRows, systemRows } from './data/demoSystem'
@@ -48,6 +49,7 @@ function readTheme(): 'light' | 'dark' {
 export function App() {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
+  const [leaderboardEntries, setLeaderboardEntries] = useState(leaderboardRows)
   const [datasetSearch, setDatasetSearch] = useState('')
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
@@ -80,8 +82,11 @@ export function App() {
   }, [datasetSearch])
 
   const filteredLeaderboard = useMemo(() => {
-    return leaderboardRows.filter((row) => row.dataset === leaderboardDataset)
-  }, [leaderboardDataset])
+    const excludedJobIds = new Set(jobs.filter((job) => !job.includeInLeaderboard).map((job) => job.id))
+    return leaderboardEntries
+      .filter((row) => row.dataset === leaderboardDataset && !excludedJobIds.has(row.jobId))
+      .map((row, index) => ({ ...row, rank: index + 1 }))
+  }, [jobs, leaderboardDataset, leaderboardEntries])
 
   useEffect(() => {
     const onHashChange = () => setRoute(readRouteFromHash())
@@ -121,12 +126,45 @@ export function App() {
       tokenUsage: '0M',
       runtimeDuration: '00:00:00',
       createdAt: '2026-06-29 04:30:00',
+      includeInLeaderboard: draft.includeInLeaderboard,
       split: draft.split,
     }
     setJobs((current) => [newJob, ...current])
+    if (draft.includeInLeaderboard) {
+      const newLeaderboardEntry: LeaderboardRow = {
+        dataset: draft.source,
+        rank: 0,
+        agentName: draft.agent,
+        harness: draft.agent,
+        model: draft.model.split('/').at(-1) ?? draft.model,
+        score: '-',
+        trials: '0',
+        cost: '$0.00',
+        tokens: '0M',
+        duration: '0m',
+        jobId: newJob.id,
+        split: draft.split || 'default',
+        metric: draft.metric,
+        submitted: 'local only',
+        reportPath: `reports/${newJob.id}.json`,
+        comparabilityKey: `${draft.source}:${draft.split || 'default'}:${draft.metric}`,
+        uploadedUrl: '-',
+        submissionId: '-',
+        configHash: `cfg_${newJob.id}`,
+        agentSnapshotHash: `agent_${draft.agent}`,
+      }
+      setLeaderboardEntries((current) => [...current, newLeaderboardEntry])
+    }
     setSelected(newJob)
     setJobDrawerOpen(true)
     navigate('jobs', 'list')
+  }
+
+  function removeFromLeaderboard(jobId: string) {
+    setJobs((current) =>
+      current.map((job) => (job.id === jobId ? { ...job, includeInLeaderboard: false } : job)),
+    )
+    setLeaderboardEntries((current) => current.filter((row) => row.jobId !== jobId))
   }
 
   return (
@@ -162,6 +200,7 @@ export function App() {
           trialRows={trialRows}
           onDataset={setLeaderboardDataset}
           onDatasetSearch={setLeaderboardDatasetSearch}
+          onRemove={removeFromLeaderboard}
         />
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (

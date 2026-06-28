@@ -23,6 +23,12 @@ export function RunBuilderHubPanel({ draft, t, onDraft }: RunBuilderHubPanelProp
           <Field label={t('metric')}>
             <input value={draft.metric} onChange={(event) => onDraft({ ...draft, metric: event.target.value })} />
           </Field>
+          <Field label={t('includeInLeaderboard')}>
+            <Toggle
+              checked={draft.includeInLeaderboard}
+              onChange={(value) => onDraft({ ...draft, includeInLeaderboard: value })}
+            />
+          </Field>
         </div>
       </section>
 

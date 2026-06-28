@@ -17,6 +17,7 @@ interface LeaderboardPageProps {
   trialRows: TrialRow[]
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
+  onRemove: (jobId: string) => void
 }
 
 export function LeaderboardPage({
@@ -30,6 +31,7 @@ export function LeaderboardPage({
   trialRows,
   onDataset,
   onDatasetSearch,
+  onRemove,
 }: LeaderboardPageProps) {
   const [selectedJob, setSelectedJob] = useState<HarborJob | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -106,6 +108,7 @@ export function LeaderboardPage({
                 <th>{t('duration')}</th>
                 <th>Split</th>
                 <th>{t('job')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -135,6 +138,11 @@ export function LeaderboardPage({
                       setDrawerOpen(true)
                     }}>
                       <code>{row.jobId}</code>
+                    </button>
+                  </td>
+                  <td>
+                    <button className="secondary-button compact-action" onClick={() => onRemove(row.jobId)}>
+                      {t('removeFromLeaderboard')}
                     </button>
                   </td>
                 </tr>

@@ -15,6 +15,7 @@ export interface HarborJob {
   tokenUsage: string
   runtimeDuration: string
   createdAt: string
+  includeInLeaderboard: boolean
   jobDir?: string
   split?: string
   failureCode?: string
@@ -86,6 +87,7 @@ export interface RunDraft {
   plugins: string
   upload: boolean
   visibility: 'private' | 'public'
+  includeInLeaderboard: boolean
   shareTargets: string
 }
 
@@ -264,6 +266,7 @@ export const initialDraft: RunDraft = {
   plugins: 'harbor.plugins.cost:CostPlugin',
   upload: false,
   visibility: 'private',
+  includeInLeaderboard: true,
   shareTargets: '@ornn',
 }
 
@@ -283,6 +286,7 @@ export const jobs: HarborJob[] = [
     tokenUsage: '0.0184M',
     runtimeDuration: '00:42:18',
     createdAt: '2026-06-29 03:46:12',
+    includeInLeaderboard: true,
     jobDir: 'jobs/terminal-bench-smoke',
     split: 'test',
   },
@@ -301,6 +305,7 @@ export const jobs: HarborJob[] = [
     tokenUsage: '1.8M',
     runtimeDuration: '03:20:44',
     createdAt: '2026-06-29 00:18:05',
+    includeInLeaderboard: true,
     jobDir: 'jobs/swe-bench-lite-regression',
     split: 'verified',
   },
@@ -319,6 +324,7 @@ export const jobs: HarborJob[] = [
     tokenUsage: '0.0032M',
     runtimeDuration: '00:07:39',
     createdAt: '2026-06-28 23:05:41',
+    includeInLeaderboard: false,
     jobDir: 'jobs/harbor-hello-world',
     split: 'smoke',
     failureCode: 'verifier_assertion_failed',
@@ -338,6 +344,7 @@ export const jobs: HarborJob[] = [
     tokenUsage: '0M',
     runtimeDuration: '00:00:00',
     createdAt: '2026-06-29 04:08:22',
+    includeInLeaderboard: false,
     jobDir: 'jobs/terminal-bench-nightly',
     split: 'nightly',
   },
