@@ -87,6 +87,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await expect(page.getByLabel('debug')).toContainText('disabled')
   await expect(page.getByLabel('yes')).toContainText('enabled')
   await expect(page.getByLabel('env_file')).toHaveValue('.env.harbor')
+  await expect(page.getByLabel('Source').locator('..')).toHaveCSS('border-top-width', '1px')
   await expect(page.getByLabel('Split')).toContainText('test')
   await page.getByLabel('Source').click()
   await page.getByRole('option', { name: 'harbor/hello-world@latest' }).click()
