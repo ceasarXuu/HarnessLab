@@ -40,13 +40,14 @@ test('renders primary Harbor WebUI demo surfaces', async ({ page }) => {
 
 test('launch action creates a queued draft job', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Run job' }).click()
+  await expect(page.locator('header').getByRole('button', { name: 'Run job' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'New Job' }).click()
   await expect(page).toHaveURL(/#jobs\/new$/)
   await expect(page.getByRole('link', { name: 'Jobs' })).toHaveClass(/active/)
   await expect(page.getByRole('navigation', { name: 'Job creation path' })).toBeVisible()
   await page.getByRole('navigation', { name: 'Job creation path' }).getByRole('button', { name: 'Jobs' }).click()
   await expect(page.getByRole('heading', { name: 'Job registry' })).toBeVisible()
-  await page.getByRole('button', { name: 'Run job' }).click()
+  await page.getByRole('button', { name: 'New Job' }).click()
   await expect(page.getByRole('heading', { name: 'New Job' })).toBeVisible()
   await expect(page.getByLabel('job_name')).toHaveValue('terminal-bench-smoke')
   await expect(page.getByLabel('include_task_name')).toHaveValue('apt-*')

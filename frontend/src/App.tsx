@@ -134,7 +134,6 @@ export function App() {
       t={t}
       onLanguage={setLanguage}
       onNavigate={navigate}
-      onNewJob={() => navigate('jobs', 'new')}
       onTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
     >
       {route.page === 'datasets' && (

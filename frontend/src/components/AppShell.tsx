@@ -1,4 +1,4 @@
-import { Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
+import { Github, Languages, Moon, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
@@ -21,7 +21,6 @@ interface AppShellProps {
   t: Translate
   onLanguage: (language: Locale) => void
   onNavigate: (page: PageKey) => void
-  onNewJob: () => void
   onTheme: () => void
 }
 
@@ -33,7 +32,6 @@ export function AppShell({
   t,
   onLanguage,
   onNavigate,
-  onNewJob,
   onTheme,
 }: AppShellProps) {
   return (
@@ -85,10 +83,6 @@ export function AppShell({
           />
           <button className="icon-button" aria-label={theme === 'light' ? t('dark') : t('light')} onClick={onTheme}>
             {theme === 'light' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
-          </button>
-          <button className="primary-button" onClick={onNewJob}>
-            <Play aria-hidden="true" />
-            {t('runJob')}
           </button>
         </div>
       </header>
