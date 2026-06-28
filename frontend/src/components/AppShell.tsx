@@ -1,4 +1,4 @@
-import { Bell, Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
+import { Github, Languages, Moon, Play, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
@@ -71,9 +71,6 @@ export function AppShell({
           <button className="secondary-button auth-chip">
             <Github aria-hidden="true" />
             {t('harborAuthReady')}
-          </button>
-          <button className="icon-button" aria-label={t('notifications')}>
-            <Bell aria-hidden="true" />
           </button>
           <button className="icon-button" aria-label={t('github')}>
             <Github aria-hidden="true" />
