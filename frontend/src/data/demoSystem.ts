@@ -108,24 +108,24 @@ export const systemRows: SystemRow[] = [
     component: 'Harbor CLI',
     status: 'healthy',
     value: '0.13.x available',
-    evidence: '~/.ornnlab/HarnessLab/bin/harbor',
+    path: '~/.ornnlab/HarnessLab/bin/harbor',
   },
   {
     component: 'Docker',
     status: 'running',
     value: 'context colima',
-    evidence: 'docker context inspect colima',
+    path: 'docker context: colima',
   },
   {
     component: 'Local cache',
     status: 'healthy',
     value: '0.01 MB',
-    evidence: '~/.cache/harbor',
+    path: '~/.cache/harbor',
   },
   {
     component: 'Storage',
     status: 'completed',
     value: '~/.ornnlab/HarnessLab',
-    evidence: 'artifact store writable',
+    path: '~/.ornnlab/HarnessLab',
   },
 ]

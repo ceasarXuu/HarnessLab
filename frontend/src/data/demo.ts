@@ -130,7 +130,7 @@ export interface SystemRow {
   component: string
   status: JobStatus | 'healthy'
   value: string
-  evidence: string
+  path: string
 }
 
 export interface DatasetRow {

@@ -39,7 +39,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                 <th>{t('component')}</th>
                 <th>{t('status')}</th>
                 <th>{t('value')}</th>
-                <th>{t('evidence')}</th>
+                <th>{t('path')}</th>
                 <th>{t('actions')}</th>
               </tr>
             </thead>
@@ -57,7 +57,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                   </td>
                   <td>{row.value}</td>
                   <td>
-                    <code>{row.evidence}</code>
+                    <code>{row.path}</code>
                   </td>
                   <td>
                     {row.component === 'Docker' && (
