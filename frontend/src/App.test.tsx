@@ -128,7 +128,7 @@ describe('App', () => {
   it('switches language and theme from the header', () => {
     render(<App />)
 
-    expect(screen.getByRole('button', { name: 'Harbor auth: GitHub connected' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hub connected' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Logout' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Language'))

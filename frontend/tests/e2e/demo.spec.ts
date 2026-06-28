@@ -66,7 +66,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
 
 test('nests task and trial concepts while toggling preferences', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Harbor auth: GitHub connected' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hub connected' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Login' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Logout' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Tasks' })).toHaveCount(0)
