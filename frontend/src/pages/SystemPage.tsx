@@ -1,4 +1,4 @@
-import { CheckCircle2, ServerCog } from 'lucide-react'
+import { ServerCog } from 'lucide-react'
 import type { SystemRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -11,7 +11,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
   const actions = [t('cleanCache'), t('sync')]
 
   return (
-    <main className="workspace two-column-page">
+    <main className="workspace single-page">
       <section className="surface">
         <div className="section-header">
           <div>
@@ -55,28 +55,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           </table>
         </div>
       </section>
-      <aside className="detail-rail">
-        <section className="surface rail-card">
-          <div className="rail-title">
-            <CheckCircle2 aria-hidden="true" />
-            <h3>{t('systemChecks')}</h3>
-          </div>
-          <ul className="doctor-list">
-            <li>
-              <CheckCircle2 aria-hidden="true" />
-              {t('runsReconciled')}
-            </li>
-            <li>
-              <CheckCircle2 aria-hidden="true" />
-              {t('artifactStoreWritable')}
-            </li>
-            <li>
-              <CheckCircle2 aria-hidden="true" />
-              {t('cacheCommandAvailable')}
-            </li>
-          </ul>
-        </section>
-      </aside>
     </main>
   )
 }

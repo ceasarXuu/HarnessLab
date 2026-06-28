@@ -187,9 +187,10 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'System' }))
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'System checks' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'System checks' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'System actions' })).not.toBeInTheDocument()
-    expect(screen.getByText('Interrupted runs reconciled')).toBeInTheDocument()
+    expect(screen.queryByText('Interrupted runs reconciled')).not.toBeInTheDocument()
+    expect(screen.queryByText('Harbor cache command available')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Cache' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hub connected' })).toBeInTheDocument()
     expect(screen.queryByText('Authentication')).not.toBeInTheDocument()
