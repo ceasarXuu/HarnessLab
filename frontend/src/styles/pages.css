@@ -4,8 +4,8 @@
   align-items: center;
   height: 34px;
   min-height: 34px;
-  gap: 6px;
-  padding: 0 8px;
+  gap: 4px;
+  padding: 0 6px 0 8px;
   border: 1px solid var(--border-strong);
   color: var(--foreground);
 }
@@ -82,8 +82,8 @@
   width: auto;
 }
 .header-select .select-trigger {
-  min-width: 48px;
-  padding: 0;
+  min-width: 54px;
+  padding: 0 4px 0 2px;
 }
 .toolbar-select .select-trigger {
   min-width: 210px;
