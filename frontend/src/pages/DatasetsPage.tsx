@@ -111,12 +111,21 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 <Metric label={t('sourceRef')} value={selected.source} />
                 <Metric label={t('digest')} value={selected.digest} />
                 <Metric label={t('updated')} value={selected.updated} />
+                <Metric label="registry_url" value={selected.registryUrl ?? '-'} />
+                <Metric label="registry_path" value={selected.registryPath ?? '-'} />
+                <Metric label="download_dir" value={selected.downloadDir ?? '-'} />
+                <Metric label="manifest" value={selected.manifestPath ?? '-'} />
+                <Metric label="include" value={selected.taskInclude ?? '-'} />
+                <Metric label="exclude" value={selected.taskExclude ?? '-'} />
               </div>
               <div className="button-row tight">
                 <button className="secondary-button">
                   <Download aria-hidden="true" />
                   {t('download')}
                 </button>
+                <button className="secondary-button">{t('sync')}</button>
+                <button className="secondary-button">{t('visibilityToggle')}</button>
+                <button className="secondary-button">{t('publish')}</button>
                 <button className="primary-button" onClick={onNewJob}>
                   <Play aria-hidden="true" />
                   {t('newJob')}
@@ -134,7 +143,14 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                     <span>{row.name}</span>
                     <span>{row.os}</span>
                     <span>{row.description}</span>
-                    <button className="row-action">{t('runSingleTask')}</button>
+                    <span>{row.verifier}</span>
+                    <div className="row-actions">
+                      <button className="row-action">{t('runSingleTask')}</button>
+                      <button className="row-action">{t('startEnvironment')}</button>
+                      <button className="row-action">{t('check')}</button>
+                      <button className="row-action">{t('debug')}</button>
+                      <button className="row-action">{t('download')}</button>
+                    </div>
                   </div>
                 ))}
               </div>

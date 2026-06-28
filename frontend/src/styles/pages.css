@@ -136,7 +136,7 @@
   min-width: 860px;
 }
 .leaderboard-page table {
-  min-width: 920px;
+  min-width: 1280px;
 }
 .leaderboard-toolbar .dataset-filter {
   width: min(320px, 24vw);
@@ -244,7 +244,7 @@
 }
 .task-row,
 .trial-row {
-  grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) max-content;
+  grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) 82px max-content;
   align-items: center;
 }
 .trial-row {
@@ -259,6 +259,11 @@
 }
 .row-action:hover {
   background: var(--subtle);
+}
+.row-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 tbody tr {
   cursor: pointer;

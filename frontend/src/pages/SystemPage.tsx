@@ -69,6 +69,24 @@ export function SystemPage({ rows, t }: SystemPageProps) {
               Docker orphan scan ready
             </li>
           </ul>
+          <div className="button-row tight">
+            <button className="secondary-button">{t('auth')}</button>
+            <button className="secondary-button">{t('cache')}</button>
+            <button className="secondary-button">{t('plugins')}</button>
+            <button className="secondary-button">{t('sync')}</button>
+          </div>
+        </section>
+        <section className="surface rail-card">
+          <div className="rail-title">
+            <ServerCog aria-hidden="true" />
+            <h3>Harbor maintenance</h3>
+          </div>
+          <div className="path-list">
+            <code>harbor auth status</code>
+            <code>harbor cache clean --dry-run</code>
+            <code>harbor plugins list</code>
+            <code>docker orphan cleanup plan</code>
+          </div>
         </section>
       </aside>
     </main>

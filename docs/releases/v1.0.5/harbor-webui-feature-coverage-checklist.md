@@ -47,6 +47,21 @@
 | Missing | Harbor 支持，但 OrnnLab demo 与后端都未覆盖。 |
 | Deferred | 低频或高风险操作，建议后续版本处理，但必须保留跟踪项。 |
 
+## 2.1 2026-06-28 demo 可见性补齐记录
+
+本次根据清单先补齐 Harbor WebUI demo 中原本不可见的配置项和操作入口，目标是让用户在页面上能看到 Harbor 支持能力的完整信息架构。注意：这些新增项仍是 demo seed data 与前端状态，不能等同于真实 Harbor API 已接管。
+
+已补齐的可见面包括：
+
+1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task include/exclude/n_tasks、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
+2. Jobs：Job drawer 新增 job_dir、split、Resume、Hub actions、summarize、open viewer、analyze、upload、share、harbor.capability.json、failure code 等入口。
+3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude，以及 task 行级 run single task、start environment、check、debug、download 操作。
+4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
+5. Leaderboard：表格新增 metric、split、submission/report path 与 submit/open viewer/share 行级操作。
+6. System：补 auth、cache、plugins、sync 与 Harbor maintenance 命令入口。
+
+后续仍需把这些可见入口逐项接入真实 API，并在对应表格中从 `Partial` / `Backend only` / `Missing` 更新为真实覆盖状态。
+
 ## 3. Jobs / JobConfig 覆盖清单
 
 ### 3.1 Job 列表与生命周期操作

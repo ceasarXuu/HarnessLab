@@ -125,6 +125,9 @@ button {
 .button-row {
   gap: 8px;
 }
+.button-row {
+  flex-wrap: wrap;
+}
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 348px;
@@ -324,6 +327,18 @@ select {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--foreground);
+}
+.toggle {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: left;
+}
+.toggle.active {
+  background: var(--foreground);
+  color: var(--background);
 }
 .config-preview,
 .button-row {

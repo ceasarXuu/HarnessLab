@@ -17,6 +17,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'terminal-bench-smoke' }))
     expect(screen.getByRole('dialog', { name: 'Selected job' })).toBeInTheDocument()
     expect(screen.getByText('Job trials')).toBeInTheDocument()
+    expect(screen.getByText('Hub actions')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open viewer' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Analyze' })).toBeInTheDocument()
+    expect(screen.getByText('harbor.capability.json')).toBeInTheDocument()
   })
 
   it('renders datasets as the Harbor catalog surface', () => {
@@ -30,6 +34,10 @@ describe('App', () => {
     expect(screen.getByRole('dialog', { name: 'Selected dataset' })).toBeInTheDocument()
     expect(screen.getByText('Dataset tasks')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Run single task' }).length).toBeGreaterThan(0)
+    expect(screen.getByText('registry_url')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Start environment' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Check' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Debug' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
   })
 
@@ -86,11 +94,17 @@ describe('App', () => {
     expect(screen.queryByRole('dialog', { name: 'Selected agent' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('local-repair-agent'))
     expect(screen.getByRole('dialog', { name: 'Selected agent' })).toBeInTheDocument()
+    expect(screen.getByText('env readiness')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Compile' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
+    expect(screen.getByText('Metric')).toBeInTheDocument()
+    expect(screen.getByText('Submission')).toBeInTheDocument()
     expect(screen.getByLabelText('Select dataset')).toHaveTextContent('terminal-bench@2.0')
     expect(screen.getByText('claude-code')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Submit' }).length).toBeGreaterThan(0)
 
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.click(screen.getByLabelText('Select dataset'))
@@ -125,10 +139,28 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run job' }))
     const runBuilder = screen.getByRole('heading', { name: 'New Job' }).closest('section')
     expect(runBuilder).not.toBeNull()
+    expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
+    expect(screen.getByLabelText('include_task_name')).toHaveValue('apt-*')
+    expect(screen.getByLabelText('agent env')).toHaveValue('ANTHROPIC_API_KEY')
+    expect(screen.getByLabelText('verifier env')).toHaveValue('PYTEST_ADDOPTS=-q')
+    expect(screen.getByLabelText('upload to Hub')).toHaveTextContent('disabled')
+    expect(screen.getByText(/--include-task-name apt-\*/)).toBeInTheDocument()
     const runButton = within(runBuilder as HTMLElement).getByRole('button', { name: 'Run job' })
     fireEvent.click(runButton)
 
     expect(screen.getAllByText('terminal-bench-draft').length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
+  })
+
+  it('shows Harbor maintenance operations in system', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'System' }))
+    expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Auth' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cache' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plugins' })).toBeInTheDocument()
+    expect(screen.getByText('harbor auth status')).toBeInTheDocument()
+    expect(screen.getByText('harbor cache clean --dry-run')).toBeInTheDocument()
   })
 })

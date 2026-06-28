@@ -69,10 +69,14 @@ export function LeaderboardPage({
                 <th>{t('agent')}</th>
                 <th>{t('model')}</th>
                 <th>{t('score')}</th>
+                <th>Metric</th>
                 <th>{t('trialCount')}</th>
                 <th>{t('cost')}</th>
                 <th>{t('duration')}</th>
+                <th>Split</th>
+                <th>Submission</th>
                 <th>{t('job')}</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -87,11 +91,22 @@ export function LeaderboardPage({
                   <td>{row.agent}</td>
                   <td>{row.model}</td>
                   <td>{row.score}</td>
+                  <td>{row.metric}</td>
                   <td>{row.trials}</td>
                   <td>{row.cost}</td>
                   <td>{row.duration}</td>
+                  <td>{row.split}</td>
+                  <td>{row.submitted}</td>
                   <td>
                     <code>{row.jobId}</code>
+                  </td>
+                  <td>
+                    <div className="row-actions">
+                      <button className="row-action">{t('openViewer')}</button>
+                      <button className="row-action">{t('submit')}</button>
+                      <button className="row-action">{t('share')}</button>
+                    </div>
+                    <small>{row.reportPath}</small>
                   </td>
                 </tr>
               ))}

@@ -6,12 +6,11 @@ import {
   datasetRows,
   initialDraft,
   jobs as seedJobs,
-  leaderboardRows,
-  systemRows,
   taskRows,
   trialRows,
   type HarborJob,
 } from './data/demo'
+import { leaderboardRows, systemRows } from './data/demoSystem'
 import { getTranslator, type Locale } from './i18n'
 import { JobsPage } from './pages/JobsPage'
 import { AgentsPage } from './pages/AgentsPage'

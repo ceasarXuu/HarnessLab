@@ -1,4 +1,14 @@
-import { AlertTriangle, CheckCircle2, FileJson, FlaskConical, Square, Terminal } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileJson,
+  FlaskConical,
+  Play,
+  Share2,
+  Square,
+  Terminal,
+  Upload,
+} from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -26,6 +36,8 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Metric label={t('score')} value={job.score} />
           <Metric label={t('cost')} value={job.cost} />
           <Metric label={t('environment')} value={job.environment} />
+          <Metric label="job_dir" value={job.jobDir ?? 'jobs/current'} />
+          <Metric label="split" value={job.split ?? 'default'} />
         </div>
         <div className="button-row tight">
           <button className="secondary-button">
@@ -33,6 +45,27 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             {t('cancel')}
           </button>
           <button className="secondary-button">{t('retry')}</button>
+          <button className="secondary-button">
+            <Play aria-hidden="true" />
+            {t('resume')}
+          </button>
+        </div>
+      </section>
+
+      <section className="surface rail-card">
+        <div className="rail-title">
+          <Upload aria-hidden="true" />
+          <h3>Hub actions</h3>
+        </div>
+        <div className="button-row tight">
+          <button className="secondary-button">{t('summarize')}</button>
+          <button className="secondary-button">{t('openViewer')}</button>
+          <button className="secondary-button">{t('analyze')}</button>
+          <button className="secondary-button">{t('upload')}</button>
+          <button className="secondary-button">
+            <Share2 aria-hidden="true" />
+            {t('share')}
+          </button>
         </div>
       </section>
 
@@ -97,9 +130,12 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
         </div>
         <div className="path-list">
           <code>harbor.config.json</code>
+          <code>harbor.capability.json</code>
           <code>result.json</code>
           <code>job.log</code>
+          <code>{job.jobDir ?? `jobs/${job.id}`}</code>
           <code>trials/{job.id}</code>
+          {job.failureCode && <code>{job.failureCode}</code>}
         </div>
       </section>
     </aside>

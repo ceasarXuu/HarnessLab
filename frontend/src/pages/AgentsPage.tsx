@@ -97,6 +97,9 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <Metric label={t('models')} value={selected.models} />
                 <Metric label={t('sourceRef')} value={selected.source} />
                 <Metric label={t('updated')} value={selected.updated} />
+                <Metric label="env readiness" value={selected.env ?? '-'} />
+                <Metric label="kwargs" value={selected.kwargs ?? '-'} />
+                <Metric label="runtime" value={selected.runtime ?? '-'} />
               </div>
             </section>
             <section className="surface rail-card">
@@ -106,12 +109,18 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
               </div>
               <div className="path-list">
                 <code>{selected.adapter}</code>
+                <code>{selected.skills ?? 'skills: none'}</code>
+                <code>{selected.mcp ?? 'mcp: none'}</code>
               </div>
               <div className="button-row tight">
                 <button className="secondary-button">
                   <Settings aria-hidden="true" />
                   {t('agentSettings')}
                 </button>
+                <button className="secondary-button">{t('validate')}</button>
+                <button className="secondary-button">{t('compile')}</button>
+                <button className="secondary-button">{t('edit')}</button>
+                <button className="secondary-button">{t('delete')}</button>
               </div>
             </section>
           </aside>

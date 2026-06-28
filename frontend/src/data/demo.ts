@@ -12,6 +12,9 @@ export interface HarborJob {
   score: string
   cost: string
   updated: string
+  jobDir?: string
+  split?: string
+  failureCode?: string
 }
 
 export interface EventLog {
@@ -21,12 +24,47 @@ export interface EventLog {
 }
 
 export interface RunDraft {
+  jobName: string
+  jobsDir: string
   source: string
+  taskFilter: string
+  excludeFilter: string
+  taskLimit: number
+  extraInstructions: string
   agent: string
   model: string
+  agentImportPath: string
+  agentEnv: string
+  agentKwargs: string
+  skills: string
+  mcpConfig: string
   environment: string
+  forceBuild: boolean
+  deleteEnvironment: boolean
+  cpus: string
+  memoryMb: string
+  storageMb: string
+  gpus: string
+  mounts: string
+  dockerCompose: string
+  verifierImportPath: string
+  verifierEnv: string
+  verifierKwargs: string
+  disableVerifier: boolean
   concurrency: number
   attempts: number
+  timeoutMultiplier: number
+  agentTimeoutMultiplier: string
+  verifierTimeoutMultiplier: string
+  maxRetries: number
+  retryInclude: string
+  retryExclude: string
+  artifacts: string
+  metric: string
+  plugins: string
+  upload: boolean
+  visibility: 'private' | 'public'
+  shareTargets: string
 }
 
 export interface TaskRow {
@@ -68,6 +106,12 @@ export interface DatasetRow {
   source: string
   digest: string
   updated: string
+  registryUrl?: string
+  registryPath?: string
+  downloadDir?: string
+  manifestPath?: string
+  taskInclude?: string
+  taskExclude?: string
 }
 
 export interface AgentRow {
@@ -78,6 +122,11 @@ export interface AgentRow {
   status: 'available' | 'configured' | 'needs-token'
   source: string
   updated: string
+  env?: string
+  kwargs?: string
+  skills?: string
+  mcp?: string
+  runtime?: string
 }
 
 export interface LeaderboardRow {
@@ -90,15 +139,54 @@ export interface LeaderboardRow {
   cost: string
   duration: string
   jobId: string
+  split: string
+  metric: string
+  submitted: string
+  reportPath: string
 }
 
 export const initialDraft: RunDraft = {
+  jobName: 'terminal-bench-smoke',
+  jobsDir: 'jobs/terminal-bench-smoke',
   source: 'terminal-bench@2.0',
+  taskFilter: 'apt-*',
+  excludeFilter: 'flaky-*',
+  taskLimit: 64,
+  extraInstructions: 'instructions/hardening.md',
   agent: 'claude-code',
   model: 'anthropic/claude-haiku-4-5',
+  agentImportPath: '',
+  agentEnv: 'ANTHROPIC_API_KEY',
+  agentKwargs: 'temperature=0',
+  skills: '~/.ornnlab/skills/terminal-bench',
+  mcpConfig: '~/.ornnlab/mcp/claude.mcp.json',
   environment: 'docker',
+  forceBuild: false,
+  deleteEnvironment: true,
+  cpus: 'auto',
+  memoryMb: '4096',
+  storageMb: '20480',
+  gpus: '0',
+  mounts: '[{"source":"./cache","target":"/cache"}]',
+  dockerCompose: 'compose.gpu.yaml',
+  verifierImportPath: '',
+  verifierEnv: 'PYTEST_ADDOPTS=-q',
+  verifierKwargs: 'max_failures=1',
+  disableVerifier: false,
   concurrency: 4,
   attempts: 1,
+  timeoutMultiplier: 1,
+  agentTimeoutMultiplier: '',
+  verifierTimeoutMultiplier: '',
+  maxRetries: 1,
+  retryInclude: 'TimeoutError',
+  retryExclude: 'ValidationError',
+  artifacts: '/workspace/result.json,/workspace/logs',
+  metric: 'mean',
+  plugins: 'harbor.plugins.cost:CostPlugin',
+  upload: false,
+  visibility: 'private',
+  shareTargets: '@ornn',
 }
 
 export const jobs: HarborJob[] = [
@@ -114,6 +202,8 @@ export const jobs: HarborJob[] = [
     score: '0.72',
     cost: '$3.42',
     updated: '2m ago',
+    jobDir: 'jobs/terminal-bench-smoke',
+    split: 'test',
   },
   {
     id: 'job_74c1',
@@ -127,6 +217,8 @@ export const jobs: HarborJob[] = [
     score: '0.41',
     cost: '$92.18',
     updated: '1h ago',
+    jobDir: 'jobs/swe-bench-lite-regression',
+    split: 'verified',
   },
   {
     id: 'job_55e9',
@@ -140,6 +232,9 @@ export const jobs: HarborJob[] = [
     score: '-',
     cost: '$0.63',
     updated: '3h ago',
+    jobDir: 'jobs/harbor-hello-world',
+    split: 'smoke',
+    failureCode: 'verifier_assertion_failed',
   },
   {
     id: 'job_118b',
@@ -153,6 +248,8 @@ export const jobs: HarborJob[] = [
     score: '-',
     cost: '$0.00',
     updated: 'queued',
+    jobDir: 'jobs/terminal-bench-nightly',
+    split: 'nightly',
   },
 ]
 
@@ -165,6 +262,12 @@ export const datasetRows: DatasetRow[] = [
     source: 'harbor registry',
     digest: 'sha256:8f3a...b91c',
     updated: '12m ago',
+    registryUrl: 'https://hub.harborframework.com',
+    registryPath: 'registry/datasets/terminal-bench',
+    downloadDir: '~/.cache/harbor/datasets/terminal-bench',
+    manifestPath: 'dataset.toml',
+    taskInclude: 'apt-*',
+    taskExclude: 'flaky-*',
   },
   {
     name: 'swe-bench-lite',
@@ -174,6 +277,12 @@ export const datasetRows: DatasetRow[] = [
     source: 'ScaleAI mirror',
     digest: 'sha256:72aa...0f44',
     updated: '1h ago',
+    registryUrl: 'https://hub.harborframework.com',
+    registryPath: 'registry/datasets/swe-bench-lite',
+    downloadDir: '~/.cache/harbor/datasets/swe-bench-lite',
+    manifestPath: 'dataset.toml',
+    taskInclude: 'django-*',
+    taskExclude: 'large-*',
   },
   {
     name: 'harbor/hello-world',
@@ -183,6 +292,10 @@ export const datasetRows: DatasetRow[] = [
     source: 'local package',
     digest: 'sha256:100f...d6a0',
     updated: '3h ago',
+    registryUrl: 'local',
+    registryPath: './examples/hello-world',
+    downloadDir: './datasets/hello-world',
+    manifestPath: 'dataset.toml',
   },
   {
     name: 'terminal-bench-nightly',
@@ -192,6 +305,11 @@ export const datasetRows: DatasetRow[] = [
     source: 'local cache',
     digest: 'sha256:f91b...aa02',
     updated: 'queued',
+    registryUrl: 'local',
+    registryPath: './nightly/terminal-bench',
+    downloadDir: '~/.cache/harbor/datasets/nightly',
+    manifestPath: 'dataset.toml',
+    taskExclude: 'unstable-*',
   },
 ]
 
@@ -259,6 +377,11 @@ export const agentRows: AgentRow[] = [
     status: 'available',
     source: 'Harbor built-in',
     updated: '12m ago',
+    env: 'ANTHROPIC_API_KEY ready',
+    kwargs: 'temperature=0',
+    skills: '~/.ornnlab/skills/terminal-bench',
+    mcp: '~/.ornnlab/mcp/claude.mcp.json',
+    runtime: 'docker / 3600s',
   },
   {
     name: 'codex-cli',
@@ -268,6 +391,11 @@ export const agentRows: AgentRow[] = [
     status: 'configured',
     source: 'Harbor built-in',
     updated: '1h ago',
+    env: 'OPENAI_API_KEY ready',
+    kwargs: 'reasoning_effort=medium',
+    skills: '~/.ornnlab/skills/swe',
+    mcp: '~/.ornnlab/mcp/codex.mcp.json',
+    runtime: 'docker / 3600s',
   },
   {
     name: 'oracle',
@@ -277,6 +405,11 @@ export const agentRows: AgentRow[] = [
     status: 'available',
     source: 'Harbor built-in',
     updated: '3h ago',
+    env: 'none',
+    kwargs: 'mode=expected',
+    skills: 'none',
+    mcp: 'none',
+    runtime: 'local / 600s',
   },
   {
     name: 'local-repair-agent',
@@ -286,6 +419,11 @@ export const agentRows: AgentRow[] = [
     status: 'needs-token',
     source: '~/.ornnlab/agents/local-repair.toml',
     updated: 'queued',
+    env: 'LOCAL_MODEL_URL missing',
+    kwargs: 'temperature=0.2',
+    skills: '~/.ornnlab/skills/repair',
+    mcp: '~/.ornnlab/mcp/local.mcp.json',
+    runtime: 'docker / 1800s',
   },
 ]
 
@@ -333,90 +471,5 @@ export const trialRows: TrialRow[] = [
     duration: '6m',
     cost: '$1.92',
     logPath: 'trials/job_74c1/django-migration.log',
-  },
-]
-
-export const leaderboardRows: LeaderboardRow[] = [
-  {
-    dataset: 'terminal-bench@2.0',
-    rank: 1,
-    agent: 'claude-code',
-    model: 'claude-haiku-4-5',
-    score: '0.72',
-    trials: '64',
-    cost: '$12.48',
-    duration: '42m',
-    jobId: 'job_91a7',
-  },
-  {
-    dataset: 'terminal-bench@2.0',
-    rank: 2,
-    agent: 'codex-cli',
-    model: 'gpt-5.1',
-    score: '0.68',
-    trials: '64',
-    cost: '$15.90',
-    duration: '47m',
-    jobId: 'job_64f2',
-  },
-  {
-    dataset: 'swe-bench-lite@2026.06',
-    rank: 1,
-    agent: 'codex-cli',
-    model: 'gpt-5.1',
-    score: '0.41',
-    trials: '300',
-    cost: '$92.18',
-    duration: '3h 20m',
-    jobId: 'job_74c1',
-  },
-  {
-    dataset: 'swe-bench-lite@2026.06',
-    rank: 2,
-    agent: 'claude-code',
-    model: 'claude-sonnet-4-5',
-    score: '0.39',
-    trials: '300',
-    cost: '$104.20',
-    duration: '3h 45m',
-    jobId: 'job_83aa',
-  },
-  {
-    dataset: 'harbor/hello-world@latest',
-    rank: 1,
-    agent: 'oracle',
-    model: 'local-sim',
-    score: '1.00',
-    trials: '8',
-    cost: '$0.00',
-    duration: '2m',
-    jobId: 'job_99ab',
-  },
-]
-
-export const systemRows: SystemRow[] = [
-  {
-    component: 'Harbor CLI',
-    status: 'healthy',
-    value: '0.13.x available',
-    evidence: '~/.ornnlab/HarnessLab/bin/harbor',
-  },
-  {
-    component: 'Docker',
-    status: 'running',
-    value: 'context colima',
-    evidence: 'docker context inspect colima',
-  },
-  {
-    component: 'Storage',
-    status: 'completed',
-    value: '~/.ornnlab/HarnessLab',
-    evidence: 'artifact store writable',
-  },
-  {
-    component: 'Verifier',
-    status: 'queued',
-    value: '1 retry pending',
-    evidence: 'event log warning',
   },
 ]
