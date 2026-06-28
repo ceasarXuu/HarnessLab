@@ -105,18 +105,28 @@ export const leaderboardRows: LeaderboardRow[] = [
 
 export const systemRows: SystemRow[] = [
   {
+    kind: 'ornnlab-service',
+    component: 'OrnnLab Service',
+    status: 'running',
+    value: '0.1.3 latest',
+    path: 'http://127.0.0.1:5173',
+  },
+  {
+    kind: 'harbor-cli',
     component: 'Harbor CLI',
     status: 'healthy',
     value: '0.13.x available',
     path: '~/.ornnlab/HarnessLab/bin/harbor',
   },
   {
+    kind: 'docker',
     component: 'Docker',
     status: 'running',
     value: 'context colima',
     path: 'docker context: colima',
   },
   {
+    kind: 'storage',
     component: 'Storage',
     status: 'completed',
     value: '0.01 MB cache',

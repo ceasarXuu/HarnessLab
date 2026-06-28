@@ -127,6 +127,7 @@ export interface TrialRow {
 }
 
 export interface SystemRow {
+  kind: 'ornnlab-service' | 'harbor-cli' | 'docker' | 'storage'
   component: string
   status: JobStatus | 'healthy'
   value: string
