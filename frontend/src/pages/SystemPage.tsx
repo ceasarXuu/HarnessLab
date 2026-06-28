@@ -17,10 +17,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
       title: t('manifestCommands'),
       actions: [t('sync')],
     },
-    {
-      title: t('hubCommands'),
-      actions: [t('upload'), t('submit'), t('share')],
-    },
   ]
 
   return (
