@@ -66,6 +66,9 @@ test('launch action creates a queued draft job', async ({ page }) => {
 
 test('nests task and trial concepts while toggling preferences', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Harbor auth: GitHub connected' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Login' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Logout' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Tasks' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Trials' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Datasets' }).click()
@@ -124,9 +127,9 @@ test('shows system maintenance operations', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('link', { name: 'System' }).click()
   await expect(page.getByRole('heading', { name: 'System health' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Auth' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Login' }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Logout' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Auth', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Login' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Cache' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Plugins' })).toBeVisible()
   await expect(page.getByText('harbor auth login')).toBeVisible()

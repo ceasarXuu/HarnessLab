@@ -128,6 +128,9 @@ describe('App', () => {
   it('switches language and theme from the header', () => {
     render(<App />)
 
+    expect(screen.getByRole('button', { name: 'Harbor auth: GitHub connected' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Logout' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Language'))
     fireEvent.click(screen.getByRole('option', { name: '中' }))
     expect(screen.getByRole('heading', { name: 'Job 管理' })).toBeInTheDocument()
@@ -175,8 +178,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('link', { name: 'System' }))
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Auth' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Login' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Logout' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cache' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Plugins' })).toBeInTheDocument()
     expect(screen.getByText('harbor auth login')).toBeInTheDocument()
