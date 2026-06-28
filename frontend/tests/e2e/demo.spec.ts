@@ -149,7 +149,7 @@ test('shows system maintenance operations', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Logout' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Clean cache' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Plugins' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Sync' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sync' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Upload' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Submit' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Share' })).toHaveCount(0)

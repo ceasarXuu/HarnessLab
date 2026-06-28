@@ -55,10 +55,10 @@
 
 1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task include/exclude/n_tasks、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
 2. Jobs：Job drawer 新增 job_dir、split、Resume、Hub actions、summarize、open viewer、analyze、upload、share、harbor.capability.json、failure code 等入口。
-3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude，以及 task 行级 run single task、start environment、check、debug、download 操作。
+3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude、manifest add/remove/sync，以及 task 行级 run single task、start environment、check、debug、download 操作。
 4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
 5. Leaderboard：表格新增 metric、split、submission/report path 与 submit/open viewer/share 行级操作。
-6. System：补 auth、cache、plugins、sync 与 Harbor maintenance 命令入口。
+6. System：补 cache 与 Harbor doctor/maintenance 状态入口；auth 只保留在 Header，plugins 归入 New Job，sync 归入 Dataset manifest editor。
 
 后续仍需把这些可见入口逐项接入真实 API，并在对应表格中从 `Partial` / `Backend only` / `Missing` 更新为真实覆盖状态。
 

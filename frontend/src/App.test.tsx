@@ -199,7 +199,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Logout' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Clean cache' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Plugins' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sync' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()

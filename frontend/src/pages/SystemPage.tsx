@@ -8,7 +8,7 @@ interface SystemPageProps {
 }
 
 export function SystemPage({ rows, t }: SystemPageProps) {
-  const actions = [t('cleanCache'), t('sync')]
+  const actions = [t('cleanCache')]
 
   return (
     <main className="workspace single-page">
