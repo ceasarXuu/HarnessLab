@@ -84,7 +84,8 @@ export function LeaderboardPage({
             <thead>
               <tr>
                 <th>{t('rank')}</th>
-                <th>{t('agent')}</th>
+                <th>{t('agentName')}</th>
+                <th>{t('harness')}</th>
                 <th>{t('model')}</th>
                 <th>{t('score')}</th>
                 <th>Metric</th>
@@ -108,7 +109,8 @@ export function LeaderboardPage({
                       #{row.rank}
                     </span>
                   </td>
-                  <td>{row.agent}</td>
+                  <td>{row.agentName}</td>
+                  <td>{row.harness}</td>
                   <td>{row.model}</td>
                   <td>{row.score}</td>
                   <td>{row.metric}</td>

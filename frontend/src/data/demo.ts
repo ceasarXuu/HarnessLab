@@ -182,7 +182,8 @@ export interface AgentRow {
 export interface LeaderboardRow {
   dataset: string
   rank: number
-  agent: string
+  agentName: string
+  harness: string
   model: string
   score: string
   trials: string

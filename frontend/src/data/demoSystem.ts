@@ -4,7 +4,8 @@ export const leaderboardRows: LeaderboardRow[] = [
   {
     dataset: 'terminal-bench@2.0',
     rank: 1,
-    agent: 'claude-code',
+    agentName: 'Claude Code default',
+    harness: 'claude-code',
     model: 'claude-haiku-4-5',
     score: '0.72',
     trials: '64',
@@ -24,7 +25,8 @@ export const leaderboardRows: LeaderboardRow[] = [
   {
     dataset: 'terminal-bench@2.0',
     rank: 2,
-    agent: 'codex-cli',
+    agentName: 'Codex CLI default',
+    harness: 'codex-cli',
     model: 'gpt-5.1',
     score: '0.68',
     trials: '64',
@@ -44,7 +46,8 @@ export const leaderboardRows: LeaderboardRow[] = [
   {
     dataset: 'swe-bench-lite@2026.06',
     rank: 1,
-    agent: 'codex-cli',
+    agentName: 'Codex CLI default',
+    harness: 'codex-cli',
     model: 'gpt-5.1',
     score: '0.41',
     trials: '300',
@@ -64,7 +67,8 @@ export const leaderboardRows: LeaderboardRow[] = [
   {
     dataset: 'swe-bench-lite@2026.06',
     rank: 2,
-    agent: 'claude-code',
+    agentName: 'Claude Code default',
+    harness: 'claude-code',
     model: 'claude-sonnet-4-5',
     score: '0.39',
     trials: '300',
@@ -84,7 +88,8 @@ export const leaderboardRows: LeaderboardRow[] = [
   {
     dataset: 'harbor/hello-world@latest',
     rank: 1,
-    agent: 'oracle',
+    agentName: 'Oracle baseline',
+    harness: 'oracle',
     model: 'local-sim',
     score: '1.00',
     trials: '8',
