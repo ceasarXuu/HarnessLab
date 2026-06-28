@@ -102,7 +102,7 @@ export function LeaderboardPage({
                 <th>Metric</th>
                 <th>{t('trialCount')}</th>
                 <th>{t('cost')}</th>
-                <th>Tokens (/M)</th>
+                <th>Tokens (M)</th>
                 <th>{t('duration')}</th>
                 <th>Split</th>
                 <th>{t('job')}</th>

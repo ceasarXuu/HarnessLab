@@ -118,7 +118,7 @@ export function App() {
       score: '-',
       cost: '$0.00',
       tokens: '0',
-      tokenUsage: '0/M',
+      tokenUsage: '0M',
       runtimeDuration: '00:00:00',
       createdAt: '2026-06-29 04:30:00',
     }
