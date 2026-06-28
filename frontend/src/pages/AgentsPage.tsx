@@ -50,11 +50,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <th>{t('agentName')}</th>
                 <th>{t('harness')}</th>
                 <th>{t('agentType')}</th>
-                <th>{t('adapter')}</th>
                 <th>{t('models')}</th>
                 <th>{t('status')}</th>
-                <th>{t('sourceRef')}</th>
-                <th>{t('updated')}</th>
               </tr>
             </thead>
             <tbody>
@@ -75,17 +72,12 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                   </td>
                   <td>{row.harness}</td>
                   <td>{row.type}</td>
-                  <td>
-                    <code>{row.adapter}</code>
-                  </td>
                   <td>{row.models}</td>
                   <td>
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td>{row.source}</td>
-                  <td>{row.updated}</td>
                 </tr>
               ))}
             </tbody>
