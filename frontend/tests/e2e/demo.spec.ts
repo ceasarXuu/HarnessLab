@@ -166,6 +166,7 @@ test('shows system maintenance operations', async ({ page }) => {
   await expect(page.getByRole('row', { name: 'OrnnLab Service Running 0.1.3 latest http://127.0.0.1:5173 Check update Restart' })).toBeVisible()
   await page.getByRole('row', { name: 'OrnnLab Service Running 0.1.3 latest http://127.0.0.1:5173 Check update Restart' }).getByRole('button', { name: 'Check update' }).click()
   await expect(page.getByRole('status')).toContainText('OrnnLab is already on the latest npm version.')
+  await expect(page.getByRole('status')).toContainText('3s')
   await page.getByRole('button', { name: 'Dismiss' }).click()
   await page.getByRole('row', { name: 'OrnnLab Service Running 0.1.3 latest http://127.0.0.1:5173 Check update Restart' }).getByRole('button', { name: 'Restart' }).click()
   await expect(page.getByRole('dialog', { name: 'Restart OrnnLab service' })).toBeVisible()

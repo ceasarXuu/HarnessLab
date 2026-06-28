@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SystemRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -9,6 +9,11 @@ interface SystemPageProps {
 
 type ConfirmAction = 'docker-cache' | 'local-cache' | 'service-restart' | 'service-update'
 
+interface ToastState {
+  message: string
+  remaining: number
+}
+
 const ornnlabVersion = {
   current: '0.1.3',
   latest: '0.1.3',
@@ -16,7 +21,7 @@ const ornnlabVersion = {
 
 export function SystemPage({ rows, t }: SystemPageProps) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
   const confirmContent = confirmAction === 'docker-cache'
     ? {
         title: t('dockerCacheCleanupTitle'),
@@ -46,17 +51,34 @@ export function SystemPage({ rows, t }: SystemPageProps) {
       setConfirmAction('service-update')
       return
     }
-    setToast(t('ornnlabAlreadyLatest'))
+    showToast(t('ornnlabAlreadyLatest'))
+  }
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const timeout = window.setTimeout(() => {
+      setToast((currentToast) => {
+        if (!currentToast) return null
+        if (currentToast.remaining <= 1) return null
+        return { ...currentToast, remaining: currentToast.remaining - 1 }
+      })
+    }, 1000)
+
+    return () => window.clearTimeout(timeout)
+  }, [toast])
+
+  const showToast = (message: string) => {
+    setToast({ message, remaining: 3 })
   }
 
   const closeConfirm = () => setConfirmAction(null)
   const confirmAndClose = () => {
     setConfirmAction(null)
     if (confirmAction === 'service-restart') {
-      setToast(t('restartRequestQueued'))
+      showToast(t('restartRequestQueued'))
     }
     if (confirmAction === 'service-update') {
-      setToast(t('updateRequestQueued'))
+      showToast(t('updateRequestQueued'))
     }
   }
 
@@ -126,8 +148,9 @@ export function SystemPage({ rows, t }: SystemPageProps) {
       </section>
       {toast && (
         <div className="toast" role="status">
-          <span>{toast}</span>
-          <button className="icon-button" aria-label={t('dismiss')} onClick={() => setToast(null)}>x</button>
+          <span>{toast.message}</span>
+          <span className="toast-countdown">{toast.remaining}s</span>
+          <button className="toast-close" aria-label={t('dismiss')} onClick={() => setToast(null)}>x</button>
         </div>
       )}
       {confirmAction && (

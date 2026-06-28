@@ -1,11 +1,15 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
 describe('App', () => {
   beforeEach(() => {
     window.localStorage.clear()
     window.location.hash = ''
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders jobs as the default Harbor operating surface', () => {
@@ -222,9 +226,17 @@ describe('App', () => {
     expect(screen.getByText('docker context: colima')).toBeInTheDocument()
     const serviceRow = screen.getByText('OrnnLab Service').closest('tr')
     expect(serviceRow).not.toBeNull()
+    vi.useFakeTimers()
     fireEvent.click(within(serviceRow as HTMLElement).getByRole('button', { name: 'Check update' }))
     expect(screen.getByRole('status')).toHaveTextContent('OrnnLab is already on the latest npm version.')
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.getByRole('status')).toHaveTextContent('3s')
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveClass('toast-close')
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('status')).toHaveTextContent('2s')
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('status')).toHaveTextContent('1s')
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
     fireEvent.click(within(serviceRow as HTMLElement).getByRole('button', { name: 'Restart' }))
     expect(screen.getByRole('dialog', { name: 'Restart OrnnLab service' })).toBeInTheDocument()
     expect(screen.queryByText('This forces the OrnnLab frontend and backend services to restart.')).not.toBeInTheDocument()
