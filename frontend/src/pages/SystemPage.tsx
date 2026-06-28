@@ -20,27 +20,23 @@ export function SystemPage({ rows, t }: SystemPageProps) {
   const confirmContent = confirmAction === 'docker-cache'
     ? {
         title: t('dockerCacheCleanupTitle'),
-        body: t('dockerCacheCleanupBody'),
         impact: [t('dockerCacheImpactImages'), t('dockerCacheImpactRebuild')],
         confirm: t('confirmCleanup'),
       }
     : confirmAction === 'service-restart'
       ? {
         title: t('restartServiceTitle'),
-        body: t('restartServiceBody'),
         impact: [t('restartServiceImpactFrontend'), t('restartServiceImpactBackend')],
         confirm: t('confirmRestart'),
       }
       : confirmAction === 'service-update'
         ? {
           title: t('updateServiceTitle'),
-          body: t('updateServiceBody'),
           impact: [t('updateServiceImpactNpm'), t('updateServiceImpactRestart')],
           confirm: t('confirmUpdate'),
         }
     : {
         title: t('localCacheCleanupTitle'),
-        body: t('localCacheCleanupBody'),
         impact: [t('localCacheImpactDirectory'), t('localCacheImpactRecreate')],
         confirm: t('confirmCleanup'),
       }
@@ -139,7 +135,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
           <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={confirmContent.title}>
             <div className="confirm-heading">
               <h2>{confirmContent.title}</h2>
-              <p>{confirmContent.body}</p>
             </div>
             <ul className="cleanup-impact-list">
               {confirmContent.impact.map((item) => (
