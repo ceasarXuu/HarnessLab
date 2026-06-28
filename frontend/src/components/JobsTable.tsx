@@ -53,7 +53,9 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
               <th>{t('trialCount')}</th>
               <th>{t('score')}</th>
               <th>{t('cost')}</th>
-              <th>{t('updated')}</th>
+              <th>{t('tokenUsage')}</th>
+              <th>{t('runtimeDuration')}</th>
+              <th>{t('createdTime')}</th>
             </tr>
           </thead>
           <tbody>
@@ -76,7 +78,9 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
                 <td>{job.trials}</td>
                 <td>{job.score}</td>
                 <td>{job.cost}</td>
-                <td>{job.updated}</td>
+                <td>{job.tokenUsage}</td>
+                <td>{job.runtimeDuration}</td>
+                <td>{job.createdAt}</td>
               </tr>
             ))}
           </tbody>

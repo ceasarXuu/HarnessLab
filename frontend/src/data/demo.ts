@@ -12,7 +12,9 @@ export interface HarborJob {
   score: string
   cost: string
   tokens: string
-  updated: string
+  tokenUsage: string
+  runtimeDuration: string
+  createdAt: string
   jobDir?: string
   split?: string
   failureCode?: string
@@ -269,7 +271,9 @@ export const jobs: HarborJob[] = [
     score: '0.72',
     cost: '$3.42',
     tokens: '18.4k',
-    updated: '2m ago',
+    tokenUsage: '0.0184/M',
+    runtimeDuration: '00:42:18',
+    createdAt: '2026-06-29 03:46:12',
     jobDir: 'jobs/terminal-bench-smoke',
     split: 'test',
   },
@@ -285,7 +289,9 @@ export const jobs: HarborJob[] = [
     score: '0.41',
     cost: '$92.18',
     tokens: '1.8M',
-    updated: '1h ago',
+    tokenUsage: '1.8/M',
+    runtimeDuration: '03:20:44',
+    createdAt: '2026-06-29 00:18:05',
     jobDir: 'jobs/swe-bench-lite-regression',
     split: 'verified',
   },
@@ -301,7 +307,9 @@ export const jobs: HarborJob[] = [
     score: '-',
     cost: '$0.63',
     tokens: '3.2k',
-    updated: '3h ago',
+    tokenUsage: '0.0032/M',
+    runtimeDuration: '00:07:39',
+    createdAt: '2026-06-28 23:05:41',
     jobDir: 'jobs/harbor-hello-world',
     split: 'smoke',
     failureCode: 'verifier_assertion_failed',
@@ -318,7 +326,9 @@ export const jobs: HarborJob[] = [
     score: '-',
     cost: '$0.00',
     tokens: '-',
-    updated: 'queued',
+    tokenUsage: '0/M',
+    runtimeDuration: '00:00:00',
+    createdAt: '2026-06-29 04:08:22',
     jobDir: 'jobs/terminal-bench-nightly',
     split: 'nightly',
   },
