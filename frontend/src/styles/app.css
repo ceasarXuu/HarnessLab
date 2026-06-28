@@ -313,12 +313,6 @@ td:first-child {
 .info {
   color: var(--info);
 }
-.run-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px;
-}
 label {
   display: flex;
   flex-direction: column;

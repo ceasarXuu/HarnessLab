@@ -1,8 +1,9 @@
 import { Copy, Play, RotateCcw } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState } from 'react'
 import type { RunDraft } from '../data/demo'
 import type { Translate } from '../i18n'
 import { CustomSelect } from './CustomSelect'
+import { Field, TabPanel, Toggle } from './RunBuilderChrome'
 
 interface RunBuilderProps {
   draft: RunDraft
@@ -11,7 +12,18 @@ interface RunBuilderProps {
   onLaunch: () => void
 }
 
+type RunBuilderTab = 'core' | 'agent' | 'environment' | 'verifier' | 'runtime' | 'hub'
+
 export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
+  const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
+  const tabs: Array<{ key: RunBuilderTab; label: string }> = [
+    { key: 'core', label: t('runTabCore') },
+    { key: 'agent', label: t('runTabAgent') },
+    { key: 'environment', label: t('runTabEnvironment') },
+    { key: 'verifier', label: t('runTabVerifier') },
+    { key: 'runtime', label: t('runTabRuntime') },
+    { key: 'hub', label: t('runTabHub') },
+  ]
   const command = [
     'harbor run',
     `--job-name ${draft.jobName}`,
@@ -89,74 +101,117 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
           {t('jobConfig')}
         </button>
       </div>
-      <div className="run-grid">
-        <Field label={t('jobName')}>
-          <input value={draft.jobName} onChange={(event) => onDraft({ ...draft, jobName: event.target.value })} />
-        </Field>
-        <Field label={t('jobsDir')}>
-          <input value={draft.jobsDir} onChange={(event) => onDraft({ ...draft, jobsDir: event.target.value })} />
-        </Field>
-        <label>
-          {t('source')}
-          <CustomSelect
-            ariaLabel={t('source')}
-            value={draft.source}
-            options={[
-              { label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
-              { label: 'swe-bench-lite', value: 'swe-bench-lite' },
-              { label: 'harbor/hello-world', value: 'harbor/hello-world' },
-            ]}
-            onChange={(value) => onDraft({ ...draft, source: value })}
-          />
-        </label>
-        <Field label={t('taskInclude')}>
-          <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
-        </Field>
-        <Field label={t('taskExclude')}>
-          <input value={draft.excludeFilter} onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })} />
-        </Field>
-        <Field label={t('taskLimit')}>
-          <input
-            type="number"
-            min="1"
-            value={draft.taskLimit}
-            onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
-          />
-        </Field>
-        <Field label={t('extraInstructions')}>
-          <input
-            value={draft.extraInstructions}
-            onChange={(event) => onDraft({ ...draft, extraInstructions: event.target.value })}
-          />
-        </Field>
-        <Field label="debug">
-          <Toggle checked={draft.debug} onChange={(value) => onDraft({ ...draft, debug: value })} />
-        </Field>
-        <Field label="quiet">
-          <Toggle checked={draft.quiet} onChange={(value) => onDraft({ ...draft, quiet: value })} />
-        </Field>
-        <Field label="yes">
-          <Toggle checked={draft.yes} onChange={(value) => onDraft({ ...draft, yes: value })} />
-        </Field>
-        <Field label="env_file">
-          <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
-        </Field>
-        <label>
-          {t('agent')}
-          <CustomSelect
-            ariaLabel={t('agent')}
-            value={draft.agent}
-            options={[
-              { label: 'claude-code', value: 'claude-code' },
-              { label: 'codex-cli', value: 'codex-cli' },
-              { label: 'oracle', value: 'oracle' },
-            ]}
-            onChange={(value) => onDraft({ ...draft, agent: value })}
-          />
-        </label>
-        <Field label={t('model')}>
-          <input value={draft.model} onChange={(event) => onDraft({ ...draft, model: event.target.value })} />
-        </Field>
+      <div className="run-tabs" role="tablist" aria-label={t('jobConfig')}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={activeTab === tab.key ? 'active' : undefined}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <TabPanel active={activeTab === 'core'} title={t('runTabCore')}>
+        <div className="run-grid">
+          <Field label={t('jobName')}>
+            <input value={draft.jobName} onChange={(event) => onDraft({ ...draft, jobName: event.target.value })} />
+          </Field>
+          <Field label={t('jobsDir')}>
+            <input value={draft.jobsDir} onChange={(event) => onDraft({ ...draft, jobsDir: event.target.value })} />
+          </Field>
+          <label>
+            {t('source')}
+            <CustomSelect
+              ariaLabel={t('source')}
+              value={draft.source}
+              options={[
+                { label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
+                { label: 'swe-bench-lite', value: 'swe-bench-lite' },
+                { label: 'harbor/hello-world', value: 'harbor/hello-world' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, source: value })}
+            />
+          </label>
+          <Field label={t('taskInclude')}>
+            <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
+          </Field>
+          <Field label={t('taskExclude')}>
+            <input value={draft.excludeFilter} onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })} />
+          </Field>
+          <Field label={t('taskLimit')}>
+            <input
+              type="number"
+              min="1"
+              value={draft.taskLimit}
+              onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
+            />
+          </Field>
+          <label>
+            {t('agent')}
+            <CustomSelect
+              ariaLabel={t('agent')}
+              value={draft.agent}
+              options={[
+                { label: 'claude-code', value: 'claude-code' },
+                { label: 'codex-cli', value: 'codex-cli' },
+                { label: 'oracle', value: 'oracle' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, agent: value })}
+            />
+          </label>
+          <Field label={t('model')}>
+            <input value={draft.model} onChange={(event) => onDraft({ ...draft, model: event.target.value })} />
+          </Field>
+          <label>
+            {t('environment')}
+            <CustomSelect
+              ariaLabel={t('environment')}
+              value={draft.environment}
+              options={[
+                { label: 'docker', value: 'docker' },
+                { label: 'daytona', value: 'daytona' },
+                { label: 'e2b', value: 'e2b' },
+                { label: 'modal', value: 'modal' },
+                { label: 'gke', value: 'gke' },
+                { label: 'runloop', value: 'runloop' },
+                { label: 'custom import path', value: 'custom' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, environment: value })}
+            />
+          </label>
+          <Field label={t('concurrency')}>
+            <input
+              type="number"
+              min="1"
+              value={draft.concurrency}
+              onChange={(event) => onDraft({ ...draft, concurrency: Number(event.target.value) })}
+            />
+          </Field>
+          <Field label={t('attempts')}>
+            <input
+              type="number"
+              min="1"
+              value={draft.attempts}
+              onChange={(event) => onDraft({ ...draft, attempts: Number(event.target.value) })}
+            />
+          </Field>
+          <Field label="debug">
+            <Toggle checked={draft.debug} onChange={(value) => onDraft({ ...draft, debug: value })} />
+          </Field>
+          <Field label="yes">
+            <Toggle checked={draft.yes} onChange={(value) => onDraft({ ...draft, yes: value })} />
+          </Field>
+          <Field label="env_file">
+            <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
+          </Field>
+        </div>
+      </TabPanel>
+      <TabPanel active={activeTab === 'agent'} title={t('runTabAgent')}>
+        <div className="run-grid">
         <Field label={t('agentImportPath')}>
           <input
             value={draft.agentImportPath}
@@ -181,6 +236,10 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         <Field label={t('mcpConfig')}>
           <input value={draft.mcpConfig} onChange={(event) => onDraft({ ...draft, mcpConfig: event.target.value })} />
         </Field>
+        </div>
+      </TabPanel>
+      <TabPanel active={activeTab === 'environment'} title={t('runTabEnvironment')}>
+        <div className="run-grid">
         <label>
           {t('environment')}
           <CustomSelect
@@ -267,6 +326,10 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         <Field label={t('dockerCompose')}>
           <input value={draft.dockerCompose} onChange={(event) => onDraft({ ...draft, dockerCompose: event.target.value })} />
         </Field>
+        </div>
+      </TabPanel>
+      <TabPanel active={activeTab === 'verifier'} title={t('runTabVerifier')}>
+        <div className="run-grid">
         <Field label={t('verifier')}>
           <input
             value={draft.verifierImportPath}
@@ -291,21 +354,18 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
             onChange={(event) => onDraft({ ...draft, verifierMaxTimeoutSec: event.target.value })}
           />
         </Field>
-        <Field label={t('concurrency')}>
+        </div>
+      </TabPanel>
+      <TabPanel active={activeTab === 'runtime'} title={t('runTabRuntime')}>
+        <div className="run-grid">
+        <Field label={t('extraInstructions')}>
           <input
-            type="number"
-            min="1"
-            value={draft.concurrency}
-            onChange={(event) => onDraft({ ...draft, concurrency: Number(event.target.value) })}
+            value={draft.extraInstructions}
+            onChange={(event) => onDraft({ ...draft, extraInstructions: event.target.value })}
           />
         </Field>
-        <Field label={t('attempts')}>
-          <input
-            type="number"
-            min="1"
-            value={draft.attempts}
-            onChange={(event) => onDraft({ ...draft, attempts: Number(event.target.value) })}
-          />
+        <Field label="quiet">
+          <Toggle checked={draft.quiet} onChange={(value) => onDraft({ ...draft, quiet: value })} />
         </Field>
         <Field label={t('timeoutMultiplier')}>
           <input
@@ -372,6 +432,10 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
             onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
           />
         </Field>
+        </div>
+      </TabPanel>
+      <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
+        <div className="run-grid">
         <Field label={t('artifacts')}>
           <input value={draft.artifacts} onChange={(event) => onDraft({ ...draft, artifacts: event.target.value })} />
         </Field>
@@ -399,7 +463,8 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         <Field label={t('shareTargets')}>
           <input value={draft.shareTargets} onChange={(event) => onDraft({ ...draft, shareTargets: event.target.value })} />
         </Field>
-      </div>
+        </div>
+      </TabPanel>
       <div className="config-preview">
         <code>{command}</code>
       </div>
@@ -414,22 +479,5 @@ export function RunBuilder({ draft, t, onDraft, onLaunch }: RunBuilderProps) {
         </button>
       </div>
     </section>
-  )
-}
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <label>
-      {label}
-      {children}
-    </label>
-  )
-}
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <button type="button" className={checked ? 'toggle active' : 'toggle'} onClick={() => onChange(!checked)}>
-      {checked ? 'enabled' : 'disabled'}
-    </button>
   )
 }
