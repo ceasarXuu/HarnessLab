@@ -1,4 +1,3 @@
-import { ServerCog } from 'lucide-react'
 import { useState } from 'react'
 import type { SystemRow } from '../data/demo'
 import type { Translate } from '../i18n'
@@ -89,7 +88,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                 <tr key={row.component}>
                   <td>
                     <span className="cell-title">
-                      <ServerCog aria-hidden="true" />
                       {row.component}
                     </span>
                   </td>

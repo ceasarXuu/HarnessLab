@@ -132,4 +132,25 @@ export const systemRows: SystemRow[] = [
     value: '0.01 MB cache',
     path: '~/.cache/harbor',
   },
+  {
+    kind: 'resource-cpu',
+    component: 'CPU Usage',
+    status: 'running',
+    value: '12%',
+    path: 'system monitor: cpu',
+  },
+  {
+    kind: 'resource-gpu',
+    component: 'GPU Usage',
+    status: 'running',
+    value: '0%',
+    path: 'system monitor: gpu',
+  },
+  {
+    kind: 'resource-storage',
+    component: 'Available Storage',
+    status: 'healthy',
+    value: '48Gi available',
+    path: '/Volumes/XU-1TB-NPM',
+  },
 ]
