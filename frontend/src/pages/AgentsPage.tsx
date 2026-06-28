@@ -10,18 +10,30 @@ interface AgentsPageProps {
 }
 
 export function AgentsPage({ rows, t }: AgentsPageProps) {
+  const [agentRows, setAgentRows] = useState(rows)
   const [selected, setSelected] = useState<AgentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AgentRow | null>(null)
   const [search, setSearch] = useState('')
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return rows
-    return rows.filter((row) =>
+    if (!query) return agentRows
+    return agentRows.filter((row) =>
       [row.agentName, row.harness, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [rows, search])
+  }, [agentRows, search])
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    setAgentRows((current) => current.filter((row) => row.harness !== deleteTarget.harness))
+    if (selected?.harness === deleteTarget.harness) {
+      setDrawerOpen(false)
+      setSelected(null)
+    }
+    setDeleteTarget(null)
+  }
 
   return (
     <main className="workspace single-page">
@@ -52,6 +64,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 <th>{t('agentType')}</th>
                 <th>{t('models')}</th>
                 <th>{t('status')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -77,6 +90,18 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
                       {row.status}
                     </span>
+                  </td>
+                  <td>
+                    <div className="row-actions">
+                      {row.type === 'custom' && (
+                        <button className="secondary-button compact-action" onClick={(event) => {
+                          event.stopPropagation()
+                          setDeleteTarget(row)
+                        }}>
+                          {t('delete')}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -145,6 +170,23 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
             </section>
           </aside>
         </DetailDrawer>
+      )}
+      {deleteTarget && (
+        <div className="confirm-overlay">
+          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteAgentTitle')}>
+            <div className="confirm-heading">
+              <h2>{t('deleteAgentTitle')}</h2>
+            </div>
+            <ul className="cleanup-impact-list">
+              <li>{t('deleteAgentLocalImpact')}</li>
+              <li>{deleteTarget.agentName}</li>
+            </ul>
+            <div className="button-row confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
+              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   )
