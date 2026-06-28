@@ -1,5 +1,5 @@
-import { Box, Database, Download, Play, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Box, Database, Download, Play, Search, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../components/DetailDrawer'
 import type { DatasetRow, TaskRow } from '../data/demo'
 import type { Translate } from '../i18n'
@@ -13,9 +13,29 @@ interface DatasetsPageProps {
   onSearch: (value: string) => void
 }
 
+type DatasetDownloadState =
+  | { status: 'not-downloaded' }
+  | { progress: number; status: 'downloading' }
+  | { path: string; size: string; status: 'downloaded' }
+
+const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
+
 export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
+  const [downloads, setDownloads] = useState<Record<string, DatasetDownloadState>>(() =>
+    Object.fromEntries(rows.map((row) => [
+      datasetKey(row),
+      row.downloadStatus === 'downloaded'
+        ? {
+            path: row.downloadPath ?? row.path ?? row.downloadDir ?? 'local dataset path',
+            size: row.size ?? 'unknown',
+            status: 'downloaded' as const,
+          }
+        : { status: 'not-downloaded' as const },
+    ])),
+  )
   const selectedTasks = useMemo(
     () =>
       selected
@@ -23,6 +43,40 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
         : [],
     [selected, taskRows],
   )
+
+  useEffect(() => {
+    const activeDownloads = Object.entries(downloads).filter(([, value]) => value.status === 'downloading')
+    if (activeDownloads.length === 0) return undefined
+
+    const timer = window.setInterval(() => {
+      setDownloads((current) => {
+        const next = { ...current }
+        for (const [key, value] of Object.entries(current)) {
+          if (value.status !== 'downloading') continue
+          const progress = Math.min(value.progress + 20, 100)
+          next[key] = progress >= 100
+            ? { path: `~/.cache/harbor/datasets/${key.replace('@', '-')}`, size: 'pending scan', status: 'downloaded' }
+            : { progress, status: 'downloading' }
+        }
+        return next
+      })
+    }, 800)
+
+    return () => window.clearInterval(timer)
+  }, [downloads])
+
+  const downloadStateFor = (row: DatasetRow) => downloads[datasetKey(row)] ?? { status: 'not-downloaded' }
+  const startDownload = (row: DatasetRow) => {
+    setDownloads((current) => ({ ...current, [datasetKey(row)]: { progress: 0, status: 'downloading' } }))
+  }
+  const cancelDownload = (row: DatasetRow) => {
+    setDownloads((current) => ({ ...current, [datasetKey(row)]: { status: 'not-downloaded' } }))
+  }
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    setDownloads((current) => ({ ...current, [datasetKey(deleteTarget)]: { status: 'not-downloaded' } }))
+    setDeleteTarget(null)
+  }
 
   return (
     <main className="workspace single-page">
@@ -41,7 +95,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
-            <button className="primary-button">{t('download')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -53,40 +106,76 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 <th>{t('visibility')}</th>
                 <th>{t('tasksCount')}</th>
                 <th>{t('sourceRef')}</th>
-                <th>{t('digest')}</th>
-                <th>{t('updated')}</th>
+                <th>{t('path')}</th>
+                <th>{t('size')}</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={`${row.name}-${row.version}`}
-                  className={selected?.name === row.name && selected.version === row.version ? 'selected-row' : undefined}
-                  onClick={() => {
-                    setSelected(row)
-                    setDrawerOpen(true)
-                  }}
-                >
-                  <td>
-                    <span className="cell-title">
-                      <Database aria-hidden="true" />
-                      {row.name}
-                    </span>
-                  </td>
-                  <td>{row.version}</td>
-                  <td>
-                    <span className={`status-dot ${row.visibility === 'public' ? 'success' : 'queued'}`}>
-                      {row.visibility}
-                    </span>
-                  </td>
-                  <td>{row.tasks}</td>
-                  <td>{row.source}</td>
-                  <td>
-                    <code>{row.digest}</code>
-                  </td>
-                  <td>{row.updated}</td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const downloadState = downloadStateFor(row)
+                return (
+                  <tr
+                    key={`${row.name}-${row.version}`}
+                    className={selected?.name === row.name && selected.version === row.version ? 'selected-row' : undefined}
+                    onClick={() => {
+                      setSelected(row)
+                      setDrawerOpen(true)
+                    }}
+                  >
+                    <td>
+                      <span className="cell-title">
+                        <Database aria-hidden="true" />
+                        {row.name}
+                      </span>
+                    </td>
+                    <td>{row.version}</td>
+                    <td>
+                      <span className={`status-dot ${row.visibility === 'public' ? 'success' : 'queued'}`}>
+                        {row.visibility}
+                      </span>
+                    </td>
+                    <td>{row.tasks}</td>
+                    <td>{row.source}</td>
+                    <td>{downloadState.status === 'downloaded' ? <code>{downloadState.path}</code> : t('notDownloaded')}</td>
+                    <td>{downloadState.status === 'downloaded' ? downloadState.size : t('notDownloaded')}</td>
+                    <td>
+                      <div className="row-actions">
+                        {downloadState.status === 'not-downloaded' && (
+                          <button className="secondary-button compact-action" onClick={(event) => {
+                            event.stopPropagation()
+                            startDownload(row)
+                          }}>
+                            <Download aria-hidden="true" />
+                            {t('download')}
+                          </button>
+                        )}
+                        {downloadState.status === 'downloading' && (
+                          <>
+                            <span className="progress-label">{downloadState.progress}%</span>
+                            <button className="secondary-button compact-action" onClick={(event) => {
+                              event.stopPropagation()
+                              cancelDownload(row)
+                            }}>
+                              <X aria-hidden="true" />
+                              {t('cancelDownload')}
+                            </button>
+                          </>
+                        )}
+                        {downloadState.status === 'downloaded' && (
+                          <button className="secondary-button compact-action" onClick={(event) => {
+                            event.stopPropagation()
+                            setDeleteTarget(row)
+                          }}>
+                            <Trash2 aria-hidden="true" />
+                            {t('delete')}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -197,6 +286,23 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
             </section>
           </aside>
         </DetailDrawer>
+      )}
+      {deleteTarget && (
+        <div className="confirm-overlay">
+          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteDatasetTitle')}>
+            <div className="confirm-heading">
+              <h2>{t('deleteDatasetTitle')}</h2>
+            </div>
+            <ul className="cleanup-impact-list">
+              <li>{t('deleteDatasetLocalImpact')}</li>
+              <li>{datasetKey(deleteTarget)}</li>
+            </ul>
+            <div className="button-row confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
+              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   )

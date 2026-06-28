@@ -144,6 +144,9 @@ export interface DatasetRow {
   source: string
   digest: string
   updated: string
+  downloadStatus: 'downloaded' | 'not-downloaded'
+  downloadPath?: string
+  size?: string
   registryUrl?: string
   registryPath?: string
   downloadDir?: string

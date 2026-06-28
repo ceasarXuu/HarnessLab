@@ -133,7 +133,7 @@
   grid-template-columns: minmax(0, 1fr) clamp(520px, 30vw, 720px);
 }
 .dataset-catalog table {
-  min-width: 860px;
+  min-width: 1220px;
 }
 .leaderboard-page table {
   min-width: 1660px;
@@ -204,12 +204,6 @@
 .system-health-table td {
   height: 59px;
   vertical-align: middle;
-}
-.row-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
 }
 .toast {
   position: fixed;
@@ -439,9 +433,12 @@
 }
 .row-actions {
   display: inline-flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+  min-height: 34px;
 }
+.progress-label { min-width: 42px; color: var(--foreground); font-size: 12px; font-weight: 600; }
 .action-groups {
   display: grid;
   gap: 14px;
@@ -465,12 +462,8 @@
   min-width: 86px;
   justify-content: center;
 }
-tbody tr {
-  cursor: pointer;
-}
-.healthy {
-  color: var(--success);
-}
+tbody tr { cursor: pointer; }
+.healthy { color: var(--success); }
 @keyframes drawer-in {
   from {
     transform: translateX(100%);
