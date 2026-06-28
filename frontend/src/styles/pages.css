@@ -188,6 +188,16 @@
 .two-column-page {
   grid-template-columns: minmax(0, 1fr) 420px;
 }
+.system-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.system-header-actions .secondary-button {
+  min-width: 96px;
+  justify-content: center;
+}
 .single-page {
   grid-template-columns: 1fr;
 }

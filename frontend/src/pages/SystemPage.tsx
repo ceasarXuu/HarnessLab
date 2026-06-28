@@ -1,4 +1,4 @@
-import { CheckCircle2, ServerCog, Wrench } from 'lucide-react'
+import { CheckCircle2, ServerCog } from 'lucide-react'
 import type { SystemRow } from '../data/demo'
 import type { Translate } from '../i18n'
 
@@ -8,16 +8,7 @@ interface SystemPageProps {
 }
 
 export function SystemPage({ rows, t }: SystemPageProps) {
-  const actionGroups = [
-    {
-      title: t('cacheCommands'),
-      actions: [t('cleanCache')],
-    },
-    {
-      title: t('manifestCommands'),
-      actions: [t('sync')],
-    },
-  ]
+  const actions = [t('cleanCache'), t('sync')]
 
   return (
     <main className="workspace two-column-page">
@@ -25,6 +16,11 @@ export function SystemPage({ rows, t }: SystemPageProps) {
         <div className="section-header">
           <div>
             <h1>{t('systemHealth')}</h1>
+          </div>
+          <div className="system-header-actions" aria-label={t('systemActions')}>
+            {actions.map((action) => (
+              <button key={action} className="secondary-button">{action}</button>
+            ))}
           </div>
         </div>
         <div className="table-wrap">
@@ -79,24 +75,6 @@ export function SystemPage({ rows, t }: SystemPageProps) {
               {t('cacheCommandAvailable')}
             </li>
           </ul>
-        </section>
-        <section className="surface rail-card">
-          <div className="rail-title">
-            <Wrench aria-hidden="true" />
-            <h3>{t('systemActions')}</h3>
-          </div>
-          <div className="action-groups">
-            {actionGroups.map((group) => (
-              <section key={group.title} className="action-group">
-                <h4>{group.title}</h4>
-                <div className="action-list">
-                  {group.actions.map((action) => (
-                    <button key={action} className="secondary-button">{action}</button>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
         </section>
       </aside>
     </main>
