@@ -1,6 +1,6 @@
 import { Github, Languages, Moon, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { Locale, Translate } from '../i18n'
+import type { Locale, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 
 export type PageKey = 'jobs' | 'datasets' | 'agents' | 'leaderboard' | 'system'

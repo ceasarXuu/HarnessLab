@@ -1,7 +1,7 @@
-import { DetailRail } from '../components/DetailRail'
-import { DetailDrawer } from '../components/DetailDrawer'
-import { JobsTable } from '../components/JobsTable'
-import type { EventLog, HarborJob, TrialRow } from '../data/demo'
+import { DetailRail } from '../ui/components/DetailRail'
+import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { JobsTable } from '../ui/components/JobsTable'
+import type { EventLog, HarborJob, TrialRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface JobsPageProps {

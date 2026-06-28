@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AppShell, type PageKey } from './components/AppShell'
+import { AppShell, type PageKey } from '../ui/components/AppShell'
 import {
   events,
   initialDraft,
@@ -7,16 +7,16 @@ import {
   trialRows,
   type HarborJob,
   type LeaderboardRow,
-} from './data/demo'
-import { agentRows, datasetRows, taskRows } from './data/demoCatalog'
-import { leaderboardRows, systemRows } from './data/demoSystem'
-import { getTranslator, type Locale } from './i18n'
-import { JobsPage } from './pages/JobsPage'
-import { AgentsPage } from './pages/AgentsPage'
-import { DatasetsPage } from './pages/DatasetsPage'
-import { LeaderboardPage } from './pages/LeaderboardPage'
-import { NewRunPage } from './pages/NewRunPage'
-import { SystemPage } from './pages/SystemPage'
+} from '../mocks/demo'
+import { agentRows, datasetRows, taskRows } from '../mocks/demoCatalog'
+import { leaderboardRows, systemRows } from '../mocks/demoSystem'
+import { getTranslator, type Locale } from '../i18n'
+import { JobsPage } from '../screens/JobsPage'
+import { AgentsPage } from '../screens/AgentsPage'
+import { DatasetsPage } from '../screens/DatasetsPage'
+import { LeaderboardPage } from '../screens/LeaderboardPage'
+import { NewRunPage } from '../screens/NewRunPage'
+import { SystemPage } from '../screens/SystemPage'
 
 type JobView = 'list' | 'new'
 

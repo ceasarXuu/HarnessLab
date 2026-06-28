@@ -1,7 +1,7 @@
 import { Bot, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { DetailDrawer } from '../components/DetailDrawer'
-import type { AgentRow } from '../data/demo'
+import { DetailDrawer } from '../ui/components/DetailDrawer'
+import type { AgentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface AgentsPageProps {

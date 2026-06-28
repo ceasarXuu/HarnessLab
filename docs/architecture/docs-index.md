@@ -14,6 +14,7 @@ Start here for the active OrnnLab version documentation.
 - Next product PRD: `../releases/v1.0.5/README.md`
 - Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
+- Harbor WebUI frontend governance: `frontend-webui-governance.md`
 - Legacy archive: `../archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
 ## Current Direction

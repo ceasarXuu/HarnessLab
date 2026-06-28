@@ -1,6 +1,6 @@
 import { Download, FileJson, FlaskConical, Play, Share2, Terminal, Upload } from 'lucide-react'
-import type { EventLog, HarborJob, TrialRow } from '../data/demo'
-import type { Translate } from '../i18n'
+import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
+import type { Translate } from '../../i18n'
 
 interface DetailRailProps {
   job: HarborJob

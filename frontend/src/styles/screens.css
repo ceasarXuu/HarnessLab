@@ -1,0 +1,70 @@
+.jobs-workspace {
+  grid-template-columns: minmax(0, 1fr) clamp(500px, 28vw, 680px);
+}
+.datasets-workspace {
+  grid-template-columns: minmax(0, 1fr) clamp(520px, 30vw, 720px);
+}
+.dataset-catalog table {
+  min-width: 1220px;
+}
+.leaderboard-page table {
+  min-width: 1760px;
+}
+.leaderboard-toolbar .dataset-filter {
+  width: min(320px, 24vw);
+}
+.filter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+.two-column-page {
+  grid-template-columns: minmax(0, 1fr) 420px;
+}
+.system-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.system-header-actions .secondary-button {
+  min-width: 96px;
+  justify-content: center;
+}
+.system-health-table tbody tr {
+  height: 59px;
+}
+.system-health-table td {
+  height: 59px;
+  vertical-align: middle;
+}
+.single-page {
+  grid-template-columns: 1fr;
+}
+@media (max-width: 1180px) {
+  .jobs-workspace,
+  .datasets-workspace,
+  .two-column-page {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 820px) {
+  .header-select {
+    min-width: 64px;
+  }
+  .task-row,
+  .trial-row,
+  .filter-strip {
+    grid-template-columns: 1fr;
+  }
+  .mini-row span {
+    white-space: normal;
+  }
+  .breadcrumb-nav {
+    overflow: auto;
+    white-space: nowrap;
+  }
+}

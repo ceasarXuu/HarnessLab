@@ -1,5 +1,5 @@
-import { RunBuilder } from '../components/RunBuilder'
-import type { DatasetRow, RunDraft } from '../data/demo'
+import { RunBuilder } from '../ui/components/RunBuilder'
+import type { DatasetRow, RunDraft } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface NewRunPageProps {

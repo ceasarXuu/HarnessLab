@@ -1,9 +1,9 @@
 import { Search, Trophy } from 'lucide-react'
 import { useState } from 'react'
-import { CustomSelect } from '../components/CustomSelect'
-import { DetailDrawer } from '../components/DetailDrawer'
-import { DetailRail } from '../components/DetailRail'
-import type { DatasetRow, EventLog, HarborJob, LeaderboardRow, TrialRow } from '../data/demo'
+import { CustomSelect } from '../ui/components/CustomSelect'
+import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { DetailRail } from '../ui/components/DetailRail'
+import type { DatasetRow, EventLog, HarborJob, LeaderboardRow, TrialRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface LeaderboardPageProps {

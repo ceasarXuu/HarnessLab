@@ -1,0 +1,144 @@
+.table-wrap {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+tbody tr:hover,
+.selected-row {
+  background: var(--surface-muted);
+}
+.row-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: capitalize;
+}
+.status-dot::before {
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-radius: 999px;
+  background: currentColor;
+}
+.running,
+.success {
+  color: var(--success);
+}
+.queued,
+.warning {
+  color: var(--warning);
+}
+.failed,
+.error {
+  color: var(--danger);
+}
+.completed,
+.info {
+  color: var(--info);
+}
+.cell-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.job-identity {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.job-identity small {
+  display: block;
+}
+.mini-table {
+  display: grid;
+  gap: 8px;
+}
+.mini-row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+.mini-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-row,
+.trial-row {
+  grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) 82px max-content;
+  align-items: center;
+}
+.trial-row {
+  grid-template-columns: 1fr 92px 64px 72px 72px;
+}
+.row-action {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+}
+.row-action:hover {
+  background: var(--subtle);
+}
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 34px;
+}
+.progress-label { min-width: 42px; color: var(--foreground); font-size: 12px; font-weight: 600; }
+.action-groups {
+  display: grid;
+  gap: 14px;
+}
+.action-group {
+  display: grid;
+  gap: 8px;
+}
+.action-group h4 {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.action-list .secondary-button {
+  min-width: 86px;
+  justify-content: center;
+}
+tbody tr { cursor: pointer; }
+.healthy { color: var(--success); }

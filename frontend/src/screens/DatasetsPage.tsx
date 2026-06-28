@@ -1,7 +1,7 @@
 import { Box, Database, Download, Play, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { DetailDrawer } from '../components/DetailDrawer'
-import type { DatasetRow, TaskRow } from '../data/demo'
+import { DetailDrawer } from '../ui/components/DetailDrawer'
+import type { DatasetRow, TaskRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {

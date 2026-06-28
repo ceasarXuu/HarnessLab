@@ -1,5 +1,5 @@
-import type { RunDraft } from '../data/demo'
-import type { Translate } from '../i18n'
+import type { RunDraft } from '../../mocks/demo'
+import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Field, Toggle } from './RunBuilderChrome'
 

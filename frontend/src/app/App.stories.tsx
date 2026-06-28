@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { App } from './App'
-import './styles/app.css'
 
 const meta = {
   title: 'Harbor WebUI/App',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { SystemRow } from '../data/demo'
+import type { SystemRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface SystemPageProps {

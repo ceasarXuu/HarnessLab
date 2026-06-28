@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react'
-import type { HarborJob, JobStatus } from '../data/demo'
-import type { Translate } from '../i18n'
+import type { HarborJob, JobStatus } from '../../mocks/demo'
+import type { Translate } from '../../i18n'
 
 const statusLabels: Record<JobStatus, string> = {
   running: 'Running',
