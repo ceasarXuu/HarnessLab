@@ -128,16 +128,17 @@ tbody tr:hover,
   border: 1px solid var(--border);
   background: var(--surface-muted);
 }
-.task-row,
-.trial-row {
-  grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) 82px max-content;
-  align-items: center;
-}
 .task-row {
-  min-width: 560px;
+  grid-template-columns: minmax(92px, 1fr) 56px minmax(120px, 1.25fr) 72px 104px;
+  align-items: center;
+  width: 100%;
+}
+.task-row .row-actions {
+  justify-content: flex-end;
 }
 .trial-row {
   grid-template-columns: minmax(210px, 1.4fr) 112px 88px 148px;
+  align-items: center;
   min-width: 580px;
 }
 .row-action {
