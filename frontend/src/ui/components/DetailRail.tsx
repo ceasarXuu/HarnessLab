@@ -1,4 +1,4 @@
-import { Download, FileJson, FlaskConical, Play, Share2, Terminal, Upload } from 'lucide-react'
+import { FileJson, FlaskConical, Play, Terminal } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 
@@ -33,27 +33,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <button className="secondary-button">
             <Play aria-hidden="true" />
             {t('resume')}
-          </button>
-        </div>
-      </section>
-
-      <section className="surface rail-card">
-        <div className="rail-title">
-          <Upload aria-hidden="true" />
-          <h3>Hub actions</h3>
-        </div>
-        <div className="button-row tight">
-          <button className="secondary-button">{t('summarize')}</button>
-          <button className="secondary-button">{t('openViewer')}</button>
-          <button className="secondary-button">{t('analyze')}</button>
-          <button className="secondary-button">{t('upload')}</button>
-          <button className="secondary-button">
-            <Download aria-hidden="true" />
-            {t('download')}
-          </button>
-          <button className="secondary-button">
-            <Share2 aria-hidden="true" />
-            {t('share')}
           </button>
         </div>
       </section>
