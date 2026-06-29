@@ -14,7 +14,7 @@ interface RunBuilderProps {
   onLaunch: () => void
 }
 
-type RunBuilderTab = 'core' | 'agent' | 'environment' | 'verifier' | 'runtime' | 'hub'
+type RunBuilderTab = 'core' | 'tasks' | 'environment' | 'verifier' | 'runtime' | 'hub'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 
@@ -25,7 +25,7 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
   const availableSplits = selectedDataset?.splits ?? []
   const tabs: Array<{ key: RunBuilderTab; label: string }> = [
     { key: 'core', label: t('runTabCore') },
-    { key: 'agent', label: t('runTabAgent') },
+    { key: 'tasks', label: t('runTabTasks') },
     { key: 'environment', label: t('runTabEnvironment') },
     { key: 'verifier', label: t('runTabVerifier') },
     { key: 'runtime', label: t('runTabRuntime') },
@@ -87,31 +87,6 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               }}
             />
           </label>
-          {availableSplits.length > 0 && (
-            <label>
-              {t('split')}
-              <CustomSelect
-                ariaLabel={t('split')}
-                value={draft.split}
-                options={availableSplits.map((split) => ({ label: split, value: split }))}
-                onChange={(value) => onDraft({ ...draft, split: value })}
-              />
-            </label>
-          )}
-          <Field label={t('taskInclude')}>
-            <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
-          </Field>
-          <Field label={t('taskExclude')}>
-            <input value={draft.excludeFilter} onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })} />
-          </Field>
-          <Field label={t('taskLimit')}>
-            <input
-              type="number"
-              min="1"
-              value={draft.taskLimit}
-              onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
-            />
-          </Field>
           <label>
             {t('agent')}
             <CustomSelect
@@ -172,32 +147,33 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
           </Field>
         </div>
       </TabPanel>
-      <TabPanel active={activeTab === 'agent'} title={t('runTabAgent')}>
+      <TabPanel active={activeTab === 'tasks'} title={t('runTabTasks')}>
         <div className="run-grid">
-        <Field label={t('agentImportPath')}>
-          <input
-            value={draft.agentImportPath}
-            onChange={(event) => onDraft({ ...draft, agentImportPath: event.target.value })}
-          />
-        </Field>
-        <Field label={t('agentEnv')}>
-          <input value={draft.agentEnv} onChange={(event) => onDraft({ ...draft, agentEnv: event.target.value })} />
-        </Field>
-        <Field label={t('agentKwargs')}>
-          <input value={draft.agentKwargs} onChange={(event) => onDraft({ ...draft, agentKwargs: event.target.value })} />
-        </Field>
-        <Field label="allow_agent_host">
-          <input
-            value={draft.allowAgentHosts}
-            onChange={(event) => onDraft({ ...draft, allowAgentHosts: event.target.value })}
-          />
-        </Field>
-        <Field label={t('skills')}>
-          <input value={draft.skills} onChange={(event) => onDraft({ ...draft, skills: event.target.value })} />
-        </Field>
-        <Field label={t('mcpConfig')}>
-          <input value={draft.mcpConfig} onChange={(event) => onDraft({ ...draft, mcpConfig: event.target.value })} />
-        </Field>
+          {availableSplits.length > 0 && (
+            <label>
+              {t('split')}
+              <CustomSelect
+                ariaLabel={t('split')}
+                value={draft.split}
+                options={availableSplits.map((split) => ({ label: split, value: split }))}
+                onChange={(value) => onDraft({ ...draft, split: value })}
+              />
+            </label>
+          )}
+          <Field label={t('taskInclude')}>
+            <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
+          </Field>
+          <Field label={t('taskExclude')}>
+            <input value={draft.excludeFilter} onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })} />
+          </Field>
+          <Field label={t('taskLimit')}>
+            <input
+              type="number"
+              min="1"
+              value={draft.taskLimit}
+              onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
+            />
+          </Field>
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'environment'} title={t('runTabEnvironment')}>

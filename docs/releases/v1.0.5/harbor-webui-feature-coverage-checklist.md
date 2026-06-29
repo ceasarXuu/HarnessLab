@@ -98,15 +98,16 @@
 
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
-| 基础 | `job_name`、`jobs_dir`、`debug`、`quiet` | 无 job name/jobs dir/debug/quiet；只有等价命令 | Missing | New Job 增加 Basic 区域。 |
+| 基础 | `job_name`、`jobs_dir`、dataset、agent、model、environment、`debug`、`yes`、`env_file` | New Job 基础 tab 已展示 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐。 |
+| Tasks | `split`、`include_task_name`、`exclude_task_name`、`n_tasks` | New Job Tasks tab 已展示 | Covered | 后端接入时用 dataset manifest 驱动 split 和 task 预览。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |
 | Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 无 | Missing | 增加 Retry 区域，区分 job retry 与 UI Retry 按钮。 |
 | Artifacts | `artifacts`，`ArtifactConfig.source/destination/exclude` | Job detail 展示 artifact paths，New Job 不可配置 | Partial | New Job 增加 artifact path 列表。 |
-| Extra instructions | `extra_instruction_paths` | 无 | Missing | Source/Task 区域增加 instruction file picker。 |
+| Extra instructions | `extra_instruction_paths` | Runtime tab 已展示 | Covered | 后端接入时校验路径存在性。 |
 | Metrics | `metrics`，`MetricConfig.type/kwargs` | Leaderboard 展示 score，不能配置 metric | Missing | New Job 增加 metric selector；Leaderboard 展示 metric breakdown。 |
-| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | 无 | Missing | Integrations 区域增加 plugin picker。 |
-| Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | 无 | Missing | Hub 区域增加 upload/share 配置。 |
+| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | Hub / 产物 tab 已展示 plugin import_path 与空列表状态 | Partial | 接真实 `harbor plugins list`。 |
+| Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | Hub / 产物 tab 已展示 upload/share targets | Partial | 接真实 Hub 认证、上传和权限状态。 |
 
 ### 3.3 Agent 配置字段覆盖
 

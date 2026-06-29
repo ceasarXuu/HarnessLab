@@ -149,14 +149,14 @@ benchmark 执行的默认环境前提。
   - 列表页沿用官方 `/datasets` 的标题、搜索框、表格、分页和空/加载骨架布局语言。
   - Jobs、Datasets、Agents 的详情不常驻占用右栏；用户点击列表行后，详情从右侧 drawer 滑出。
   - 任何暂未接入真实能力的官方 UI 元素不得做成误导性假入口；若保留入口，必须明确指向真实本地路径、外部官方路径或禁用状态。
-- JobConfig UI 应采用单页铺开表单，基础字段直接可见：
-  - Dataset / Task source
+- JobConfig UI 应采用单页多 tab 表单，基础字段直接可见：
+  - Dataset source
   - Agent / Model
   - Environment
   - Attempts / Concurrency
-  - Generated JobConfig / equivalent CLI preview
+  - 右上角 JobConfig、Reset、Run 操作
 - Harbor 的高级配置按区域折叠，不再使用无实际价值的步骤条或流程说明栏：
-  - Task filters
+  - Tasks：split、include/exclude、task limit
   - Verifier
   - Retry / Timeout
   - Artifacts
