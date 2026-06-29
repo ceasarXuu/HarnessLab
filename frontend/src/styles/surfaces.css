@@ -22,9 +22,37 @@ code {
 }
 .rail-heading {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+.rail-heading .status-dot {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.rail-title-copy {
+  min-width: 0;
+}
+.rail-title-copy h2,
+.rail-title-copy p {
+  overflow-wrap: anywhere;
+}
+.job-summary-card {
+  padding: 18px 18px 16px;
+}
+.job-summary-card .metric-grid {
+  gap: 10px;
+}
+.job-action-row {
+  justify-content: flex-start;
+}
+.hub-action-card {
+  padding-top: 18px;
+}
+.hub-action-card .button-row {
+  margin-top: 12px;
 }
 .rail-title {
   gap: 8px;

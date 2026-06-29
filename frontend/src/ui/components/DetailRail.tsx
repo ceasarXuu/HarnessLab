@@ -12,9 +12,9 @@ interface DetailRailProps {
 export function DetailRail({ job, events, trials, t }: DetailRailProps) {
   return (
     <aside className="detail-rail">
-      <section className="surface rail-card">
+      <section className="surface rail-card job-summary-card">
         <div className="rail-heading">
-          <div>
+          <div className="rail-title-copy">
             <h2>{job.name}</h2>
             <p>{job.dataset}</p>
           </div>
@@ -29,7 +29,7 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Metric label="job_dir" value={job.jobDir ?? 'jobs/current'} />
           <Metric label="split" value={job.split ?? 'default'} />
         </div>
-        <div className="button-row tight">
+        <div className="button-row tight job-action-row">
           <button className="secondary-button">
             <Play aria-hidden="true" />
             {t('resume')}
@@ -37,7 +37,7 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
         </div>
       </section>
 
-      <section className="surface rail-card">
+      <section className="surface rail-card hub-action-card">
         <div className="rail-title">
           <Upload aria-hidden="true" />
           <h3>Hub actions</h3>
