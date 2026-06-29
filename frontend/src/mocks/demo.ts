@@ -18,6 +18,7 @@ export interface HarborJob {
   includeInLeaderboard: boolean
   jobDir?: string
   eventLogPath?: string
+  artifactPaths?: string[]
   split?: string
   failureCode?: string
 }
@@ -290,6 +291,14 @@ export const jobs: HarborJob[] = [
     includeInLeaderboard: true,
     jobDir: 'jobs/terminal-bench-smoke',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log',
+    artifactPaths: [
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/harbor.config.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/harbor.capability.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/result.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke',
+      '/Users/xuzhang/.ornnlab/HarnessLab/trials/job_91a7',
+    ],
     split: 'test',
   },
   {
@@ -310,6 +319,14 @@ export const jobs: HarborJob[] = [
     includeInLeaderboard: true,
     jobDir: 'jobs/swe-bench-lite-regression',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/job.log',
+    artifactPaths: [
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/harbor.config.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/harbor.capability.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/result.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/job.log',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression',
+      '/Users/xuzhang/.ornnlab/HarnessLab/trials/job_74c1',
+    ],
     split: 'verified',
   },
   {
@@ -330,6 +347,15 @@ export const jobs: HarborJob[] = [
     includeInLeaderboard: false,
     jobDir: 'jobs/harbor-hello-world',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/job.log',
+    artifactPaths: [
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/harbor.config.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/harbor.capability.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/result.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/job.log',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world',
+      '/Users/xuzhang/.ornnlab/HarnessLab/trials/job_55e9',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/verifier_assertion_failed',
+    ],
     split: 'smoke',
     failureCode: 'verifier_assertion_failed',
   },
@@ -351,6 +377,14 @@ export const jobs: HarborJob[] = [
     includeInLeaderboard: false,
     jobDir: 'jobs/terminal-bench-nightly',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/job.log',
+    artifactPaths: [
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/harbor.config.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/harbor.capability.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/result.json',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/job.log',
+      '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly',
+      '/Users/xuzhang/.ornnlab/HarnessLab/trials/job_118b',
+    ],
     split: 'nightly',
   },
 ]

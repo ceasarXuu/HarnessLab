@@ -127,6 +127,7 @@ interface Job {
   includeInLeaderboard: boolean
   jobDir?: string
   eventLogPath?: string
+  artifactPaths?: string[]
   split?: string
   metric?: string
   failureCode?: string
@@ -238,6 +239,7 @@ interface Trial {
 ### EventLog
 
 `EventLog` 表示前端日志窗口中的滚动条目；日志文件的绝对路径由 `Job.eventLogPath` 提供，避免每条日志重复携带路径。
+Job 详情中的产物路径列表由 `Job.artifactPaths` 提供，所有条目必须是绝对路径，避免 WebUI 混用相对路径和裸文件名。
 
 ```ts
 interface EventLog {

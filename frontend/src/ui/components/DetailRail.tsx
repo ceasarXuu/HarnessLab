@@ -12,6 +12,7 @@ interface DetailRailProps {
 
 export function DetailRail({ job, events, trials, t }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
+  const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
 
   return (
     <aside className="detail-rail">
@@ -110,17 +111,39 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <h3>{t('artifactPaths')}</h3>
         </div>
         <div className="path-list">
-          <code>harbor.config.json</code>
-          <code>harbor.capability.json</code>
-          <code>result.json</code>
-          <code>job.log</code>
-          <code>{job.jobDir ?? `jobs/${job.id}`}</code>
-          <code>trials/{job.id}</code>
-          {job.failureCode && <code>{job.failureCode}</code>}
+          {artifactPaths.map((path) => (
+            <code key={path}>{path}</code>
+          ))}
         </div>
       </section>
     </aside>
   )
+}
+
+function buildArtifactPaths(job: HarborJob) {
+  const root = getJobRootPath(job)
+  const paths = [
+    `${root}/harbor.config.json`,
+    `${root}/harbor.capability.json`,
+    `${root}/result.json`,
+    `${root}/job.log`,
+    root,
+    `/Users/xuzhang/.ornnlab/HarnessLab/trials/${job.id}`,
+  ]
+
+  if (job.failureCode) {
+    paths.push(`${root}/${job.failureCode}`)
+  }
+
+  return paths
+}
+
+function getJobRootPath(job: HarborJob) {
+  if (job.eventLogPath?.endsWith('/job.log')) {
+    return job.eventLogPath.slice(0, -'/job.log'.length)
+  }
+
+  return `/Users/xuzhang/.ornnlab/HarnessLab/${job.jobDir ?? `jobs/${job.id}`}`
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -111,8 +111,10 @@ export function App() {
   }
 
   function launchDraft() {
+    const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
+    const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
     const newJob: HarborJob = {
-      id: `job_${Math.floor(Math.random() * 9000 + 1000)}`,
+      id: nextJobId,
       name: `${draft.source.split('@')[0]}-draft`,
       status: 'queued',
       dataset: draft.source,
@@ -128,7 +130,15 @@ export function App() {
       createdAt: '2026-06-29 04:30:00',
       includeInLeaderboard: draft.includeInLeaderboard,
       jobDir: draft.jobsDir,
-      eventLogPath: `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}/job.log`,
+      eventLogPath: `${nextJobRoot}/job.log`,
+      artifactPaths: [
+        `${nextJobRoot}/harbor.config.json`,
+        `${nextJobRoot}/harbor.capability.json`,
+        `${nextJobRoot}/result.json`,
+        `${nextJobRoot}/job.log`,
+        nextJobRoot,
+        `/Users/xuzhang/.ornnlab/HarnessLab/trials/${nextJobId}`,
+      ],
       split: draft.split,
     }
     setJobs((current) => [newJob, ...current])
