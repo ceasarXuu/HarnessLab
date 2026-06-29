@@ -40,7 +40,6 @@ export interface RunDraft {
   extraInstructions: string
   debug: boolean
   quiet: boolean
-  yes: boolean
   envFile: string
   notes: string
   agent: string
@@ -220,7 +219,6 @@ export const initialDraft: RunDraft = {
   extraInstructions: 'instructions/hardening.md',
   debug: false,
   quiet: false,
-  yes: true,
   envFile: '.env.harbor',
   notes: '',
   agent: 'claude-code',

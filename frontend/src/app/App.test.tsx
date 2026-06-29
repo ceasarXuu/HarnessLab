@@ -306,7 +306,7 @@ describe('App', () => {
     expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
     expect(screen.queryByLabelText('include_task_name')).not.toBeInTheDocument()
     expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
-    expect(screen.getByLabelText('yes')).toHaveTextContent('enabled')
+    expect(screen.queryByLabelText('yes')).not.toBeInTheDocument()
     expect(screen.getByLabelText('env_file')).toHaveValue('.env.harbor')
     expect(screen.getByLabelText('Include in leaderboard')).toHaveTextContent('enabled')
     expect(screen.getByLabelText('Notes')).toHaveValue('')

@@ -66,7 +66,7 @@
 
 根据对抗性审查，本次继续补齐上一轮仍不可见的 Harbor 能力面：
 
-1. New Job：补 debug、quiet、yes、env_file、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入命令预览。
+1. New Job：补 debug、quiet、env_file、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入配置预览。CLI `--yes` 不进入 WebUI，由执行层处理非交互运行。
 2. Jobs：补 Trial diagnostics，展示 progress、retries、log、analysis、verifier evidence、artifact 和 tokens；Job 操作补 clone job。
 3. Datasets / Tasks：补 manifest tools，对应 `harbor init/add/remove/sync`；Task config explorer 用户价值不足，v1.0.5 不展示。
 4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
@@ -98,7 +98,7 @@
 
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
-| 基础 | `job_name`、`jobs_dir`、dataset、agent、model、environment、`debug`、`yes`、`env_file` | New Job 基础 tab 已展示 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐。 |
+| 基础 | `job_name`、`jobs_dir`、dataset、agent、model、environment、`debug`、`env_file`、leaderboard inclusion、notes | New Job 基础 tab 已展示 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项。 |
 | Tasks | `split`、`include_task_name`、`exclude_task_name`、`n_tasks` | New Job Tasks tab 已展示 | Covered | 后端接入时用 dataset manifest 驱动 split 和 task 预览。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |

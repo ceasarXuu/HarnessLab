@@ -148,18 +148,6 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               onChange={(value) => onDraft({ ...draft, debug: value === 'enabled' })}
             />
           </label>
-          <label>
-            yes
-            <CustomSelect
-              ariaLabel="yes"
-              value={draft.yes ? 'enabled' : 'disabled'}
-              options={[
-                { label: 'enabled', value: 'enabled' },
-                { label: 'disabled', value: 'disabled' },
-              ]}
-              onChange={(value) => onDraft({ ...draft, yes: value === 'enabled' })}
-            />
-          </label>
           <Field label="env_file">
             <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
           </Field>
