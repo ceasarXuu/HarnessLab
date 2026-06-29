@@ -175,6 +175,9 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               onChange={(value) => onDraft({ ...draft, includeInLeaderboard: value === 'enabled' })}
             />
           </label>
+          <Field label={t('notes')} wide>
+            <textarea value={draft.notes} onChange={(event) => onDraft({ ...draft, notes: event.target.value })} />
+          </Field>
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'tasks'} title={t('runTabTasks')}>

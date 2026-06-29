@@ -10,6 +10,7 @@ body {
 }
 button,
 input,
+textarea,
 select {
   font: inherit;
 }
@@ -52,12 +53,19 @@ label {
   font-size: 12px;
 }
 input,
+textarea,
 select {
   min-height: 34px;
   padding: 0 10px;
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--foreground);
+}
+textarea {
+  min-height: 96px;
+  padding-top: 8px;
+  line-height: 1.5;
+  resize: vertical;
 }
 code {
   color: var(--foreground);

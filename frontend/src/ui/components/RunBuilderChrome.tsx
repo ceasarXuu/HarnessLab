@@ -14,9 +14,9 @@ export function TabPanel({ active, children, title }: { active: boolean; childre
   )
 }
 
-export function Field({ children, label }: { children: ReactNode; label: string }) {
+export function Field({ children, label, wide = false }: { children: ReactNode; label: string; wide?: boolean }) {
   return (
-    <label>
+    <label className={wide ? 'field-wide' : undefined}>
       {label}
       {children}
     </label>

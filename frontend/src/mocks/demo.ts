@@ -42,6 +42,7 @@ export interface RunDraft {
   quiet: boolean
   yes: boolean
   envFile: string
+  notes: string
   agent: string
   model: string
   agentImportPath: string
@@ -221,6 +222,7 @@ export const initialDraft: RunDraft = {
   quiet: false,
   yes: true,
   envFile: '.env.harbor',
+  notes: '',
   agent: 'claude-code',
   model: 'anthropic/claude-haiku-4-5',
   agentImportPath: '',
