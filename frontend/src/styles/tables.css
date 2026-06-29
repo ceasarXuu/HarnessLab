@@ -133,6 +133,9 @@ tbody tr:hover,
   grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) 82px max-content;
   align-items: center;
 }
+.task-row {
+  min-width: 760px;
+}
 .trial-row {
   grid-template-columns: minmax(210px, 1.4fr) 112px 88px 148px;
   min-width: 580px;

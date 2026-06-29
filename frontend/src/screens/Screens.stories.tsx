@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../i18n'
 import { events, jobs, trialRows } from '../mocks/demo'
@@ -65,6 +66,14 @@ export const Jobs: Story = {
 
 export const Datasets: Story = {
   render: () => <DatasetsFixture />,
+}
+
+export const DatasetDrawer: Story = {
+  render: () => <DatasetsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByText('terminal-bench'))
+  },
 }
 
 export const Agents: Story = {
