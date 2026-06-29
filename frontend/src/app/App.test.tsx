@@ -313,7 +313,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'nightly smoke run' } })
     expect(screen.getByLabelText('Notes')).toHaveValue('nightly smoke run')
     expect(screen.queryByLabelText('Split')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText('Source'))
+    fireEvent.click(screen.getByLabelText('Dataset'))
     fireEvent.click(screen.getByRole('option', { name: 'harbor/hello-world@latest' }))
     fireEvent.click(screen.getByRole('tab', { name: 'Tasks' }))
     expect(screen.getByLabelText('Split')).toHaveTextContent('smoke')

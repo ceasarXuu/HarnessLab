@@ -76,9 +76,9 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
             <input value={draft.jobsDir} onChange={(event) => onDraft({ ...draft, jobsDir: event.target.value })} />
           </Field>
           <label>
-            {t('source')}
+            {t('jobDataset')}
             <CustomSelect
-              ariaLabel={t('source')}
+              ariaLabel={t('jobDataset')}
               value={draft.source}
               options={datasetOptions}
               onChange={(value) => {
