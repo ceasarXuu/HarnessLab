@@ -76,6 +76,15 @@ export const DatasetDrawer: Story = {
   },
 }
 
+export const DatasetTaskConfig: Story = {
+  render: () => <DatasetsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByText('terminal-bench'))
+    canvas.getByText('Task config').scrollIntoView()
+  },
+}
+
 export const Agents: Story = {
   render: () => <AgentsPage rows={agentRows} t={t} />,
 }
