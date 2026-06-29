@@ -127,6 +127,8 @@ export function App() {
       runtimeDuration: '00:00:00',
       createdAt: '2026-06-29 04:30:00',
       includeInLeaderboard: draft.includeInLeaderboard,
+      jobDir: draft.jobsDir,
+      eventLogPath: `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}/job.log`,
       split: draft.split,
     }
     setJobs((current) => [newJob, ...current])

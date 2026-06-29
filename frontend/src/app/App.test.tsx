@@ -50,6 +50,8 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.getByText('harbor.capability.json')).toBeInTheDocument()
+    expect(screen.getByText('Log file')).toBeInTheDocument()
+    expect(screen.getByText('/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log')).toBeInTheDocument()
     expect(screen.queryByText('Trial diagnostics')).not.toBeInTheDocument()
     expect(screen.queryByText('analysis: trials/job_91a7/apt-setup.analysis.json')).not.toBeInTheDocument()
     expect(screen.queryByText('log path: trials/job_91a7/apt-setup.log')).not.toBeInTheDocument()

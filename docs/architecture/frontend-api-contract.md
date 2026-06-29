@@ -126,6 +126,7 @@ interface Job {
   createdAt: string
   includeInLeaderboard: boolean
   jobDir?: string
+  eventLogPath?: string
   split?: string
   metric?: string
   failureCode?: string
@@ -235,6 +236,8 @@ interface Trial {
 ```
 
 ### EventLog
+
+`EventLog` 表示前端日志窗口中的滚动条目；日志文件的绝对路径由 `Job.eventLogPath` 提供，避免每条日志重复携带路径。
 
 ```ts
 interface EventLog {

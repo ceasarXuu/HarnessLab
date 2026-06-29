@@ -90,6 +90,10 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Terminal aria-hidden="true" />
           <h3>{t('eventLog')}</h3>
         </div>
+        <p className="rail-subtitle">
+          <span>{t('eventLogPath')}</span>
+          <code>{job.eventLogPath ?? `${job.jobDir ?? `jobs/${job.id}`}/job.log`}</code>
+        </p>
         <ol className="event-list">
           {events.map((event) => (
             <li key={`${event.time}-${event.message}`} className={event.level}>

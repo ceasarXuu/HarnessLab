@@ -52,6 +52,16 @@ code {
   gap: 8px;
   margin-bottom: 12px;
 }
+.rail-subtitle {
+  display: grid;
+  gap: 4px;
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.rail-subtitle code {
+  overflow-wrap: anywhere;
+}
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -84,6 +94,11 @@ code {
   padding: 0;
   list-style: none;
 }
+.event-list {
+  max-height: 176px;
+  overflow: auto;
+  padding-right: 4px;
+}
 .event-list li {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
@@ -91,6 +106,10 @@ code {
 }
 .event-list span {
   color: var(--muted);
+}
+.event-list p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 .doctor-list li {
   display: flex;

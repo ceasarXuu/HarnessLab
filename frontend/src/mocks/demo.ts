@@ -17,6 +17,7 @@ export interface HarborJob {
   createdAt: string
   includeInLeaderboard: boolean
   jobDir?: string
+  eventLogPath?: string
   split?: string
   failureCode?: string
 }
@@ -288,6 +289,7 @@ export const jobs: HarborJob[] = [
     createdAt: '2026-06-29 03:46:12',
     includeInLeaderboard: true,
     jobDir: 'jobs/terminal-bench-smoke',
+    eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log',
     split: 'test',
   },
   {
@@ -307,6 +309,7 @@ export const jobs: HarborJob[] = [
     createdAt: '2026-06-29 00:18:05',
     includeInLeaderboard: true,
     jobDir: 'jobs/swe-bench-lite-regression',
+    eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swe-bench-lite-regression/job.log',
     split: 'verified',
   },
   {
@@ -326,6 +329,7 @@ export const jobs: HarborJob[] = [
     createdAt: '2026-06-28 23:05:41',
     includeInLeaderboard: false,
     jobDir: 'jobs/harbor-hello-world',
+    eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/job.log',
     split: 'smoke',
     failureCode: 'verifier_assertion_failed',
   },
@@ -346,6 +350,7 @@ export const jobs: HarborJob[] = [
     createdAt: '2026-06-29 04:08:22',
     includeInLeaderboard: false,
     jobDir: 'jobs/terminal-bench-nightly',
+    eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/job.log',
     split: 'nightly',
   },
 ]
