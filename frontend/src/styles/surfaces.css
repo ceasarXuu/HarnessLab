@@ -123,7 +123,8 @@ code {
   position: absolute;
   top: 0;
   right: 0;
-  width: min(560px, calc(100vw - 32px));
+  min-width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   height: 100vh;
   padding: 52px 16px 16px;
   overflow: auto;
@@ -132,6 +133,25 @@ code {
   box-shadow: -18px 0 48px rgba(0, 0, 0, 0.18);
   pointer-events: auto;
   animation: drawer-in 160ms ease-out;
+}
+.drawer-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 10px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  background: transparent;
+  cursor: ew-resize;
+}
+.drawer-resize-handle:hover,
+.drawer-resize-handle:focus-visible {
+  border-left-color: var(--border-strong);
+  border-right-color: var(--border-strong);
+  background: var(--subtle);
 }
 .detail-drawer .detail-rail {
   display: flex;
