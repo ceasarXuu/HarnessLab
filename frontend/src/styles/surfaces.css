@@ -48,12 +48,6 @@ code {
 .job-action-row {
   justify-content: flex-start;
 }
-.hub-action-card {
-  padding-top: 18px;
-}
-.hub-action-card .button-row {
-  margin-top: 12px;
-}
 .rail-title {
   gap: 8px;
   margin-bottom: 12px;

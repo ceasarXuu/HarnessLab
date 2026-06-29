@@ -76,6 +76,8 @@ tbody tr:hover,
 .mini-table {
   display: grid;
   gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 .mini-row {
   display: grid;
@@ -97,7 +99,8 @@ tbody tr:hover,
   align-items: center;
 }
 .trial-row {
-  grid-template-columns: 1fr 92px 64px 72px 72px;
+  grid-template-columns: minmax(190px, 1.3fr) 104px 72px 80px 128px;
+  min-width: 620px;
 }
 .row-action {
   min-height: 28px;

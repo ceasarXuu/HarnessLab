@@ -34,17 +34,11 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             <Play aria-hidden="true" />
             {t('resume')}
           </button>
-        </div>
-      </section>
-
-      <section className="surface rail-card hub-action-card">
-        <div className="rail-title">
-          <Upload aria-hidden="true" />
-          <h3>Hub actions</h3>
-        </div>
-        <div className="button-row tight">
           <button className="secondary-button">{t('openViewer')}</button>
-          <button className="secondary-button">{t('upload')}</button>
+          <button className="secondary-button">
+            <Upload aria-hidden="true" />
+            {t('upload')}
+          </button>
           <button className="secondary-button">
             <Download aria-hidden="true" />
             {t('download')}
