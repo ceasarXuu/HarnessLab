@@ -21,6 +21,7 @@ const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
 
 export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
+  const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [downloads, setDownloads] = useState<Record<string, DatasetDownloadState>>(() =>
@@ -119,6 +120,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     className={selected?.name === row.name && selected.version === row.version ? 'selected-row' : undefined}
                     onClick={() => {
                       setSelected(row)
+                      setExpandedTaskName(null)
                       setDrawerOpen(true)
                     }}
                   >
@@ -237,18 +239,38 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
               <div className="mini-table">
                 <div className="mini-row task-row mini-header" role="row">
                   <span>{t('taskName')}</span>
-                  <span>{t('os')}</span>
-                  <span>{t('description')}</span>
                   <span>{t('actions')}</span>
                 </div>
                 {selectedTasks.map((row) => (
-                  <div key={row.name} className="mini-row task-row">
-                    <span>{row.name}</span>
-                    <span>{row.os}</span>
-                    <span>{row.description}</span>
-                    <div className="row-actions">
-                      <button className="row-action">{t('runSingleTask')}</button>
+                  <div key={row.name} className="task-entry">
+                    <div
+                      className="mini-row task-row task-toggle"
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expandedTaskName === row.name}
+                      onClick={() => setExpandedTaskName((current) => (current === row.name ? null : row.name))}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return
+                        event.preventDefault()
+                        setExpandedTaskName((current) => (current === row.name ? null : row.name))
+                      }}
+                    >
+                      <span>{row.name}</span>
+                      <div className="row-actions">
+                        <button
+                          className="row-action"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {t('runSingleTask')}
+                        </button>
+                      </div>
                     </div>
+                    {expandedTaskName === row.name && (
+                      <div className="task-expanded">
+                        <span>{t('description')}</span>
+                        <p>{row.description}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

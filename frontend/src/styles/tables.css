@@ -100,6 +100,34 @@ tbody tr:hover,
   font-weight: 700;
   text-transform: uppercase;
 }
+.task-entry {
+  display: grid;
+  gap: 0;
+}
+.task-toggle {
+  cursor: pointer;
+}
+.task-toggle:hover {
+  background: var(--subtle);
+}
+.task-expanded {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--surface);
+}
+.task-expanded span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.task-expanded p {
+  margin: 0;
+  color: var(--foreground);
+}
 .trial-entry {
   display: grid;
   gap: 0;
@@ -129,7 +157,7 @@ tbody tr:hover,
   background: var(--surface-muted);
 }
 .task-row {
-  grid-template-columns: minmax(104px, 1fr) 56px minmax(160px, 1.6fr) 104px;
+  grid-template-columns: minmax(0, 1fr) 104px;
   align-items: center;
   width: 100%;
 }
