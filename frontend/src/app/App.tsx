@@ -143,29 +143,7 @@ export function App() {
     }
     setJobs((current) => [newJob, ...current])
     if (draft.includeInLeaderboard) {
-      const newLeaderboardEntry: LeaderboardRow = {
-        dataset: draft.source,
-        rank: 0,
-        agentName: draft.agent,
-        harness: draft.agent,
-        model: draft.model.split('/').at(-1) ?? draft.model,
-        score: '-',
-        trials: '0',
-        cost: '$0.00',
-        tokens: '0M',
-        duration: '0m',
-        jobId: newJob.id,
-        split: draft.split || 'default',
-        metric: draft.metric,
-        submitted: 'local only',
-        reportPath: `reports/${newJob.id}.json`,
-        comparabilityKey: `${draft.source}:${draft.split || 'default'}:${draft.metric}`,
-        uploadedUrl: '-',
-        submissionId: '-',
-        configHash: `cfg_${newJob.id}`,
-        agentSnapshotHash: `agent_${draft.agent}`,
-      }
-      setLeaderboardEntries((current) => [...current, newLeaderboardEntry])
+      setLeaderboardEntries((current) => [...current, buildLeaderboardEntryFromJob(newJob, draft.metric)])
     }
     setSelected(newJob)
     setJobDrawerOpen(true)
@@ -177,6 +155,27 @@ export function App() {
       current.map((job) => (job.id === jobId ? { ...job, includeInLeaderboard: false } : job)),
     )
     setLeaderboardEntries((current) => current.filter((row) => row.jobId !== jobId))
+  }
+
+  function updateJobLeaderboardInclusion(jobId: string, includeInLeaderboard: boolean) {
+    setJobs((current) =>
+      current.map((job) => (job.id === jobId ? { ...job, includeInLeaderboard } : job)),
+    )
+    setSelected((current) => (current?.id === jobId ? { ...current, includeInLeaderboard } : current))
+    if (!includeInLeaderboard) {
+      setLeaderboardEntries((current) => current.filter((row) => row.jobId !== jobId))
+      return
+    }
+    const targetJob = jobs.find((job) => job.id === jobId)
+    if (!targetJob) {
+      return
+    }
+    setLeaderboardEntries((current) => {
+      if (current.some((row) => row.jobId === jobId)) {
+        return current
+      }
+      return [...current, buildLeaderboardEntryFromJob({ ...targetJob, includeInLeaderboard })]
+    })
   }
 
   return (
@@ -211,6 +210,7 @@ export function App() {
           trialRows={trialRows}
           onDataset={setLeaderboardDataset}
           onDatasetSearch={setLeaderboardDatasetSearch}
+          onLeaderboardChange={updateJobLeaderboardInclusion}
           onRemove={removeFromLeaderboard}
         />
       )}
@@ -224,6 +224,7 @@ export function App() {
           trialRows={trialRows}
           t={t}
           onClose={() => setJobDrawerOpen(false)}
+          onLeaderboardChange={updateJobLeaderboardInclusion}
           onNewJob={() => navigate('jobs', 'new')}
           onSearch={setSearch}
           onSelect={(job) => {
@@ -245,4 +246,29 @@ export function App() {
       {route.page === 'system' && <SystemPage rows={systemRows} t={t} />}
     </AppShell>
   )
+}
+
+function buildLeaderboardEntryFromJob(job: HarborJob, metric = 'pass@1 mean'): LeaderboardRow {
+  return {
+    dataset: job.dataset,
+    rank: 0,
+    agentName: job.agent,
+    harness: job.agent,
+    model: job.model,
+    score: job.score,
+    trials: job.trials.split('/')[0]?.trim() ?? job.trials,
+    cost: job.cost,
+    tokens: job.tokenUsage,
+    duration: job.runtimeDuration,
+    jobId: job.id,
+    split: job.split || 'default',
+    metric,
+    submitted: 'local only',
+    reportPath: `reports/${job.id}.json`,
+    comparabilityKey: `${job.dataset}:${job.split || 'default'}:${metric}`,
+    uploadedUrl: '-',
+    submissionId: '-',
+    configHash: `cfg_${job.id}`,
+    agentSnapshotHash: `agent_${job.agent}`,
+  }
 }

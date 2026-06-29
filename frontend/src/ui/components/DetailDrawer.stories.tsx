@@ -22,7 +22,13 @@ function DetailDrawerFixture() {
         </div>
       </section>
       <DetailDrawer label="Selected job" open={open} onClose={() => setOpen(false)}>
-        <DetailRail job={job} events={events} trials={trialRows.filter((row) => row.jobId === job.id)} t={t} />
+        <DetailRail
+          job={job}
+          events={events}
+          trials={trialRows.filter((row) => row.jobId === job.id)}
+          t={t}
+          onLeaderboardChange={() => undefined}
+        />
       </DetailDrawer>
     </main>
   )

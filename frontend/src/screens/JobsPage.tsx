@@ -14,6 +14,7 @@ interface JobsPageProps {
   t: Translate
   onClose: () => void
   onNewJob: () => void
+  onLeaderboardChange: (jobId: string, include: boolean) => void
   onSearch: (value: string) => void
   onSelect: (job: HarborJob) => void
 }
@@ -28,6 +29,7 @@ export function JobsPage({
   t,
   onClose,
   onNewJob,
+  onLeaderboardChange,
   onSearch,
   onSelect,
 }: JobsPageProps) {
@@ -46,7 +48,13 @@ export function JobsPage({
       </div>
       {selected && (
         <DetailDrawer label={t('selectedJob')} open={open} onClose={onClose}>
-          <DetailRail job={selected} events={events} trials={trialRows.filter((row) => row.jobId === selected.id)} t={t} />
+          <DetailRail
+            job={selected}
+            events={events}
+            trials={trialRows.filter((row) => row.jobId === selected.id)}
+            t={t}
+            onLeaderboardChange={onLeaderboardChange}
+          />
         </DetailDrawer>
       )}
     </main>

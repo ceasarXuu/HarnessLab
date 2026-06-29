@@ -214,10 +214,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                   {t('download')}
                 </button>
                 <button className="secondary-button">{t('pullUpdates')}</button>
-                <label className="switch-control">
-                  <span>{t('countInLeaderboard')}</span>
-                  <input type="checkbox" defaultChecked={selected.visibility === 'public'} />
-                </label>
                 <button className="secondary-button">{t('publish')}</button>
               </div>
             </section>

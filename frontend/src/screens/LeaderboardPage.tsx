@@ -17,6 +17,7 @@ interface LeaderboardPageProps {
   trialRows: TrialRow[]
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
+  onLeaderboardChange: (jobId: string, include: boolean) => void
   onRemove: (jobId: string) => void
 }
 
@@ -31,6 +32,7 @@ export function LeaderboardPage({
   trialRows,
   onDataset,
   onDatasetSearch,
+  onLeaderboardChange,
   onRemove,
 }: LeaderboardPageProps) {
   const [selectedJob, setSelectedJob] = useState<HarborJob | null>(null)
@@ -153,7 +155,16 @@ export function LeaderboardPage({
       </section>
       {selectedJob && (
         <DetailDrawer label={t('selectedJob')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <DetailRail job={selectedJob} events={events} trials={trialRows.filter((row) => row.jobId === selectedJob.id)} t={t} />
+          <DetailRail
+            job={selectedJob}
+            events={events}
+            trials={trialRows.filter((row) => row.jobId === selectedJob.id)}
+            t={t}
+            onLeaderboardChange={(jobId, include) => {
+              setSelectedJob((current) => (current?.id === jobId ? { ...current, includeInLeaderboard: include } : current))
+              onLeaderboardChange(jobId, include)
+            }}
+          />
         </DetailDrawer>
       )}
     </main>

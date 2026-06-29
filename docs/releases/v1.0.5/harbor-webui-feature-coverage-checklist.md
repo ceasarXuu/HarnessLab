@@ -92,6 +92,7 @@
 | Download job | `harbor job download` | 无 API | Jobs 有 Import 按钮但未定义来源 | Missing | Import from Hub 表单：job id/url、download target、conflict policy。 |
 | Upload job | `harbor upload` / `harbor run --upload` | 无 API | 未展示 | Missing | Upload dialog：visibility、share targets、uploaded url。 |
 | Share job | `harbor job share` | 无 API | 未展示 | Missing | Share dialog：org/user chips、confirm。 |
+| Leaderboard inclusion | JobConfig leaderboard / submit policy | 无 API | New Job 与 Job detail drawer 展示“计入排行榜”开关 | Partial | 接真实 JobConfig 与 leaderboard submission 状态。 |
 
 ### 3.2 JobConfig 字段覆盖
 
@@ -146,7 +147,7 @@
 | Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 展示 version/tasks/source/digest/updated 和 task 列表 | Partial | 增加 registry_url/path、download_dir、task filters、manifest path。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | Download 按钮未接行为 | Missing | Dataset detail 加 download action。 |
 | Dataset init | `harbor dataset init` | 无 | 未展示 | Deferred | Dataset create wizard。 |
-| Dataset visibility | `harbor dataset visibility` | 无 | Dataset drawer 顶部展示“计入排行榜”开关 | Partial | 后续接真实 visibility / leaderboard inclusion 状态。 |
+| Dataset visibility | `harbor dataset visibility` | 无 | Dataset drawer 不展示 leaderboard inclusion | Deferred | 若 Harbor dataset visibility 进入 v1.0.5，再定义独立 dataset 可见性 UI。 |
 | Publish dataset | `harbor publish` | 无 | 未展示 | Deferred | Publish wizard。 |
 | Manifest add/remove/sync | `harbor add/remove/sync` | 无 | Manifest 工具区跟踪，不放入顶部快捷操作 | Partial | Dataset editor + manifest diff。 |
 

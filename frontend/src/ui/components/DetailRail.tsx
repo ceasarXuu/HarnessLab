@@ -8,9 +8,10 @@ interface DetailRailProps {
   events: EventLog[]
   trials: TrialRow[]
   t: Translate
+  onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ job, events, trials, t }: DetailRailProps) {
+export function DetailRail({ job, events, trials, t, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job.status, t)
@@ -41,6 +42,14 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Metric label="split" value={job.split ?? 'default'} />
         </div>
         <div className="button-row tight job-action-row">
+          <label className="switch-control">
+            <span>{t('includeInLeaderboard')}</span>
+            <input
+              type="checkbox"
+              checked={job.includeInLeaderboard}
+              onChange={(event) => onLeaderboardChange(job.id, event.target.checked)}
+            />
+          </label>
           <button className="secondary-button">{t('openViewer')}</button>
           <button className="secondary-button">
             <Upload aria-hidden="true" />

@@ -31,6 +31,7 @@ export const JobDetail: Story = {
     events,
     trials: trialRows.filter((row) => row.jobId === jobs[0].id),
     t,
+    onLeaderboardChange: () => undefined,
   },
 }
 
@@ -40,6 +41,7 @@ export const RecoverableJobAction: Story = {
     events,
     trials: trialRows.filter((row) => row.jobId === jobs[2].id),
     t,
+    onLeaderboardChange: () => undefined,
   },
 }
 
@@ -49,6 +51,7 @@ export const ScrollableEventLog: Story = {
     events: longEvents,
     trials: trialRows.filter((row) => row.jobId === jobs[0].id),
     t,
+    onLeaderboardChange: () => undefined,
   },
   decorators: [
     (StoryComponent) => (

@@ -41,6 +41,7 @@ function LeaderboardFixture() {
       trialRows={trialRows}
       onDataset={setDataset}
       onDatasetSearch={() => undefined}
+      onLeaderboardChange={() => undefined}
       onRemove={() => undefined}
     />
   )
@@ -57,6 +58,7 @@ export const Jobs: Story = {
       trialRows={trialRows}
       t={t}
       onClose={() => undefined}
+      onLeaderboardChange={() => undefined}
       onNewJob={() => undefined}
       onSearch={() => undefined}
       onSelect={() => undefined}
