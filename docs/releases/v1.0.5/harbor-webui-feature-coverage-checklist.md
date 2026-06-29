@@ -92,7 +92,7 @@
 | Download job | `harbor job download` | 无 API | Jobs 有 Import 按钮但未定义来源 | Missing | Import from Hub 表单：job id/url、download target、conflict policy。 |
 | Upload job | `harbor upload` / `harbor run --upload` | 无 API | 未展示 | Missing | Upload dialog：visibility、share targets、uploaded url。 |
 | Share job | `harbor job share` | 无 API | 未展示 | Missing | Share dialog：org/user chips、confirm。 |
-| Leaderboard inclusion | JobConfig leaderboard / submit policy | 无 API | New Job 与 Job detail drawer 展示“计入排行榜”开关 | Partial | 接真实 JobConfig 与 leaderboard submission 状态。 |
+| Leaderboard inclusion | JobConfig leaderboard / submit policy | 无 API | New Job 基础 tab 与 Job detail drawer 展示“计入排行榜”开关 | Partial | 接真实 JobConfig 与 leaderboard submission 状态。 |
 
 ### 3.2 JobConfig 字段覆盖
 
@@ -106,8 +106,8 @@
 | Artifacts | `artifacts`，`ArtifactConfig.source/destination/exclude` | Job detail 展示 artifact paths，New Job 不可配置 | Partial | New Job 增加 artifact path 列表。 |
 | Extra instructions | `extra_instruction_paths` | Runtime tab 已展示 | Covered | 后端接入时校验路径存在性。 |
 | Metrics | `metrics`，`MetricConfig.type/kwargs` | Leaderboard 展示 score，不能配置 metric | Missing | New Job 增加 metric selector；Leaderboard 展示 metric breakdown。 |
-| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | Hub / 产物 tab 已展示 plugin import_path 与空列表状态 | Partial | 接真实 `harbor plugins list`。 |
-| Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | Hub / 产物 tab 已展示 upload/share targets | Partial | 接真实 Hub 认证、上传和权限状态。 |
+| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | 输出 tab 已展示 plugin import_path 与空列表状态 | Partial | 接真实 `harbor plugins list`。 |
+| Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | 输出 tab 已展示 upload/share targets | Partial | 接真实 Hub 认证、上传和权限状态。 |
 
 ### 3.3 Agent 配置字段覆盖
 

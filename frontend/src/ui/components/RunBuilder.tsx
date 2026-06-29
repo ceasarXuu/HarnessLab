@@ -145,6 +145,14 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
           <Field label="env_file">
             <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
           </Field>
+          <label className="switch-control">
+            <span>{t('includeInLeaderboard')}</span>
+            <input
+              type="checkbox"
+              checked={draft.includeInLeaderboard}
+              onChange={(event) => onDraft({ ...draft, includeInLeaderboard: event.target.checked })}
+            />
+          </label>
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'tasks'} title={t('runTabTasks')}>
