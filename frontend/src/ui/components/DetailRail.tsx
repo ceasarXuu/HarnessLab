@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, FileJson, FlaskConical, Play, Terminal, Upload } from 'lucide-react'
+import { Download, FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 
@@ -13,6 +13,7 @@ interface DetailRailProps {
 export function DetailRail({ job, events, trials, t }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
+  const primaryJobAction = getPrimaryJobAction(job.status, t)
 
   return (
     <aside className="detail-rail">
@@ -22,7 +23,13 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             <h2>{job.name}</h2>
             <p>{job.dataset}</p>
           </div>
-          <span className={`status-dot ${job.status}`}>{job.status}</span>
+          <div className="rail-heading-actions">
+            <span className={`status-dot ${job.status}`}>{job.status}</span>
+            <button className="secondary-button compact-button">
+              {primaryJobAction.kind === 'pause' ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+              {primaryJobAction.label}
+            </button>
+          </div>
         </div>
         <div className="metric-grid">
           <Metric label={t('trialCount')} value={job.trials} />
@@ -34,10 +41,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <Metric label="split" value={job.split ?? 'default'} />
         </div>
         <div className="button-row tight job-action-row">
-          <button className="secondary-button">
-            <Play aria-hidden="true" />
-            {t('resume')}
-          </button>
           <button className="secondary-button">{t('openViewer')}</button>
           <button className="secondary-button">
             <Upload aria-hidden="true" />
@@ -118,6 +121,14 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
       </section>
     </aside>
   )
+}
+
+function getPrimaryJobAction(status: HarborJob['status'], t: Translate) {
+  if (status === 'running' || status === 'queued') {
+    return { kind: 'pause' as const, label: t('pause') }
+  }
+
+  return { kind: 'resume' as const, label: t('resume') }
 }
 
 function buildArtifactPaths(job: HarborJob) {

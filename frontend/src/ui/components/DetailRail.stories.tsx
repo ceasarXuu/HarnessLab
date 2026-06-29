@@ -34,6 +34,15 @@ export const JobDetail: Story = {
   },
 }
 
+export const RecoverableJobAction: Story = {
+  args: {
+    job: jobs[2],
+    events,
+    trials: trialRows.filter((row) => row.jobId === jobs[2].id),
+    t,
+  },
+}
+
 export const ScrollableEventLog: Story = {
   args: {
     job: jobs[0],

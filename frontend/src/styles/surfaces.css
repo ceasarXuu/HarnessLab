@@ -29,8 +29,18 @@ code {
 }
 .rail-heading .status-dot {
   flex: 0 0 auto;
-  margin-top: 2px;
   white-space: nowrap;
+}
+.rail-heading-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.compact-button {
+  min-height: 28px;
+  padding: 0 10px;
 }
 .rail-title-copy {
   min-width: 0;
