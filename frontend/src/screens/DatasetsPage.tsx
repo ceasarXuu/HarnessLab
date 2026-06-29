@@ -1,4 +1,4 @@
-import { Box, Database, Download, Search, Trash2, X } from 'lucide-react'
+import { Box, Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import type { DatasetRow, TaskRow } from '../mocks/demo'
@@ -18,12 +18,21 @@ type DatasetDownloadState =
   | { path: string; size: string; status: 'downloaded' }
 
 const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
+const defaultImportDraft = {
+  name: 'local/custom-dataset',
+  path: './datasets/custom-dataset',
+  tasks: '12',
+  version: 'local',
+}
 
 export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importDraft, setImportDraft] = useState(defaultImportDraft)
+  const [importedRows, setImportedRows] = useState<DatasetRow[]>([])
   const [downloads, setDownloads] = useState<Record<string, DatasetDownloadState>>(() =>
     Object.fromEntries(rows.map((row) => [
       datasetKey(row),
@@ -36,6 +45,18 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
         : { status: 'not-downloaded' as const },
     ])),
   )
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    const visibleImportedRows = query
+      ? importedRows.filter((row) =>
+          [row.name, row.version, row.visibility, row.source, row.digest, row.path ?? ''].some((value) =>
+            value.toLowerCase().includes(query),
+          ),
+        )
+      : importedRows
+
+    return [...visibleImportedRows, ...rows]
+  }, [importedRows, rows, search])
   const selectedTasks = useMemo(
     () =>
       selected
@@ -77,6 +98,43 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
     setDownloads((current) => ({ ...current, [datasetKey(deleteTarget)]: { status: 'not-downloaded' } }))
     setDeleteTarget(null)
   }
+  const confirmImportDataset = () => {
+    const taskCount = Number.parseInt(importDraft.tasks, 10)
+    const nextRow: DatasetRow = {
+      name: importDraft.name.trim() || defaultImportDraft.name,
+      version: importDraft.version.trim() || defaultImportDraft.version,
+      visibility: 'private',
+      tasks: Number.isFinite(taskCount) && taskCount > 0 ? taskCount : 0,
+      source: t('localImport'),
+      digest: t('localOnly'),
+      updated: t('justNow'),
+      downloadStatus: 'downloaded',
+      downloadPath: importDraft.path.trim() || defaultImportDraft.path,
+      size: t('localDataset'),
+      registryUrl: 'local',
+      registryPath: importDraft.path.trim() || defaultImportDraft.path,
+      downloadDir: importDraft.path.trim() || defaultImportDraft.path,
+      manifestPath: 'dataset.toml',
+      ref: `${importDraft.name.trim() || defaultImportDraft.name}@${importDraft.version.trim() || defaultImportDraft.version}`,
+      path: importDraft.path.trim() || defaultImportDraft.path,
+      overwrite: false,
+      splits: ['local'],
+    }
+    setImportedRows((current) => [nextRow, ...current])
+    setDownloads((current) => ({
+      ...current,
+      [datasetKey(nextRow)]: {
+        path: nextRow.path ?? defaultImportDraft.path,
+        size: nextRow.size ?? t('localDataset'),
+        status: 'downloaded',
+      },
+    }))
+    setSelected(nextRow)
+    setExpandedTaskName(null)
+    setDrawerOpen(true)
+    setImportDialogOpen(false)
+    setImportDraft(defaultImportDraft)
+  }
 
   return (
     <main className="workspace single-page">
@@ -95,6 +153,10 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
+            <button className="secondary-button" onClick={() => setImportDialogOpen(true)}>
+              <Plus aria-hidden="true" />
+              {t('importLocalDataset')}
+            </button>
           </div>
         </div>
         <div className="table-wrap">
@@ -112,7 +174,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {visibleRows.map((row) => {
                 const downloadState = downloadStateFor(row)
                 return (
                   <tr
@@ -291,6 +353,54 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
             <div className="button-row confirm-actions">
               <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
               <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
+            </div>
+          </section>
+        </div>
+      )}
+      {importDialogOpen && (
+        <div className="confirm-overlay">
+          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('importLocalDataset')}>
+            <div className="confirm-heading">
+              <h2>{t('importLocalDataset')}</h2>
+            </div>
+            <div className="import-dataset-form">
+              <label>
+                {t('datasetName')}
+                <input
+                  value={importDraft.name}
+                  onChange={(event) => setImportDraft((current) => ({ ...current, name: event.target.value }))}
+                />
+              </label>
+              <label>
+                {t('version')}
+                <input
+                  value={importDraft.version}
+                  onChange={(event) => setImportDraft((current) => ({ ...current, version: event.target.value }))}
+                />
+              </label>
+              <label>
+                {t('localPath')}
+                <input
+                  value={importDraft.path}
+                  onChange={(event) => setImportDraft((current) => ({ ...current, path: event.target.value }))}
+                />
+              </label>
+              <label>
+                {t('tasksCount')}
+                <input
+                  min="0"
+                  type="number"
+                  value={importDraft.tasks}
+                  onChange={(event) => setImportDraft((current) => ({ ...current, tasks: event.target.value }))}
+                />
+              </label>
+            </div>
+            <ul className="cleanup-impact-list">
+              <li>{t('importLocalDatasetImpact')}</li>
+            </ul>
+            <div className="button-row confirm-actions">
+              <button className="secondary-button" onClick={() => setImportDialogOpen(false)}>{t('cancel')}</button>
+              <button className="primary-button" onClick={confirmImportDataset}>{t('confirmImport')}</button>
             </div>
           </section>
         </div>

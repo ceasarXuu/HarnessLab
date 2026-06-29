@@ -143,10 +143,10 @@
 
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
-| Dataset list | `harbor dataset list` | `GET /api/benchmarks` 静态返回两项 | Datasets 表格 seed 数据 | Partial | 接 Harbor registry list，支持分页、registry source。 |
+| Dataset list | `harbor dataset list` | `GET /api/benchmarks` 静态返回两项 | Datasets 表格 seed 数据 + 本地导入 mock row | Partial | 接 Harbor registry list，支持分页、registry source。 |
 | Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 展示 version/tasks/source/digest/updated 和 task 列表 | Partial | 增加 registry_url/path、download_dir、task filters、manifest path。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | Download 按钮未接行为 | Missing | Dataset detail 加 download action。 |
-| Dataset init | `harbor dataset init` | 无 | 未展示 | Deferred | Dataset create wizard。 |
+| Dataset local import/init | `harbor dataset init`、`harbor add`、`harbor run --path` | 无 | Datasets 页“导入本地 Dataset”mock 表单，登记本地路径 | Partial | 接真实本地路径选择、manifest 探测与 JobConfig source。 |
 | Dataset visibility | `harbor dataset visibility` | 无 | Dataset drawer 不展示 leaderboard inclusion | Deferred | 若 Harbor dataset visibility 进入 v1.0.5，再定义独立 dataset 可见性 UI。 |
 | Publish dataset | `harbor publish` | 无 | 未展示 | Deferred | Publish wizard。 |
 | Manifest add/remove/sync | `harbor add/remove/sync` | 无 | Manifest 工具区跟踪，不放入顶部快捷操作 | Partial | Dataset editor + manifest diff。 |
@@ -155,7 +155,7 @@
 
 | DatasetConfig 字段 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|
-| `path` | 无 | Missing | 支持本地 dataset/task 路径。 |
+| `path` | 本地导入 mock 表单和详情 path 展示 | Partial | 接真实本地 dataset/task 路径选择与校验。 |
 | `name` / `version` / `ref` | name/version 展示；ref 无 | Partial | 增加 ref 与完整 dataset id。 |
 | `registry_url` / `registry_path` | source 文本，非真实字段 | Partial | 明确 registry selector。 |
 | `overwrite` | 无 | Missing | 下载/同步时加 conflict policy。 |
