@@ -213,7 +213,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                   <Download aria-hidden="true" />
                   {t('download')}
                 </button>
-                <button className="secondary-button">{t('sync')}</button>
+                <button className="secondary-button">{t('pullUpdates')}</button>
                 <label className="switch-control">
                   <span>{t('countInLeaderboard')}</span>
                   <input type="checkbox" defaultChecked={selected.visibility === 'public'} />
