@@ -243,10 +243,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     <span>{row.verifier}</span>
                     <div className="row-actions">
                       <button className="row-action">{t('runSingleTask')}</button>
-                      <button className="row-action">{t('startEnvironment')}</button>
-                      <button className="row-action">{t('check')}</button>
-                      <button className="row-action">{t('debug')}</button>
-                      <button className="row-action">{t('download')}</button>
                     </div>
                   </div>
                 ))}

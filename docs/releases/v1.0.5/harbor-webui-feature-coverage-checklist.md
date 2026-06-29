@@ -55,7 +55,7 @@
 
 1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task include/exclude/n_tasks、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
 2. Jobs：Job drawer 新增 job_dir、split、Resume、Hub actions、summarize、open viewer、analyze、upload、share、harbor.capability.json、failure code 等入口。
-3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude、manifest add/remove/sync，以及 task 行级 run single task、start environment、check、debug、download 操作。
+3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude、manifest add/remove/sync；task 行级只保留 run single task 操作。
 4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
 5. Leaderboard：表格新增 metric、split、submission/report path 与 submit/open viewer/share 行级操作。
 6. System：补 cache 与 Harbor doctor/maintenance 状态入口；auth 只保留在 Header，plugins 归入 New Job，sync 归入 Dataset manifest editor。
@@ -170,9 +170,9 @@
 |---|---|---|---|---|
 | Task list | Dataset 下属 task | Dataset drawer 展示部分 task name/description/os/state | Partial | 增加 task id/source/ref/path/verifier/environment/steps。 |
 | Run single task | `harbor trial start` / `harbor run --task` | Dataset drawer 有 Run single task 按钮 | Partial | 接真实 API，生成单 task Job。 |
-| Task download | `harbor task download` | 未展示 | Missing | Task row action。 |
-| Start environment | `harbor task start-env` | 未展示 | Missing | Task detail 增加 Start Env。 |
-| Debug/check | `harbor task debug` / `harbor task check` / `harbor check` | 未展示 | Missing | Task diagnostics panel。 |
+| Task download | `harbor task download` | 未展示 | Missing | 不放在 task 行级快捷操作，后续如需要进入 Task detail。 |
+| Start environment | `harbor task start-env` | 未展示 | Missing | 不放在 task 行级快捷操作，后续如需要进入 Task detail。 |
+| Debug/check | `harbor task debug` / `harbor task check` / `harbor check` | 未展示 | Missing | 不放在 task 行级快捷操作，后续如需要进入 Task detail / diagnostics panel。 |
 | Task init/update/annotate/migrate | `harbor task init/update/annotate/migrate` | 未展示 | Deferred | Authoring tools，后续版本。 |
 | Task visibility | `harbor task visibility` | 未展示 | Deferred | Task settings。 |
 | Task config fields | schema/package metadata/verifier/agent/environment/solution/source/steps/artifacts | 不展示，仅保留任务列表与可执行任务操作 | Out of scope | v1.0.5 不提供 Task config explorer，避免暴露用户用不到的 manifest 细节。 |
