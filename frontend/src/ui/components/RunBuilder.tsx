@@ -38,10 +38,20 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
           <h1>{t('newJob')}</h1>
           <p>{t('newJobDesc')}</p>
         </div>
-        <button className="secondary-button">
-          <Copy aria-hidden="true" />
-          {t('jobConfig')}
-        </button>
+        <div className="run-builder-actions">
+          <button className="secondary-button">
+            <RotateCcw aria-hidden="true" />
+            {t('reset')}
+          </button>
+          <button className="primary-button" onClick={onLaunch}>
+            <Play aria-hidden="true" />
+            {t('runJob')}
+          </button>
+          <button className="secondary-button">
+            <Copy aria-hidden="true" />
+            {t('jobConfig')}
+          </button>
+        </div>
       </div>
       <div className="run-tabs" role="tablist" aria-label={t('jobConfig')}>
         {tabs.map((tab) => (
@@ -389,16 +399,6 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
       <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
         <RunBuilderHubPanel draft={draft} t={t} onDraft={onDraft} />
       </TabPanel>
-      <div className="button-row">
-        <button className="secondary-button">
-          <RotateCcw aria-hidden="true" />
-          {t('reset')}
-        </button>
-        <button className="primary-button" onClick={onLaunch}>
-          <Play aria-hidden="true" />
-          {t('runJob')}
-        </button>
-      </div>
     </section>
   )
 }

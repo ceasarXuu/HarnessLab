@@ -5,6 +5,13 @@
 }
 .run-grid .custom-select { min-height: 34px; border: 1px solid var(--border-strong); background: var(--surface); }
 .run-grid .custom-select:focus-within { border-color: var(--foreground); background: var(--subtle); }
+.run-builder-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .run-config-groups {
   display: grid;
   gap: 16px;

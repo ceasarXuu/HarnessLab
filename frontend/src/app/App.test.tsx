@@ -298,6 +298,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New Job' }))
     const runBuilder = screen.getByRole('heading', { name: 'New Job' }).closest('section')
     expect(runBuilder).not.toBeNull()
+    expect(within(runBuilder as HTMLElement).getByRole('button', { name: 'Reset' })).toBeInTheDocument()
+    expect(within(runBuilder as HTMLElement).getByRole('button', { name: 'JobConfig' })).toBeInTheDocument()
     expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
     expect(screen.getByLabelText('include_task_name')).toHaveValue('apt-*')
     expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
