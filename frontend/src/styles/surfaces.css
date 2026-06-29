@@ -143,21 +143,6 @@ code {
   overflow-wrap: anywhere;
   white-space: normal;
 }
-.diagnostic-block {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-}
-.diagnostic-block strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.diagnostic-block code {
-  background: var(--surface);
-}
 .drawer-layer {
   position: fixed;
   inset: 0;

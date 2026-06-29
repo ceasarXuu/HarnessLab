@@ -68,7 +68,7 @@
 
 1. New Job：补 debug、quiet、yes、env_file、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入命令预览。
 2. Jobs：补 Trial diagnostics，展示 progress、retries、log、analysis、verifier evidence、artifact 和 tokens；Job 操作补 clone job。
-3. Datasets / Tasks：补 manifest tools，对应 `harbor init/add/remove/sync`；补 Task config explorer，展示 schema/package/path/git/ref/source/environment/solution/steps/artifacts。
+3. Datasets / Tasks：补 manifest tools，对应 `harbor init/add/remove/sync`；Task config explorer 用户价值不足，v1.0.5 不展示。
 4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
 5. Leaderboard：补 agent/status/date/comparability filters、uploaded URL、submission id、config hash、agent snapshot hash、open job/open report/download 操作。
 6. System / Header：补 Harbor auth 全局状态，以及 login/logout/status、upload、leaderboard submit、job share 的维护入口。
@@ -174,7 +174,7 @@
 | Debug/check | `harbor task debug` / `harbor task check` / `harbor check` | 未展示 | Missing | Task diagnostics panel。 |
 | Task init/update/annotate/migrate | `harbor task init/update/annotate/migrate` | 未展示 | Deferred | Authoring tools，后续版本。 |
 | Task visibility | `harbor task visibility` | 未展示 | Deferred | Task settings。 |
-| Task config fields | schema/package metadata/verifier/agent/environment/solution/source/steps/artifacts | 只展示 description/os/verifier 状态 | Missing | Task detail 增加 config explorer。 |
+| Task config fields | schema/package metadata/verifier/agent/environment/solution/source/steps/artifacts | 不展示，仅保留任务列表与可执行任务操作 | Out of scope | v1.0.5 不提供 Task config explorer，避免暴露用户用不到的 manifest 细节。 |
 
 ## 5. Agents 覆盖清单
 

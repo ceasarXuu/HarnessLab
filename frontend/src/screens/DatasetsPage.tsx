@@ -261,29 +261,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                 ))}
               </div>
             </section>
-            <section className="surface rail-card">
-              <div className="rail-title">
-                <Box aria-hidden="true" />
-                <h3>{t('taskConfig')}</h3>
-              </div>
-              <div className="path-list">
-                {selectedTasks.map((row) => (
-                  <div key={`${row.name}-config`} className="diagnostic-block">
-                    <strong>{row.name}</strong>
-                    <code>schema_version: {row.schemaVersion}</code>
-                    <code>package: {row.packageInfo}</code>
-                    <code>path: {row.path}</code>
-                    <code>git: {row.gitUrl}@{row.gitCommitId}</code>
-                    <code>ref: {row.ref}</code>
-                    <code>source: {row.source}</code>
-                    <code>environment: {row.environment}</code>
-                    <code>solution: {row.solution}</code>
-                    <code>steps: {row.steps}</code>
-                    <code>artifacts: {row.artifacts}</code>
-                  </div>
-                ))}
-              </div>
-            </section>
           </aside>
         </DetailDrawer>
       )}

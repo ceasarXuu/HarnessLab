@@ -111,8 +111,8 @@ describe('App', () => {
     expect(screen.getAllByRole('button', { name: 'Check' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: 'Debug' }).length).toBeGreaterThan(0)
     expect(screen.getByText('Manifest tools')).toBeInTheDocument()
-    expect(screen.getByText('Task config')).toBeInTheDocument()
-    expect(screen.getAllByText('schema_version: 1.0').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Task config')).not.toBeInTheDocument()
+    expect(screen.queryByText('schema_version: 1.0')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
   })
 
