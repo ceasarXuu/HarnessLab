@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
+import { FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 
@@ -45,10 +45,6 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <button className="secondary-button">
             <Upload aria-hidden="true" />
             {t('upload')}
-          </button>
-          <button className="secondary-button">
-            <Download aria-hidden="true" />
-            {t('download')}
           </button>
         </div>
       </section>

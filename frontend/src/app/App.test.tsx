@@ -49,7 +49,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Open viewer' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Analyze' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Upload' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(within(jobDialog).queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.getByText('/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/harbor.capability.json')).toBeInTheDocument()
     expect(screen.getByText('/Users/xuzhang/.ornnlab/HarnessLab/trials/job_91a7')).toBeInTheDocument()
