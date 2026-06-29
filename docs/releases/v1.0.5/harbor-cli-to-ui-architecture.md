@@ -111,7 +111,7 @@ Hub/产物等领域 tab。用户仍然在同一个页面内完成配置、预览
 | Verification | `--verifier-env`, `--verifier-import-path`, `--verifier-kwarg`, verification toggle | Verifier config panel、env editor、enable/disable toggle |
 | Runtime | `--job-name`, `--jobs-dir`, `--n-attempts`, `--n-concurrent`, retry, timeouts, artifacts | Name/path fields、steppers、timeout controls、artifact path list |
 | Hub | `--upload`, `--public/--private`, `--share-org`, `--share-user` | Upload toggle、visibility radio、share target chips |
-| Preview | `--config` equivalent | Generated JobConfig preview、equivalent CLI display、Run button |
+| Preview | `--config` equivalent | 右上角 JobConfig 入口、Run button；CLI 命令不常驻展示 |
 
 默认进入 Common tab，只展示最短闭环和高频字段：job name、jobs dir、dataset、task include/exclude、
 task limit、agent、model、environment、concurrency、attempts、debug、yes、env_file。其余字段不删除，

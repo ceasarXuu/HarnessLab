@@ -81,7 +81,7 @@
 
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
-| 创建 JobConfig | `JobConfig`，`harbor run --config` | `HarborConfigBuilder.to_job_config_payload` | New Job 表单 + 等价命令预览 | Partial | 表单字段需要扩展到完整 JobConfig。 |
+| 创建 JobConfig | `JobConfig`，`harbor run --config` | `HarborConfigBuilder.to_job_config_payload` | New Job 表单 + 右上角 JobConfig 入口 | Partial | 表单字段需要扩展到完整 JobConfig。 |
 | 启动 job | `harbor run` / `harbor job start` | `POST /api/experiments/{id}/run`，worker 执行 Harbor | New Job 的 `运行 Job` 只更新 demo seed state | Partial | demo 要展示真实 API 对接状态，区分 mock/demo 与 real backend。 |
 | Job list | job artifact / OrnnLab runs | `GET /api/experiments`，`GET /api/runs/{id}` | Jobs 表格：name/status/dataset/agent/model/trials/score/cost/updated | Partial | 增加 Harbor job id、job dir、started/finished time、failure class/code。 |
 | Job detail | Harbor viewer/job result | `GET /api/runs/{id}`，events/report | 右侧 drawer：overview、events、trials、artifact paths | Partial | 增加 config/result/job.log/summary/upload/share/resume 入口。 |
@@ -228,7 +228,7 @@
 | 页面 | 已有可见操作 | 真实程度 |
 |---|---|---|
 | Jobs | 搜索、Import 按钮、新建 Job、点击行打开 Job drawer、Cancel/Retry 按钮、查看 events/trials/artifacts | 多数为 demo state；Cancel/Retry 未接 API。 |
-| New Job | 选择 source/agent/environment，填写 model/concurrency/attempts，查看等价命令，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
+| New Job | 选择 source/agent/environment，填写 model/concurrency/attempts，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
 | Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task 按钮 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |

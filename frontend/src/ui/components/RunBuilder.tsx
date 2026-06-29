@@ -31,72 +31,6 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
     { key: 'runtime', label: t('runTabRuntime') },
     { key: 'hub', label: t('runTabHub') },
   ]
-  const command = [
-    'harbor run',
-    `--job-name ${draft.jobName}`,
-    `--jobs-dir ${draft.jobsDir}`,
-    `--dataset ${draft.source}`,
-    draft.split ? `--split ${draft.split}` : '',
-    draft.taskFilter ? `--include-task-name ${draft.taskFilter}` : '',
-    draft.excludeFilter ? `--exclude-task-name ${draft.excludeFilter}` : '',
-    `--n-tasks ${draft.taskLimit}`,
-    draft.debug ? '--debug' : '',
-    draft.quiet ? '--quiet' : '',
-    draft.yes ? '--yes' : '',
-    draft.envFile ? `--env-file ${draft.envFile}` : '',
-    `--agent ${draft.agent}`,
-    draft.agentImportPath ? `--agent-import-path ${draft.agentImportPath}` : '',
-    `--model ${draft.model}`,
-    draft.agentEnv ? `--agent-env ${draft.agentEnv}` : '',
-    draft.agentKwargs ? `--agent-kwarg ${draft.agentKwargs}` : '',
-    draft.allowAgentHosts ? `--allow-agent-host ${draft.allowAgentHosts}` : '',
-    draft.skills ? `--skills ${draft.skills}` : '',
-    draft.mcpConfig ? `--mcp-config ${draft.mcpConfig}` : '',
-    `--env ${draft.environment}`,
-    draft.environmentImportPath ? `--environment-import-path ${draft.environmentImportPath}` : '',
-    draft.environmentEnv ? `--environment-env ${draft.environmentEnv}` : '',
-    draft.environmentKwargs ? `--environment-kwarg ${draft.environmentKwargs}` : '',
-    draft.allowEnvironmentHosts ? `--allow-environment-host ${draft.allowEnvironmentHosts}` : '',
-    draft.forceBuild ? '--force-build' : '--no-force-build',
-    draft.deleteEnvironment ? '--delete' : '--no-delete',
-    draft.suppressOverrideWarnings ? '--suppress-override-warnings' : '',
-    `--cpus ${draft.cpus}`,
-    draft.cpuOverride ? `--override-cpus ${draft.cpuOverride}` : '',
-    draft.memoryMb ? `--override-memory-mb ${draft.memoryMb}` : '',
-    draft.storageMb ? `--override-storage-mb ${draft.storageMb}` : '',
-    draft.gpus ? `--override-gpus ${draft.gpus}` : '',
-    draft.tpu ? `--override-tpu ${draft.tpu}` : '',
-    draft.mounts ? `--mount ${draft.mounts}` : '',
-    draft.dockerCompose ? `--extra-docker-compose ${draft.dockerCompose}` : '',
-    draft.verifierImportPath ? `--verifier-import-path ${draft.verifierImportPath}` : '',
-    draft.verifierEnv ? `--verifier-env ${draft.verifierEnv}` : '',
-    draft.verifierKwargs ? `--verifier-kwarg ${draft.verifierKwargs}` : '',
-    draft.disableVerifier ? '--disable-verification' : '--enable-verification',
-    draft.verifierMaxTimeoutSec ? `--verifier-max-timeout-sec ${draft.verifierMaxTimeoutSec}` : '',
-    `--n-concurrent ${draft.concurrency}`,
-    `--n-attempts ${draft.attempts}`,
-    `--timeout-multiplier ${draft.timeoutMultiplier}`,
-    draft.agentTimeoutMultiplier ? `--agent-timeout-multiplier ${draft.agentTimeoutMultiplier}` : '',
-    draft.verifierTimeoutMultiplier ? `--verifier-timeout-multiplier ${draft.verifierTimeoutMultiplier}` : '',
-    draft.agentSetupTimeoutMultiplier ? `--agent-setup-timeout-multiplier ${draft.agentSetupTimeoutMultiplier}` : '',
-    draft.environmentBuildTimeoutMultiplier
-      ? `--environment-build-timeout-multiplier ${draft.environmentBuildTimeoutMultiplier}`
-      : '',
-    `--max-retries ${draft.maxRetries}`,
-    draft.retryInclude ? `--retry-include ${draft.retryInclude}` : '',
-    draft.retryExclude ? `--retry-exclude ${draft.retryExclude}` : '',
-    draft.retryWaitMultiplier ? `--retry-wait-multiplier ${draft.retryWaitMultiplier}` : '',
-    draft.retryMinWaitSec ? `--retry-min-wait-sec ${draft.retryMinWaitSec}` : '',
-    draft.retryMaxWaitSec ? `--retry-max-wait-sec ${draft.retryMaxWaitSec}` : '',
-    draft.artifacts ? `--artifact ${draft.artifacts}` : '',
-    draft.metric ? `--metric ${draft.metric}` : '',
-    draft.plugins ? `--plugin ${draft.plugins}` : '',
-    draft.upload ? `--upload --${draft.visibility}` : '',
-    draft.shareTargets ? `--share-user ${draft.shareTargets}` : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-
   return (
     <section className="surface run-builder" id="new-job">
       <div className="section-header compact">
@@ -455,9 +389,6 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
       <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
         <RunBuilderHubPanel draft={draft} t={t} onDraft={onDraft} />
       </TabPanel>
-      <div className="config-preview">
-        <code>{command}</code>
-      </div>
       <div className="button-row">
         <button className="secondary-button">
           <RotateCcw aria-hidden="true" />

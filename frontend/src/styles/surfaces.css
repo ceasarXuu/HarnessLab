@@ -1,12 +1,5 @@
-.config-preview,
 .button-row {
   margin: 0 16px 16px;
-}
-.config-preview {
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
 }
 code {
   color: var(--foreground);

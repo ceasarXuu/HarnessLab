@@ -323,9 +323,9 @@ describe('App', () => {
     expect(screen.getByLabelText('plugin import_path')).toHaveValue('harbor.plugins.cost:CostPlugin')
     expect(screen.getByLabelText('Include in leaderboard')).toHaveTextContent('enabled')
     expect(screen.getByLabelText('upload to Hub')).toHaveTextContent('disabled')
-    expect(screen.getByText(/--include-task-name apt-\*/)).toBeInTheDocument()
-    expect(screen.getByText(/--split smoke/)).toBeInTheDocument()
-    expect(screen.getByText(/--env-file \.env\.harbor/)).toBeInTheDocument()
+    expect(screen.queryByText(/harbor run/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/--include-task-name apt-\*/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/--env-file \.env\.harbor/)).not.toBeInTheDocument()
     const runButton = within(runBuilder as HTMLElement).getByRole('button', { name: 'Run job' })
     fireEvent.click(runButton)
 
