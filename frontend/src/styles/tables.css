@@ -129,7 +129,7 @@ tbody tr:hover,
   background: var(--surface-muted);
 }
 .task-row {
-  grid-template-columns: minmax(92px, 1fr) 56px minmax(120px, 1.25fr) 72px 104px;
+  grid-template-columns: minmax(104px, 1fr) 56px minmax(160px, 1.6fr) 104px;
   align-items: center;
   width: 100%;
 }

@@ -239,7 +239,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                   <span>{t('taskName')}</span>
                   <span>{t('os')}</span>
                   <span>{t('description')}</span>
-                  <span>{t('verifier')}</span>
                   <span>{t('actions')}</span>
                 </div>
                 {selectedTasks.map((row) => (
@@ -247,7 +246,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     <span>{row.name}</span>
                     <span>{row.os}</span>
                     <span>{row.description}</span>
-                    <span>{row.verifier}</span>
                     <div className="row-actions">
                       <button className="row-action">{t('runSingleTask')}</button>
                     </div>

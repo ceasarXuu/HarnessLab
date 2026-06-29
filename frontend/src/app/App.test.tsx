@@ -107,7 +107,7 @@ describe('App', () => {
     expect(within(datasetDialog).getByText('Task')).toBeInTheDocument()
     expect(within(datasetDialog).getByText('OS')).toBeInTheDocument()
     expect(within(datasetDialog).getByText('Description')).toBeInTheDocument()
-    expect(within(datasetDialog).getByText('Verifier')).toBeInTheDocument()
+    expect(within(datasetDialog).queryByText('Verifier')).not.toBeInTheDocument()
     expect(within(datasetDialog).getByText('Actions')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Run single task' }).length).toBeGreaterThan(0)
     expect(within(datasetDialog).getByText('Splits')).toBeInTheDocument()
