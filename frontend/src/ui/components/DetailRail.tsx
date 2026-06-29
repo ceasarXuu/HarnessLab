@@ -52,11 +52,16 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
           <h3>{t('jobTrials')}</h3>
         </div>
         <div className="mini-table">
+          <div className="mini-row trial-row mini-header" role="row">
+            <span>{t('taskName')}</span>
+            <span>{t('result')}</span>
+            <span>{t('duration')}</span>
+            <span>{t('cost')} / tokens</span>
+          </div>
           {trials.map((trial) => (
             <div key={trial.id} className="mini-row trial-row">
               <span>{trial.task}</span>
               <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
-              <span>{trial.score}</span>
               <span>{trial.duration}</span>
               <span>{trial.cost} / {trial.tokens}</span>
             </div>
