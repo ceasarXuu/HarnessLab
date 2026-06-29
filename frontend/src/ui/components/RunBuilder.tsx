@@ -136,21 +136,43 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               onChange={(event) => onDraft({ ...draft, attempts: Number(event.target.value) })}
             />
           </Field>
-          <Field label="debug">
-            <Toggle checked={draft.debug} onChange={(value) => onDraft({ ...draft, debug: value })} />
-          </Field>
-          <Field label="yes">
-            <Toggle checked={draft.yes} onChange={(value) => onDraft({ ...draft, yes: value })} />
-          </Field>
+          <label>
+            debug
+            <CustomSelect
+              ariaLabel="debug"
+              value={draft.debug ? 'enabled' : 'disabled'}
+              options={[
+                { label: 'disabled', value: 'disabled' },
+                { label: 'enabled', value: 'enabled' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, debug: value === 'enabled' })}
+            />
+          </label>
+          <label>
+            yes
+            <CustomSelect
+              ariaLabel="yes"
+              value={draft.yes ? 'enabled' : 'disabled'}
+              options={[
+                { label: 'enabled', value: 'enabled' },
+                { label: 'disabled', value: 'disabled' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, yes: value === 'enabled' })}
+            />
+          </label>
           <Field label="env_file">
             <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
           </Field>
-          <label className="switch-control">
-            <span>{t('includeInLeaderboard')}</span>
-            <input
-              type="checkbox"
-              checked={draft.includeInLeaderboard}
-              onChange={(event) => onDraft({ ...draft, includeInLeaderboard: event.target.checked })}
+          <label>
+            {t('includeInLeaderboard')}
+            <CustomSelect
+              ariaLabel={t('includeInLeaderboard')}
+              value={draft.includeInLeaderboard ? 'enabled' : 'disabled'}
+              options={[
+                { label: 'enabled', value: 'enabled' },
+                { label: 'disabled', value: 'disabled' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, includeInLeaderboard: value === 'enabled' })}
             />
           </label>
         </div>

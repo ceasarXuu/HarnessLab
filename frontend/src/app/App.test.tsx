@@ -308,7 +308,7 @@ describe('App', () => {
     expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
     expect(screen.getByLabelText('yes')).toHaveTextContent('enabled')
     expect(screen.getByLabelText('env_file')).toHaveValue('.env.harbor')
-    expect(screen.getByRole('checkbox', { name: 'Include in leaderboard' })).toBeChecked()
+    expect(screen.getByLabelText('Include in leaderboard')).toHaveTextContent('enabled')
     expect(screen.queryByLabelText('Split')).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Source'))
     fireEvent.click(screen.getByRole('option', { name: 'harbor/hello-world@latest' }))
