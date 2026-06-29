@@ -161,6 +161,9 @@ tbody tr:hover,
   align-items: center;
   width: 100%;
 }
+.task-row > :last-child {
+  justify-self: end;
+}
 .task-row .row-actions {
   justify-content: flex-end;
 }
