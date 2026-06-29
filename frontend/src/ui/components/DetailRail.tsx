@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Download, FileJson, FlaskConical, Play, Terminal, Upload } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
@@ -10,6 +11,8 @@ interface DetailRailProps {
 }
 
 export function DetailRail({ job, events, trials, t }: DetailRailProps) {
+  const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
+
   return (
     <aside className="detail-rail">
       <section className="surface rail-card job-summary-card">
@@ -59,31 +62,24 @@ export function DetailRail({ job, events, trials, t }: DetailRailProps) {
             <span>{t('cost')} / tokens</span>
           </div>
           {trials.map((trial) => (
-            <div key={trial.id} className="mini-row trial-row">
-              <span>{trial.task}</span>
-              <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
-              <span>{trial.duration}</span>
-              <span>{trial.cost} / {trial.tokens}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="surface rail-card">
-        <div className="rail-title">
-          <FlaskConical aria-hidden="true" />
-          <h3>{t('trialDiagnostics')}</h3>
-        </div>
-        <div className="path-list">
-          {trials.map((trial) => (
-            <div key={`${trial.id}-diagnostics`} className="diagnostic-block">
-              <strong>{trial.id}</strong>
-              <code>progress: {trial.progress}</code>
-              <code>retries: {trial.retries}</code>
-              <code>log: {trial.logPath}</code>
-              <code>analysis: {trial.analysisPath}</code>
-              <code>verifier: {trial.verifierEvidence}</code>
-              <code>artifact: {trial.artifactPath}</code>
+            <div key={trial.id} className="trial-entry">
+              <button
+                type="button"
+                className="mini-row trial-row trial-toggle"
+                aria-expanded={expandedTrialId === trial.id}
+                onClick={() => setExpandedTrialId((current) => (current === trial.id ? null : trial.id))}
+              >
+                <span>{trial.task}</span>
+                <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
+                <span>{trial.duration}</span>
+                <span>{trial.cost} / {trial.tokens}</span>
+              </button>
+              {expandedTrialId === trial.id && (
+                <div className="trial-expanded">
+                  <code>retries: {trial.retries}</code>
+                  <code>log path: {trial.logPath}</code>
+                </div>
+              )}
             </div>
           ))}
         </div>

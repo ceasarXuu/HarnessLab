@@ -106,16 +106,6 @@ code {
   border: 1px solid var(--border);
   background: var(--surface-muted);
 }
-.diagnostic-block {
-  display: grid;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-.diagnostic-block strong {
-  font-size: 12px;
-}
 .drawer-layer {
   position: fixed;
   inset: 0;

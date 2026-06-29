@@ -100,6 +100,34 @@ tbody tr:hover,
   font-weight: 700;
   text-transform: uppercase;
 }
+.trial-entry {
+  display: grid;
+  gap: 0;
+  min-width: 580px;
+}
+.trial-toggle {
+  width: 100%;
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.trial-toggle:hover {
+  background: var(--subtle);
+}
+.trial-expanded {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: var(--surface);
+}
+.trial-expanded code {
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
 .task-row,
 .trial-row {
   grid-template-columns: minmax(110px, 0.8fr) 68px minmax(180px, 1.3fr) 82px max-content;

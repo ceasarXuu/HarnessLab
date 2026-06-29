@@ -45,8 +45,12 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.getByText('harbor.capability.json')).toBeInTheDocument()
-    expect(screen.getByText('Trial diagnostics')).toBeInTheDocument()
-    expect(screen.getByText('analysis: trials/job_91a7/apt-setup.analysis.json')).toBeInTheDocument()
+    expect(screen.queryByText('Trial diagnostics')).not.toBeInTheDocument()
+    expect(screen.queryByText('analysis: trials/job_91a7/apt-setup.analysis.json')).not.toBeInTheDocument()
+    expect(screen.queryByText('log path: trials/job_91a7/apt-setup.log')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /apt-setup/i }))
+    expect(screen.getByText('retries: 0')).toBeInTheDocument()
+    expect(screen.getByText('log path: trials/job_91a7/apt-setup.log')).toBeInTheDocument()
   })
 
   it('renders datasets as the Harbor catalog surface', () => {

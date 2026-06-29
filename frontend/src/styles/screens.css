@@ -60,6 +60,10 @@
   .filter-strip {
     grid-template-columns: 1fr;
   }
+  .trial-entry,
+  .trial-expanded {
+    min-width: 0;
+  }
   .mini-row span {
     white-space: normal;
   }
