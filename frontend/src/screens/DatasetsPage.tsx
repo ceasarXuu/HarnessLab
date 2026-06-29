@@ -235,6 +235,13 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 <h3>{t('datasetTasks')}</h3>
               </div>
               <div className="mini-table">
+                <div className="mini-row task-row mini-header" role="row">
+                  <span>{t('taskName')}</span>
+                  <span>{t('os')}</span>
+                  <span>{t('description')}</span>
+                  <span>{t('verifier')}</span>
+                  <span>{t('actions')}</span>
+                </div>
                 {selectedTasks.map((row) => (
                   <div key={row.name} className="mini-row task-row">
                     <span>{row.name}</span>
