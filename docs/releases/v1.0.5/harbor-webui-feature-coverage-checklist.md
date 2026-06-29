@@ -146,9 +146,9 @@
 | Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 展示 version/tasks/source/digest/updated 和 task 列表 | Partial | 增加 registry_url/path、download_dir、task filters、manifest path。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | Download 按钮未接行为 | Missing | Dataset detail 加 download action。 |
 | Dataset init | `harbor dataset init` | 无 | 未展示 | Deferred | Dataset create wizard。 |
-| Dataset visibility | `harbor dataset visibility` | 无 | 表格展示 visibility，不可操作 | Partial | Visibility control。 |
+| Dataset visibility | `harbor dataset visibility` | 无 | Dataset drawer 顶部展示“计入排行榜”开关 | Partial | 后续接真实 visibility / leaderboard inclusion 状态。 |
 | Publish dataset | `harbor publish` | 无 | 未展示 | Deferred | Publish wizard。 |
-| Manifest add/remove/sync | `harbor add/remove/sync` | 无 | 未展示 | Missing | Dataset editor + manifest diff。 |
+| Manifest add/remove/sync | `harbor add/remove/sync` | 无 | Manifest 工具区跟踪，不放入顶部快捷操作 | Partial | Dataset editor + manifest diff。 |
 
 ### 4.2 DatasetConfig 字段覆盖
 

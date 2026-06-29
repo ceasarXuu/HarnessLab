@@ -1,4 +1,4 @@
-import { Box, Database, Download, Play, Search, Trash2, X } from 'lucide-react'
+import { Box, Database, Download, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import type { DatasetRow, TaskRow } from '../mocks/demo'
@@ -9,7 +9,6 @@ interface DatasetsPageProps {
   search: string
   taskRows: TaskRow[]
   t: Translate
-  onNewJob: () => void
   onSearch: (value: string) => void
 }
 
@@ -20,7 +19,7 @@ type DatasetDownloadState =
 
 const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
 
-export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: DatasetsPageProps) {
+export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
@@ -215,15 +214,11 @@ export function DatasetsPage({ rows, search, taskRows, t, onNewJob, onSearch }: 
                   {t('download')}
                 </button>
                 <button className="secondary-button">{t('sync')}</button>
-                <button className="secondary-button">Init</button>
-                <button className="secondary-button">Add</button>
-                <button className="secondary-button">Remove</button>
-                <button className="secondary-button">{t('visibilityToggle')}</button>
+                <label className="switch-control">
+                  <span>{t('countInLeaderboard')}</span>
+                  <input type="checkbox" defaultChecked={selected.visibility === 'public'} />
+                </label>
                 <button className="secondary-button">{t('publish')}</button>
-                <button className="primary-button" onClick={onNewJob}>
-                  <Play aria-hidden="true" />
-                  {t('newJob')}
-                </button>
               </div>
             </section>
             <section className="surface rail-card">

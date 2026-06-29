@@ -195,7 +195,6 @@ export function App() {
           search={datasetSearch}
           taskRows={taskRows}
           t={t}
-          onNewJob={() => navigate('jobs', 'new')}
           onSearch={setDatasetSearch}
         />
       )}

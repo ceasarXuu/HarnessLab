@@ -23,7 +23,7 @@ type Story = StoryObj<typeof meta>
 
 function DatasetsFixture() {
   const [search, setSearch] = useState('')
-  return <DatasetsPage rows={datasetRows} search={search} taskRows={taskRows} t={t} onNewJob={() => undefined} onSearch={setSearch} />
+  return <DatasetsPage rows={datasetRows} search={search} taskRows={taskRows} t={t} onSearch={setSearch} />
 }
 
 function LeaderboardFixture() {
