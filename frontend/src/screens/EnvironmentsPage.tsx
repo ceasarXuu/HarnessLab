@@ -1,4 +1,4 @@
-import { Box, Copy, Pencil, Plus, Save, Search, Trash2, X } from 'lucide-react'
+import { Box, Copy, Plus, Save, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { EnvironmentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
@@ -32,9 +32,8 @@ const editableFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
   { key: 'dockerCompose', label: 'extra_docker_compose' },
 ]
 
-const detailFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
+const editableDetailFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
   { key: 'name', label: 'Environment Name' },
-  { key: 'profileType', label: 'profile' },
   { key: 'environmentType', label: 'type' },
   { key: 'importPath', label: 'import_path' },
   { key: 'networkMode', label: 'network_mode' },
@@ -79,16 +78,17 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
     )
   }, [rows, search])
 
-  const openDrawer = (row: EnvironmentRow, edit = false) => {
+  const openDrawer = (row: EnvironmentRow) => {
     setSelected(row)
     setDrawerOpen(true)
-    setEditingDraft(edit && row.profileType === 'custom' ? { ...row } : null)
+    setEditingDraft({ ...row })
   }
 
   const saveNewTemplate = (draft: EnvironmentRow) => {
     const saved = { ...draft, id: buildEnvironmentId(rows, draft.name), profileType: 'custom' as const }
     onRowsChange([...rows, saved])
     setSelected(saved)
+    setEditingDraft(saved)
     setDrawerOpen(true)
     onView('list')
   }
@@ -98,7 +98,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
     const saved = { ...editingDraft, name: editingDraft.name.trim() || 'Custom Environment' }
     onRowsChange(rows.map((row) => (row.id === saved.id ? saved : row)))
     setSelected(saved)
-    setEditingDraft(null)
+    setEditingDraft(saved)
   }
 
   const confirmDelete = () => {
@@ -193,7 +193,6 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                       t={t}
                       onCopy={(target) => onView('copy', target.id)}
                       onDelete={setDeleteTarget}
-                      onEdit={(target) => openDrawer(target, true)}
                     />
                   </td>
                 </tr>
@@ -211,38 +210,20 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   <h2>{selected.name}</h2>
                   <p>{selected.environmentType}</p>
                 </div>
-                {editingDraft ? (
-                  <div className="row-actions">
-                    <button className="secondary-button compact-action" onClick={() => setEditingDraft(null)}>
-                      <X aria-hidden="true" />
-                      {t('cancel')}
-                    </button>
-                    <button className="primary-button compact-action" onClick={saveDrawerEdit}>
-                      <Save aria-hidden="true" />
-                      {t('save')}
-                    </button>
-                  </div>
-                ) : (
+                <div className="row-actions">
+                  <button className="primary-button compact-action" onClick={saveDrawerEdit}>
+                    <Save aria-hidden="true" />
+                    {t('save')}
+                  </button>
                   <EnvironmentActions
                     row={selected}
                     t={t}
                     onCopy={(target) => onView('copy', target.id)}
                     onDelete={setDeleteTarget}
-                    onEdit={(target) => openDrawer(target, true)}
                   />
-                )}
-              </div>
-              {editingDraft ? (
-                <EnvironmentFields value={editingDraft} onChange={setEditingDraft} />
-              ) : (
-                <div className="metric-grid">
-                  {detailFields.map((field) => (
-                    <Metric key={field.key} label={field.label} value={String(selected[field.key])} />
-                  ))}
-                  <Metric label="force_build" value={selected.forceBuild ? 'true' : 'false'} />
-                  <Metric label="delete" value={selected.deleteAfterRun ? 'true' : 'false'} />
                 </div>
-              )}
+              </div>
+              {editingDraft && <EnvironmentFields value={editingDraft} fields={editableDetailFields} onChange={setEditingDraft} />}
             </section>
           </aside>
         </DetailDrawer>
@@ -314,10 +295,18 @@ function EnvironmentFormPage({
   )
 }
 
-function EnvironmentFields({ value, onChange }: { value: EnvironmentRow; onChange: (value: EnvironmentRow) => void }) {
+function EnvironmentFields({
+  fields = editableFields,
+  value,
+  onChange,
+}: {
+  fields?: Array<{ key: keyof EnvironmentRow; label: string }>
+  value: EnvironmentRow
+  onChange: (value: EnvironmentRow) => void
+}) {
   return (
     <div className="run-grid">
-      {editableFields.map((field) => (
+      {fields.map((field) => (
         <label key={field.key}>
           {field.label}
           <input
@@ -335,13 +324,11 @@ function EnvironmentActions({
   t,
   onCopy,
   onDelete,
-  onEdit,
 }: {
   row: EnvironmentRow
   t: Translate
   onCopy: (row: EnvironmentRow) => void
   onDelete: (row: EnvironmentRow) => void
-  onEdit: (row: EnvironmentRow) => void
 }) {
   return (
     <div className="row-actions" onClick={(event) => event.stopPropagation()}>
@@ -350,16 +337,10 @@ function EnvironmentActions({
         {t('copy')}
       </button>
       {row.profileType === 'custom' && (
-        <>
-          <button className="secondary-button compact-action" onClick={() => onEdit(row)}>
-            <Pencil aria-hidden="true" />
-            {t('edit')}
-          </button>
-          <button className="secondary-button compact-action" onClick={() => onDelete(row)}>
-            <Trash2 aria-hidden="true" />
-            {t('delete')}
-          </button>
-        </>
+        <button className="secondary-button compact-action" onClick={() => onDelete(row)}>
+          <Trash2 aria-hidden="true" />
+          {t('delete')}
+        </button>
       )}
     </div>
   )
@@ -391,13 +372,4 @@ function buildEnvironmentId(rows: EnvironmentRow[], name: string) {
 function formatOverrides(row: EnvironmentRow) {
   const values = [row.overrideCpus, row.overrideMemoryMb, row.overrideStorageMb, row.overrideGpus, row.overrideTpu]
   return values.some((value) => value !== 'none') ? values.filter((value) => value !== 'none').join(' / ') : 'none'
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
 }

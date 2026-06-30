@@ -23,7 +23,7 @@ describe('Environment templates', () => {
     expect(customRow).not.toBeNull()
     expect(within(builtinRow as HTMLElement).getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(within(builtinRow as HTMLElement).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
-    expect(within(customRow as HTMLElement).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(customRow as HTMLElement).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
     expect(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
 
     fireEvent.click(within(builtinRow as HTMLElement).getByRole('button', { name: 'Copy' }))
@@ -43,8 +43,9 @@ describe('Environment templates', () => {
 
     const customRowForEdit = screen.getByText('Docker GPU').closest('tr')
     expect(customRowForEdit).not.toBeNull()
-    fireEvent.click(within(customRowForEdit as HTMLElement).getByRole('button', { name: 'Edit' }))
-    expect(screen.getByRole('dialog', { name: 'Selected environment' })).toBeInTheDocument()
+    fireEvent.click(customRowForEdit as HTMLElement)
+    const editableEnvironmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
+    expect(within(editableEnvironmentDialog).getByLabelText('Environment Name')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Environment Name'), { target: { value: 'Docker GPU tuned' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
@@ -52,8 +53,8 @@ describe('Environment templates', () => {
 
     fireEvent.click(screen.getByText('Docker GPU tuned'))
     const environmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
-    expect(within(environmentDialog).getByText('nvidia/cuda:12.4-runtime')).toBeInTheDocument()
-    expect(within(environmentDialog).getByText('cpu_enforcement_policy')).toBeInTheDocument()
+    expect(within(environmentDialog).getByDisplayValue('nvidia/cuda:12.4-runtime')).toBeInTheDocument()
+    expect(within(environmentDialog).getByLabelText('cpu_enforcement_policy')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
 
     const copiedRow = screen.getByText('Docker default copy').closest('tr')
