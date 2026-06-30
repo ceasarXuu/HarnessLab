@@ -101,7 +101,7 @@ interface Operation {
 - Dataset 列表不再向页面暴露 `digest` 和 `updated`，如后端需要保留，应只放在详情或调试信息中。
 - Agent 列表不再暴露 `adapter`、`source`、`updated` 三列；harness/adapter 的技术检查只进入详情或 review 操作。
 - Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
-- Environment 页面不暴露 Harbor 没有的一等资源 CRUD。当前只展示 Harbor `EnvironmentConfig` / task `[environment]` 支持的参数预设，并由 New Job 下拉引用。
+- Environment 页面提供 OrnnLab-local 模板 CRUD。模板不是 Harbor 原生资源，但每个模板必须完整映射到 Harbor `EnvironmentConfig` / task `[environment]` 支持字段，并由 New Job 下拉引用。
 
 ## 数据模型
 
@@ -200,16 +200,17 @@ interface JobConfig {
 }
 ```
 
-`environmentPresetId` 指向 Environment 页面列出的 Harbor 环境参数预设。后端创建 JobConfig 时负责把预设展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
+`environmentPresetId` 指向 Environment 页面管理的 OrnnLab-local 环境模板。后端创建 JobConfig 时负责把模板展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
 
 ### EnvironmentPreset
 
-Environment 不是 Harbor 顶层 CRUD 资源；当前接口只提供可搜索、可查看、可被 New Job 引用的参数预设。新建/删除本地 Environment profile 需要另行定义 OrnnLab 本地 profile API，不能假装是 Harbor 原生命令。
+Environment 模板是 OrnnLab-local 管理层，不是 Harbor 顶层 CRUD 资源。built-in 模板不可直接编辑或删除，只能复制为 custom 模板；custom 模板允许新建、编辑、复制、删除，并可被 New Job 引用。
 
 ```ts
 interface EnvironmentPreset {
   id: string
   name: string
+  profileType: 'built-in' | 'custom'
   environmentType: string
   importPath: string
   networkMode: string
@@ -488,10 +489,14 @@ interface CreateJobResponse {
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| `GET` | `/environments?q=&type=&cursor=&limit=` | Harbor 环境参数预设列表、搜索 |
-| `GET` | `/environments/{environmentPresetId}` | Environment 参数预设详情抽屉 |
+| `GET` | `/environments?q=&type=&cursor=&limit=` | OrnnLab-local Environment 模板列表、搜索 |
+| `GET` | `/environments/{environmentPresetId}` | Environment 模板详情抽屉 |
+| `POST` | `/environments` | 新建 OrnnLab-local custom Environment 模板 |
+| `POST` | `/environments/{environmentPresetId}/copy` | 复制 built-in 或 custom 模板为 custom 模板 |
+| `PATCH` | `/environments/{environmentPresetId}` | 编辑 custom Environment 模板 |
+| `DELETE` | `/environments/{environmentPresetId}` | 删除 custom Environment 模板 |
 
-首期不提供 `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`。这些动作不是 Harbor 原生 Environment 能力，必须等 OrnnLab 本地 profile API 定义后再加入。
+`PATCH` 和 `DELETE` 对 built-in 模板必须返回 `403` 或业务错误 `ENVIRONMENT_BUILT_IN_IMMUTABLE`。所有模板写操作只影响 OrnnLab 本地模板，不修改 Harbor 内置 backend 类型。
 
 ### Leaderboard
 

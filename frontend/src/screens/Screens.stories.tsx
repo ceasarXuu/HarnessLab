@@ -83,8 +83,13 @@ export const Agents: Story = {
   render: () => <AgentsPage rows={agentRows} t={t} />,
 }
 
+function EnvironmentsFixture() {
+  const [rows, setRows] = useState(environmentRows)
+  return <EnvironmentsPage rows={rows} t={t} onRowsChange={setRows} />
+}
+
 export const Environments: Story = {
-  render: () => <EnvironmentsPage rows={environmentRows} t={t} />,
+  render: () => <EnvironmentsFixture />,
 }
 
 export const Leaderboard: Story = {

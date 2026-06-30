@@ -50,6 +50,7 @@ function readTheme(): 'light' | 'dark' {
 export function App() {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
+  const [environmentProfiles, setEnvironmentProfiles] = useState(environmentRows)
   const [leaderboardEntries, setLeaderboardEntries] = useState(leaderboardRows)
   const [datasetSearch, setDatasetSearch] = useState('')
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
@@ -115,7 +116,7 @@ export function App() {
     const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
     const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
     const draftDataset = datasetRows.find((row) => `${row.name}@${row.version}` === draft.source)
-    const draftEnvironment = environmentRows.find((row) => row.id === draft.environment)
+    const draftEnvironment = environmentProfiles.find((row) => row.id === draft.environment)
     const draftTaskRows = taskRows.filter((row) => row.dataset === draftDataset?.name || row.dataset === draft.source)
     const selectedTaskCount = draft.selectedTaskNames?.length ?? draftTaskRows.length
     const newJob: HarborJob = {
@@ -153,6 +154,13 @@ export function App() {
     setSelected(newJob)
     setJobDrawerOpen(true)
     navigate('jobs', 'list')
+  }
+
+  function updateEnvironmentProfiles(nextRows: typeof environmentRows) {
+    setEnvironmentProfiles(nextRows)
+    if (!nextRows.some((row) => row.id === draft.environment)) {
+      setDraft((current) => ({ ...current, environment: nextRows[0]?.id ?? current.environment }))
+    }
   }
 
   function removeFromLeaderboard(jobId: string) {
@@ -203,7 +211,9 @@ export function App() {
         />
       )}
       {route.page === 'agents' && <AgentsPage rows={agentRows} t={t} />}
-      {route.page === 'environments' && <EnvironmentsPage rows={environmentRows} t={t} />}
+      {route.page === 'environments' && (
+        <EnvironmentsPage rows={environmentProfiles} t={t} onRowsChange={updateEnvironmentProfiles} />
+      )}
       {route.page === 'leaderboard' && (
         <LeaderboardPage
           dataset={leaderboardDataset}
@@ -243,7 +253,7 @@ export function App() {
         <NewRunPage
           datasets={datasetRows}
           draft={draft}
-          environments={environmentRows}
+          environments={environmentProfiles}
           taskRows={taskRows}
           t={t}
           onDraft={setDraft}

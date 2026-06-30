@@ -82,7 +82,7 @@
 1. task manifest 的 `[environment]` 字段：`docker_image`、`os`、`cpus`、`memory_mb`、`storage_mb`、`gpus`、`gpu_types`、`tpu`、`env`、`skills_dir`、`healthcheck`、`workdir`、`network_mode`、`allowed_hosts`。
 2. Job / Trial 运行时 EnvironmentConfig：`type`、`import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_cpus`、`override_memory_mb`、`override_storage_mb`、`override_gpus`、`override_tpu`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。
 
-因此 v1.0.5 当前 demo 将 Environment 页收敛为“Harbor 环境参数预设查看页”：可搜索、可打开详情抽屉、可被 New Job 下拉引用；不展示 New Environment、Delete custom environment、status、source、updated 等 Harbor 原生不支持的一等资源管理能力。若后续需要“可复用 Environment profile CRUD”，必须先定义 OrnnLab 本地 profile API，并在文档中明确它不是 Harbor 原生命令。
+2026-07-01 用户确认：OrnnLab 需要在 Harbor 上构建一层 Environment 管理。v1.0.5 当前 demo 将 Environment 页定义为 OrnnLab-local 环境模板管理层：可搜索、可新建 custom 模板、可复制 built-in/custom 模板、可编辑/删除 custom 模板、可打开详情抽屉、可被 New Job 下拉引用。该 CRUD 只管理 OrnnLab 本地模板，不是 Harbor 原生 Environment 资源命令；每个模板必须展开为 Harbor 真实支持的 EnvironmentConfig / task `[environment]` 字段。
 
 ## 3. Jobs / JobConfig 覆盖清单
 
@@ -138,7 +138,7 @@
 
 | 字段域 | Harbor 支持项 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| Environment 参数预设 | task `[environment]` 字段，以及 Job/Trial `EnvironmentConfig`：`type` / `import_path`、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts、runtime overrides | Environment 一级页展示参数预设并可打开详情；New Job 只下拉选择预设；不展示新建/删除 Environment 资源动作 | Partial | 后端接入时将预设展开为真实 JobConfig 字段；如需 profile CRUD，先定义 OrnnLab 本地 profile API。 |
+| Environment 模板 | OrnnLab-local profile，底层映射 task `[environment]` 字段和 Job/Trial `EnvironmentConfig`：`type` / `import_path`、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts、runtime overrides | Environment 一级页展示模板，支持 new/copy/edit/delete custom；built-in 只能复制；New Job 只下拉选择模板 | Partial | 后端实现本地模板 API，并在创建 JobConfig 时展开为 Harbor 真实字段。 |
 | Verifier | override/max timeout、env、import_path、kwargs、disable | 无 | Missing | 增加 Verifier 区域。 |
 
 ## 4. Datasets / Tasks 覆盖清单
@@ -235,7 +235,7 @@
 | New Job | 选择 Dataset/agent/environment，填写 concurrency/attempts/debug/env_file/notes，通过 Tasks 白名单选择要运行的 task，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
 | Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task、拉取更新/发布 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
-| Environment | 搜索、查看 Harbor 环境参数预设、点击行打开 Environment drawer | 主要为 seed 数据；不再展示 Harbor 没有的一等 Environment 新建/删除资源动作。 |
+| Environment | 搜索、新建 custom 模板、复制模板、编辑/删除 custom 模板、点击行打开 Environment drawer | 主要为 seed 数据；CRUD 语义是 OrnnLab-local 模板管理，不是 Harbor 原生命令。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
 | System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
 

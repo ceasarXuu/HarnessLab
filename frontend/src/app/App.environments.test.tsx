@@ -1,0 +1,70 @@
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { App } from './App'
+
+describe('Environment templates', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    window.location.hash = ''
+  })
+
+  it('manages OrnnLab-local templates over Harbor config fields', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
+    expect(screen.getByRole('heading', { name: 'Environment catalog' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New Environment' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'profile' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
+
+    const builtinRow = screen.getByText('Docker default').closest('tr')
+    const customRow = screen.getByText('Docker GPU').closest('tr')
+    expect(builtinRow).not.toBeNull()
+    expect(customRow).not.toBeNull()
+    expect(within(builtinRow as HTMLElement).getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+    expect(within(builtinRow as HTMLElement).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(within(customRow as HTMLElement).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+
+    fireEvent.click(within(builtinRow as HTMLElement).getByRole('button', { name: 'Copy' }))
+    expect(screen.getByRole('dialog', { name: 'Copy Environment' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
+    expect(screen.getByText('Docker default copy')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Environment' }))
+    fireEvent.change(screen.getByLabelText('Environment Name'), { target: { value: 'Docker local tmp' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
+    expect(screen.getByText('Docker local tmp')).toBeInTheDocument()
+
+    fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Edit' }))
+    fireEvent.change(screen.getByLabelText('Environment Name'), { target: { value: 'Docker GPU tuned' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
+    expect(screen.getByText('Docker GPU tuned')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Docker GPU tuned'))
+    const environmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
+    expect(within(environmentDialog).getByText('nvidia/cuda:12.4-runtime')).toBeInTheDocument()
+    expect(within(environmentDialog).getByText('cpu_enforcement_policy')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
+
+    const copiedRow = screen.getByText('Docker default copy').closest('tr')
+    expect(copiedRow).not.toBeNull()
+    fireEvent.click(within(copiedRow as HTMLElement).getByRole('button', { name: 'Delete' }))
+    expect(screen.getByRole('dialog', { name: 'Delete custom environment' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
+    expect(screen.queryByText('Docker default copy')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New Job' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Environment' }))
+    expect(screen.getByRole('option', { name: 'Docker local tmp' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
+    fireEvent.change(screen.getByLabelText('Search environments'), { target: { value: 'e2b' } })
+    expect(screen.getByText('E2B sandbox')).toBeInTheDocument()
+    expect(screen.queryByText('Docker default')).not.toBeInTheDocument()
+  })
+})

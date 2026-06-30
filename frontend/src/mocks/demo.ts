@@ -186,6 +186,7 @@ export interface AgentRow {
 export interface EnvironmentRow {
   id: string
   name: string
+  profileType: 'built-in' | 'custom'
   environmentType: string
   importPath: string
   networkMode: string

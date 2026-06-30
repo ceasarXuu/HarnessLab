@@ -185,38 +185,6 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
   })
 
-  it('renders Harbor environment configuration presets without resource CRUD', () => {
-    render(<App />)
-
-    fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
-    expect(screen.getByRole('heading', { name: 'Environment catalog' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Search environments')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'New Environment' })).not.toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Environment Name' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'type' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'docker_image' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'network_mode' })).toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
-    expect(screen.getByText('Docker default')).toBeInTheDocument()
-    expect(screen.getByText('Docker GPU')).toBeInTheDocument()
-    const customRow = screen.getByText('Docker GPU').closest('tr')
-    expect(customRow).not.toBeNull()
-    expect(within(customRow as HTMLElement).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByText('Docker GPU'))
-    const environmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
-    expect(environmentDialog).toBeInTheDocument()
-    expect(within(environmentDialog).getByText('nvidia/cuda:12.4-runtime')).toBeInTheDocument()
-    expect(within(environmentDialog).getByText('cpu_enforcement_policy')).toBeInTheDocument()
-    expect(within(environmentDialog).getByText('memory_enforcement_policy')).toBeInTheDocument()
-    expect(within(environmentDialog).getByText('extra_docker_compose')).toBeInTheDocument()
-    expect(within(environmentDialog).getByText(/huggingface\.co/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
-    fireEvent.change(screen.getByLabelText('Search environments'), { target: { value: 'e2b' } })
-    expect(screen.getByText('E2B sandbox')).toBeInTheDocument()
-    expect(screen.queryByText('Docker default')).not.toBeInTheDocument()
-  })
-
   it('renders agents and dataset-scoped leaderboard pages', () => {
     render(<App />)
 

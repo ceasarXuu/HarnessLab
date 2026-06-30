@@ -262,6 +262,7 @@ export const environmentRows: EnvironmentRow[] = [
   {
     id: 'docker-default',
     name: 'Docker default',
+    profileType: 'built-in',
     environmentType: 'docker',
     importPath: 'none',
     networkMode: 'public',
@@ -294,6 +295,7 @@ export const environmentRows: EnvironmentRow[] = [
   {
     id: 'docker-gpu',
     name: 'Docker GPU',
+    profileType: 'custom',
     environmentType: 'docker',
     importPath: 'none',
     networkMode: 'allowlist',
@@ -326,6 +328,7 @@ export const environmentRows: EnvironmentRow[] = [
   {
     id: 'e2b-sandbox',
     name: 'E2B sandbox',
+    profileType: 'custom',
     environmentType: 'e2b',
     importPath: 'none',
     networkMode: 'allowlist',
