@@ -34,6 +34,7 @@ export interface RunDraft {
   jobsDir: string
   source: string
   split: string
+  taskMode: 'all' | 'custom'
   taskFilter: string
   excludeFilter: string
   taskLimit: number
@@ -213,8 +214,9 @@ export const initialDraft: RunDraft = {
   jobsDir: 'jobs/terminal-bench-smoke',
   source: 'terminal-bench@2.0',
   split: 'test',
-  taskFilter: 'apt-*',
-  excludeFilter: 'flaky-*',
+  taskMode: 'all',
+  taskFilter: '',
+  excludeFilter: '',
   taskLimit: 64,
   extraInstructions: 'instructions/hardening.md',
   debug: false,

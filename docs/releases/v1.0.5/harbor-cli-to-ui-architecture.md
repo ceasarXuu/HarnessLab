@@ -105,7 +105,7 @@ flowchart TD
 | UI 区域 | 替代 CLI 参数域 | UI 控件 |
 |---|---|---|
 | Source | `--path`, `--dataset`, `--task`, `--registry-url`, `--registry-path` | Dataset selector、Task picker、本地路径选择、registry source |
-| Tasks | `--split`, `--include-task-name`, `--exclude-task-name`, `--n-tasks` | split selector、glob input、任务预览、limit stepper |
+| Tasks | `--split`, `--include-task-name`, `--exclude-task-name`, `--n-tasks` | split selector、运行范围 selector；默认全量运行，选择自定义范围后再展示 include/exclude 和数量上限 |
 | Agent | `--agent`, `--model` | 基础 tab 内的 Agent selector 和 model 输入；高级 Agent/Harness 管理收敛到 Agents 一级页 |
 | Environment | `--env`, `--force-build`, `--delete`, resource override, mounts, docker compose overlay | Environment segmented control、resource fields、mount editor |
 | Verification | `--verifier-env`, `--verifier-import-path`, `--verifier-kwarg`, verification toggle | Verifier config panel、env editor、enable/disable toggle |
@@ -114,7 +114,7 @@ flowchart TD
 | Preview | `--config` equivalent | 右上角 JobConfig 入口、Run button；CLI 命令不常驻展示 |
 
 默认进入基础 tab，只展示最短闭环和高频字段：job name、jobs dir、dataset、agent、model、environment、
-concurrency、attempts、debug、env_file、计入排行榜。task split、include/exclude 和 task limit 进入 Tasks tab。
+concurrency、attempts、debug、env_file、计入排行榜。task split 和运行范围进入 Tasks tab，默认全量运行；include/exclude 和 task limit 只在自定义范围下展示。
 非 Agent 的低频运行字段保留在对应领域 tab；高级 Agent/Harness 配置回到 Agents 一级页，避免 New Job 中重复配置。
 CLI 的 `--yes` 属于非交互执行细节，不作为 WebUI 配置项展示；WebUI 的按钮、弹窗和确认流承担用户确认语义。
 

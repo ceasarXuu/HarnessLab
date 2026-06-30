@@ -99,7 +99,7 @@
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
 | 基础 | `job_name`、`jobs_dir`、dataset、agent、model、environment、`debug`、`env_file`、leaderboard inclusion、notes | New Job 基础 tab 已展示 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项。 |
-| Tasks | `split`、`include_task_name`、`exclude_task_name`、`n_tasks` | New Job Tasks tab 已展示 | Covered | 后端接入时用 dataset manifest 驱动 split 和 task 预览。 |
+| Tasks | `split`、`include_task_name`、`exclude_task_name`、`n_tasks` | New Job Tasks tab 以“运行范围”承载；默认全量运行，自定义范围时展示 include/exclude 和数量上限 | Covered | 后端接入时用 dataset manifest 驱动 split、全量任务数和 task 预览。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |
 | Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 无 | Missing | 增加 Retry 区域，区分 job retry 与 UI Retry 按钮。 |
@@ -163,7 +163,7 @@
 | `download_dir` | 无 | Missing | Download target picker。 |
 | `task_names` | task 列表展示，但不可筛选 | Partial | include task names picker。 |
 | `exclude_task_names` | 无 | Missing | exclude task names picker。 |
-| `n_tasks` | New Job 有 implicit trials，Dataset detail 只展示 total tasks | Partial | JobConfig 中增加 n_tasks limit。 |
+| `n_tasks` | New Job 自定义运行范围中展示“运行数量上限”；Dataset detail 展示 total tasks | Covered | 接后端后按 dataset manifest 给出合法上限。 |
 
 ### 4.3 Task 支持项覆盖
 

@@ -181,20 +181,39 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               />
             </label>
           )}
-          <Field label={t('taskInclude')}>
-            <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
-          </Field>
-          <Field label={t('taskExclude')}>
-            <input value={draft.excludeFilter} onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })} />
-          </Field>
-          <Field label={t('taskLimit')}>
-            <input
-              type="number"
-              min="1"
-              value={draft.taskLimit}
-              onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
+          <label>
+            {t('taskScope')}
+            <CustomSelect
+              ariaLabel={t('taskScope')}
+              value={draft.taskMode}
+              options={[
+                { label: t('taskScopeAll'), value: 'all' },
+                { label: t('taskScopeCustom'), value: 'custom' },
+              ]}
+              onChange={(value) => onDraft({ ...draft, taskMode: value as 'all' | 'custom' })}
             />
-          </Field>
+          </label>
+          {draft.taskMode === 'custom' && (
+            <>
+              <Field label={t('taskInclude')}>
+                <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
+              </Field>
+              <Field label={t('taskExclude')}>
+                <input
+                  value={draft.excludeFilter}
+                  onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })}
+                />
+              </Field>
+              <Field label={t('taskLimit')}>
+                <input
+                  type="number"
+                  min="1"
+                  value={draft.taskLimit}
+                  onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
+                />
+              </Field>
+            </>
+          )}
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'environment'} title={t('runTabEnvironment')}>
