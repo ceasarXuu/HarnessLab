@@ -20,8 +20,8 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
   }
 
   return (
-    <fieldset className="tpu-spec-control field-wide">
-      <legend>{label}</legend>
+    <div className="tpu-spec-control field-wide">
+      <span className="tpu-spec-label">{label}</span>
       <label>
         TPU type
         <select value={parsed.type} onChange={(event) => update({ type: event.target.value })}>
@@ -30,40 +30,38 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
           ))}
         </select>
       </label>
-      <div className="tpu-topology-grid">
-        <label>
-          Topology X
-          <input
-            disabled={parsed.type === 'none'}
-            min="1"
-            type="number"
-            value={parsed.x}
-            onChange={(event) => update({ x: event.target.value })}
-          />
-        </label>
-        <label>
-          Topology Y
-          <input
-            disabled={parsed.type === 'none'}
-            min="1"
-            type="number"
-            value={parsed.y}
-            onChange={(event) => update({ y: event.target.value })}
-          />
-        </label>
-        <label>
-          Topology Z
-          <input
-            disabled={parsed.type === 'none'}
-            min="1"
-            placeholder="optional"
-            type="number"
-            value={parsed.z}
-            onChange={(event) => update({ z: event.target.value })}
-          />
-        </label>
-      </div>
-    </fieldset>
+      <label>
+        Topology X
+        <input
+          disabled={parsed.type === 'none'}
+          min="1"
+          type="number"
+          value={parsed.x}
+          onChange={(event) => update({ x: event.target.value })}
+        />
+      </label>
+      <label>
+        Topology Y
+        <input
+          disabled={parsed.type === 'none'}
+          min="1"
+          type="number"
+          value={parsed.y}
+          onChange={(event) => update({ y: event.target.value })}
+        />
+      </label>
+      <label>
+        Topology Z
+        <input
+          disabled={parsed.type === 'none'}
+          min="1"
+          placeholder="optional"
+          type="number"
+          value={parsed.z}
+          onChange={(event) => update({ z: event.target.value })}
+        />
+      </label>
+    </div>
   )
 }
 
