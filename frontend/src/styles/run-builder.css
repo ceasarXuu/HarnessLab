@@ -161,3 +161,32 @@
   font-size: 14px;
   font-weight: 700;
 }
+
+.environment-editor {
+  display: grid;
+  gap: 12px;
+}
+.environment-editor .run-config-group {
+  padding: 12px;
+}
+.profile-readonly-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.profile-readonly-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.profile-readonly-row strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.environment-switch {
+  width: 100%;
+  min-width: 0;
+}

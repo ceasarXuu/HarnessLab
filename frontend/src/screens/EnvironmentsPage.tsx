@@ -5,6 +5,7 @@ import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
+type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch'
 
 interface EnvironmentsPageProps {
   environmentId?: string
@@ -15,51 +16,91 @@ interface EnvironmentsPageProps {
   onView: (view: EnvironmentView, environmentId?: string) => void
 }
 
-const editableFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
-  { key: 'name', label: 'Environment Name' },
-  { key: 'environmentType', label: 'type' },
-  { key: 'importPath', label: 'import_path' },
-  { key: 'networkMode', label: 'network_mode' },
-  { key: 'allowedHosts', label: 'allowed_hosts' },
-  { key: 'dockerImage', label: 'docker_image' },
-  { key: 'cpus', label: 'cpus' },
-  { key: 'memoryMb', label: 'memory_mb' },
-  { key: 'storageMb', label: 'storage_mb' },
-  { key: 'gpus', label: 'gpus' },
-  { key: 'env', label: 'env' },
-  { key: 'kwargs', label: 'kwargs' },
-  { key: 'mounts', label: 'mounts' },
-  { key: 'dockerCompose', label: 'extra_docker_compose' },
-]
+interface EnvironmentField {
+  key: keyof EnvironmentRow
+  label: string
+  kind: EnvironmentFieldKind
+  options?: string[]
+  placeholder?: string
+}
 
-const editableDetailFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
-  { key: 'name', label: 'Environment Name' },
-  { key: 'environmentType', label: 'type' },
-  { key: 'importPath', label: 'import_path' },
-  { key: 'networkMode', label: 'network_mode' },
-  { key: 'allowedHosts', label: 'allowed_hosts' },
-  { key: 'dockerImage', label: 'docker_image' },
-  { key: 'os', label: 'os' },
-  { key: 'cpus', label: 'cpus' },
-  { key: 'memoryMb', label: 'memory_mb' },
-  { key: 'storageMb', label: 'storage_mb' },
-  { key: 'gpus', label: 'gpus' },
-  { key: 'gpuTypes', label: 'gpu_types' },
-  { key: 'tpu', label: 'tpu' },
-  { key: 'skillsDir', label: 'skills_dir' },
-  { key: 'healthcheck', label: 'healthcheck' },
-  { key: 'workdir', label: 'workdir' },
-  { key: 'mounts', label: 'mounts' },
-  { key: 'env', label: 'env' },
-  { key: 'kwargs', label: 'kwargs' },
-  { key: 'cpuPolicy', label: 'cpu_enforcement_policy' },
-  { key: 'memoryPolicy', label: 'memory_enforcement_policy' },
-  { key: 'overrideCpus', label: 'override_cpus' },
-  { key: 'overrideMemoryMb', label: 'override_memory_mb' },
-  { key: 'overrideStorageMb', label: 'override_storage_mb' },
-  { key: 'overrideGpus', label: 'override_gpus' },
-  { key: 'overrideTpu', label: 'override_tpu' },
-  { key: 'dockerCompose', label: 'extra_docker_compose' },
+interface EnvironmentFieldGroup {
+  title: string
+  description: string
+  fields: EnvironmentField[]
+}
+
+const environmentTypes = [
+  'docker',
+  'e2b',
+  'daytona',
+  'modal',
+  'runloop',
+  'langsmith',
+  'gke',
+  'novita',
+  'apple-container',
+  'singularity',
+  'islo',
+  'tensorlake',
+  'cwsandbox',
+  'wandb',
+  'use-computer',
+  'custom',
+]
+const networkModes = ['public', 'no-network', 'allowlist']
+const operatingSystems = ['linux', 'windows']
+const resourcePolicies = ['auto', 'limit', 'request', 'guarantee', 'ignore']
+
+const environmentFieldGroups: EnvironmentFieldGroup[] = [
+  {
+    title: 'OrnnLab template',
+    description: '本地模板信息，用于在 New Job 中复用，不是 Harbor 原生资源。',
+    fields: [
+      { key: 'name', label: 'Environment Name', kind: 'text' },
+      { key: 'environmentType', label: 'type', kind: 'select', options: environmentTypes },
+      { key: 'importPath', label: 'import_path', kind: 'path', placeholder: 'module.path:ClassName' },
+    ],
+  },
+  {
+    title: 'Task environment baseline',
+    description: '映射 task manifest 的 [environment] 字段。',
+    fields: [
+      { key: 'dockerImage', label: 'docker_image', kind: 'text', placeholder: 'python:3.13-slim' },
+      { key: 'os', label: 'os', kind: 'select', options: operatingSystems },
+      { key: 'networkMode', label: 'network_mode', kind: 'select', options: networkModes },
+      { key: 'allowedHosts', label: 'allowed_hosts', kind: 'tags', placeholder: 'pypi.org, github.com' },
+      { key: 'cpus', label: 'cpus', kind: 'number' },
+      { key: 'memoryMb', label: 'memory_mb', kind: 'number' },
+      { key: 'storageMb', label: 'storage_mb', kind: 'number' },
+      { key: 'gpus', label: 'gpus', kind: 'number' },
+      { key: 'gpuTypes', label: 'gpu_types', kind: 'tags', placeholder: 'A100, H100' },
+      { key: 'tpu', label: 'tpu', kind: 'text', placeholder: 'v6e=2x4' },
+      { key: 'env', label: 'env', kind: 'keyValue', placeholder: 'KEY=value' },
+      { key: 'skillsDir', label: 'skills_dir', kind: 'path' },
+      { key: 'healthcheck', label: 'healthcheck', kind: 'json' },
+      { key: 'workdir', label: 'workdir', kind: 'path' },
+    ],
+  },
+  {
+    title: 'Runtime overrides',
+    description: '映射 Job/Trial EnvironmentConfig 的运行时覆盖项。',
+    fields: [
+      { key: 'forceBuild', label: 'force_build', kind: 'switch' },
+      { key: 'deleteAfterRun', label: 'delete', kind: 'switch' },
+      { key: 'cpuPolicy', label: 'cpu_enforcement_policy', kind: 'select', options: resourcePolicies },
+      { key: 'memoryPolicy', label: 'memory_enforcement_policy', kind: 'select', options: resourcePolicies },
+      { key: 'overrideCpus', label: 'override_cpus', kind: 'number' },
+      { key: 'overrideMemoryMb', label: 'override_memory_mb', kind: 'number' },
+      { key: 'overrideStorageMb', label: 'override_storage_mb', kind: 'number' },
+      { key: 'overrideGpus', label: 'override_gpus', kind: 'number' },
+      { key: 'overrideTpu', label: 'override_tpu', kind: 'text', placeholder: 'v6e=2x4' },
+      { key: 'mounts', label: 'mounts', kind: 'json' },
+      { key: 'dockerCompose', label: 'extra_docker_compose', kind: 'path' },
+      { key: 'extraAllowedHosts', label: 'extra_allowed_hosts', kind: 'tags', placeholder: 'model.internal' },
+      { key: 'kwargs', label: 'kwargs', kind: 'keyValue' },
+    ],
+  },
 ]
 
 export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, onView }: EnvironmentsPageProps) {
@@ -223,7 +264,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   />
                 </div>
               </div>
-              {editingDraft && <EnvironmentFields value={editingDraft} fields={editableDetailFields} onChange={setEditingDraft} />}
+              {editingDraft && <EnvironmentProfileEditor value={editingDraft} onChange={setEditingDraft} />}
             </section>
           </aside>
         </DetailDrawer>
@@ -288,35 +329,119 @@ function EnvironmentFormPage({
               </button>
             </div>
           </div>
-          <EnvironmentFields value={draft} onChange={setDraft} />
+          <EnvironmentProfileEditor value={draft} onChange={setDraft} />
         </section>
       </div>
     </main>
   )
 }
 
-function EnvironmentFields({
-  fields = editableFields,
-  value,
-  onChange,
-}: {
-  fields?: Array<{ key: keyof EnvironmentRow; label: string }>
-  value: EnvironmentRow
-  onChange: (value: EnvironmentRow) => void
-}) {
+function EnvironmentProfileEditor({ value, onChange }: { value: EnvironmentRow; onChange: (value: EnvironmentRow) => void }) {
   return (
-    <div className="run-grid">
-      {fields.map((field) => (
-        <label key={field.key}>
-          {field.label}
-          <input
-            value={String(value[field.key])}
-            onChange={(event) => onChange({ ...value, [field.key]: event.target.value })}
-          />
-        </label>
+    <div className="environment-editor">
+      {environmentFieldGroups.map((group) => (
+        <section className="run-config-group" key={group.title}>
+          <div className="run-config-group-heading">
+            <h3>{group.title}</h3>
+            <p>{group.description}</p>
+          </div>
+          {group.title === 'OrnnLab template' && (
+            <div className="profile-readonly-row">
+              <span>profile</span>
+              <strong>{value.profileType}</strong>
+            </div>
+          )}
+          <div className="run-grid">
+            {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
+              <EnvironmentFieldControl
+                field={field}
+                key={field.key}
+                value={value}
+                onChange={onChange}
+              />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   )
+}
+
+function EnvironmentFieldControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: EnvironmentField
+  value: EnvironmentRow
+  onChange: (value: EnvironmentRow) => void
+}) {
+  const currentValue = value[field.key]
+  const setValue = (nextValue: string | boolean) => onChange({ ...value, [field.key]: nextValue })
+  if (field.kind === 'switch') {
+    return (
+      <label className="switch-control environment-switch">
+        <span>{field.label}</span>
+        <input
+          checked={Boolean(currentValue)}
+          onChange={(event) => setValue(event.target.checked)}
+          type="checkbox"
+        />
+      </label>
+    )
+  }
+  if (field.kind === 'select') {
+    return (
+      <label>
+        {field.label}
+        <select value={String(currentValue)} onChange={(event) => setValue(event.target.value)}>
+          {field.options?.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </label>
+    )
+  }
+  if (field.kind === 'json' || field.kind === 'keyValue') {
+    return (
+      <label className="field-wide">
+        {field.label}
+        <textarea
+          placeholder={field.placeholder}
+          value={String(currentValue)}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </label>
+    )
+  }
+  const displayValue = field.kind === 'number' ? normalizeNumberValue(currentValue) : normalizeInputValue(currentValue)
+  return (
+    <label>
+      {field.label}
+      <input
+        inputMode={field.kind === 'number' ? 'numeric' : undefined}
+        placeholder={field.placeholder}
+        type={field.kind === 'number' ? 'number' : 'text'}
+        value={displayValue}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    </label>
+  )
+}
+
+function isEnvironmentFieldVisible(field: EnvironmentField, value: EnvironmentRow) {
+  if (field.key === 'importPath') return value.environmentType === 'custom'
+  if (field.key === 'allowedHosts') return value.networkMode === 'allowlist'
+  return true
+}
+
+function normalizeInputValue(value: EnvironmentRow[keyof EnvironmentRow]) {
+  return typeof value === 'boolean' ? String(value) : String(value).replace(/^none$/, '')
+}
+
+function normalizeNumberValue(value: EnvironmentRow[keyof EnvironmentRow]) {
+  const text = normalizeInputValue(value)
+  return /^-?\d+(\.\d+)?$/.test(text) ? text : ''
 }
 
 function EnvironmentActions({

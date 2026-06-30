@@ -205,6 +205,7 @@ export interface EnvironmentRow {
   env: string
   kwargs: string
   allowedHosts: string
+  extraAllowedHosts: string
   forceBuild: boolean
   deleteAfterRun: boolean
   cpuPolicy: string

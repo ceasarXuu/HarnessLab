@@ -139,6 +139,8 @@
 | 字段域 | Harbor 支持项 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
 | Environment 模板 | OrnnLab-local profile，底层映射 task `[environment]` 字段和 Job/Trial `EnvironmentConfig`：`type` / `import_path`、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts、runtime overrides | Environment 一级页展示模板；new/copy 使用二级页面；detail 用抽屉；抽屉打开即编辑；custom 可 delete；New Job 只下拉选择模板 | Partial | 后端实现本地模板 API，并在创建 JobConfig 时展开为 Harbor 真实字段。 |
+
+Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 switch，资源数量使用数字输入，host / GPU type 使用 tag 输入，`env` / `kwargs` 使用 Key-Value 多行输入，`mounts` / `healthcheck` 使用 JSON 多行输入，路径字段使用路径输入。`allowed_hosts` 与 `extra_allowed_hosts` 必须分开：前者属于 task `[environment]` network baseline，后者属于 Job/Trial `EnvironmentConfig` runtime override。
 | Verifier | override/max timeout、env、import_path、kwargs、disable | 无 | Missing | 增加 Verifier 区域。 |
 
 ## 4. Datasets / Tasks 覆盖清单
