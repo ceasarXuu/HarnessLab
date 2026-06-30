@@ -85,7 +85,22 @@ export const Agents: Story = {
 
 function EnvironmentsFixture() {
   const [rows, setRows] = useState(environmentRows)
-  return <EnvironmentsPage rows={rows} t={t} onRowsChange={setRows} />
+  const [view, setView] = useState<'list' | 'new' | 'copy'>('list')
+  const [environmentId, setEnvironmentId] = useState<string | undefined>()
+  const onView = (nextView: 'list' | 'new' | 'copy', nextEnvironmentId?: string) => {
+    setView(nextView)
+    setEnvironmentId(nextEnvironmentId)
+  }
+  return (
+    <EnvironmentsPage
+      environmentId={environmentId}
+      rows={rows}
+      t={t}
+      view={view}
+      onRowsChange={setRows}
+      onView={onView}
+    />
+  )
 }
 
 export const Environments: Story = {

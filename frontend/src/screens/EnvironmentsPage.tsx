@@ -1,20 +1,18 @@
-import { Box, Copy, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Box, Copy, Pencil, Plus, Save, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { EnvironmentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 
+type EnvironmentView = 'list' | 'new' | 'copy'
+
 interface EnvironmentsPageProps {
+  environmentId?: string
   rows: EnvironmentRow[]
   t: Translate
+  view: EnvironmentView
   onRowsChange: (rows: EnvironmentRow[]) => void
-}
-
-type FormMode = 'new' | 'edit' | 'copy'
-
-interface FormState {
-  mode: FormMode
-  value: EnvironmentRow
+  onView: (view: EnvironmentView, environmentId?: string) => void
 }
 
 const editableFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
@@ -65,11 +63,11 @@ const detailFields: Array<{ key: keyof EnvironmentRow; label: string }> = [
   { key: 'dockerCompose', label: 'extra_docker_compose' },
 ]
 
-export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProps) {
+export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, onView }: EnvironmentsPageProps) {
   const [selected, setSelected] = useState<EnvironmentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<EnvironmentRow | null>(null)
-  const [form, setForm] = useState<FormState | null>(null)
+  const [editingDraft, setEditingDraft] = useState<EnvironmentRow | null>(null)
   const [search, setSearch] = useState('')
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -81,36 +79,26 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
     )
   }, [rows, search])
 
-  const openDrawer = (row: EnvironmentRow) => {
+  const openDrawer = (row: EnvironmentRow, edit = false) => {
     setSelected(row)
     setDrawerOpen(true)
+    setEditingDraft(edit && row.profileType === 'custom' ? { ...row } : null)
   }
 
-  const openNew = () => {
-    setForm({ mode: 'new', value: buildNewEnvironment(rows) })
-  }
-
-  const openCopy = (row: EnvironmentRow) => {
-    setForm({ mode: 'copy', value: { ...row, id: buildEnvironmentId(rows, row.name), name: `${row.name} copy`, profileType: 'custom' } })
-  }
-
-  const openEdit = (row: EnvironmentRow) => {
-    if (row.profileType === 'built-in') return
-    setForm({ mode: 'edit', value: { ...row } })
-  }
-
-  const saveForm = () => {
-    if (!form) return
-    const nextValue = { ...form.value, name: form.value.name.trim() || 'Custom Environment', profileType: 'custom' as const }
-    const savedValue = form.mode === 'edit' ? nextValue : { ...nextValue, id: buildEnvironmentId(rows, nextValue.name) }
-    const nextRows =
-      form.mode === 'edit'
-        ? rows.map((row) => (row.id === savedValue.id ? savedValue : row))
-        : [...rows, savedValue]
-    onRowsChange(nextRows)
-    setSelected(savedValue)
+  const saveNewTemplate = (draft: EnvironmentRow) => {
+    const saved = { ...draft, id: buildEnvironmentId(rows, draft.name), profileType: 'custom' as const }
+    onRowsChange([...rows, saved])
+    setSelected(saved)
     setDrawerOpen(true)
-    setForm(null)
+    onView('list')
+  }
+
+  const saveDrawerEdit = () => {
+    if (!editingDraft) return
+    const saved = { ...editingDraft, name: editingDraft.name.trim() || 'Custom Environment' }
+    onRowsChange(rows.map((row) => (row.id === saved.id ? saved : row)))
+    setSelected(saved)
+    setEditingDraft(null)
   }
 
   const confirmDelete = () => {
@@ -120,8 +108,27 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
     if (selected?.id === deleteTarget.id) {
       setSelected(null)
       setDrawerOpen(false)
+      setEditingDraft(null)
     }
     setDeleteTarget(null)
+  }
+
+  if (view !== 'list') {
+    const source = rows.find((row) => row.id === environmentId)
+    const initialValue =
+      view === 'copy' && source
+        ? { ...source, id: buildEnvironmentId(rows, source.name), name: `${source.name} copy`, profileType: 'custom' as const }
+        : buildNewEnvironment(rows)
+    return (
+      <EnvironmentFormPage
+        key={`${view}-${environmentId ?? 'new'}`}
+        initialValue={initialValue}
+        title={view === 'copy' ? t('copyEnvironment') : t('newEnvironment')}
+        t={t}
+        onCancel={() => onView('list')}
+        onSave={saveNewTemplate}
+      />
+    )
   }
 
   return (
@@ -141,7 +148,7 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
                 placeholder={t('searchEnvironmentsPlaceholder')}
               />
             </label>
-            <button className="primary-button" onClick={openNew}>
+            <button className="primary-button" onClick={() => onView('new')}>
               <Plus aria-hidden="true" />
               {t('newEnvironment')}
             </button>
@@ -184,9 +191,9 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
                     <EnvironmentActions
                       row={row}
                       t={t}
-                      onCopy={openCopy}
+                      onCopy={(target) => onView('copy', target.id)}
                       onDelete={setDeleteTarget}
-                      onEdit={openEdit}
+                      onEdit={(target) => openDrawer(target, true)}
                     />
                   </td>
                 </tr>
@@ -204,33 +211,41 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
                   <h2>{selected.name}</h2>
                   <p>{selected.environmentType}</p>
                 </div>
-                <EnvironmentActions
-                  row={selected}
-                  t={t}
-                  onCopy={openCopy}
-                  onDelete={setDeleteTarget}
-                  onEdit={openEdit}
-                />
+                {editingDraft ? (
+                  <div className="row-actions">
+                    <button className="secondary-button compact-action" onClick={() => setEditingDraft(null)}>
+                      <X aria-hidden="true" />
+                      {t('cancel')}
+                    </button>
+                    <button className="primary-button compact-action" onClick={saveDrawerEdit}>
+                      <Save aria-hidden="true" />
+                      {t('save')}
+                    </button>
+                  </div>
+                ) : (
+                  <EnvironmentActions
+                    row={selected}
+                    t={t}
+                    onCopy={(target) => onView('copy', target.id)}
+                    onDelete={setDeleteTarget}
+                    onEdit={(target) => openDrawer(target, true)}
+                  />
+                )}
               </div>
-              <div className="metric-grid">
-                {detailFields.map((field) => (
-                  <Metric key={field.key} label={field.label} value={String(selected[field.key])} />
-                ))}
-                <Metric label="force_build" value={selected.forceBuild ? 'true' : 'false'} />
-                <Metric label="delete" value={selected.deleteAfterRun ? 'true' : 'false'} />
-              </div>
+              {editingDraft ? (
+                <EnvironmentFields value={editingDraft} onChange={setEditingDraft} />
+              ) : (
+                <div className="metric-grid">
+                  {detailFields.map((field) => (
+                    <Metric key={field.key} label={field.label} value={String(selected[field.key])} />
+                  ))}
+                  <Metric label="force_build" value={selected.forceBuild ? 'true' : 'false'} />
+                  <Metric label="delete" value={selected.deleteAfterRun ? 'true' : 'false'} />
+                </div>
+              )}
             </section>
           </aside>
         </DetailDrawer>
-      )}
-      {form && (
-        <EnvironmentFormDialog
-          form={form}
-          t={t}
-          onCancel={() => setForm(null)}
-          onChange={(value) => setForm({ ...form, value })}
-          onSave={saveForm}
-        />
       )}
       {deleteTarget && (
         <div className="confirm-overlay">
@@ -250,6 +265,68 @@ export function EnvironmentsPage({ rows, t, onRowsChange }: EnvironmentsPageProp
         </div>
       )}
     </main>
+  )
+}
+
+function EnvironmentFormPage({
+  initialValue,
+  title,
+  t,
+  onCancel,
+  onSave,
+}: {
+  initialValue: EnvironmentRow
+  title: string
+  t: Translate
+  onCancel: () => void
+  onSave: (value: EnvironmentRow) => void
+}) {
+  const [draft, setDraft] = useState(initialValue)
+  return (
+    <main className="workspace single-page">
+      <div className="content-column">
+        <nav className="breadcrumb-nav" aria-label="Environment path">
+          <button type="button" onClick={onCancel}>
+            {t('environments')}
+          </button>
+          <span aria-current="page">{title}</span>
+        </nav>
+        <section className="surface run-builder">
+          <div className="section-header compact">
+            <div>
+              <h1>{title}</h1>
+            </div>
+            <div className="run-builder-actions">
+              <button className="secondary-button" onClick={onCancel}>
+                <X aria-hidden="true" />
+                {t('cancel')}
+              </button>
+              <button className="primary-button" onClick={() => onSave(draft)}>
+                <Save aria-hidden="true" />
+                {t('save')}
+              </button>
+            </div>
+          </div>
+          <EnvironmentFields value={draft} onChange={setDraft} />
+        </section>
+      </div>
+    </main>
+  )
+}
+
+function EnvironmentFields({ value, onChange }: { value: EnvironmentRow; onChange: (value: EnvironmentRow) => void }) {
+  return (
+    <div className="run-grid">
+      {editableFields.map((field) => (
+        <label key={field.key}>
+          {field.label}
+          <input
+            value={String(value[field.key])}
+            onChange={(event) => onChange({ ...value, [field.key]: event.target.value })}
+          />
+        </label>
+      ))}
+    </div>
   )
 }
 
@@ -284,46 +361,6 @@ function EnvironmentActions({
           </button>
         </>
       )}
-    </div>
-  )
-}
-
-function EnvironmentFormDialog({
-  form,
-  t,
-  onCancel,
-  onChange,
-  onSave,
-}: {
-  form: FormState
-  t: Translate
-  onCancel: () => void
-  onChange: (value: EnvironmentRow) => void
-  onSave: () => void
-}) {
-  const title = form.mode === 'edit' ? t('editEnvironment') : form.mode === 'copy' ? t('copyEnvironment') : t('newEnvironment')
-  return (
-    <div className="confirm-overlay">
-      <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="confirm-heading">
-          <h2>{title}</h2>
-        </div>
-        <div className="import-dataset-form">
-          {editableFields.map((field) => (
-            <label key={field.key}>
-              {field.label}
-              <input
-                value={String(form.value[field.key])}
-                onChange={(event) => onChange({ ...form.value, [field.key]: event.target.value })}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="button-row confirm-actions">
-          <button className="secondary-button" onClick={onCancel}>{t('cancel')}</button>
-          <button className="primary-button" onClick={onSave}>{t('save')}</button>
-        </div>
-      </section>
     </div>
   )
 }

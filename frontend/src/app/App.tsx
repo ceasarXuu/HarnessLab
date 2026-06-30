@@ -20,8 +20,11 @@ import { NewRunPage } from '../screens/NewRunPage'
 import { SystemPage } from '../screens/SystemPage'
 
 type JobView = 'list' | 'new'
+type EnvironmentView = 'list' | 'new' | 'copy'
 
 interface RouteState {
+  environmentId?: string
+  environmentView: EnvironmentView
   jobView: JobView
   page: PageKey
 }
@@ -31,11 +34,24 @@ const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'environments',
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
   if (hash === 'jobs/new' || hash === 'new-run') {
-    return { page: 'jobs', jobView: 'new' }
+    return { page: 'jobs', jobView: 'new', environmentView: 'list' }
+  }
+  if (hash === 'environments/new') {
+    return { page: 'environments', jobView: 'list', environmentView: 'new' }
+  }
+  const environmentMatch = hash.match(/^environments\/([^/]+)\/copy$/)
+  if (environmentMatch) {
+    return {
+      page: 'environments',
+      jobView: 'list',
+      environmentView: 'copy',
+      environmentId: environmentMatch[1],
+    }
   }
   return {
     page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs',
     jobView: 'list',
+    environmentView: 'list',
   }
 }
 
@@ -104,8 +120,22 @@ export function App() {
   }, [language, theme])
 
   function navigate(page: PageKey, jobView: JobView = 'list') {
-    const nextRoute: RouteState = { page, jobView: page === 'jobs' ? jobView : 'list' }
+    const nextRoute: RouteState = { page, jobView: page === 'jobs' ? jobView : 'list', environmentView: 'list' }
     const nextHash = nextRoute.page === 'jobs' && nextRoute.jobView === 'new' ? '#jobs/new' : `#${nextRoute.page}`
+    setRoute(nextRoute)
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash)
+    }
+  }
+
+  function navigateEnvironment(environmentView: EnvironmentView, environmentId?: string) {
+    const nextRoute: RouteState = { page: 'environments', jobView: 'list', environmentView, environmentId }
+    const nextHash =
+      environmentView === 'list'
+        ? '#environments'
+        : environmentView === 'new'
+          ? '#environments/new'
+        : `#environments/${environmentId}/copy`
     setRoute(nextRoute)
     if (window.location.hash !== nextHash) {
       window.history.pushState(null, '', nextHash)
@@ -212,7 +242,14 @@ export function App() {
       )}
       {route.page === 'agents' && <AgentsPage rows={agentRows} t={t} />}
       {route.page === 'environments' && (
-        <EnvironmentsPage rows={environmentProfiles} t={t} onRowsChange={updateEnvironmentProfiles} />
+        <EnvironmentsPage
+          environmentId={route.environmentId}
+          rows={environmentProfiles}
+          t={t}
+          view={route.environmentView}
+          onRowsChange={updateEnvironmentProfiles}
+          onView={navigateEnvironment}
+        />
       )}
       {route.page === 'leaderboard' && (
         <LeaderboardPage
