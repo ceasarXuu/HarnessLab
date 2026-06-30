@@ -1,4 +1,4 @@
-import { Copy, Play, RotateCcw } from 'lucide-react'
+import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 import type { DatasetRow, RunDraft, TaskRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
@@ -12,6 +12,7 @@ interface RunBuilderProps {
   taskRows: TaskRow[]
   t: Translate
   onDraft: (draft: RunDraft) => void
+  onCancel: () => void
   onLaunch: () => void
 }
 
@@ -24,7 +25,7 @@ const agentOptions = [
   { label: 'oracle', value: 'oracle', model: 'local-sim' },
 ]
 
-export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
@@ -79,6 +80,10 @@ export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onLaunch }: 
           <p>{t('newJobDesc')}</p>
         </div>
         <div className="run-builder-actions">
+          <button className="secondary-button" onClick={onCancel}>
+            <X aria-hidden="true" />
+            {t('cancel')}
+          </button>
           <button className="secondary-button">
             <RotateCcw aria-hidden="true" />
             {t('reset')}

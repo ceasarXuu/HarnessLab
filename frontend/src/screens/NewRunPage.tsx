@@ -22,7 +22,15 @@ export function NewRunPage({ datasets, draft, taskRows, t, onDraft, onJobs, onLa
           </button>
           <span aria-current="page">{t('newJob')}</span>
         </nav>
-        <RunBuilder datasets={datasets} draft={draft} taskRows={taskRows} t={t} onDraft={onDraft} onLaunch={onLaunch} />
+        <RunBuilder
+          datasets={datasets}
+          draft={draft}
+          taskRows={taskRows}
+          t={t}
+          onDraft={onDraft}
+          onCancel={onJobs}
+          onLaunch={onLaunch}
+        />
       </div>
     </main>
   )

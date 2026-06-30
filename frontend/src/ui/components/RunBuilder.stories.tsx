@@ -17,6 +17,7 @@ function RunBuilderFixture() {
           taskRows={taskRows}
           t={getTranslator('en')}
           onDraft={setDraft}
+          onCancel={() => undefined}
           onLaunch={() => undefined}
         />
       </div>
