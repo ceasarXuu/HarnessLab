@@ -101,6 +101,7 @@ interface Operation {
 - Dataset 列表不再向页面暴露 `digest` 和 `updated`，如后端需要保留，应只放在详情或调试信息中。
 - Agent 列表不再暴露 `adapter`、`source`、`updated` 三列；harness/adapter 的技术检查只进入详情或 review 操作。
 - Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
+- Environment 页面不暴露 Harbor 没有的一等资源 CRUD。当前只展示 Harbor `EnvironmentConfig` / task `[environment]` 支持的参数预设，并由 New Job 下拉引用。
 
 ## 数据模型
 
@@ -155,7 +156,6 @@ interface JobConfig {
   extraInstructions: string
   debug: boolean
   quiet: boolean
-  yes: boolean
   envFile: string
 
   agentName: string
@@ -168,22 +168,7 @@ interface JobConfig {
   skills: string
   mcpConfig: string
 
-  environment: string
-  environmentImportPath: string
-  environmentEnv: string
-  environmentKwargs: string
-  allowEnvironmentHosts: string
-  forceBuild: boolean
-  deleteEnvironment: boolean
-  suppressOverrideWarnings: boolean
-  cpus: string
-  cpuOverride: string
-  memoryMb: string
-  storageMb: string
-  gpus: string
-  tpu: string
-  mounts: string
-  dockerCompose: string
+  environmentPresetId: string
 
   verifierImportPath: string
   verifierEnv: string
@@ -212,6 +197,47 @@ interface JobConfig {
   visibility: 'private' | 'public'
   includeInLeaderboard: boolean
   shareTargets: string
+}
+```
+
+`environmentPresetId` 指向 Environment 页面列出的 Harbor 环境参数预设。后端创建 JobConfig 时负责把预设展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
+
+### EnvironmentPreset
+
+Environment 不是 Harbor 顶层 CRUD 资源；当前接口只提供可搜索、可查看、可被 New Job 引用的参数预设。新建/删除本地 Environment profile 需要另行定义 OrnnLab 本地 profile API，不能假装是 Harbor 原生命令。
+
+```ts
+interface EnvironmentPreset {
+  id: string
+  name: string
+  environmentType: string
+  importPath: string
+  networkMode: string
+  allowedHosts: string
+  dockerImage: string
+  os: string
+  cpus: string
+  memoryMb: string
+  storageMb: string
+  gpus: string
+  gpuTypes: string
+  tpu: string
+  skillsDir: string
+  healthcheck: string
+  workdir: string
+  mounts: string
+  env: string
+  kwargs: string
+  forceBuild: boolean
+  deleteAfterRun: boolean
+  cpuPolicy: string
+  memoryPolicy: string
+  overrideCpus: string
+  overrideMemoryMb: string
+  overrideStorageMb: string
+  overrideGpus: string
+  overrideTpu: string
+  dockerCompose: string
 }
 ```
 
@@ -457,6 +483,15 @@ interface CreateJobResponse {
 | `POST` | `/agents/{agentId}/adapter/review` | 检查 harness/adapter 配置 |
 
 `DELETE /agents/{agentId}` 对 built-in Agent 必须返回 `403` 或业务错误 `AGENT_BUILT_IN_IMMUTABLE`。
+
+### Environment
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `GET` | `/environments?q=&type=&cursor=&limit=` | Harbor 环境参数预设列表、搜索 |
+| `GET` | `/environments/{environmentPresetId}` | Environment 参数预设详情抽屉 |
+
+首期不提供 `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`。这些动作不是 Harbor 原生 Environment 能力，必须等 OrnnLab 本地 profile API 定义后再加入。
 
 ### Leaderboard
 

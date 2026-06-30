@@ -10,30 +10,18 @@ interface EnvironmentsPageProps {
 }
 
 export function EnvironmentsPage({ rows, t }: EnvironmentsPageProps) {
-  const [environmentRows, setEnvironmentRows] = useState(rows)
   const [selected, setSelected] = useState<EnvironmentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<EnvironmentRow | null>(null)
   const [search, setSearch] = useState('')
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return environmentRows
-    return environmentRows.filter((row) =>
-      [row.name, row.backend, row.type, row.image, row.resources, row.status].some((value) =>
+    if (!query) return rows
+    return rows.filter((row) =>
+      [row.name, row.environmentType, row.importPath, row.dockerImage, row.networkMode, row.allowedHosts].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [environmentRows, search])
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return
-    setEnvironmentRows((current) => current.filter((row) => row.id !== deleteTarget.id))
-    if (selected?.id === deleteTarget.id) {
-      setDrawerOpen(false)
-      setSelected(null)
-    }
-    setDeleteTarget(null)
-  }
+  }, [rows, search])
 
   return (
     <main className="workspace single-page">
@@ -52,7 +40,6 @@ export function EnvironmentsPage({ rows, t }: EnvironmentsPageProps) {
                 placeholder={t('searchEnvironmentsPlaceholder')}
               />
             </label>
-            <button className="primary-button">{t('newEnvironment')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -60,12 +47,11 @@ export function EnvironmentsPage({ rows, t }: EnvironmentsPageProps) {
             <thead>
               <tr>
                 <th>{t('environmentName')}</th>
-                <th>{t('backend')}</th>
-                <th>{t('agentType')}</th>
-                <th>{t('image')}</th>
-                <th>{t('resourcePolicy')}</th>
-                <th>{t('status')}</th>
-                <th>{t('actions')}</th>
+                <th>type</th>
+                <th>docker_image</th>
+                <th>network_mode</th>
+                <th>cpu / memory policy</th>
+                <th>runtime overrides</th>
               </tr>
             </thead>
             <tbody>
@@ -84,27 +70,11 @@ export function EnvironmentsPage({ rows, t }: EnvironmentsPageProps) {
                       {row.name}
                     </span>
                   </td>
-                  <td>{row.backend}</td>
-                  <td>{row.type}</td>
-                  <td>{row.image}</td>
-                  <td>{row.resources}</td>
-                  <td>
-                    <span className={`status-dot ${row.status === 'needs-review' ? 'warning' : 'success'}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="row-actions">
-                      {row.type === 'custom' && (
-                        <button className="secondary-button compact-action" onClick={(event) => {
-                          event.stopPropagation()
-                          setDeleteTarget(row)
-                        }}>
-                          {t('delete')}
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <td>{row.environmentType}</td>
+                  <td>{row.dockerImage}</td>
+                  <td>{row.networkMode}</td>
+                  <td>{row.cpuPolicy} / {row.memoryPolicy}</td>
+                  <td>{formatOverrides(row)}</td>
                 </tr>
               ))}
             </tbody>
@@ -118,49 +88,51 @@ export function EnvironmentsPage({ rows, t }: EnvironmentsPageProps) {
               <div className="rail-heading">
                 <div>
                   <h2>{selected.name}</h2>
-                  <p>{selected.backend}</p>
+                  <p>{selected.environmentType}</p>
                 </div>
-                <span className={`status-dot ${selected.status === 'needs-review' ? 'warning' : 'success'}`}>
-                  {selected.status}
-                </span>
               </div>
               <div className="metric-grid">
                 <Metric label={t('environmentName')} value={selected.name} />
-                <Metric label={t('backend')} value={selected.backend} />
-                <Metric label={t('agentType')} value={selected.type} />
-                <Metric label={t('image')} value={selected.image} />
-                <Metric label={t('resourcePolicy')} value={selected.resources} />
+                <Metric label="type" value={selected.environmentType} />
+                <Metric label="import_path" value={selected.importPath} />
+                <Metric label="network_mode" value={selected.networkMode} />
+                <Metric label="allowed_hosts" value={selected.allowedHosts} />
+                <Metric label="docker_image" value={selected.dockerImage} />
+                <Metric label="os" value={selected.os} />
+                <Metric label="cpus" value={selected.cpus} />
+                <Metric label="memory_mb" value={selected.memoryMb} />
+                <Metric label="storage_mb" value={selected.storageMb} />
+                <Metric label="gpus" value={selected.gpus} />
+                <Metric label="gpu_types" value={selected.gpuTypes} />
+                <Metric label="tpu" value={selected.tpu} />
+                <Metric label="skills_dir" value={selected.skillsDir} />
+                <Metric label="healthcheck" value={selected.healthcheck} />
+                <Metric label="workdir" value={selected.workdir} />
                 <Metric label={t('mounts')} value={selected.mounts} />
                 <Metric label="env" value={selected.env} />
-                <Metric label="allowed hosts" value={selected.allowedHosts} />
-                <Metric label={t('forceBuild')} value={selected.forceBuild ? 'enabled' : 'disabled'} />
-                <Metric label={t('deleteEnvironment')} value={selected.deleteAfterRun ? 'enabled' : 'disabled'} />
-                <Metric label={t('sourceRef')} value={selected.source} />
-                <Metric label={t('updated')} value={selected.updated} />
+                <Metric label="kwargs" value={selected.kwargs} />
+                <Metric label="force_build" value={selected.forceBuild ? 'true' : 'false'} />
+                <Metric label="delete" value={selected.deleteAfterRun ? 'true' : 'false'} />
+                <Metric label="cpu_enforcement_policy" value={selected.cpuPolicy} />
+                <Metric label="memory_enforcement_policy" value={selected.memoryPolicy} />
+                <Metric label="override_cpus" value={selected.overrideCpus} />
+                <Metric label="override_memory_mb" value={selected.overrideMemoryMb} />
+                <Metric label="override_storage_mb" value={selected.overrideStorageMb} />
+                <Metric label="override_gpus" value={selected.overrideGpus} />
+                <Metric label="override_tpu" value={selected.overrideTpu} />
+                <Metric label="extra_docker_compose" value={selected.dockerCompose} />
               </div>
             </section>
           </aside>
         </DetailDrawer>
       )}
-      {deleteTarget && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteEnvironmentTitle')}>
-            <div className="confirm-heading">
-              <h2>{t('deleteEnvironmentTitle')}</h2>
-            </div>
-            <ul className="cleanup-impact-list">
-              <li>{t('deleteEnvironmentLocalImpact')}</li>
-              <li>{deleteTarget.name}</li>
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
-            </div>
-          </section>
-        </div>
-      )}
     </main>
   )
+}
+
+function formatOverrides(row: EnvironmentRow) {
+  const values = [row.overrideCpus, row.overrideMemoryMb, row.overrideStorageMb, row.overrideGpus, row.overrideTpu]
+  return values.some((value) => value !== 'none') ? values.filter((value) => value !== 'none').join(' / ') : 'none'
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

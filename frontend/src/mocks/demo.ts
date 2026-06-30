@@ -186,18 +186,34 @@ export interface AgentRow {
 export interface EnvironmentRow {
   id: string
   name: string
-  backend: string
-  type: 'built-in' | 'custom'
-  image: string
-  resources: string
+  environmentType: string
+  importPath: string
+  networkMode: string
+  dockerImage: string
+  os: string
+  cpus: string
+  memoryMb: string
+  storageMb: string
+  gpus: string
+  gpuTypes: string
+  tpu: string
+  skillsDir: string
+  healthcheck: string
+  workdir: string
   mounts: string
   env: string
+  kwargs: string
   allowedHosts: string
-  status: 'available' | 'configured' | 'needs-review'
-  source: string
-  updated: string
   forceBuild: boolean
   deleteAfterRun: boolean
+  cpuPolicy: string
+  memoryPolicy: string
+  overrideCpus: string
+  overrideMemoryMb: string
+  overrideStorageMb: string
+  overrideGpus: string
+  overrideTpu: string
+  dockerCompose: string
 }
 
 export interface LeaderboardRow {

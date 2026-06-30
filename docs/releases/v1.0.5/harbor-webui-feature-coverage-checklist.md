@@ -75,6 +75,15 @@
 
 本次仍只承诺 demo 可见性，不改变“真实 API 接管仍需后续逐项实现”的边界。
 
+## 2.3 2026-06-30 Environment 双向一致性修正
+
+本机 Harbor CLI 顶层命令没有 `environment` / `environments` 一等资源管理命令。Environment 真实能力来自两个层面：
+
+1. task manifest 的 `[environment]` 字段：`docker_image`、`os`、`cpus`、`memory_mb`、`storage_mb`、`gpus`、`gpu_types`、`tpu`、`env`、`skills_dir`、`healthcheck`、`workdir`、`network_mode`、`allowed_hosts`。
+2. Job / Trial 运行时 EnvironmentConfig：`type`、`import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_cpus`、`override_memory_mb`、`override_storage_mb`、`override_gpus`、`override_tpu`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。
+
+因此 v1.0.5 当前 demo 将 Environment 页收敛为“Harbor 环境参数预设查看页”：可搜索、可打开详情抽屉、可被 New Job 下拉引用；不展示 New Environment、Delete custom environment、status、source、updated 等 Harbor 原生不支持的一等资源管理能力。若后续需要“可复用 Environment profile CRUD”，必须先定义 OrnnLab 本地 profile API，并在文档中明确它不是 Harbor 原生命令。
+
 ## 3. Jobs / JobConfig 覆盖清单
 
 ### 3.1 Job 列表与生命周期操作
@@ -129,7 +138,7 @@
 
 | 字段域 | Harbor 支持项 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| Environment profile | `docker/daytona/e2b/modal/runloop/langsmith/gke/...` 或 import path、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts | Environment 一级页展示可复用 profile；New Job 只下拉选择 profile | Partial | 接真实 environment profile API；禁止在 New Job 中重复铺开环境细节。 |
+| Environment 参数预设 | task `[environment]` 字段，以及 Job/Trial `EnvironmentConfig`：`type` / `import_path`、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts、runtime overrides | Environment 一级页展示参数预设并可打开详情；New Job 只下拉选择预设；不展示新建/删除 Environment 资源动作 | Partial | 后端接入时将预设展开为真实 JobConfig 字段；如需 profile CRUD，先定义 OrnnLab 本地 profile API。 |
 | Verifier | override/max timeout、env、import_path、kwargs、disable | 无 | Missing | 增加 Verifier 区域。 |
 
 ## 4. Datasets / Tasks 覆盖清单
@@ -226,7 +235,7 @@
 | New Job | 选择 Dataset/agent/environment，填写 concurrency/attempts/debug/env_file/notes，通过 Tasks 白名单选择要运行的 task，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
 | Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task、拉取更新/发布 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
-| Environment | 搜索、查看 environment profile 列表、点击行打开 Environment drawer、删除 custom environment | 主要为 seed 数据；后端 environment profile API 待定义。 |
+| Environment | 搜索、查看 Harbor 环境参数预设、点击行打开 Environment drawer | 主要为 seed 数据；不再展示 Harbor 没有的一等 Environment 新建/删除资源动作。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
 | System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
 
