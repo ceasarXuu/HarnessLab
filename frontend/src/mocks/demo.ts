@@ -183,6 +183,23 @@ export interface AgentRow {
   adapterReview?: string
 }
 
+export interface EnvironmentRow {
+  id: string
+  name: string
+  backend: string
+  type: 'built-in' | 'custom'
+  image: string
+  resources: string
+  mounts: string
+  env: string
+  allowedHosts: string
+  status: 'available' | 'configured' | 'needs-review'
+  source: string
+  updated: string
+  forceBuild: boolean
+  deleteAfterRun: boolean
+}
+
 export interface LeaderboardRow {
   dataset: string
   rank: number
@@ -225,7 +242,7 @@ export const initialDraft: RunDraft = {
   allowAgentHosts: 'api.anthropic.com,hub.harborframework.com',
   skills: '~/.ornnlab/skills/terminal-bench',
   mcpConfig: '~/.ornnlab/mcp/claude.mcp.json',
-  environment: 'docker',
+  environment: 'docker-default',
   environmentImportPath: '',
   environmentEnv: 'HTTP_PROXY=',
   environmentKwargs: 'reuse_layers=true',

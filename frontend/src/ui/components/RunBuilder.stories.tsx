@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { initialDraft } from '../../mocks/demo'
-import { datasetRows, taskRows } from '../../mocks/demoCatalog'
+import { datasetRows, environmentRows, taskRows } from '../../mocks/demoCatalog'
 import { RunBuilder } from './RunBuilder'
 
 function RunBuilderFixture() {
@@ -14,6 +14,7 @@ function RunBuilderFixture() {
         <RunBuilder
           datasets={datasetRows}
           draft={draft}
+          environments={environmentRows}
           taskRows={taskRows}
           t={getTranslator('en')}
           onDraft={setDraft}

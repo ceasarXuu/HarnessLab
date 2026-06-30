@@ -1,6 +1,6 @@
 import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
-import type { DatasetRow, RunDraft, TaskRow } from '../../mocks/demo'
+import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Field, TabPanel, Toggle } from './RunBuilderChrome'
@@ -9,6 +9,7 @@ import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 interface RunBuilderProps {
   datasets: DatasetRow[]
   draft: RunDraft
+  environments: EnvironmentRow[]
   taskRows: TaskRow[]
   t: Translate
   onDraft: (draft: RunDraft) => void
@@ -16,7 +17,7 @@ interface RunBuilderProps {
   onLaunch: () => void
 }
 
-type RunBuilderTab = 'core' | 'tasks' | 'environment' | 'verifier' | 'runtime' | 'hub'
+type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime' | 'hub'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 const agentOptions = [
@@ -25,10 +26,11 @@ const agentOptions = [
   { label: 'oracle', value: 'oracle', model: 'local-sim' },
 ]
 
-export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
+  const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
   const availableSplits = selectedDataset?.splits ?? []
   const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
@@ -67,7 +69,6 @@ export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onCancel, on
   const tabs: Array<{ key: RunBuilderTab; label: string }> = [
     { key: 'core', label: t('runTabCore') },
     { key: 'tasks', label: t('runTabTasks') },
-    { key: 'environment', label: t('runTabEnvironment') },
     { key: 'verifier', label: t('runTabVerifier') },
     { key: 'runtime', label: t('runTabRuntime') },
     { key: 'hub', label: t('runTabHub') },
@@ -149,15 +150,7 @@ export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onCancel, on
             <CustomSelect
               ariaLabel={t('environment')}
               value={draft.environment}
-              options={[
-                { label: 'docker', value: 'docker' },
-                { label: 'daytona', value: 'daytona' },
-                { label: 'e2b', value: 'e2b' },
-                { label: 'modal', value: 'modal' },
-                { label: 'gke', value: 'gke' },
-                { label: 'runloop', value: 'runloop' },
-                { label: 'custom import path', value: 'custom' },
-              ]}
+              options={environmentOptions}
               onChange={(value) => onDraft({ ...draft, environment: value })}
             />
           </label>
@@ -276,96 +269,6 @@ export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onCancel, on
               </div>
             )}
           </section>
-        </div>
-      </TabPanel>
-      <TabPanel active={activeTab === 'environment'} title={t('runTabEnvironment')}>
-        <div className="run-grid">
-        <label>
-          {t('environment')}
-          <CustomSelect
-            ariaLabel={t('environment')}
-            value={draft.environment}
-            options={[
-              { label: 'docker', value: 'docker' },
-              { label: 'daytona', value: 'daytona' },
-              { label: 'e2b', value: 'e2b' },
-              { label: 'modal', value: 'modal' },
-              { label: 'gke', value: 'gke' },
-              { label: 'runloop', value: 'runloop' },
-              { label: 'langsmith', value: 'langsmith' },
-              { label: 'novita', value: 'novita' },
-              { label: 'apple-container', value: 'apple-container' },
-              { label: 'singularity', value: 'singularity' },
-              { label: 'islo', value: 'islo' },
-              { label: 'tensorlake', value: 'tensorlake' },
-              { label: 'cwsandbox', value: 'cwsandbox' },
-              { label: 'wandb', value: 'wandb' },
-              { label: 'use-computer', value: 'use-computer' },
-              { label: 'custom import path', value: 'custom' },
-            ]}
-            onChange={(value) => onDraft({ ...draft, environment: value })}
-          />
-        </label>
-        <Field label="environment import_path">
-          <input
-            value={draft.environmentImportPath}
-            onChange={(event) => onDraft({ ...draft, environmentImportPath: event.target.value })}
-          />
-        </Field>
-        <Field label="environment env">
-          <input
-            value={draft.environmentEnv}
-            onChange={(event) => onDraft({ ...draft, environmentEnv: event.target.value })}
-          />
-        </Field>
-        <Field label="environment kwargs">
-          <input
-            value={draft.environmentKwargs}
-            onChange={(event) => onDraft({ ...draft, environmentKwargs: event.target.value })}
-          />
-        </Field>
-        <Field label="allow_environment_host">
-          <input
-            value={draft.allowEnvironmentHosts}
-            onChange={(event) => onDraft({ ...draft, allowEnvironmentHosts: event.target.value })}
-          />
-        </Field>
-        <Field label={t('forceBuild')}>
-          <Toggle checked={draft.forceBuild} onChange={(value) => onDraft({ ...draft, forceBuild: value })} />
-        </Field>
-        <Field label={t('deleteEnvironment')}>
-          <Toggle checked={draft.deleteEnvironment} onChange={(value) => onDraft({ ...draft, deleteEnvironment: value })} />
-        </Field>
-        <Field label="suppress_override_warnings">
-          <Toggle
-            checked={draft.suppressOverrideWarnings}
-            onChange={(value) => onDraft({ ...draft, suppressOverrideWarnings: value })}
-          />
-        </Field>
-        <Field label={t('resourcePolicy')}>
-          <input value={draft.cpus} onChange={(event) => onDraft({ ...draft, cpus: event.target.value })} />
-        </Field>
-        <Field label="override_cpus">
-          <input value={draft.cpuOverride} onChange={(event) => onDraft({ ...draft, cpuOverride: event.target.value })} />
-        </Field>
-        <Field label={t('memoryMb')}>
-          <input value={draft.memoryMb} onChange={(event) => onDraft({ ...draft, memoryMb: event.target.value })} />
-        </Field>
-        <Field label={t('storageMb')}>
-          <input value={draft.storageMb} onChange={(event) => onDraft({ ...draft, storageMb: event.target.value })} />
-        </Field>
-        <Field label={t('gpus')}>
-          <input value={draft.gpus} onChange={(event) => onDraft({ ...draft, gpus: event.target.value })} />
-        </Field>
-        <Field label="tpu">
-          <input value={draft.tpu} onChange={(event) => onDraft({ ...draft, tpu: event.target.value })} />
-        </Field>
-        <Field label={t('mounts')}>
-          <input value={draft.mounts} onChange={(event) => onDraft({ ...draft, mounts: event.target.value })} />
-        </Field>
-        <Field label={t('dockerCompose')}>
-          <input value={draft.dockerCompose} onChange={(event) => onDraft({ ...draft, dockerCompose: event.target.value })} />
-        </Field>
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'verifier'} title={t('runTabVerifier')}>

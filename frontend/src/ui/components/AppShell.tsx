@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import type { Locale, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 
-export type PageKey = 'jobs' | 'datasets' | 'agents' | 'leaderboard' | 'system'
+export type PageKey = 'jobs' | 'datasets' | 'agents' | 'environments' | 'leaderboard' | 'system'
 
 const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
   { key: 'jobs', label: 'jobs' },
   { key: 'datasets', label: 'datasets' },
   { key: 'agents', label: 'agents' },
+  { key: 'environments', label: 'environments' },
   { key: 'leaderboard', label: 'leaderboard' },
   { key: 'system', label: 'system' },
 ]

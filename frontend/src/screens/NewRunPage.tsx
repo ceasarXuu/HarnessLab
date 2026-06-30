@@ -1,10 +1,11 @@
 import { RunBuilder } from '../ui/components/RunBuilder'
-import type { DatasetRow, RunDraft, TaskRow } from '../mocks/demo'
+import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
 interface NewRunPageProps {
   datasets: DatasetRow[]
   draft: RunDraft
+  environments: EnvironmentRow[]
   taskRows: TaskRow[]
   t: Translate
   onDraft: (draft: RunDraft) => void
@@ -12,7 +13,7 @@ interface NewRunPageProps {
   onLaunch: () => void
 }
 
-export function NewRunPage({ datasets, draft, taskRows, t, onDraft, onJobs, onLaunch }: NewRunPageProps) {
+export function NewRunPage({ datasets, draft, environments, taskRows, t, onDraft, onJobs, onLaunch }: NewRunPageProps) {
   return (
     <main className="workspace single-page">
       <div className="content-column">
@@ -25,6 +26,7 @@ export function NewRunPage({ datasets, draft, taskRows, t, onDraft, onJobs, onLa
         <RunBuilder
           datasets={datasets}
           draft={draft}
+          environments={environments}
           taskRows={taskRows}
           t={t}
           onDraft={onDraft}

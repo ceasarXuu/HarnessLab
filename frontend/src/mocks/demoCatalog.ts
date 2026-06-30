@@ -1,4 +1,4 @@
-import type { AgentRow, DatasetRow, TaskRow } from './demo'
+import type { AgentRow, DatasetRow, EnvironmentRow, TaskRow } from './demo'
 
 export const datasetRows: DatasetRow[] = [
   {
@@ -255,5 +255,56 @@ export const agentRows: AgentRow[] = [
     allowedHosts: 'localhost, model.internal',
     compatibleModels: 'qwen3-coder-local',
     adapterReview: 'needs token before review',
+  },
+]
+
+export const environmentRows: EnvironmentRow[] = [
+  {
+    id: 'docker-default',
+    name: 'Docker default',
+    backend: 'docker',
+    type: 'built-in',
+    image: 'ubuntu-24.04 / task image',
+    resources: 'cpu auto, memory 4096 MB, storage 20480 MB',
+    mounts: './cache -> /cache',
+    env: 'HTTP_PROXY=',
+    allowedHosts: 'pypi.org, github.com',
+    status: 'available',
+    source: 'Harbor built-in',
+    updated: '12m ago',
+    forceBuild: false,
+    deleteAfterRun: true,
+  },
+  {
+    id: 'docker-gpu',
+    name: 'Docker GPU',
+    backend: 'docker',
+    type: 'custom',
+    image: 'nvidia/cuda:12.4-runtime',
+    resources: 'cpu 8, memory 16384 MB, gpus 1',
+    mounts: './cache -> /cache, ./models -> /models',
+    env: 'CUDA_VISIBLE_DEVICES=0',
+    allowedHosts: 'pypi.org, github.com, huggingface.co',
+    status: 'configured',
+    source: '~/.ornnlab/environments/docker-gpu.toml',
+    updated: '1h ago',
+    forceBuild: false,
+    deleteAfterRun: false,
+  },
+  {
+    id: 'e2b-sandbox',
+    name: 'E2B sandbox',
+    backend: 'e2b',
+    type: 'custom',
+    image: 'python-3.13',
+    resources: 'cpu 4, memory 8192 MB',
+    mounts: 'none',
+    env: 'E2B_API_KEY',
+    allowedHosts: 'pypi.org, github.com',
+    status: 'needs-review',
+    source: '~/.ornnlab/environments/e2b-sandbox.toml',
+    updated: 'queued',
+    forceBuild: false,
+    deleteAfterRun: true,
   },
 ]

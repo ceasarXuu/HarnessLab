@@ -3,10 +3,11 @@ import { userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../i18n'
 import { events, jobs, trialRows } from '../mocks/demo'
-import { agentRows, datasetRows, taskRows } from '../mocks/demoCatalog'
+import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
+import { EnvironmentsPage } from './EnvironmentsPage'
 import { JobsPage } from './JobsPage'
 import { LeaderboardPage } from './LeaderboardPage'
 import { SystemPage } from './SystemPage'
@@ -80,6 +81,10 @@ export const DatasetDrawer: Story = {
 
 export const Agents: Story = {
   render: () => <AgentsPage rows={agentRows} t={t} />,
+}
+
+export const Environments: Story = {
+  render: () => <EnvironmentsPage rows={environmentRows} t={t} />,
 }
 
 export const Leaderboard: Story = {

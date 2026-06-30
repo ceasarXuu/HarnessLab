@@ -98,7 +98,7 @@
 
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
-| 基础 | `job_name`、`jobs_dir`、dataset、agent、environment、`debug`、`env_file`、leaderboard inclusion、notes | New Job 基础 tab 已展示；model 内包在 Agent profile，不作为 Job 级字段暴露 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项。 |
+| 基础 | `job_name`、`jobs_dir`、dataset、agent、environment profile、`debug`、`env_file`、leaderboard inclusion、notes | New Job 基础 tab 已展示；model 内包在 Agent profile，environment 只选择已配置 profile，不作为 Job 级细节配置暴露 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项。 |
 | Tasks | `split`、`task_names` | New Job Tasks tab 以 Task 白名单列表承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |
@@ -129,13 +129,7 @@
 
 | 字段域 | Harbor 支持项 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| Environment type | `docker/daytona/e2b/modal/runloop/langsmith/gke/...` 或 import path | 只有 `docker/local` | Partial | 至少展示 Harbor 支持 backend 全集，首版可禁用非 Docker 并说明原因。 |
-| Build/delete | `force_build`、`delete` | 无 | Missing | Environment 区域增加 toggle。 |
-| 资源策略 | `cpu_enforcement_policy`、`memory_enforcement_policy` | 无 | Missing | 增加 resource mode selector。 |
-| 资源 override | cpus/memory/storage/gpus/tpu | 无 | Missing | 增加 numeric fields。 |
-| Mounts | `mounts` | 无 | Missing | 增加 mount list editor。 |
-| Docker compose overlay | `extra_docker_compose` | 无 | Missing | 增加 compose file list。 |
-| Environment env/kwargs | `env`、`kwargs`、`extra_allowed_hosts` | 无 | Missing | 增加 env/kwargs/host allowlist。 |
+| Environment profile | `docker/daytona/e2b/modal/runloop/langsmith/gke/...` 或 import path、`force_build`、`delete`、resources、mounts、env/kwargs、extra_allowed_hosts | Environment 一级页展示可复用 profile；New Job 只下拉选择 profile | Partial | 接真实 environment profile API；禁止在 New Job 中重复铺开环境细节。 |
 | Verifier | override/max timeout、env、import_path、kwargs、disable | 无 | Missing | 增加 Verifier 区域。 |
 
 ## 4. Datasets / Tasks 覆盖清单
@@ -232,6 +226,7 @@
 | New Job | 选择 Dataset/agent/environment，填写 concurrency/attempts/debug/env_file/notes，通过 Tasks 白名单选择要运行的 task，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
 | Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task、拉取更新/发布 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
+| Environment | 搜索、查看 environment profile 列表、点击行打开 Environment drawer、删除 custom environment | 主要为 seed 数据；后端 environment profile API 待定义。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
 | System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
 
@@ -242,7 +237,7 @@
 1. New Job 表单扩展到 Harbor JobConfig P0 字段：
    - job name、jobs dir、dataset name/version/ref、task whitelist、
    - agent/import path/model/env/kwargs、
-   - environment type、force build、delete、
+   - environment profile selection、
    - attempts、concurrency、timeouts、retry、artifacts。
 2. 前端从 seed data 切到真实 API：
    - agents、benchmarks/datasets、experiments/runs、leaderboard、system。

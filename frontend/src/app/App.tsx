@@ -8,12 +8,13 @@ import {
   type HarborJob,
   type LeaderboardRow,
 } from '../mocks/demo'
-import { agentRows, datasetRows, taskRows } from '../mocks/demoCatalog'
+import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { getTranslator, type Locale } from '../i18n'
 import { JobsPage } from '../screens/JobsPage'
 import { AgentsPage } from '../screens/AgentsPage'
 import { DatasetsPage } from '../screens/DatasetsPage'
+import { EnvironmentsPage } from '../screens/EnvironmentsPage'
 import { LeaderboardPage } from '../screens/LeaderboardPage'
 import { NewRunPage } from '../screens/NewRunPage'
 import { SystemPage } from '../screens/SystemPage'
@@ -25,7 +26,7 @@ interface RouteState {
   page: PageKey
 }
 
-const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'leaderboard', 'system'])
+const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'environments', 'leaderboard', 'system'])
 
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
@@ -114,6 +115,7 @@ export function App() {
     const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
     const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
     const draftDataset = datasetRows.find((row) => `${row.name}@${row.version}` === draft.source)
+    const draftEnvironment = environmentRows.find((row) => row.id === draft.environment)
     const draftTaskRows = taskRows.filter((row) => row.dataset === draftDataset?.name || row.dataset === draft.source)
     const selectedTaskCount = draft.selectedTaskNames?.length ?? draftTaskRows.length
     const newJob: HarborJob = {
@@ -123,7 +125,7 @@ export function App() {
       dataset: draft.source,
       agent: draft.agent,
       model: draft.model.split('/').at(-1) ?? draft.model,
-      environment: draft.environment,
+      environment: draftEnvironment?.name ?? draft.environment,
       trials: `0 / ${selectedTaskCount}`,
       score: '-',
       cost: '$0.00',
@@ -201,6 +203,7 @@ export function App() {
         />
       )}
       {route.page === 'agents' && <AgentsPage rows={agentRows} t={t} />}
+      {route.page === 'environments' && <EnvironmentsPage rows={environmentRows} t={t} />}
       {route.page === 'leaderboard' && (
         <LeaderboardPage
           dataset={leaderboardDataset}
@@ -240,6 +243,7 @@ export function App() {
         <NewRunPage
           datasets={datasetRows}
           draft={draft}
+          environments={environmentRows}
           taskRows={taskRows}
           t={t}
           onDraft={setDraft}
