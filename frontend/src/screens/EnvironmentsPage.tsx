@@ -325,14 +325,9 @@ function EnvironmentProfileEditor({ value, onChange }: { value: EnvironmentRow; 
     <div className="environment-editor">
       {environmentFieldGroups.map((group) => (
         <section className="run-config-group" key={group.title}>
-          <div className="run-config-group-heading">
-            <h3>{group.title}</h3>
-            <p>{group.description}</p>
-          </div>
-          {group.title === 'OrnnLab template' && (
-            <div className="profile-readonly-row">
-              <span>profile</span>
-              <strong>{value.profileType}</strong>
+          {group.title !== 'OrnnLab template' && (
+            <div className="run-config-group-heading">
+              <h3>{group.title}</h3>
             </div>
           )}
           <div className="run-grid">
