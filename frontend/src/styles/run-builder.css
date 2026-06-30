@@ -188,3 +188,25 @@
   color: var(--muted);
   font-size: 12px;
 }
+.key-value-control {
+  display: grid;
+  gap: 8px;
+}
+.key-value-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.key-value-list {
+  display: grid;
+  gap: 8px;
+}
+.key-value-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.2fr) auto;
+  align-items: end;
+  gap: 8px;
+}

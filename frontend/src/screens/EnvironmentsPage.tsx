@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import type { EnvironmentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { KeyValueControl } from '../ui/components/KeyValueControl'
 import { TpuSpecControl } from '../ui/components/TpuSpecControl'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
@@ -381,7 +382,16 @@ function EnvironmentFieldControl({
       </label>
     )
   }
-  if (field.kind === 'json' || field.kind === 'keyValue') {
+  if (field.kind === 'keyValue') {
+    return (
+      <KeyValueControl
+        label={field.label}
+        value={String(currentValue)}
+        onChange={setValue}
+      />
+    )
+  }
+  if (field.kind === 'json') {
     return (
       <label className="field-wide">
         {field.label}
