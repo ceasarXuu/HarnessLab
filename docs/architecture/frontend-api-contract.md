@@ -223,7 +223,7 @@ interface EnvironmentPreset {
   gpus: string
   gpuTypes: string
   tpu: string
-  skillsDir: string
+  skillsDir: string // Harbor task environment field; v1.0.5 UI does not expose it in Environment, it is reserved for Agents management.
   healthcheck: string
   workdir: string
   mounts: string

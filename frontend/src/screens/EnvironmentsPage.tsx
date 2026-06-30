@@ -62,7 +62,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'gpuTypes', label: 'gpu_types', kind: 'tags', placeholder: 'A100, H100' },
       { key: 'tpu', label: 'tpu', kind: 'tpu' },
       { key: 'env', label: 'env', kind: 'keyValue', placeholder: 'KEY=value' },
-      { key: 'skillsDir', label: 'skills_dir', kind: 'path' },
       { key: 'healthcheck', label: 'healthcheck', kind: 'json' },
       { key: 'workdir', label: 'workdir', kind: 'path' },
     ],
