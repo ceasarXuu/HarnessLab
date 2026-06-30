@@ -18,6 +18,11 @@ interface RunBuilderProps {
 type RunBuilderTab = 'core' | 'tasks' | 'environment' | 'verifier' | 'runtime' | 'hub'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
+const agentOptions = [
+  { label: 'claude-code', value: 'claude-code', model: 'anthropic/claude-haiku-4-5' },
+  { label: 'codex-cli', value: 'codex-cli', model: 'gpt-5.1' },
+  { label: 'oracle', value: 'oracle', model: 'local-sim' },
+]
 
 export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
@@ -127,17 +132,13 @@ export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onLaunch }: 
             <CustomSelect
               ariaLabel={t('agent')}
               value={draft.agent}
-              options={[
-                { label: 'claude-code', value: 'claude-code' },
-                { label: 'codex-cli', value: 'codex-cli' },
-                { label: 'oracle', value: 'oracle' },
-              ]}
-              onChange={(value) => onDraft({ ...draft, agent: value })}
+              options={agentOptions.map((option) => ({ label: option.label, value: option.value }))}
+              onChange={(value) => {
+                const nextAgent = agentOptions.find((option) => option.value === value)
+                onDraft({ ...draft, agent: value, model: nextAgent?.model ?? draft.model })
+              }}
             />
           </label>
-          <Field label={t('model')}>
-            <input value={draft.model} onChange={(event) => onDraft({ ...draft, model: event.target.value })} />
-          </Field>
           <label>
             {t('environment')}
             <CustomSelect

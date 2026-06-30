@@ -304,6 +304,7 @@ describe('App', () => {
     expect(within(runBuilder as HTMLElement).getByRole('tab', { name: 'Tasks' })).toBeInTheDocument()
     expect(within(runBuilder as HTMLElement).queryByRole('tab', { name: 'Agent' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
+    expect(screen.queryByLabelText('Model')).not.toBeInTheDocument()
     expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
     expect(screen.queryByLabelText('yes')).not.toBeInTheDocument()
     expect(screen.getByLabelText('env_file')).toHaveValue('.env.harbor')

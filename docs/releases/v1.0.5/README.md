@@ -72,7 +72,7 @@ benchmark 执行的默认环境前提。
 ### In Scope
 
 - Harbor JobConfig 可视化配置：
-  - agent、model、agent env、agent kwargs、skills、MCP config；
+  - agent profile、agent env、agent kwargs、skills、MCP config；model 内包在 Agent profile，不作为 Job 级字段暴露；
   - dataset、version、task split、Task 白名单；
   - n_attempts、n_concurrent、timeout、retry；
   - environment type、Docker 资源、mounts、delete/force-build；

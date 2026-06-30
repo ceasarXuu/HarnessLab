@@ -96,6 +96,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await page.getByRole('button', { name: 'New Job' }).click()
   await expect(page.getByRole('heading', { name: 'New Job' })).toBeVisible()
   await expect(page.getByLabel('job_name')).toHaveValue('terminal-bench-smoke')
+  await expect(page.getByLabel('Model')).toHaveCount(0)
   await expect(page.getByLabel('debug')).toContainText('disabled')
   await expect(page.getByLabel('env_file')).toHaveValue('.env.harbor')
   await expect(page.getByLabel('Dataset').locator('..')).toHaveCSS('border-top-width', '1px')
