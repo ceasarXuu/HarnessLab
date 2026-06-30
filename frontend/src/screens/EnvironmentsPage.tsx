@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react'
 import type { EnvironmentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { TpuSpecControl } from '../ui/components/TpuSpecControl'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
-type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch'
+type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch' | 'tpu'
 
 interface EnvironmentsPageProps {
   environmentId?: string
@@ -30,24 +31,7 @@ interface EnvironmentFieldGroup {
   fields: EnvironmentField[]
 }
 
-const environmentTypes = [
-  'docker',
-  'e2b',
-  'daytona',
-  'modal',
-  'runloop',
-  'langsmith',
-  'gke',
-  'novita',
-  'apple-container',
-  'singularity',
-  'islo',
-  'tensorlake',
-  'cwsandbox',
-  'wandb',
-  'use-computer',
-  'custom',
-]
+const environmentTypes = ['docker', 'e2b', 'daytona', 'modal', 'runloop', 'langsmith', 'gke', 'novita', 'apple-container', 'singularity', 'islo', 'tensorlake', 'cwsandbox', 'wandb', 'use-computer', 'custom']
 const networkModes = ['public', 'no-network', 'allowlist']
 const operatingSystems = ['linux', 'windows']
 const resourcePolicies = ['auto', 'limit', 'request', 'guarantee', 'ignore']
@@ -75,7 +59,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'storageMb', label: 'storage_mb', kind: 'number' },
       { key: 'gpus', label: 'gpus', kind: 'number' },
       { key: 'gpuTypes', label: 'gpu_types', kind: 'tags', placeholder: 'A100, H100' },
-      { key: 'tpu', label: 'tpu', kind: 'text', placeholder: 'v6e=2x4' },
+      { key: 'tpu', label: 'tpu', kind: 'tpu' },
       { key: 'env', label: 'env', kind: 'keyValue', placeholder: 'KEY=value' },
       { key: 'skillsDir', label: 'skills_dir', kind: 'path' },
       { key: 'healthcheck', label: 'healthcheck', kind: 'json' },
@@ -94,7 +78,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'overrideMemoryMb', label: 'override_memory_mb', kind: 'number' },
       { key: 'overrideStorageMb', label: 'override_storage_mb', kind: 'number' },
       { key: 'overrideGpus', label: 'override_gpus', kind: 'number' },
-      { key: 'overrideTpu', label: 'override_tpu', kind: 'text', placeholder: 'v6e=2x4' },
+      { key: 'overrideTpu', label: 'override_tpu', kind: 'tpu' },
       { key: 'mounts', label: 'mounts', kind: 'json' },
       { key: 'dockerCompose', label: 'extra_docker_compose', kind: 'path' },
       { key: 'extraAllowedHosts', label: 'extra_allowed_hosts', kind: 'tags', placeholder: 'model.internal' },
@@ -412,6 +396,15 @@ function EnvironmentFieldControl({
           onChange={(event) => setValue(event.target.value)}
         />
       </label>
+    )
+  }
+  if (field.kind === 'tpu') {
+    return (
+      <TpuSpecControl
+        label={field.label}
+        value={String(currentValue)}
+        onChange={setValue}
+      />
     )
   }
   const displayValue = field.kind === 'number' ? normalizeNumberValue(currentValue) : normalizeInputValue(currentValue)
