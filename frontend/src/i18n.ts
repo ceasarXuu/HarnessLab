@@ -383,7 +383,7 @@ const messages = {
     verifierKwargs: 'verifier kwargs',
     disableVerifier: 'disable verifier',
     concurrency: '并发',
-    attempts: '尝试次数',
+    attempts: '每个 Task 重复次数',
     timeoutMultiplier: 'timeout multiplier',
     agentTimeoutMultiplier: 'agent timeout multiplier',
     verifierTimeoutMultiplier: 'verifier timeout multiplier',

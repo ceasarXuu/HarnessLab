@@ -114,7 +114,7 @@ flowchart TD
 | Preview | `--config` equivalent | 右上角 JobConfig 入口、Run button；CLI 命令不常驻展示 |
 
 默认进入基础 tab，只展示最短闭环和高频字段：job name、jobs dir、dataset、agent、model、environment、
-concurrency、attempts、debug、env_file、计入排行榜。task split 和 Task 白名单进入 Tasks tab，默认全选；用户通过列表开关形成 Harbor `task_names` 白名单。搜索过滤只改变当前可见 task 集合，批量开启/关闭仅作用于当前过滤结果。
+concurrency、每个 Task 重复次数、debug、env_file、计入排行榜。task split 和 Task 白名单进入 Tasks tab，默认全选；用户通过列表开关形成 Harbor `task_names` 白名单。搜索过滤只改变当前可见 task 集合，批量开启/关闭仅作用于当前过滤结果。
 非 Agent 的低频运行字段保留在对应领域 tab；高级 Agent/Harness 配置回到 Agents 一级页，避免 New Job 中重复配置。
 CLI 的 `--yes` 属于非交互执行细节，不作为 WebUI 配置项展示；WebUI 的按钮、弹窗和确认流承担用户确认语义。
 
