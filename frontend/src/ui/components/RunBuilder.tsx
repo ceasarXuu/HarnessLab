@@ -1,6 +1,6 @@
 import { Copy, Play, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
-import type { DatasetRow, RunDraft } from '../../mocks/demo'
+import type { DatasetRow, RunDraft, TaskRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Field, TabPanel, Toggle } from './RunBuilderChrome'
@@ -9,6 +9,7 @@ import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 interface RunBuilderProps {
   datasets: DatasetRow[]
   draft: RunDraft
+  taskRows: TaskRow[]
   t: Translate
   onDraft: (draft: RunDraft) => void
   onLaunch: () => void
@@ -18,11 +19,45 @@ type RunBuilderTab = 'core' | 'tasks' | 'environment' | 'verifier' | 'runtime' |
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 
-export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ datasets, draft, taskRows, t, onDraft, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
+  const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
   const availableSplits = selectedDataset?.splits ?? []
+  const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
+  const selectedDatasetTasks = taskRows.filter(
+    (row) => row.dataset === selectedDataset?.name || row.dataset === selectedDatasetKey,
+  )
+  const searchedTasks = selectedDatasetTasks.filter((row) => {
+    const query = taskSearch.trim().toLowerCase()
+    if (!query) return true
+    return [row.name, row.description, row.state].some((value) => value.toLowerCase().includes(query))
+  })
+  const selectedTaskNames = draft.selectedTaskNames ?? selectedDatasetTasks.map((task) => task.name)
+  const selectedTaskNameSet = new Set(selectedTaskNames)
+  const selectedTaskCount = selectedTaskNames.length
+  const toggleTask = (taskName: string, enabled: boolean) => {
+    const next = new Set(selectedTaskNames)
+    if (enabled) {
+      next.add(taskName)
+    } else {
+      next.delete(taskName)
+    }
+    onDraft({ ...draft, selectedTaskNames: Array.from(next) })
+  }
+  const setFilteredTasks = (enabled: boolean) => {
+    const filteredNames = searchedTasks.map((task) => task.name)
+    const next = new Set(selectedTaskNames)
+    for (const taskName of filteredNames) {
+      if (enabled) {
+        next.add(taskName)
+      } else {
+        next.delete(taskName)
+      }
+    }
+    onDraft({ ...draft, selectedTaskNames: Array.from(next) })
+  }
   const tabs: Array<{ key: RunBuilderTab; label: string }> = [
     { key: 'core', label: t('runTabCore') },
     { key: 'tasks', label: t('runTabTasks') },
@@ -83,7 +118,7 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               options={datasetOptions}
               onChange={(value) => {
                 const nextDataset = datasets.find((row) => datasetValue(row) === value)
-                onDraft({ ...draft, source: value, split: nextDataset?.splits?.[0] ?? '' })
+                onDraft({ ...draft, selectedTaskNames: null, source: value, split: nextDataset?.splits?.[0] ?? '' })
               }}
             />
           </label>
@@ -181,39 +216,60 @@ export function RunBuilder({ datasets, draft, t, onDraft, onLaunch }: RunBuilder
               />
             </label>
           )}
-          <label>
-            {t('taskScope')}
-            <CustomSelect
-              ariaLabel={t('taskScope')}
-              value={draft.taskMode}
-              options={[
-                { label: t('taskScopeAll'), value: 'all' },
-                { label: t('taskScopeCustom'), value: 'custom' },
-              ]}
-              onChange={(value) => onDraft({ ...draft, taskMode: value as 'all' | 'custom' })}
+          <Field label={t('searchTaskList')}>
+            <input
+              aria-label={t('searchTaskList')}
+              value={taskSearch}
+              onChange={(event) => setTaskSearch(event.target.value)}
             />
-          </label>
-          {draft.taskMode === 'custom' && (
-            <>
-              <Field label={t('taskInclude')}>
-                <input value={draft.taskFilter} onChange={(event) => onDraft({ ...draft, taskFilter: event.target.value })} />
-              </Field>
-              <Field label={t('taskExclude')}>
-                <input
-                  value={draft.excludeFilter}
-                  onChange={(event) => onDraft({ ...draft, excludeFilter: event.target.value })}
-                />
-              </Field>
-              <Field label={t('taskLimit')}>
-                <input
-                  type="number"
-                  min="1"
-                  value={draft.taskLimit}
-                  onChange={(event) => onDraft({ ...draft, taskLimit: Number(event.target.value) })}
-                />
-              </Field>
-            </>
-          )}
+          </Field>
+          <section className="task-whitelist field-wide" aria-label={t('taskWhitelist')}>
+            <div className="task-whitelist-header">
+              <div>
+                <h3>{t('taskWhitelist')}</h3>
+                <span>
+                  {t('selectedTaskCount')}: {selectedTaskCount} / {selectedDatasetTasks.length}
+                </span>
+              </div>
+              <div className="button-row tight">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={searchedTasks.length === 0}
+                  onClick={() => setFilteredTasks(true)}
+                >
+                  {t('enableAllTasks')}
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={searchedTasks.length === 0}
+                  onClick={() => setFilteredTasks(false)}
+                >
+                  {t('disableAllTasks')}
+                </button>
+              </div>
+            </div>
+            {selectedDatasetTasks.length === 0 ? (
+              <div className="plugin-empty-state">{t('noTasksAvailable')}</div>
+            ) : (
+              <div className="task-switch-list">
+                {searchedTasks.map((task) => (
+                  <label className="task-switch-row" key={task.name}>
+                    <div>
+                      <strong>{task.name}</strong>
+                      <span>{task.description}</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={selectedTaskNameSet.has(task.name)}
+                      onChange={(event) => toggleTask(task.name, event.target.checked)}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'environment'} title={t('runTabEnvironment')}>

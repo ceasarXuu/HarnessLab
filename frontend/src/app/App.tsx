@@ -113,6 +113,9 @@ export function App() {
   function launchDraft() {
     const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
     const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
+    const draftDataset = datasetRows.find((row) => `${row.name}@${row.version}` === draft.source)
+    const draftTaskRows = taskRows.filter((row) => row.dataset === draftDataset?.name || row.dataset === draft.source)
+    const selectedTaskCount = draft.selectedTaskNames?.length ?? draftTaskRows.length
     const newJob: HarborJob = {
       id: nextJobId,
       name: `${draft.source.split('@')[0]}-draft`,
@@ -121,7 +124,7 @@ export function App() {
       agent: draft.agent,
       model: draft.model.split('/').at(-1) ?? draft.model,
       environment: draft.environment,
-      trials: '0 / 64',
+      trials: `0 / ${selectedTaskCount}`,
       score: '-',
       cost: '$0.00',
       tokens: '0',
@@ -237,6 +240,7 @@ export function App() {
         <NewRunPage
           datasets={datasetRows}
           draft={draft}
+          taskRows={taskRows}
           t={t}
           onDraft={setDraft}
           onJobs={() => navigate('jobs', 'list')}

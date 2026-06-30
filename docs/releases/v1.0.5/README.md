@@ -73,7 +73,7 @@ benchmark 执行的默认环境前提。
 
 - Harbor JobConfig 可视化配置：
   - agent、model、agent env、agent kwargs、skills、MCP config；
-  - dataset、version、task split、运行范围、include/exclude、运行数量上限；
+  - dataset、version、task split、Task 白名单；
   - n_attempts、n_concurrent、timeout、retry；
   - environment type、Docker 资源、mounts、delete/force-build；
   - verifier env、custom verifier、verification 开关；
@@ -156,7 +156,7 @@ benchmark 执行的默认环境前提。
   - Attempts / Concurrency
   - 右上角 JobConfig、Reset、Run 操作
 - Harbor 的高级配置按区域折叠，不再使用无实际价值的步骤条或流程说明栏：
-  - Tasks：split、运行范围；默认全量运行，自定义时展示 include/exclude 与运行数量上限
+  - Tasks：split、Task 白名单；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；存在搜索过滤时，批量开关只作用于当前搜索结果
   - Verifier
   - Retry / Timeout
   - Artifacts

@@ -53,9 +53,9 @@
 
 已补齐的可见面包括：
 
-1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task include/exclude/n_tasks、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
-2. Jobs：Job drawer 新增 job_dir、split、Resume、Hub actions、summarize、open viewer、analyze、upload、share、harbor.capability.json、failure code 等入口。
-3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、task include/exclude、manifest add/remove/sync；task 行级只保留 run single task 操作。
+1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task 白名单、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
+2. Jobs：Job drawer 新增 job_dir、split、暂停/恢复、Open viewer、Upload、harbor.capability.json、failure code、计入排行榜开关等入口；不展示 summarize/analyze/share/download 等未明确收敛的入口。
+3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、拉取更新、发布；task 行级只保留 run single task 操作。
 4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
 5. Leaderboard：表格新增 metric、split、submission/report path 与 submit/open viewer/share 行级操作。
 6. System：补 cache 与 Harbor doctor/maintenance 状态入口；auth 只保留在 Header，plugins 归入 New Job，sync 归入 Dataset manifest editor。
@@ -67,8 +67,8 @@
 根据对抗性审查，本次继续补齐上一轮仍不可见的 Harbor 能力面：
 
 1. New Job：补 debug、quiet、env_file、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入配置预览。CLI `--yes` 不进入 WebUI，由执行层处理非交互运行。
-2. Jobs：补 Trial diagnostics，展示 progress、retries、log、analysis、verifier evidence、artifact 和 tokens；Job 操作补 clone job。
-3. Datasets / Tasks：补 manifest tools，对应 `harbor init/add/remove/sync`；Task config explorer 用户价值不足，v1.0.5 不展示。
+2. Jobs：取消独立 Trial diagnostics 模块，改为 Job Trials 表格行展开，仅展示 retries 与 log path；Job 操作只保留与当前 Harbor 产品语义明确对应的暂停/恢复、Open viewer、Upload 与排行榜开关。
+3. Datasets / Tasks：保留 registry 拉取更新与发布入口；Task config explorer、manifest add/init/remove 等用户价值不足或已被收敛的操作在 v1.0.5 不展示。
 4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
 5. Leaderboard：补 agent/status/date/comparability filters、uploaded URL、submission id、config hash、agent snapshot hash、open job/open report/download 操作。
 6. System / Header：补 Harbor auth 全局状态，以及 login/logout/status、upload、leaderboard submit、job share 的维护入口。
@@ -87,11 +87,11 @@
 | Job detail | Harbor viewer/job result | `GET /api/runs/{id}`，events/report | 右侧 drawer：overview、events、trials、artifact paths | Partial | 增加 config/result/job.log/summary/upload/share/resume 入口。 |
 | 取消 run | OrnnLab subprocess cancel + Harbor artifacts | `POST /api/runs/{id}/cancel`，`POST /api/experiments/{id}/cancel` | Job drawer 有 Cancel 按钮但 demo 未接 API | Partial | 按钮接真实 cancel API，并展示 cancel evidence。 |
 | Retry / rerun | Harbor retry config；OrnnLab clone/template | `clone`、`save-template`、run retry config | Job drawer 有 Retry 按钮但未定义行为 | Partial | 区分 retry failed trial、clone config、rerun whole job。 |
-| Resume job | `harbor job resume` | 无专门 API | 未展示 | Missing | Job detail 增加 Resume from job_dir 操作。 |
-| Summarize job | `harbor job summarize` | report summary 读取，未接 Harbor summarize | 未展示 | Missing | Job detail 增加 Generate Summary。 |
+| Resume job | `harbor job resume` | 无专门 API | Job detail 按状态展示暂停/恢复入口 | Partial | 接真实 resume/cancel API，并展示失败状态。 |
+| Summarize job | `harbor job summarize` | report summary 读取，未接 Harbor summarize | 不展示 | Deferred | 后续确认是否需要可视化摘要生成。 |
 | Download job | `harbor job download` | 无 API | Jobs 有 Import 按钮但未定义来源 | Missing | Import from Hub 表单：job id/url、download target、conflict policy。 |
-| Upload job | `harbor upload` / `harbor run --upload` | 无 API | 未展示 | Missing | Upload dialog：visibility、share targets、uploaded url。 |
-| Share job | `harbor job share` | 无 API | 未展示 | Missing | Share dialog：org/user chips、confirm。 |
+| Upload job | `harbor upload` / `harbor run --upload` | 无 API | Job detail 展示 Upload 入口 | Partial | Upload dialog：visibility、share targets、uploaded url。 |
+| Share job | `harbor job share` | 无 API | 不展示 | Deferred | 与 Upload 能力边界确认后再进入 UI。 |
 | Leaderboard inclusion | JobConfig leaderboard / submit policy | 无 API | New Job 基础 tab 与 Job detail drawer 展示“计入排行榜”开关 | Partial | 接真实 JobConfig 与 leaderboard submission 状态。 |
 
 ### 3.2 JobConfig 字段覆盖
@@ -99,7 +99,7 @@
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
 | 基础 | `job_name`、`jobs_dir`、dataset、agent、model、environment、`debug`、`env_file`、leaderboard inclusion、notes | New Job 基础 tab 已展示 | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项。 |
-| Tasks | `split`、`include_task_name`、`exclude_task_name`、`n_tasks` | New Job Tasks tab 以“运行范围”承载；默认全量运行，自定义范围时展示 include/exclude 和数量上限 | Covered | 后端接入时用 dataset manifest 驱动 split、全量任务数和 task 预览。 |
+| Tasks | `split`、`task_names` | New Job Tasks tab 以 Task 白名单列表承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |
 | Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 无 | Missing | 增加 Retry 区域，区分 job retry 与 UI Retry 按钮。 |
@@ -161,9 +161,9 @@
 | `registry_url` / `registry_path` | source 文本，非真实字段 | Partial | 明确 registry selector。 |
 | `overwrite` | 无 | Missing | 下载/同步时加 conflict policy。 |
 | `download_dir` | 无 | Missing | Download target picker。 |
-| `task_names` | task 列表展示，但不可筛选 | Partial | include task names picker。 |
-| `exclude_task_names` | 无 | Missing | exclude task names picker。 |
-| `n_tasks` | New Job 自定义运行范围中展示“运行数量上限”；Dataset detail 展示 total tasks | Covered | 接后端后按 dataset manifest 给出合法上限。 |
+| `task_names` | New Job Tasks tab 通过白名单列表选择；Dataset detail 展示 task 列表 | Covered | 接真实 dataset manifest 后展示完整 task 集合。 |
+| `exclude_task_names` | WebUI 不暴露排除规则，避免与白名单模型重复 | Out of scope | 如后续需要高级模式，再单独设计。 |
+| `n_tasks` | WebUI 不暴露数量截断，用户通过白名单明确选择任务 | Out of scope | 如后续需要抽样/随机抽样，再单独设计。 |
 
 ### 4.3 Task 支持项覆盖
 
@@ -218,19 +218,19 @@
 | Auth | `harbor auth login/status/logout` | Header 无 auth panel | Missing | Header 增加 Auth 状态和登录/登出。 |
 | Cache | `harbor cache clean` | System 未展示 cache | Missing | Cleanup plan，不直接破坏性删除。 |
 | Plugins | `harbor plugins list`，JobConfig plugins | 未展示 | Missing | Integrations 页面或 New Job plugin picker。 |
-| View artifacts | `harbor view` | Job drawer 展示 artifact paths | Partial | 受管启动 viewer 或内嵌 Artifact viewer。 |
-| Analyze trajectories | `harbor analyze` | 未展示 | Missing | Job/Trial detail 增加 Analyze action。 |
+| View artifacts | `harbor view` | Job drawer 展示 Open viewer 与绝对 artifact paths | Partial | 受管启动 viewer 或内嵌 Artifact viewer。 |
+| Analyze trajectories | `harbor analyze` | 不展示 | Deferred | 后续确认具体用户场景后再进入 Job/Trial detail。 |
 | Publish | `harbor publish` | 未展示 | Deferred | Dataset/Task publish wizard。 |
-| Upload/share | `harbor upload` / `harbor job share` | 未展示 | Missing | Job detail Hub actions。 |
+| Upload/share | `harbor upload` / `harbor job share` | Job detail 只展示 Upload；Share 暂不展示 | Partial | 先接 Upload，Share 后续确认语义。 |
 | Real-vs-demo boundary | Harbor real subprocess exists in backend | 前端仍为 seed data | Partial | Demo 内标注/切换真实 API，不能伪装成 real state。 |
 
 ## 8. 当前 demo 已覆盖的可见操作
 
 | 页面 | 已有可见操作 | 真实程度 |
 |---|---|---|
-| Jobs | 搜索、Import 按钮、新建 Job、点击行打开 Job drawer、Cancel/Retry 按钮、查看 events/trials/artifacts | 多数为 demo state；Cancel/Retry 未接 API。 |
-| New Job | 选择 source/agent/environment，填写 model/concurrency/attempts，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
-| Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task 按钮 | 主要为 seed 数据；按钮未接 API。 |
+| Jobs | 搜索、Import 按钮、新建 Job、点击行打开 Job drawer、暂停/恢复、Open viewer、Upload、查看 events/trials/artifacts、计入排行榜开关 | 多数为 demo state；暂停/恢复、Upload、Viewer 未接 API。 |
+| New Job | 选择 Dataset/agent/environment，填写 model/concurrency/attempts/debug/env_file/notes，通过 Tasks 白名单选择要运行的 task，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；Run 只更新前端 demo state。 |
+| Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task、拉取更新/发布 | 主要为 seed 数据；按钮未接 API。 |
 | Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
 | Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
 | System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
@@ -240,7 +240,7 @@
 ### P0：让 Web 真实接管 Harbor run 主链路
 
 1. New Job 表单扩展到 Harbor JobConfig P0 字段：
-   - job name、jobs dir、dataset name/version/ref、task include/exclude/n_tasks、
+   - job name、jobs dir、dataset name/version/ref、task whitelist、
    - agent/import path/model/env/kwargs、
    - environment type、force build、delete、
    - attempts、concurrency、timeouts、retry、artifacts。
