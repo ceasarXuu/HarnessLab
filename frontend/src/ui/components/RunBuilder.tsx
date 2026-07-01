@@ -171,9 +171,9 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
             />
           </Field>
           <label>
-            debug
+            debug模式
             <CustomSelect
-              ariaLabel="debug"
+              ariaLabel="debug模式"
               value={draft.debug ? 'enabled' : 'disabled'}
               options={[
                 { label: 'disabled', value: 'disabled' },

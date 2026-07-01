@@ -314,7 +314,7 @@ describe('App', () => {
     expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
     expect(screen.getByLabelText('Environment')).toHaveTextContent('Docker default')
     expect(screen.queryByLabelText('Model')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
+    expect(screen.getByLabelText('debug模式')).toHaveTextContent('disabled')
     expect(screen.queryByLabelText('yes')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('env_file')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Include in leaderboard')).toHaveTextContent('enabled')
