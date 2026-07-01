@@ -156,7 +156,6 @@ interface JobConfig {
   extraInstructions: string
   debug: boolean
   quiet: boolean
-  envFile: string
 
   agentName: string
   harness: string

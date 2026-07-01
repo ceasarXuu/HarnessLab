@@ -182,9 +182,6 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
               onChange={(value) => onDraft({ ...draft, debug: value === 'enabled' })}
             />
           </label>
-          <Field label="env_file">
-            <input value={draft.envFile} onChange={(event) => onDraft({ ...draft, envFile: event.target.value })} />
-          </Field>
           <label>
             {t('includeInLeaderboard')}
             <CustomSelect

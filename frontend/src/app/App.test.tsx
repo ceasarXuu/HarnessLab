@@ -316,7 +316,7 @@ describe('App', () => {
     expect(screen.queryByLabelText('Model')).not.toBeInTheDocument()
     expect(screen.getByLabelText('debug')).toHaveTextContent('disabled')
     expect(screen.queryByLabelText('yes')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('env_file')).toHaveValue('.env.harbor')
+    expect(screen.queryByLabelText('env_file')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Include in leaderboard')).toHaveTextContent('enabled')
     expect(screen.getByLabelText('Notes')).toHaveValue('')
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'nightly smoke run' } })

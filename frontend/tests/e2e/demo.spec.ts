@@ -105,7 +105,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await expect(page.getByLabel('Model')).toHaveCount(0)
   await expect(page.getByLabel('Environment')).toContainText('Docker default')
   await expect(page.getByLabel('debug')).toContainText('disabled')
-  await expect(page.getByLabel('env_file')).toHaveValue('.env.harbor')
+  await expect(page.getByLabel('env_file')).toHaveCount(0)
   await expect(page.getByLabel('Dataset').locator('..')).toHaveCSS('border-top-width', '1px')
   await expect(page.getByLabel('Include in leaderboard')).toContainText('enabled')
   await expect(page.getByLabel('Notes')).toHaveValue('')
