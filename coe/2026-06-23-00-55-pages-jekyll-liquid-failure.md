@@ -33,10 +33,56 @@
 - Current conclusion: The root cause is GitHub Pages legacy Jekyll processing over the repository root, not the project CI workflow.
 - Related hypotheses:
   - H-001
+  - H-002
 - Resolution basis:
   - H-001 confirmed by E-001, E-002, and E-003; repair validated locally by E-004 and remotely by the post-push Pages result.
 - Close reason:
   - fixed
+
+## Hypothesis H-002: Pages deploy can fail transiently after a successful build
+- Status: confirmed
+- Parent: P-001
+- Claim: A later `pages-build-deployment` failure for commit `8bb46753c88adcfa04c9de144294ca836e2f65fe` was not caused by source rendering or repository content; the build artifact was valid and GitHub Pages deploy returned a transient service-side `try again later` failure.
+- Layer: sub-cause
+- Factor relation: independent
+- Depends on:
+  - none
+- Rationale:
+  - The failed run's `build` and `report-build-status` jobs succeeded; only `deploy` failed.
+- Falsifiable predictions:
+  - If true: failed logs should show `actions/deploy-pages@v5` failing after artifact metadata is found and deployment is created, without Jekyll/Liquid errors.
+  - If false: failed logs would show a source build, artifact upload, or Jekyll rendering error before deployment.
+- Diagnostic evidence plan:
+  - Prediction or clause under test: deploy failure is transient and recoverable by rerunning failed jobs.
+  - Signal: failed deploy log, rerun status, Pages latest build status.
+  - Capture method: `gh run view 28622125030 --log-failed`, `gh run rerun 28622125030 --failed`, `gh api repos/ceasarXuu/HarnessLab/pages/builds/latest`.
+  - Event name or marker:
+    - pages-build-deployment
+  - Correlation keys:
+    - run_id=28622125030
+    - commit=8bb46753c88adcfa04c9de144294ca836e2f65fe
+  - Differentiates from:
+    - Jekyll/Liquid source parsing failure.
+    - Invalid Pages artifact.
+  - Supports if:
+    - The failed log reports only deploy failure, then the same run succeeds after rerunning failed jobs.
+  - Refutes if:
+    - Repeated reruns fail with deterministic source or artifact errors.
+  - Instrumentation status: none
+  - Instrumentation lifecycle:
+    - none
+- Evidence gate: satisfied
+- Related evidence:
+  - E-006
+  - E-007
+  - E-008
+- Conclusion: confirmed
+- Repair design readiness: no code repair required
+- Next step: no repository code change; rerun failed Pages jobs if this transient deploy error recurs.
+- Blocker:
+  - none
+- Close reason:
+  - recovered by rerun
 
 ## Hypothesis H-001: Pages legacy Jekyll parses repository docs as Liquid
 - Status: confirmed
@@ -186,3 +232,66 @@
   ```
 - Interpretation: The directories known to contain literal Liquid-like snippets are no longer Jekyll render inputs.
 - Time: 2026-06-23 00:58
+
+## Evidence E-006: Latest failed Pages run failed only in deploy
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: diagnostic-log
+- Source: `gh run view 28622125030 --log-failed`
+- Prediction or plan link:
+  - H-002 diagnostic plan expects deploy-only failure after a valid artifact.
+- Matched signal:
+  - `actions/deploy-pages@v5` found the `github-pages` artifact, created a Pages deployment, then returned `Deployment failed, try again later.`
+- Correlation keys:
+  - run_id=28622125030
+  - commit=8bb46753c88adcfa04c9de144294ca836e2f65fe
+- Raw content:
+  ```text
+  Found 1 artifact(s)
+  Created deployment for 8bb46753c88adcfa04c9de144294ca836e2f65fe
+  ##[error]Deployment failed, try again later.
+  ```
+- Interpretation: The source build and artifact creation path succeeded; the failure was in the GitHub Pages deployment service step.
+- Time: 2026-07-03 05:20
+
+## Evidence E-007: Rerunning failed jobs recovered the Pages workflow
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: fix-validation
+- Source: `gh run rerun 28622125030 --failed` and `gh run view 28622125030 --json status,conclusion,jobs`
+- Prediction or plan link:
+  - H-002 diagnostic plan expects the same run to recover when failed deploy is rerun.
+- Matched signal:
+  - Rerun deploy job completed successfully and the workflow conclusion became `success`.
+- Correlation keys:
+  - run_id=28622125030
+  - deploy_job_id=84880740017
+- Raw content:
+  ```text
+  {"conclusion":"success","status":"completed"}
+  deploy / Deploy to GitHub Pages: success
+  ```
+- Interpretation: No source-code repair was needed for this failure; GitHub accepted the same artifact on retry.
+- Time: 2026-07-03 05:20
+
+## Evidence E-008: Pages latest build is now built for the same commit
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: fix-validation
+- Source: `gh api repos/ceasarXuu/HarnessLab/pages/builds/latest`
+- Prediction or plan link:
+  - H-002 diagnostic plan expects Pages latest build to show built after the retry.
+- Matched signal:
+  - Latest Pages build reports `status=built`, `error.message=null`, `commit=8bb46753c88adcfa04c9de144294ca836e2f65fe`.
+- Correlation keys:
+  - build_id=1075847715
+  - commit=8bb46753c88adcfa04c9de144294ca836e2f65fe
+- Raw content:
+  ```text
+  {"status":"built","error":{"message":null},"commit":"8bb46753c88adcfa04c9de144294ca836e2f65fe"}
+  ```
+- Interpretation: GitHub Pages deployment state recovered for the commit shown in the failure email.
+- Time: 2026-07-03 05:20
