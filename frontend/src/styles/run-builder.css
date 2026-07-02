@@ -38,6 +38,12 @@
   color: var(--muted);
   font-size: 12px;
 }
+.runtime-collapsible-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .plugin-empty-state {
   padding: 10px;
   border: 1px dashed var(--border-strong);
@@ -235,4 +241,30 @@
 .runtime-checklist input {
   width: auto;
   min-height: auto;
+}
+
+.rule-list-control {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rule-list-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
 }

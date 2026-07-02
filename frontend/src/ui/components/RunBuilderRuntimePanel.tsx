@@ -1,5 +1,6 @@
 import type { RunDraft } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
+import { useState } from 'react'
 import { CustomSelect } from './CustomSelect'
 import { Field } from './RunBuilderChrome'
 
@@ -21,6 +22,7 @@ const retryScenarios = [
 
 export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps) {
   const labels = runtimeLabels(t('runTabRuntime') === '运行策略')
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const timeoutPolicy = draft.timeoutPolicy
   const retryIntervalPolicy = draft.retryIntervalPolicy
   const selectedRetryScenarios = new Set(splitRules(draft.retryInclude))
@@ -187,32 +189,46 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
       </section>
 
       <section className="run-config-group">
-        <div className="run-config-group-heading">
+        <div className="run-config-group-heading runtime-collapsible-heading">
           <h3>{labels.advancedGroup}</h3>
+          <button
+            type="button"
+            className="secondary-button compact-action"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((current) => !current)}
+          >
+            {advancedOpen ? labels.collapse : labels.expand}
+          </button>
         </div>
-        <div className="run-grid">
-          <Field label={labels.agentSetupTimeoutMultiplier}>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              value={draft.agentSetupTimeoutMultiplier}
-              onChange={(event) => onDraft({ ...draft, agentSetupTimeoutMultiplier: event.target.value })}
+        {advancedOpen && (
+          <div className="run-grid">
+            <Field label={labels.agentSetupTimeoutMultiplier}>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={draft.agentSetupTimeoutMultiplier}
+                onChange={(event) => onDraft({ ...draft, agentSetupTimeoutMultiplier: event.target.value })}
+              />
+            </Field>
+            <Field label={labels.environmentBuildTimeoutMultiplier}>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={draft.environmentBuildTimeoutMultiplier}
+                onChange={(event) => onDraft({ ...draft, environmentBuildTimeoutMultiplier: event.target.value })}
+              />
+            </Field>
+            <RuleListControl
+              label={labels.retryExclude}
+              addLabel={labels.addRule}
+              deleteLabel={labels.deleteRule}
+              value={draft.retryExclude}
+              onChange={(value) => onDraft({ ...draft, retryExclude: value })}
             />
-          </Field>
-          <Field label={labels.environmentBuildTimeoutMultiplier}>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              value={draft.environmentBuildTimeoutMultiplier}
-              onChange={(event) => onDraft({ ...draft, environmentBuildTimeoutMultiplier: event.target.value })}
-            />
-          </Field>
-          <Field label={labels.retryExclude}>
-            <input value={draft.retryExclude} onChange={(event) => onDraft({ ...draft, retryExclude: event.target.value })} />
-          </Field>
-        </div>
+          </div>
+        )}
       </section>
     </div>
   )
@@ -222,19 +238,75 @@ function splitRules(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean)
 }
 
+function formatRules(rules: string[]) {
+  return rules.map((rule) => rule.trim()).filter(Boolean).join(',')
+}
+
+function RuleListControl({
+  addLabel,
+  deleteLabel,
+  label,
+  onChange,
+  value,
+}: {
+  addLabel: string
+  deleteLabel: string
+  label: string
+  onChange: (value: string) => void
+  value: string
+}) {
+  const [rows, setRows] = useState(() => {
+    const rules = splitRules(value)
+    return rules.length ? rules : ['']
+  })
+  const commit = (nextRows: string[]) => {
+    setRows(nextRows.length ? nextRows : [''])
+    onChange(formatRules(nextRows))
+  }
+
+  return (
+    <div className="rule-list-control field-wide">
+      <div className="rule-list-header">
+        <span>{label}</span>
+        <button className="secondary-button compact-action" type="button" onClick={() => setRows([...rows, ''])}>
+          {addLabel}
+        </button>
+      </div>
+      <div className="rule-list-rows">
+        {rows.map((rule, index) => (
+          <div className="rule-list-row" key={index}>
+            <input
+              aria-label={`${label} ${index + 1}`}
+              value={rule}
+              onChange={(event) => commit(rows.map((item, rowIndex) => (rowIndex === index ? event.target.value : item)))}
+            />
+            <button className="secondary-button compact-action" type="button" onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}>
+              {deleteLabel}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function runtimeLabels(zh: boolean) {
   if (zh) {
     return {
+      addRule: '添加',
       advancedGroup: '高级参数',
       agentSetupTimeoutMultiplier: 'Agent 初始化超时倍率',
       agentTimeoutMultiplier: 'Agent 执行超时倍率',
       custom: '自定义',
+      collapse: '收起',
+      deleteRule: '删除',
       environmentBuildTimeoutMultiplier: '环境构建超时倍率',
+      expand: '展开',
       fast: '快速',
       maxRetries: '失败重试次数',
       relaxed: '放宽',
       retryCustom: '自定义间隔',
-      retryExclude: '不重试的原始错误',
+      retryExclude: '不重试的原始错误（命中规则）',
       retryFast: '快速（立即重试，最多 5s）',
       retryGroup: '失败重试',
       retryInterval: '重试间隔',
@@ -259,16 +331,20 @@ function runtimeLabels(zh: boolean) {
     }
   }
   return {
+    addRule: 'Add',
     advancedGroup: 'Advanced parameters',
     agentSetupTimeoutMultiplier: 'Agent setup timeout multiplier',
     agentTimeoutMultiplier: 'Agent execution timeout multiplier',
     custom: 'Custom',
+    collapse: 'Collapse',
+    deleteRule: 'Delete',
     environmentBuildTimeoutMultiplier: 'Environment build timeout multiplier',
+    expand: 'Expand',
     fast: 'Fast',
     maxRetries: 'Failure retries',
     relaxed: 'Relaxed',
     retryCustom: 'Custom interval',
-    retryExclude: 'Raw errors that should not retry',
+    retryExclude: 'Raw errors that should not retry (match rule)',
     retryFast: 'Fast (retry immediately, max 5s)',
     retryGroup: 'Failure retry',
     retryInterval: 'Retry interval',

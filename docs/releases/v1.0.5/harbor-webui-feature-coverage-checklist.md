@@ -111,7 +111,7 @@
 | Tasks | `split`、`task_names`、`extra_instruction_paths` | New Job Tasks tab 以 Task 白名单列表和额外说明文件承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`；校验 extra instruction 路径。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 运行策略 tab 展示“超时策略”，标准/严格/放宽/自定义；高级区展示 setup/build timeout | Partial | 后端接入时将策略映射到 Harbor multiplier，并补充边界校验。 |
-| Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 运行策略 tab 展示失败重试次数、重试场景、重试间隔；原始 exclude 仅放高级区 | Partial | 后端接入时将产品化场景映射到 Harbor exception names，并区分 job retry 与 UI Retry 按钮。 |
+| Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 运行策略 tab 展示失败重试次数、重试场景、重试间隔；原始 exclude 放在默认收起的高级区，以“不重试的原始错误（命中规则）”列表维护 | Partial | 后端接入时将产品化场景映射到 Harbor exception names，并区分 job retry 与 UI Retry 按钮。 |
 | Artifacts | `artifacts`，`ArtifactConfig.source/destination/exclude` | Job detail 展示 artifact paths，New Job 不可配置 | Partial | New Job 增加 artifact path 列表。 |
 | Extra instructions | `extra_instruction_paths` | Tasks tab 已展示 | Covered | 后端接入时校验路径存在性。 |
 | Metrics | `metrics`，`MetricConfig.type/kwargs` | Leaderboard 展示 score，不能配置 metric | Missing | New Job 增加 metric selector；Leaderboard 展示 metric breakdown。 |
