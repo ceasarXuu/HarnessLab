@@ -354,7 +354,7 @@ describe('App', () => {
     expect(screen.getByLabelText('Timeout policy')).toHaveTextContent('Standard (1x)')
     expect(screen.getByLabelText('Failure retries')).toHaveValue(1)
     expect(screen.getByLabelText('Retry interval')).toHaveTextContent('Standard (starts at 2s, max 30s)')
-    expect(screen.getByLabelText('Timeout')).toBeChecked()
+    expect(screen.getByLabelText('Task execution timeout')).toBeChecked()
     expect(screen.queryByLabelText('quiet')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('retry wait multiplier')).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Timeout policy'))

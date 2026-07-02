@@ -139,7 +139,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await expect(page.getByLabel('Timeout policy')).toContainText('Standard (1x)')
   await expect(page.getByLabel('Failure retries')).toHaveValue('1')
   await expect(page.getByLabel('Retry interval')).toContainText('Standard (starts at 2s, max 30s)')
-  await expect(page.getByLabel('Timeout')).toBeChecked()
+  await expect(page.getByLabel('Task execution timeout')).toBeChecked()
   await expect(page.getByLabel('quiet')).toHaveCount(0)
   await expect(page.getByLabel('retry wait multiplier')).toHaveCount(0)
   await page.getByLabel('Timeout policy').click()
