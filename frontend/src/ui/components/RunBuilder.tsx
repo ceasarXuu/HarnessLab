@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
+import { KeyValueControl } from './KeyValueControl'
 import { Field, TabPanel, Toggle } from './RunBuilderChrome'
 import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 
@@ -25,6 +26,7 @@ const agentOptions = [
   { label: 'codex-cli', value: 'codex-cli', model: 'gpt-5.1' },
   { label: 'oracle', value: 'oracle', model: 'local-sim' },
 ]
+type VerifierMode = 'dataset-default' | 'custom' | 'skip'
 
 export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
@@ -45,6 +47,16 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
   const selectedTaskNames = draft.selectedTaskNames ?? selectedDatasetTasks.map((task) => task.name)
   const selectedTaskNameSet = new Set(selectedTaskNames)
   const selectedTaskCount = selectedTaskNames.length
+  const verifierMode: VerifierMode = draft.verifierMode
+  const setVerifierMode = (mode: VerifierMode) => {
+    if (mode === 'dataset-default') {
+      onDraft({ ...draft, verifierMode: mode, disableVerifier: false, verifierImportPath: '' })
+    } else if (mode === 'skip') {
+      onDraft({ ...draft, verifierMode: mode, disableVerifier: true })
+    } else {
+      onDraft({ ...draft, verifierMode: mode, disableVerifier: false })
+    }
+  }
   const toggleTask = (taskName: string, enabled: boolean) => {
     const next = new Set(selectedTaskNames)
     if (enabled) {
@@ -270,30 +282,47 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
       </TabPanel>
       <TabPanel active={activeTab === 'verifier'} title={t('runTabVerifier')}>
         <div className="run-grid">
-        <Field label={t('verifier')}>
-          <input
-            value={draft.verifierImportPath}
-            onChange={(event) => onDraft({ ...draft, verifierImportPath: event.target.value })}
-          />
-        </Field>
-        <Field label={t('verifierEnv')}>
-          <input value={draft.verifierEnv} onChange={(event) => onDraft({ ...draft, verifierEnv: event.target.value })} />
-        </Field>
-        <Field label={t('verifierKwargs')}>
-          <input
-            value={draft.verifierKwargs}
-            onChange={(event) => onDraft({ ...draft, verifierKwargs: event.target.value })}
-          />
-        </Field>
-        <Field label={t('disableVerifier')}>
-          <Toggle checked={draft.disableVerifier} onChange={(value) => onDraft({ ...draft, disableVerifier: value })} />
-        </Field>
-        <Field label="verifier max timeout sec">
-          <input
-            value={draft.verifierMaxTimeoutSec}
-            onChange={(event) => onDraft({ ...draft, verifierMaxTimeoutSec: event.target.value })}
-          />
-        </Field>
+          <label className="field-wide">
+            {t('verifierMode')}
+            <CustomSelect
+              ariaLabel={t('verifierMode')}
+              value={verifierMode}
+              options={[
+                { label: t('datasetDefaultVerifier'), value: 'dataset-default' },
+                { label: t('customVerifier'), value: 'custom' },
+                { label: t('skipVerifier'), value: 'skip' },
+              ]}
+              onChange={(value) => setVerifierMode(value as VerifierMode)}
+            />
+          </label>
+          {verifierMode === 'custom' && (
+            <>
+              <Field label={t('verifierImportPath')}>
+                <input
+                  value={draft.verifierImportPath}
+                  onChange={(event) => onDraft({ ...draft, verifierImportPath: event.target.value })}
+                />
+              </Field>
+              <Field label={t('verifierMaxTimeoutSec')}>
+                <input
+                  type="number"
+                  min="1"
+                  value={draft.verifierMaxTimeoutSec}
+                  onChange={(event) => onDraft({ ...draft, verifierMaxTimeoutSec: event.target.value })}
+                />
+              </Field>
+              <KeyValueControl
+                label={t('verifierEnv')}
+                value={draft.verifierEnv}
+                onChange={(value) => onDraft({ ...draft, verifierEnv: value })}
+              />
+              <KeyValueControl
+                label={t('verifierKwargs')}
+                value={draft.verifierKwargs}
+                onChange={(value) => onDraft({ ...draft, verifierKwargs: value })}
+              />
+            </>
+          )}
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'runtime'} title={t('runTabRuntime')}>

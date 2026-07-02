@@ -169,6 +169,7 @@ interface JobConfig {
 
   environmentPresetId: string
 
+  verifierMode: 'dataset-default' | 'custom' | 'skip'
   verifierImportPath: string
   verifierEnv: string
   verifierKwargs: string

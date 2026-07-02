@@ -63,6 +63,7 @@ export interface RunDraft {
   tpu: string
   mounts: string
   dockerCompose: string
+  verifierMode: 'dataset-default' | 'custom' | 'skip'
   verifierImportPath: string
   verifierEnv: string
   verifierKwargs: string
@@ -274,6 +275,7 @@ export const initialDraft: RunDraft = {
   tpu: '',
   mounts: '[{"source":"./cache","target":"/cache"}]',
   dockerCompose: 'compose.gpu.yaml',
+  verifierMode: 'dataset-default',
   verifierImportPath: '',
   verifierEnv: 'PYTEST_ADDOPTS=-q',
   verifierKwargs: 'max_failures=1',
