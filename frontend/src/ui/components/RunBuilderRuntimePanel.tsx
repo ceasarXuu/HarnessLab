@@ -21,29 +21,31 @@ const retryScenarios = [
 
 export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps) {
   const labels = runtimeLabels(t('runTabRuntime') === '运行策略')
-  const timeoutPolicy = getTimeoutPolicy(draft)
-  const retryIntervalPolicy = getRetryIntervalPolicy(draft)
+  const timeoutPolicy = draft.timeoutPolicy
+  const retryIntervalPolicy = draft.retryIntervalPolicy
   const selectedRetryScenarios = new Set(splitRules(draft.retryInclude))
 
   const setTimeoutPolicy = (policy: TimeoutPolicy) => {
     if (policy === 'standard') {
-      onDraft({ ...draft, timeoutMultiplier: 1, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 1, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
     } else if (policy === 'strict') {
-      onDraft({ ...draft, timeoutMultiplier: 0.5, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 0.5, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
     } else if (policy === 'relaxed') {
-      onDraft({ ...draft, timeoutMultiplier: 2, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 2, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
     } else {
-      onDraft({ ...draft, timeoutMultiplier: draft.timeoutMultiplier || 1 })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: draft.timeoutMultiplier || 1 })
     }
   }
 
   const setRetryIntervalPolicy = (policy: RetryIntervalPolicy) => {
     if (policy === 'standard') {
-      onDraft({ ...draft, retryWaitMultiplier: '1.5', retryMinWaitSec: '2', retryMaxWaitSec: '30' })
+      onDraft({ ...draft, retryIntervalPolicy: policy, retryWaitMultiplier: '1.5', retryMinWaitSec: '2', retryMaxWaitSec: '30' })
     } else if (policy === 'fast') {
-      onDraft({ ...draft, retryWaitMultiplier: '1', retryMinWaitSec: '0', retryMaxWaitSec: '5' })
+      onDraft({ ...draft, retryIntervalPolicy: policy, retryWaitMultiplier: '1', retryMinWaitSec: '0', retryMaxWaitSec: '5' })
     } else if (policy === 'slow') {
-      onDraft({ ...draft, retryWaitMultiplier: '2', retryMinWaitSec: '10', retryMaxWaitSec: '120' })
+      onDraft({ ...draft, retryIntervalPolicy: policy, retryWaitMultiplier: '2', retryMinWaitSec: '10', retryMaxWaitSec: '120' })
+    } else {
+      onDraft({ ...draft, retryIntervalPolicy: policy })
     }
   }
 
@@ -70,10 +72,10 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
               ariaLabel={labels.timeoutPolicy}
               value={timeoutPolicy}
               options={[
-                { label: labels.standard, value: 'standard' },
-                { label: labels.strict, value: 'strict' },
-                { label: labels.relaxed, value: 'relaxed' },
-                { label: labels.custom, value: 'custom' },
+                { label: labels.timeoutStandard, value: 'standard' },
+                { label: labels.timeoutStrict, value: 'strict' },
+                { label: labels.timeoutRelaxed, value: 'relaxed' },
+                { label: labels.timeoutCustom, value: 'custom' },
               ]}
               onChange={(value) => setTimeoutPolicy(value as TimeoutPolicy)}
             />
@@ -220,22 +222,6 @@ function splitRules(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean)
 }
 
-function getTimeoutPolicy(draft: RunDraft): TimeoutPolicy {
-  if (draft.agentTimeoutMultiplier || draft.verifierTimeoutMultiplier) return 'custom'
-  if (draft.timeoutMultiplier === 0.5) return 'strict'
-  if (draft.timeoutMultiplier === 2) return 'relaxed'
-  if (draft.timeoutMultiplier === 1) return 'standard'
-  return 'custom'
-}
-
-function getRetryIntervalPolicy(draft: RunDraft): RetryIntervalPolicy {
-  const signature = `${draft.retryWaitMultiplier}/${draft.retryMinWaitSec}/${draft.retryMaxWaitSec}`
-  if (signature === '1.5/2/30') return 'standard'
-  if (signature === '1/0/5') return 'fast'
-  if (signature === '2/10/120') return 'slow'
-  return 'custom'
-}
-
 function runtimeLabels(zh: boolean) {
   if (zh) {
     return {
@@ -259,8 +245,12 @@ function runtimeLabels(zh: boolean) {
       standard: '标准',
       strict: '严格',
       timeoutGroup: '执行时长',
+      timeoutCustom: '自定义倍率',
       timeoutMultiplier: '整体超时倍率',
       timeoutPolicy: '超时策略',
+      timeoutRelaxed: '放宽（2x，允许更久）',
+      timeoutStandard: '标准（1x）',
+      timeoutStrict: '严格（0.5x，更快超时）',
       verifierTimeoutMultiplier: '验证器超时倍率',
     }
   }
@@ -285,8 +275,12 @@ function runtimeLabels(zh: boolean) {
     standard: 'Standard',
     strict: 'Strict',
     timeoutGroup: 'Execution duration',
+    timeoutCustom: 'Custom multiplier',
     timeoutMultiplier: 'Overall timeout multiplier',
     timeoutPolicy: 'Timeout policy',
+    timeoutRelaxed: 'Relaxed (2x, allow longer runs)',
+    timeoutStandard: 'Standard (1x)',
+    timeoutStrict: 'Strict (0.5x, fail faster)',
     verifierTimeoutMultiplier: 'Verifier timeout multiplier',
   }
 }

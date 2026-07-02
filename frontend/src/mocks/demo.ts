@@ -70,12 +70,14 @@ export interface RunDraft {
   verifierMaxTimeoutSec: string
   concurrency: number
   attempts: number
+  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
   timeoutMultiplier: number
   agentTimeoutMultiplier: string
   verifierTimeoutMultiplier: string
   agentSetupTimeoutMultiplier: string
   environmentBuildTimeoutMultiplier: string
   maxRetries: number
+  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
   retryInclude: string
   retryExclude: string
   retryWaitMultiplier: string
@@ -281,12 +283,14 @@ export const initialDraft: RunDraft = {
   verifierMaxTimeoutSec: '900',
   concurrency: 4,
   attempts: 1,
+  timeoutPolicy: 'standard',
   timeoutMultiplier: 1,
   agentTimeoutMultiplier: '',
   verifierTimeoutMultiplier: '',
   agentSetupTimeoutMultiplier: '',
   environmentBuildTimeoutMultiplier: '',
   maxRetries: 1,
+  retryIntervalPolicy: 'standard',
   retryInclude: 'TimeoutError',
   retryExclude: 'ValidationError',
   retryWaitMultiplier: '1.5',

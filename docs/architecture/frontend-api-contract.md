@@ -177,12 +177,14 @@ interface JobConfig {
 
   concurrency: number
   attempts: number
+  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
   timeoutMultiplier: number
   agentTimeoutMultiplier: string
   verifierTimeoutMultiplier: string
   agentSetupTimeoutMultiplier: string
   environmentBuildTimeoutMultiplier: string
   maxRetries: number
+  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
   retryInclude: string
   retryExclude: string
   retryWaitMultiplier: string
