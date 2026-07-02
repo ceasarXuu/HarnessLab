@@ -366,7 +366,7 @@ describe('App', () => {
     expect(screen.getByLabelText('Retry interval')).toHaveTextContent('Custom interval')
     expect(screen.getByLabelText('Wait growth multiplier')).toHaveValue(1.5)
     expect(screen.queryByLabelText('Agent setup timeout multiplier')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Expand' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand advanced parameters' }))
     expect(screen.getByLabelText('Agent setup timeout multiplier')).toHaveValue(1)
     expect(screen.getByLabelText('Environment build timeout multiplier')).toHaveValue(1)
     expect(screen.getByLabelText('Raw errors that should not retry (match rule) 1')).toHaveValue('ValidationError')

@@ -151,7 +151,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await expect(page.getByLabel('Retry interval')).toContainText('Custom interval')
   await expect(page.getByLabel('Wait growth multiplier')).toHaveValue('1.5')
   await expect(page.getByLabel('Agent setup timeout multiplier')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Expand' }).click()
+  await page.getByRole('button', { name: 'Expand advanced parameters' }).click()
   await expect(page.getByLabel('Agent setup timeout multiplier')).toHaveValue('1')
   await expect(page.getByLabel('Environment build timeout multiplier')).toHaveValue('1')
   await expect(page.getByLabel('Raw errors that should not retry (match rule) 1')).toHaveValue('ValidationError')

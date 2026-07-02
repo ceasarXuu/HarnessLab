@@ -38,11 +38,36 @@
   color: var(--muted);
   font-size: 12px;
 }
-.runtime-collapsible-heading {
+.runtime-collapsible-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+.runtime-collapsible-trigger:focus-visible {
+  outline: 1px solid var(--foreground);
+  outline-offset: 3px;
+}
+.runtime-collapsible-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+.runtime-collapsible-icon {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--muted);
+}
+.runtime-collapsible-trigger[aria-expanded="true"] .runtime-collapsible-icon {
+  transform: rotate(90deg);
 }
 .plugin-empty-state {
   padding: 10px;

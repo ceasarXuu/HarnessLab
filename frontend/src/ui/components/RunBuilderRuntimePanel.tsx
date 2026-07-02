@@ -189,15 +189,16 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
       </section>
 
       <section className="run-config-group">
-        <div className="run-config-group-heading runtime-collapsible-heading">
-          <h3>{labels.advancedGroup}</h3>
+        <div className="run-config-group-heading">
           <button
             type="button"
-            className="secondary-button compact-action"
+            className="runtime-collapsible-trigger"
             aria-expanded={advancedOpen}
+            aria-label={advancedOpen ? labels.collapseAdvanced : labels.expandAdvanced}
             onClick={() => setAdvancedOpen((current) => !current)}
           >
-            {advancedOpen ? labels.collapse : labels.expand}
+            <span className="runtime-collapsible-title">{labels.advancedGroup}</span>
+            <span className="runtime-collapsible-icon" aria-hidden="true" />
           </button>
         </div>
         {advancedOpen && (
@@ -298,10 +299,10 @@ function runtimeLabels(zh: boolean) {
       agentSetupTimeoutMultiplier: 'Agent 初始化超时倍率',
       agentTimeoutMultiplier: 'Agent 执行超时倍率',
       custom: '自定义',
-      collapse: '收起',
+      collapseAdvanced: '收起高级参数',
       deleteRule: '删除',
       environmentBuildTimeoutMultiplier: '环境构建超时倍率',
-      expand: '展开',
+      expandAdvanced: '展开高级参数',
       fast: '快速',
       maxRetries: '失败重试次数',
       relaxed: '放宽',
@@ -336,10 +337,10 @@ function runtimeLabels(zh: boolean) {
     agentSetupTimeoutMultiplier: 'Agent setup timeout multiplier',
     agentTimeoutMultiplier: 'Agent execution timeout multiplier',
     custom: 'Custom',
-    collapse: 'Collapse',
+    collapseAdvanced: 'Collapse advanced parameters',
     deleteRule: 'Delete',
     environmentBuildTimeoutMultiplier: 'Environment build timeout multiplier',
-    expand: 'Expand',
+    expandAdvanced: 'Expand advanced parameters',
     fast: 'Fast',
     maxRetries: 'Failure retries',
     relaxed: 'Relaxed',
