@@ -182,6 +182,9 @@
 .custom-select.open {
   z-index: 100;
 }
+.custom-select.disabled {
+  opacity: 0.6;
+}
 .select-trigger {
   display: inline-flex;
   align-items: center;
@@ -194,6 +197,9 @@
   border: 0;
   background: transparent;
   color: var(--foreground);
+}
+.select-trigger:disabled {
+  cursor: not-allowed;
 }
 .header-select.custom-select,
 .toolbar-select.custom-select {

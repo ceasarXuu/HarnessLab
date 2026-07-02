@@ -50,11 +50,12 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
   const selectedTaskNameSet = new Set(selectedTaskNames)
   const selectedTaskCount = selectedTaskNames.length
   const verifierMode: VerifierMode = draft.verifierMode
+  const leaderboardLockedByVerifier = verifierMode === 'skip'
   const setVerifierMode = (mode: VerifierMode) => {
     if (mode === 'dataset-default') {
       onDraft({ ...draft, verifierMode: mode, disableVerifier: false, verifierImportPath: '' })
     } else if (mode === 'skip') {
-      onDraft({ ...draft, verifierMode: mode, disableVerifier: true })
+      onDraft({ ...draft, verifierMode: mode, disableVerifier: true, includeInLeaderboard: false })
     } else {
       onDraft({ ...draft, verifierMode: mode, disableVerifier: false })
     }
@@ -205,12 +206,17 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
             {t('includeInLeaderboard')}
             <CustomSelect
               ariaLabel={t('includeInLeaderboard')}
-              value={draft.includeInLeaderboard ? 'enabled' : 'disabled'}
+              value={!leaderboardLockedByVerifier && draft.includeInLeaderboard ? 'enabled' : 'disabled'}
+              disabled={leaderboardLockedByVerifier}
               options={[
                 { label: 'enabled', value: 'enabled' },
                 { label: 'disabled', value: 'disabled' },
               ]}
-              onChange={(value) => onDraft({ ...draft, includeInLeaderboard: value === 'enabled' })}
+              onChange={(value) => {
+                if (!leaderboardLockedByVerifier) {
+                  onDraft({ ...draft, includeInLeaderboard: value === 'enabled' })
+                }
+              }}
             />
           </label>
           <Field label={t('notes')} wide>

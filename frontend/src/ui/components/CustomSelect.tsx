@@ -11,6 +11,7 @@ interface CustomSelectProps {
   options: SelectOption[]
   value: string
   className?: string
+  disabled?: boolean
   leadingIcon?: ReactNode
   visibleLabel?: string
   onChange: (value: string) => void
@@ -19,6 +20,7 @@ interface CustomSelectProps {
 export function CustomSelect({
   ariaLabel,
   className,
+  disabled = false,
   leadingIcon,
   options,
   value,
@@ -30,7 +32,7 @@ export function CustomSelect({
 
   return (
     <div
-      className={`custom-select ${open ? 'open' : ''} ${className ?? ''}`}
+      className={`custom-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className ?? ''}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setOpen(false)
@@ -50,12 +52,13 @@ export function CustomSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
         <span>{selected?.label ?? value}</span>
         <ChevronDown aria-hidden="true" />
       </button>
-      {open && (
+      {open && !disabled && (
         <div className="select-menu" role="listbox" aria-label={`${ariaLabel} options`}>
           {options.map((option) => (
             <button
