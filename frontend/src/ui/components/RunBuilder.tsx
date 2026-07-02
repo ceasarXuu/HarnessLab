@@ -6,7 +6,6 @@ import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
 import { Field, TabPanel } from './RunBuilderChrome'
-import { RunBuilderHubPanel } from './RunBuilderHubPanel'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
 interface RunBuilderProps {
@@ -20,7 +19,7 @@ interface RunBuilderProps {
   onLaunch: () => void
 }
 
-type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime' | 'hub'
+type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 const agentOptions = [
@@ -86,7 +85,6 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
     { key: 'tasks', label: t('runTabTasks') },
     { key: 'verifier', label: t('runTabVerifier') },
     { key: 'runtime', label: t('runTabRuntime') },
-    { key: 'hub', label: t('runTabHub') },
   ]
   return (
     <section className="surface run-builder" id="new-job">
@@ -346,9 +344,6 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
       </TabPanel>
       <TabPanel active={activeTab === 'runtime'} title={t('runTabRuntime')}>
         <RunBuilderRuntimePanel draft={draft} t={t} onDraft={onDraft} />
-      </TabPanel>
-      <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
-        <RunBuilderHubPanel draft={draft} t={t} onDraft={onDraft} />
       </TabPanel>
     </section>
   )

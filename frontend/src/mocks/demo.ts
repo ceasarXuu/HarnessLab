@@ -83,13 +83,8 @@ export interface RunDraft {
   retryWaitMultiplier: string
   retryMinWaitSec: string
   retryMaxWaitSec: string
-  artifacts: string
   metric: string
-  plugins: string
-  upload: boolean
-  visibility: 'private' | 'public'
   includeInLeaderboard: boolean
-  shareTargets: string
 }
 
 export interface TaskRow {
@@ -296,13 +291,8 @@ export const initialDraft: RunDraft = {
   retryWaitMultiplier: '1.5',
   retryMinWaitSec: '2',
   retryMaxWaitSec: '30',
-  artifacts: '/workspace/result.json,/workspace/logs',
   metric: 'mean',
-  plugins: 'harbor.plugins.cost:CostPlugin',
-  upload: false,
-  visibility: 'private',
   includeInLeaderboard: true,
-  shareTargets: '@ornn',
 }
 
 export const jobs: HarborJob[] = [
