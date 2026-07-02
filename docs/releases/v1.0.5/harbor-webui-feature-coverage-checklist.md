@@ -53,7 +53,7 @@
 
 已补齐的可见面包括：
 
-1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task 白名单、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share targets。
+1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task 白名单、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry、artifacts、metric、plugins、upload、visibility、share orgs。
 2. Jobs：Job drawer 新增 job_dir、split、暂停/恢复、Open viewer、Upload、harbor.capability.json、failure code、计入排行榜开关等入口；不展示 summarize/analyze/share/download 等未明确收敛的入口。
 3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、拉取更新、发布；task 行级只保留 run single task 操作。
 4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
@@ -112,11 +112,11 @@
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 运行策略 tab 展示“超时策略”，标准/严格/放宽/自定义；高级区展示 setup/build timeout | Partial | 后端接入时将策略映射到 Harbor multiplier，并补充边界校验。 |
 | Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 运行策略 tab 默认不启用失败重试；启用后展开失败重试次数、重试场景、重试间隔；原始 exclude 放在默认收起的高级区，以“不重试的原始错误（命中规则）”列表维护 | Partial | 后端接入时将产品化场景映射到 Harbor exception names，并区分 job retry 与 UI Retry 按钮。 |
-| Artifacts | `artifacts`，`ArtifactConfig.source/destination/exclude` | Job detail 展示 artifact paths，New Job 不可配置 | Partial | New Job 增加 artifact path 列表。 |
+| Artifacts | `--artifact`，JobConfig artifacts | 输出 tab 已展示可增删 artifact path 列表 | Partial | 后续接真实 artifact config 校验。 |
 | Extra instructions | `extra_instruction_paths` | Tasks tab 已展示 | Covered | 后端接入时校验路径存在性。 |
-| Metrics | `metrics`，`MetricConfig.type/kwargs` | Leaderboard 展示 score，不能配置 metric | Missing | New Job 增加 metric selector；Leaderboard 展示 metric breakdown。 |
-| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | 输出 tab 已展示 plugin import_path 与空列表状态 | Partial | 接真实 `harbor plugins list`。 |
-| Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | 输出 tab 已展示 upload/share targets | Partial | 接真实 Hub 认证、上传和权限状态。 |
+| Metrics | `MetricConfig.type` | 输出 tab 高级参数已提供 mean/sum/min/max selector | Partial | 暂不开放 uv_script；后续补 metric kwargs。 |
+| Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | 输出 tab 高级参数仅展示未安装插件空状态，不允许手填 import path | Partial | 接真实 `harbor plugins list` 后再做 picker。 |
+| Hub upload/share | `--upload`、`--public/--private`、`--share-org` | 输出 tab 已展示 upload 开关；开启后展示 visibility 与 share orgs | Partial | 接真实 Hub 认证、上传和组织权限状态。 |
 
 ### 3.3 Agent 配置字段覆盖
 
