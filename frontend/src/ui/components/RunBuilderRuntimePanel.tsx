@@ -133,10 +133,10 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
               ariaLabel={labels.retryInterval}
               value={retryIntervalPolicy}
               options={[
-                { label: labels.standard, value: 'standard' },
-                { label: labels.fast, value: 'fast' },
-                { label: labels.slow, value: 'slow' },
-                { label: labels.custom, value: 'custom' },
+                { label: labels.retryStandard, value: 'standard' },
+                { label: labels.retryFast, value: 'fast' },
+                { label: labels.retrySlow, value: 'slow' },
+                { label: labels.retryCustom, value: 'custom' },
               ]}
               onChange={(value) => setRetryIntervalPolicy(value as RetryIntervalPolicy)}
             />
@@ -233,12 +233,16 @@ function runtimeLabels(zh: boolean) {
       fast: '快速',
       maxRetries: '失败重试次数',
       relaxed: '放宽',
+      retryCustom: '自定义间隔',
       retryExclude: '不重试的原始错误',
+      retryFast: '快速（立即重试，最多 5s）',
       retryGroup: '失败重试',
       retryInterval: '重试间隔',
       retryMaxWaitSec: '最长等待秒数',
       retryMinWaitSec: '最短等待秒数',
       retryScenarios: '重试场景',
+      retrySlow: '慢速（10s 起，最多 120s）',
+      retryStandard: '标准（2s 起，最多 30s）',
       retryWaitMultiplier: '等待递增倍率',
       scenarios: { environment: '环境启动失败', network: '网络错误', timeout: '超时', verifier: '验证器临时失败' },
       slow: '慢速',
@@ -263,12 +267,16 @@ function runtimeLabels(zh: boolean) {
     fast: 'Fast',
     maxRetries: 'Failure retries',
     relaxed: 'Relaxed',
+    retryCustom: 'Custom interval',
     retryExclude: 'Raw errors that should not retry',
+    retryFast: 'Fast (retry immediately, max 5s)',
     retryGroup: 'Failure retry',
     retryInterval: 'Retry interval',
     retryMaxWaitSec: 'Max wait seconds',
     retryMinWaitSec: 'Min wait seconds',
     retryScenarios: 'Retry scenarios',
+    retrySlow: 'Slow (starts at 10s, max 120s)',
+    retryStandard: 'Standard (starts at 2s, max 30s)',
     retryWaitMultiplier: 'Wait growth multiplier',
     scenarios: { environment: 'Environment startup failure', network: 'Network error', timeout: 'Timeout', verifier: 'Temporary verifier failure' },
     slow: 'Slow',
