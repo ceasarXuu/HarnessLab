@@ -21,7 +21,7 @@ export function RunBuilderHubPanel({ draft, t, onDraft }: RunBuilderHubPanelProp
           <h3>{t('artifacts')}</h3>
         </div>
         <ListControl
-          addLabel={labels.add}
+          addLabel={labels.addArtifactPath}
           deleteLabel={t('delete')}
           label={t('artifacts')}
           value={draft.artifacts}
@@ -52,7 +52,7 @@ export function RunBuilderHubPanel({ draft, t, onDraft }: RunBuilderHubPanelProp
                 />
               </label>
               <ListControl
-                addLabel={labels.add}
+                addLabel={labels.addShareOrg}
                 deleteLabel={t('delete')}
                 label={t('shareTargets')}
                 value={draft.shareTargets}
@@ -164,14 +164,16 @@ function ListControl({
 function hubLabels(zh: boolean) {
   if (zh) {
     return {
-      add: '添加',
+      addArtifactPath: '添加路径',
+      addShareOrg: '添加组织',
       advanced: '高级参数',
       collapseAdvanced: '收起高级参数',
       expandAdvanced: '展开高级参数',
     }
   }
   return {
-    add: 'Add',
+    addArtifactPath: 'Add path',
+    addShareOrg: 'Add org',
     advanced: 'Advanced parameters',
     collapseAdvanced: 'Collapse advanced parameters',
     expandAdvanced: 'Expand advanced parameters',
