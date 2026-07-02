@@ -66,7 +66,7 @@
 
 根据对抗性审查，本次继续补齐上一轮仍不可见的 Harbor 能力面：
 
-1. New Job：补 debug、quiet、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入配置预览。CLI `--yes` 不进入 WebUI，由执行层处理非交互运行。`env_file` 作为 CLI 文件输入形式不进入 WebUI，环境变量统一收敛到 Environment 模板。
+1. New Job：补 debug、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入配置预览。CLI `--yes` 与 `quiet` 不进入 WebUI，由执行层处理非交互运行和输出降噪。`env_file` 作为 CLI 文件输入形式不进入 WebUI，环境变量统一收敛到 Environment 模板。
 2. Jobs：取消独立 Trial diagnostics 模块，改为 Job Trials 表格行展开，仅展示 retries 与 log path；Job 操作只保留与当前 Harbor 产品语义明确对应的暂停/恢复、Open viewer、Upload 与排行榜开关。
 3. Datasets / Tasks：保留 registry 拉取更新与发布入口；Task config explorer、manifest add/init/remove 等用户价值不足或已被收敛的操作在 v1.0.5 不展示。
 4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
@@ -108,12 +108,12 @@
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
 | 基础 | `job_name`、`jobs_dir`、dataset、agent、environment profile、`debug`、leaderboard inclusion、notes | New Job 基础 tab 已展示；model 内包在 Agent profile，environment 只选择已配置 profile，不作为 Job 级细节配置暴露；`env_file` 不进入 WebUI | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项；环境变量由 Environment 模板统一承载。 |
-| Tasks | `split`、`task_names` | New Job Tasks tab 以 Task 白名单列表承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`。 |
+| Tasks | `split`、`task_names`、`extra_instruction_paths` | New Job Tasks tab 以 Task 白名单列表和额外说明文件承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`；校验 extra instruction 路径。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
-| Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 无 | Missing | Runtime/Advanced 增加 timeout controls。 |
-| Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 无 | Missing | 增加 Retry 区域，区分 job retry 与 UI Retry 按钮。 |
+| Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 运行策略 tab 展示“超时策略”，标准/严格/放宽/自定义；高级区展示 setup/build timeout | Partial | 后端接入时将策略映射到 Harbor multiplier，并补充边界校验。 |
+| Retry | `RetryConfig.max_retries`、include/exclude exceptions、wait multiplier/min/max wait | 运行策略 tab 展示失败重试次数、重试场景、重试间隔；原始 exclude 仅放高级区 | Partial | 后端接入时将产品化场景映射到 Harbor exception names，并区分 job retry 与 UI Retry 按钮。 |
 | Artifacts | `artifacts`，`ArtifactConfig.source/destination/exclude` | Job detail 展示 artifact paths，New Job 不可配置 | Partial | New Job 增加 artifact path 列表。 |
-| Extra instructions | `extra_instruction_paths` | Runtime tab 已展示 | Covered | 后端接入时校验路径存在性。 |
+| Extra instructions | `extra_instruction_paths` | Tasks tab 已展示 | Covered | 后端接入时校验路径存在性。 |
 | Metrics | `metrics`，`MetricConfig.type/kwargs` | Leaderboard 展示 score，不能配置 metric | Missing | New Job 增加 metric selector；Leaderboard 展示 metric breakdown。 |
 | Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | 输出 tab 已展示 plugin import_path 与空列表状态 | Partial | 接真实 `harbor plugins list`。 |
 | Hub upload/share | `--upload`、`--public/--private`、`--share-org`、`--share-user` | 输出 tab 已展示 upload/share targets | Partial | 接真实 Hub 认证、上传和权限状态。 |

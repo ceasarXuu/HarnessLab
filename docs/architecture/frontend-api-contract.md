@@ -155,7 +155,6 @@ interface JobConfig {
   taskLimit: number
   extraInstructions: string
   debug: boolean
-  quiet: boolean
 
   agentName: string
   harness: string

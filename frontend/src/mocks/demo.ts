@@ -37,7 +37,6 @@ export interface RunDraft {
   selectedTaskNames: string[] | null
   extraInstructions: string
   debug: boolean
-  quiet: boolean
   notes: string
   agent: string
   model: string
@@ -249,7 +248,6 @@ export const initialDraft: RunDraft = {
   selectedTaskNames: null,
   extraInstructions: 'instructions/hardening.md',
   debug: false,
-  quiet: false,
   notes: '',
   agent: 'claude-code',
   model: 'anthropic/claude-haiku-4-5',

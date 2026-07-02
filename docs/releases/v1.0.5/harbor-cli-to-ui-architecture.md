@@ -105,11 +105,11 @@ flowchart TD
 | UI 区域 | 替代 CLI 参数域 | UI 控件 |
 |---|---|---|
 | Source | `--path`, `--dataset`, `--task`, `--registry-url`, `--registry-path` | Dataset selector、Task picker、本地路径选择、registry source |
-| Tasks | `--split`, `--include-task-name` / `task_names` | split selector、Task 白名单列表；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 |
+| Tasks | `--split`, `--include-task-name` / `task_names`、`extra_instruction_paths` | split selector、Task 白名单列表、额外说明文件；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 |
 | Agent | `--agent`, agent profile model | 基础 tab 内只展示 Agent selector；model 内包在 Agent profile，不作为 Job 表单字段暴露 |
 | Environment | `--env`, `--force-build`, `--delete`, resource override, mounts, docker compose overlay | Environment 一级页管理可复用 profile；New Job 基础 tab 只下拉选择已配置 profile |
 | Verification | `--verifier-env`, `--verifier-import-path`, `--verifier-kwarg`, verification toggle | Verifier config panel、env editor、enable/disable toggle |
-| Runtime | `--job-name`, `--jobs-dir`, `--n-attempts`, `--n-concurrent`, retry, timeouts, artifacts | Name/path fields、steppers、timeout controls、artifact path list |
+| Runtime | timeout multipliers、retry config、setup/build timeout | 超时策略、失败重试次数、重试场景、重试间隔、高级 timeout/retry 原始参数 |
 | 输出 | `--upload`, `--public/--private`, `--share-org`, `--share-user`、artifacts、plugins、metrics | Upload toggle、visibility radio、share target chips、artifact/plugin/metric fields |
 | Preview | `--config` equivalent | 右上角 JobConfig 入口、Run button；CLI 命令不常驻展示 |
 
@@ -117,7 +117,7 @@ flowchart TD
 concurrency、每个 Task 重复次数、debug、计入排行榜。`env_file` 不进入 WebUI；环境变量统一通过 Environment 模板管理，并由后端展开为 Harbor 真实支持的环境变量配置。Environment 仅作为已配置 profile 下拉选择，不在 New Job 中暴露镜像、资源、mount、env 等配置细节。task split 和 Task 白名单进入 Tasks tab，默认全选；用户通过列表开关形成 Harbor `task_names` 白名单。搜索过滤只改变当前可见 task 集合，批量开启/关闭仅作用于当前过滤结果。
 model 归属 Agent profile，不在 Job 表单中直接暴露；用户需要改模型时应进入 Agent/Custom Agent 配置流。
 非 Agent 的低频运行字段保留在对应领域 tab；高级 Agent/Harness 配置回到 Agents 一级页，环境配置回到 Environment 一级页，避免 New Job 中重复配置。
-CLI 的 `--yes` 属于非交互执行细节，不作为 WebUI 配置项展示；WebUI 的按钮、弹窗和确认流承担用户确认语义。
+CLI 的 `--yes` 与 `quiet` 属于非交互/CLI 输出细节，不作为 WebUI 配置项展示；WebUI 的按钮、弹窗和页面状态承担用户确认与信息密度控制语义。
 
 ## 5. 推荐的页面架构
 

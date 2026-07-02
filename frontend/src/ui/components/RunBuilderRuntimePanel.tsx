@@ -1,0 +1,292 @@
+import type { RunDraft } from '../../mocks/demo'
+import type { Translate } from '../../i18n'
+import { CustomSelect } from './CustomSelect'
+import { Field } from './RunBuilderChrome'
+
+interface RuntimePanelProps {
+  draft: RunDraft
+  t: Translate
+  onDraft: (draft: RunDraft) => void
+}
+
+type TimeoutPolicy = 'standard' | 'strict' | 'relaxed' | 'custom'
+type RetryIntervalPolicy = 'standard' | 'fast' | 'slow' | 'custom'
+
+const retryScenarios = [
+  { key: 'timeout', value: 'TimeoutError' },
+  { key: 'network', value: 'NetworkError' },
+  { key: 'environment', value: 'EnvironmentError' },
+  { key: 'verifier', value: 'VerifierTransientError' },
+] as const
+
+export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps) {
+  const labels = runtimeLabels(t('runTabRuntime') === '运行策略')
+  const timeoutPolicy = getTimeoutPolicy(draft)
+  const retryIntervalPolicy = getRetryIntervalPolicy(draft)
+  const selectedRetryScenarios = new Set(splitRules(draft.retryInclude))
+
+  const setTimeoutPolicy = (policy: TimeoutPolicy) => {
+    if (policy === 'standard') {
+      onDraft({ ...draft, timeoutMultiplier: 1, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+    } else if (policy === 'strict') {
+      onDraft({ ...draft, timeoutMultiplier: 0.5, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+    } else if (policy === 'relaxed') {
+      onDraft({ ...draft, timeoutMultiplier: 2, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+    } else {
+      onDraft({ ...draft, timeoutMultiplier: draft.timeoutMultiplier || 1 })
+    }
+  }
+
+  const setRetryIntervalPolicy = (policy: RetryIntervalPolicy) => {
+    if (policy === 'standard') {
+      onDraft({ ...draft, retryWaitMultiplier: '1.5', retryMinWaitSec: '2', retryMaxWaitSec: '30' })
+    } else if (policy === 'fast') {
+      onDraft({ ...draft, retryWaitMultiplier: '1', retryMinWaitSec: '0', retryMaxWaitSec: '5' })
+    } else if (policy === 'slow') {
+      onDraft({ ...draft, retryWaitMultiplier: '2', retryMinWaitSec: '10', retryMaxWaitSec: '120' })
+    }
+  }
+
+  const setRetryScenario = (value: string, enabled: boolean) => {
+    const next = new Set(selectedRetryScenarios)
+    if (enabled) {
+      next.add(value)
+    } else {
+      next.delete(value)
+    }
+    onDraft({ ...draft, retryInclude: Array.from(next).join(',') })
+  }
+
+  return (
+    <div className="run-config-groups">
+      <section className="run-config-group">
+        <div className="run-config-group-heading">
+          <h3>{labels.timeoutGroup}</h3>
+        </div>
+        <div className="run-grid">
+          <label>
+            {labels.timeoutPolicy}
+            <CustomSelect
+              ariaLabel={labels.timeoutPolicy}
+              value={timeoutPolicy}
+              options={[
+                { label: labels.standard, value: 'standard' },
+                { label: labels.strict, value: 'strict' },
+                { label: labels.relaxed, value: 'relaxed' },
+                { label: labels.custom, value: 'custom' },
+              ]}
+              onChange={(value) => setTimeoutPolicy(value as TimeoutPolicy)}
+            />
+          </label>
+          {timeoutPolicy === 'custom' && (
+            <>
+              <Field label={labels.timeoutMultiplier}>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={draft.timeoutMultiplier}
+                  onChange={(event) => onDraft({ ...draft, timeoutMultiplier: Number(event.target.value) })}
+                />
+              </Field>
+              <Field label={labels.agentTimeoutMultiplier}>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={draft.agentTimeoutMultiplier}
+                  onChange={(event) => onDraft({ ...draft, agentTimeoutMultiplier: event.target.value })}
+                />
+              </Field>
+              <Field label={labels.verifierTimeoutMultiplier}>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={draft.verifierTimeoutMultiplier}
+                  onChange={(event) => onDraft({ ...draft, verifierTimeoutMultiplier: event.target.value })}
+                />
+              </Field>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="run-config-group">
+        <div className="run-config-group-heading">
+          <h3>{labels.retryGroup}</h3>
+        </div>
+        <div className="run-grid">
+          <Field label={labels.maxRetries}>
+            <input
+              type="number"
+              min="0"
+              value={draft.maxRetries}
+              onChange={(event) => onDraft({ ...draft, maxRetries: Number(event.target.value) })}
+            />
+          </Field>
+          <label>
+            {labels.retryInterval}
+            <CustomSelect
+              ariaLabel={labels.retryInterval}
+              value={retryIntervalPolicy}
+              options={[
+                { label: labels.standard, value: 'standard' },
+                { label: labels.fast, value: 'fast' },
+                { label: labels.slow, value: 'slow' },
+                { label: labels.custom, value: 'custom' },
+              ]}
+              onChange={(value) => setRetryIntervalPolicy(value as RetryIntervalPolicy)}
+            />
+          </label>
+          <fieldset className="runtime-checklist field-wide">
+            <legend>{labels.retryScenarios}</legend>
+            {retryScenarios.map((scenario) => (
+              <label key={scenario.value}>
+                <input
+                  type="checkbox"
+                  checked={selectedRetryScenarios.has(scenario.value)}
+                  onChange={(event) => setRetryScenario(scenario.value, event.target.checked)}
+                />
+                {labels.scenarios[scenario.key]}
+              </label>
+            ))}
+          </fieldset>
+          {retryIntervalPolicy === 'custom' && (
+            <>
+              <Field label={labels.retryWaitMultiplier}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={draft.retryWaitMultiplier}
+                  onChange={(event) => onDraft({ ...draft, retryWaitMultiplier: event.target.value })}
+                />
+              </Field>
+              <Field label={labels.retryMinWaitSec}>
+                <input
+                  type="number"
+                  min="0"
+                  value={draft.retryMinWaitSec}
+                  onChange={(event) => onDraft({ ...draft, retryMinWaitSec: event.target.value })}
+                />
+              </Field>
+              <Field label={labels.retryMaxWaitSec}>
+                <input
+                  type="number"
+                  min="0"
+                  value={draft.retryMaxWaitSec}
+                  onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
+                />
+              </Field>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="run-config-group">
+        <div className="run-config-group-heading">
+          <h3>{labels.advancedGroup}</h3>
+        </div>
+        <div className="run-grid">
+          <Field label={labels.agentSetupTimeoutMultiplier}>
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={draft.agentSetupTimeoutMultiplier}
+              onChange={(event) => onDraft({ ...draft, agentSetupTimeoutMultiplier: event.target.value })}
+            />
+          </Field>
+          <Field label={labels.environmentBuildTimeoutMultiplier}>
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={draft.environmentBuildTimeoutMultiplier}
+              onChange={(event) => onDraft({ ...draft, environmentBuildTimeoutMultiplier: event.target.value })}
+            />
+          </Field>
+          <Field label={labels.retryExclude}>
+            <input value={draft.retryExclude} onChange={(event) => onDraft({ ...draft, retryExclude: event.target.value })} />
+          </Field>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function splitRules(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function getTimeoutPolicy(draft: RunDraft): TimeoutPolicy {
+  if (draft.agentTimeoutMultiplier || draft.verifierTimeoutMultiplier) return 'custom'
+  if (draft.timeoutMultiplier === 0.5) return 'strict'
+  if (draft.timeoutMultiplier === 2) return 'relaxed'
+  if (draft.timeoutMultiplier === 1) return 'standard'
+  return 'custom'
+}
+
+function getRetryIntervalPolicy(draft: RunDraft): RetryIntervalPolicy {
+  const signature = `${draft.retryWaitMultiplier}/${draft.retryMinWaitSec}/${draft.retryMaxWaitSec}`
+  if (signature === '1.5/2/30') return 'standard'
+  if (signature === '1/0/5') return 'fast'
+  if (signature === '2/10/120') return 'slow'
+  return 'custom'
+}
+
+function runtimeLabels(zh: boolean) {
+  if (zh) {
+    return {
+      advancedGroup: '高级参数',
+      agentSetupTimeoutMultiplier: 'Agent 初始化超时倍率',
+      agentTimeoutMultiplier: 'Agent 执行超时倍率',
+      custom: '自定义',
+      environmentBuildTimeoutMultiplier: '环境构建超时倍率',
+      fast: '快速',
+      maxRetries: '失败重试次数',
+      relaxed: '放宽',
+      retryExclude: '不重试的原始错误',
+      retryGroup: '失败重试',
+      retryInterval: '重试间隔',
+      retryMaxWaitSec: '最长等待秒数',
+      retryMinWaitSec: '最短等待秒数',
+      retryScenarios: '重试场景',
+      retryWaitMultiplier: '等待递增倍率',
+      scenarios: { environment: '环境启动失败', network: '网络错误', timeout: '超时', verifier: '验证器临时失败' },
+      slow: '慢速',
+      standard: '标准',
+      strict: '严格',
+      timeoutGroup: '执行时长',
+      timeoutMultiplier: '整体超时倍率',
+      timeoutPolicy: '超时策略',
+      verifierTimeoutMultiplier: '验证器超时倍率',
+    }
+  }
+  return {
+    advancedGroup: 'Advanced parameters',
+    agentSetupTimeoutMultiplier: 'Agent setup timeout multiplier',
+    agentTimeoutMultiplier: 'Agent execution timeout multiplier',
+    custom: 'Custom',
+    environmentBuildTimeoutMultiplier: 'Environment build timeout multiplier',
+    fast: 'Fast',
+    maxRetries: 'Failure retries',
+    relaxed: 'Relaxed',
+    retryExclude: 'Raw errors that should not retry',
+    retryGroup: 'Failure retry',
+    retryInterval: 'Retry interval',
+    retryMaxWaitSec: 'Max wait seconds',
+    retryMinWaitSec: 'Min wait seconds',
+    retryScenarios: 'Retry scenarios',
+    retryWaitMultiplier: 'Wait growth multiplier',
+    scenarios: { environment: 'Environment startup failure', network: 'Network error', timeout: 'Timeout', verifier: 'Temporary verifier failure' },
+    slow: 'Slow',
+    standard: 'Standard',
+    strict: 'Strict',
+    timeoutGroup: 'Execution duration',
+    timeoutMultiplier: 'Overall timeout multiplier',
+    timeoutPolicy: 'Timeout policy',
+    verifierTimeoutMultiplier: 'Verifier timeout multiplier',
+  }
+}

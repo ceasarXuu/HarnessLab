@@ -4,8 +4,9 @@ import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../mocks/
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { KeyValueControl } from './KeyValueControl'
-import { Field, TabPanel, Toggle } from './RunBuilderChrome'
+import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderHubPanel } from './RunBuilderHubPanel'
+import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
 interface RunBuilderProps {
   datasets: DatasetRow[]
@@ -231,6 +232,12 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
               onChange={(event) => setTaskSearch(event.target.value)}
             />
           </Field>
+          <Field label={t('extraInstructions')} wide>
+            <input
+              value={draft.extraInstructions}
+              onChange={(event) => onDraft({ ...draft, extraInstructions: event.target.value })}
+            />
+          </Field>
           <section className="task-whitelist field-wide" aria-label={t('taskWhitelist')}>
             <div className="task-whitelist-header">
               <div>
@@ -326,82 +333,7 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'runtime'} title={t('runTabRuntime')}>
-        <div className="run-grid">
-        <Field label={t('extraInstructions')}>
-          <input
-            value={draft.extraInstructions}
-            onChange={(event) => onDraft({ ...draft, extraInstructions: event.target.value })}
-          />
-        </Field>
-        <Field label="quiet">
-          <Toggle checked={draft.quiet} onChange={(value) => onDraft({ ...draft, quiet: value })} />
-        </Field>
-        <Field label={t('timeoutMultiplier')}>
-          <input
-            type="number"
-            min="0.1"
-            step="0.1"
-            value={draft.timeoutMultiplier}
-            onChange={(event) => onDraft({ ...draft, timeoutMultiplier: Number(event.target.value) })}
-          />
-        </Field>
-        <Field label={t('agentTimeoutMultiplier')}>
-          <input
-            value={draft.agentTimeoutMultiplier}
-            onChange={(event) => onDraft({ ...draft, agentTimeoutMultiplier: event.target.value })}
-          />
-        </Field>
-        <Field label={t('verifierTimeoutMultiplier')}>
-          <input
-            value={draft.verifierTimeoutMultiplier}
-            onChange={(event) => onDraft({ ...draft, verifierTimeoutMultiplier: event.target.value })}
-          />
-        </Field>
-        <Field label="agent setup timeout multiplier">
-          <input
-            value={draft.agentSetupTimeoutMultiplier}
-            onChange={(event) => onDraft({ ...draft, agentSetupTimeoutMultiplier: event.target.value })}
-          />
-        </Field>
-        <Field label="environment build timeout multiplier">
-          <input
-            value={draft.environmentBuildTimeoutMultiplier}
-            onChange={(event) => onDraft({ ...draft, environmentBuildTimeoutMultiplier: event.target.value })}
-          />
-        </Field>
-        <Field label={t('maxRetries')}>
-          <input
-            type="number"
-            min="0"
-            value={draft.maxRetries}
-            onChange={(event) => onDraft({ ...draft, maxRetries: Number(event.target.value) })}
-          />
-        </Field>
-        <Field label={t('retryInclude')}>
-          <input value={draft.retryInclude} onChange={(event) => onDraft({ ...draft, retryInclude: event.target.value })} />
-        </Field>
-        <Field label={t('retryExclude')}>
-          <input value={draft.retryExclude} onChange={(event) => onDraft({ ...draft, retryExclude: event.target.value })} />
-        </Field>
-        <Field label="retry wait multiplier">
-          <input
-            value={draft.retryWaitMultiplier}
-            onChange={(event) => onDraft({ ...draft, retryWaitMultiplier: event.target.value })}
-          />
-        </Field>
-        <Field label="retry min wait sec">
-          <input
-            value={draft.retryMinWaitSec}
-            onChange={(event) => onDraft({ ...draft, retryMinWaitSec: event.target.value })}
-          />
-        </Field>
-        <Field label="retry max wait sec">
-          <input
-            value={draft.retryMaxWaitSec}
-            onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
-          />
-        </Field>
-        </div>
+        <RunBuilderRuntimePanel draft={draft} t={t} onDraft={onDraft} />
       </TabPanel>
       <TabPanel active={activeTab === 'hub'} title={t('runTabHub')}>
         <RunBuilderHubPanel draft={draft} t={t} onDraft={onDraft} />
