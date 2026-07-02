@@ -38,6 +38,15 @@
   color: var(--muted);
   font-size: 12px;
 }
+.runtime-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.runtime-section-switch {
+  min-width: 150px;
+}
 .runtime-collapsible-trigger {
   display: flex;
   align-items: center;

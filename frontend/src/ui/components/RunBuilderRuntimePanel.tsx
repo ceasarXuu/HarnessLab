@@ -24,6 +24,7 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
   const labels = runtimeLabels(t('runTabRuntime') === '运行策略')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const timeoutPolicy = draft.timeoutPolicy
+  const retryEnabled = draft.maxRetries > 0
   const retryIntervalPolicy = draft.retryIntervalPolicy
   const selectedRetryScenarios = new Set(splitRules(draft.retryInclude))
 
@@ -59,6 +60,14 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
       next.delete(value)
     }
     onDraft({ ...draft, retryInclude: Array.from(next).join(',') })
+  }
+
+  const setRetryEnabled = (enabled: boolean) => {
+    if (enabled) {
+      onDraft({ ...draft, maxRetries: Math.max(draft.maxRetries, 1), retryInclude: draft.retryInclude || 'TimeoutError' })
+    } else {
+      onDraft({ ...draft, maxRetries: 0, retryInclude: '' })
+    }
   }
 
   return (
@@ -117,75 +126,86 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
       </section>
 
       <section className="run-config-group">
-        <div className="run-config-group-heading">
+        <div className="run-config-group-heading runtime-section-heading">
           <h3>{labels.retryGroup}</h3>
-        </div>
-        <div className="run-grid">
-          <Field label={labels.maxRetries}>
+          <label className="switch-control runtime-section-switch">
+            <span>{labels.retryEnabled}</span>
             <input
-              type="number"
-              min="0"
-              value={draft.maxRetries}
-              onChange={(event) => onDraft({ ...draft, maxRetries: Number(event.target.value) })}
-            />
-          </Field>
-          <label>
-            {labels.retryInterval}
-            <CustomSelect
-              ariaLabel={labels.retryInterval}
-              value={retryIntervalPolicy}
-              options={[
-                { label: labels.retryStandard, value: 'standard' },
-                { label: labels.retryFast, value: 'fast' },
-                { label: labels.retrySlow, value: 'slow' },
-                { label: labels.retryCustom, value: 'custom' },
-              ]}
-              onChange={(value) => setRetryIntervalPolicy(value as RetryIntervalPolicy)}
+              aria-label={labels.retryEnabled}
+              checked={retryEnabled}
+              onChange={(event) => setRetryEnabled(event.target.checked)}
+              type="checkbox"
             />
           </label>
-          <fieldset className="runtime-checklist field-wide">
-            <legend>{labels.retryScenarios}</legend>
-            {retryScenarios.map((scenario) => (
-              <label key={scenario.value}>
-                <input
-                  type="checkbox"
-                  checked={selectedRetryScenarios.has(scenario.value)}
-                  onChange={(event) => setRetryScenario(scenario.value, event.target.checked)}
-                />
-                {labels.scenarios[scenario.key]}
-              </label>
-            ))}
-          </fieldset>
-          {retryIntervalPolicy === 'custom' && (
-            <>
-              <Field label={labels.retryWaitMultiplier}>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={draft.retryWaitMultiplier}
-                  onChange={(event) => onDraft({ ...draft, retryWaitMultiplier: event.target.value })}
-                />
-              </Field>
-              <Field label={labels.retryMinWaitSec}>
-                <input
-                  type="number"
-                  min="0"
-                  value={draft.retryMinWaitSec}
-                  onChange={(event) => onDraft({ ...draft, retryMinWaitSec: event.target.value })}
-                />
-              </Field>
-              <Field label={labels.retryMaxWaitSec}>
-                <input
-                  type="number"
-                  min="0"
-                  value={draft.retryMaxWaitSec}
-                  onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
-                />
-              </Field>
-            </>
-          )}
         </div>
+        {retryEnabled && (
+          <div className="run-grid">
+            <Field label={labels.maxRetries}>
+              <input
+                type="number"
+                min="1"
+                value={draft.maxRetries}
+                onChange={(event) => onDraft({ ...draft, maxRetries: Number(event.target.value) })}
+              />
+            </Field>
+            <label>
+              {labels.retryInterval}
+              <CustomSelect
+                ariaLabel={labels.retryInterval}
+                value={retryIntervalPolicy}
+                options={[
+                  { label: labels.retryStandard, value: 'standard' },
+                  { label: labels.retryFast, value: 'fast' },
+                  { label: labels.retrySlow, value: 'slow' },
+                  { label: labels.retryCustom, value: 'custom' },
+                ]}
+                onChange={(value) => setRetryIntervalPolicy(value as RetryIntervalPolicy)}
+              />
+            </label>
+            <fieldset className="runtime-checklist field-wide">
+              <legend>{labels.retryScenarios}</legend>
+              {retryScenarios.map((scenario) => (
+                <label key={scenario.value}>
+                  <input
+                    type="checkbox"
+                    checked={selectedRetryScenarios.has(scenario.value)}
+                    onChange={(event) => setRetryScenario(scenario.value, event.target.checked)}
+                  />
+                  {labels.scenarios[scenario.key]}
+                </label>
+              ))}
+            </fieldset>
+            {retryIntervalPolicy === 'custom' && (
+              <>
+                <Field label={labels.retryWaitMultiplier}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={draft.retryWaitMultiplier}
+                    onChange={(event) => onDraft({ ...draft, retryWaitMultiplier: event.target.value })}
+                  />
+                </Field>
+                <Field label={labels.retryMinWaitSec}>
+                  <input
+                    type="number"
+                    min="0"
+                    value={draft.retryMinWaitSec}
+                    onChange={(event) => onDraft({ ...draft, retryMinWaitSec: event.target.value })}
+                  />
+                </Field>
+                <Field label={labels.retryMaxWaitSec}>
+                  <input
+                    type="number"
+                    min="0"
+                    value={draft.retryMaxWaitSec}
+                    onChange={(event) => onDraft({ ...draft, retryMaxWaitSec: event.target.value })}
+                  />
+                </Field>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="run-config-group">
@@ -305,6 +325,7 @@ function runtimeLabels(zh: boolean) {
       expandAdvanced: '展开高级参数',
       fast: '快速',
       maxRetries: '失败重试次数',
+      retryEnabled: '启用失败重试',
       relaxed: '放宽',
       retryCustom: '自定义间隔',
       retryExclude: '不重试的原始错误（命中规则）',
@@ -343,6 +364,7 @@ function runtimeLabels(zh: boolean) {
     expandAdvanced: 'Expand advanced parameters',
     fast: 'Fast',
     maxRetries: 'Failure retries',
+    retryEnabled: 'Enable failure retry',
     relaxed: 'Relaxed',
     retryCustom: 'Custom interval',
     retryExclude: 'Raw errors that should not retry (match rule)',
