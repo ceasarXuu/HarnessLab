@@ -341,7 +341,7 @@ const messages = {
     runTabCore: '基础',
     runTabTasks: 'Tasks',
     runTabEnvironment: '环境',
-    runTabVerifier: '验证',
+    runTabVerifier: '验证器',
     runTabRuntime: '运行策略',
     runTabHub: '输出',
     resume: '恢复',
