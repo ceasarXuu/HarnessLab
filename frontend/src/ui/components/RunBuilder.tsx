@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
+import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
 import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderHubPanel } from './RunBuilderHubPanel'
@@ -132,7 +133,12 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
             <input value={draft.jobName} onChange={(event) => onDraft({ ...draft, jobName: event.target.value })} />
           </Field>
           <Field label={t('jobsDir')}>
-            <input value={draft.jobsDir} onChange={(event) => onDraft({ ...draft, jobsDir: event.target.value })} />
+            <FolderPathInput
+              chooseLabel={t('chooseFolder')}
+              label={t('jobsDirFolderPicker')}
+              value={draft.jobsDir}
+              onChange={(value) => onDraft({ ...draft, jobsDir: value })}
+            />
           </Field>
           <label>
             {t('jobDataset')}

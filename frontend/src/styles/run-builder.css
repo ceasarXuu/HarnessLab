@@ -8,12 +8,30 @@
 }
 .run-grid .custom-select { min-height: 34px; border: 1px solid var(--border-strong); background: var(--surface); }
 .run-grid .custom-select:focus-within { border-color: var(--foreground); background: var(--subtle); }
+.run-grid .custom-select.open {
+  flex-wrap: wrap;
+}
+.run-grid .select-menu {
+  position: static;
+  flex-basis: calc(100% + 2px);
+  width: calc(100% + 2px);
+  margin: 4px -1px -1px;
+  box-shadow: none;
+}
 .run-builder-actions {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+.folder-path-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.folder-path-input button {
+  min-height: 34px;
 }
 .run-config-groups {
   display: grid;

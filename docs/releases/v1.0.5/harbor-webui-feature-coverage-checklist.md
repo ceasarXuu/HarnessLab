@@ -107,7 +107,7 @@
 
 | JobConfig 字段域 | Harbor 支持项 | 当前 demo 可见项 | 状态 | 下一步 |
 |---|---|---|---|---|
-| 基础 | `job_name`、`jobs_dir`、dataset、agent、environment profile、`debug`、leaderboard inclusion、notes | New Job 基础 tab 已展示；model 内包在 Agent profile，environment 只选择已配置 profile，不作为 Job 级细节配置暴露；`env_file` 不进入 WebUI | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；CLI `--yes` 不作为用户配置项；环境变量由 Environment 模板统一承载。 |
+| 基础 | `job_name`、`jobs_dir`、dataset、agent、environment profile、`debug`、leaderboard inclusion、notes | New Job 基础 tab 已展示；`jobs_dir` 支持手动输入和文件夹选择；model 内包在 Agent profile，environment 只选择已配置 profile，不作为 Job 级细节配置暴露；`env_file` 不进入 WebUI | Covered | 后端接入时校验字段名与 JobConfig schema 对齐；桌面壳/后端接入原生文件夹选择后回填绝对路径；CLI `--yes` 不作为用户配置项；环境变量由 Environment 模板统一承载。 |
 | Tasks | `split`、`task_names`、`extra_instruction_paths` | New Job Tasks tab 以 Task 白名单列表和额外说明文件承载；默认全选，支持搜索过滤、单项开关、全部开启/全部关闭；搜索后批量开关只作用于当前过滤结果 | Covered | 后端接入时用 dataset manifest 驱动 task 列表，并将用户选择映射为 Harbor `task_names`；校验 extra instruction 路径。 |
 | 尝试与并发 | `n_attempts`、`n_concurrent_trials` | attempts、concurrency | Covered | 字段名和生成配置需对齐 Harbor。 |
 | Timeout | `timeout_multiplier`、`agent_timeout_multiplier`、`verifier_timeout_multiplier`、`agent_setup_timeout_multiplier`、`environment_build_timeout_multiplier` | 运行策略 tab 展示“超时策略”，标准/严格/放宽/自定义；高级区展示 setup/build timeout | Partial | 后端接入时将策略映射到 Harbor multiplier，并补充边界校验。 |

@@ -30,7 +30,7 @@ export function CustomSelect({
 
   return (
     <div
-      className={`custom-select ${className ?? ''}`}
+      className={`custom-select ${open ? 'open' : ''} ${className ?? ''}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setOpen(false)

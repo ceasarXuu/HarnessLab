@@ -102,6 +102,7 @@ test('launch action creates a queued draft job', async ({ page }) => {
   await page.getByRole('button', { name: 'New Job' }).click()
   await expect(page.getByRole('heading', { name: 'New Job' })).toBeVisible()
   await expect(page.getByLabel('job_name')).toHaveValue('terminal-bench-smoke')
+  await expect(page.getByRole('button', { name: 'Choose folder' })).toBeVisible()
   await expect(page.getByLabel('Model')).toHaveCount(0)
   await expect(page.getByLabel('Environment')).toContainText('Docker default')
   await expect(page.getByLabel('debug模式')).toContainText('disabled')
