@@ -271,7 +271,6 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
               <div className="metric-grid">
                 <Metric label={t('tasksCount')} value={String(selected.tasks)} />
                 <Metric label={t('sourceRef')} value={selected.source} />
-                <Metric label={t('splits')} value={selected.splits?.join(', ') ?? '-'} />
                 <Metric label={t('path')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.path : t('notDownloaded')} />
                 <Metric label={t('size')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.size : t('notDownloaded')} />
                 <Metric label={t('registry')} value={selected.registryUrl ?? '-'} />
