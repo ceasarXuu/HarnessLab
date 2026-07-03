@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { userEvent, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../i18n'
 import { events, jobs, trialRows } from '../mocks/demo'
@@ -76,6 +76,11 @@ export const DatasetDrawer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByText('terminal-bench'))
+    await expect(canvas.getByText('Dataset tasks')).toBeVisible()
+    await expect(canvas.queryByText('Manifest tools')).not.toBeInTheDocument()
+    await userEvent.type(canvas.getByLabelText('Search tasks'), 'sqlite')
+    await expect(canvas.getByText('sqlite-log-repair')).toBeVisible()
+    await expect(canvas.queryByText('apt-setup')).not.toBeInTheDocument()
   },
 }
 

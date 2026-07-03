@@ -28,6 +28,7 @@ const defaultImportDraft = {
 export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
+  const [taskSearch, setTaskSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -64,6 +65,13 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
         : [],
     [selected, taskRows],
   )
+  const visibleSelectedTasks = useMemo(() => {
+    const query = taskSearch.trim().toLowerCase()
+    if (!query) return selectedTasks
+    return selectedTasks.filter((row) =>
+      [row.name, row.description, row.state].some((value) => value.toLowerCase().includes(query)),
+    )
+  }, [selectedTasks, taskSearch])
 
   useEffect(() => {
     const activeDownloads = Object.entries(downloads).filter(([, value]) => value.status === 'downloading')
@@ -131,10 +139,13 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
     }))
     setSelected(nextRow)
     setExpandedTaskName(null)
+    setTaskSearch('')
     setDrawerOpen(true)
     setImportDialogOpen(false)
     setImportDraft(defaultImportDraft)
   }
+  const selectedDownloadState = selected ? downloadStateFor(selected) : { status: 'not-downloaded' as const }
+  const selectedIsRegistryDataset = selected?.registryUrl !== 'local'
 
   return (
     <main className="workspace single-page">
@@ -183,6 +194,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     onClick={() => {
                       setSelected(row)
                       setExpandedTaskName(null)
+                      setTaskSearch('')
                       setDrawerOpen(true)
                     }}
                   >
@@ -260,37 +272,35 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 <Metric label={t('tasksCount')} value={String(selected.tasks)} />
                 <Metric label={t('sourceRef')} value={selected.source} />
                 <Metric label={t('splits')} value={selected.splits?.join(', ') ?? '-'} />
-                <Metric label={t('digest')} value={selected.digest} />
-                <Metric label={t('updated')} value={selected.updated} />
-                <Metric label="registry_url" value={selected.registryUrl ?? '-'} />
-                <Metric label="registry_path" value={selected.registryPath ?? '-'} />
-                <Metric label="download_dir" value={selected.downloadDir ?? '-'} />
-                <Metric label="manifest" value={selected.manifestPath ?? '-'} />
-                <Metric label="include" value={selected.taskInclude ?? '-'} />
-                <Metric label="exclude" value={selected.taskExclude ?? '-'} />
-                <Metric label="ref" value={selected.ref ?? '-'} />
-                <Metric label="path" value={selected.path ?? '-'} />
-                <Metric label="overwrite" value={selected.overwrite ? 'true' : 'false'} />
+                <Metric label={t('path')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.path : t('notDownloaded')} />
+                <Metric label={t('size')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.size : t('notDownloaded')} />
+                <Metric label={t('registry')} value={selected.registryUrl ?? '-'} />
               </div>
               <div className="button-row tight">
-                <button className="secondary-button">
-                  <Download aria-hidden="true" />
-                  {t('download')}
-                </button>
-                <button className="secondary-button">{t('pullUpdates')}</button>
-                <button className="secondary-button">{t('publish')}</button>
-              </div>
-            </section>
-            <section className="surface rail-card">
-              <div className="rail-title">
-                <Database aria-hidden="true" />
-                <h3>{t('manifestTools')}</h3>
-              </div>
-              <div className="path-list">
-                <code>harbor init {selected.path ?? selected.name}</code>
-                <code>harbor add {selected.manifestPath ?? 'dataset.toml'} tasks/*</code>
-                <code>harbor remove {selected.manifestPath ?? 'dataset.toml'} task-name</code>
-                <code>harbor sync {selected.manifestPath ?? 'dataset.toml'}</code>
+                {selectedDownloadState.status === 'not-downloaded' && (
+                  <button className="secondary-button" onClick={() => startDownload(selected)}>
+                    <Download aria-hidden="true" />
+                    {t('download')}
+                  </button>
+                )}
+                {selectedDownloadState.status === 'downloading' && (
+                  <>
+                    <span className="progress-label">{selectedDownloadState.progress}%</span>
+                    <button className="secondary-button" onClick={() => cancelDownload(selected)}>
+                      <X aria-hidden="true" />
+                      {t('cancelDownload')}
+                    </button>
+                  </>
+                )}
+                {selectedDownloadState.status === 'downloaded' && selectedIsRegistryDataset && (
+                  <button className="secondary-button">{t('pullUpdates')}</button>
+                )}
+                {selectedDownloadState.status === 'downloaded' && (
+                  <button className="secondary-button" onClick={() => setDeleteTarget(selected)}>
+                    <Trash2 aria-hidden="true" />
+                    {t('delete')}
+                  </button>
+                )}
               </div>
             </section>
             <section className="surface rail-card">
@@ -298,12 +308,21 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 <Box aria-hidden="true" />
                 <h3>{t('datasetTasks')}</h3>
               </div>
+              <label className="search-field drawer-search">
+                <Search aria-hidden="true" />
+                <input
+                  aria-label={t('searchTasks')}
+                  value={taskSearch}
+                  onChange={(event) => setTaskSearch(event.target.value)}
+                  placeholder={t('searchTasks')}
+                />
+              </label>
               <div className="mini-table">
                 <div className="mini-row task-row mini-header" role="row">
                   <span>{t('taskName')}</span>
                   <span>{t('actions')}</span>
                 </div>
-                {selectedTasks.map((row) => (
+                {visibleSelectedTasks.map((row) => (
                   <div key={row.name} className="task-entry">
                     <div
                       className="mini-row task-row task-toggle"
@@ -335,6 +354,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     )}
                   </div>
                 ))}
+                {visibleSelectedTasks.length === 0 && <div className="empty-row">{t('noTasksAvailable')}</div>}
               </div>
             </section>
           </aside>

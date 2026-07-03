@@ -79,6 +79,16 @@ tbody tr:hover,
   overflow-x: auto;
   padding-bottom: 2px;
 }
+.drawer-search {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.empty-row {
+  padding: 12px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface-muted);
+}
 .mini-row {
   display: grid;
   gap: 8px;
