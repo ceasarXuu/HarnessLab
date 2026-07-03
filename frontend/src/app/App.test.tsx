@@ -126,7 +126,7 @@ describe('App', () => {
     expect(within(datasetDialog).getByText('Install packages and verify shell setup.')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Run single task' }).length).toBeGreaterThan(0)
     expect(within(datasetDialog).queryByText('Splits')).not.toBeInTheDocument()
-    expect(within(datasetDialog).queryByText('test', { exact: true })).not.toBeInTheDocument()
+    expect(within(datasetDialog).getByLabelText('Split')).toHaveTextContent('All splits')
     expect(within(datasetDialog).getByText('Registry')).toBeInTheDocument()
     expect(within(datasetDialog).queryByText('registry_url')).not.toBeInTheDocument()
     fireEvent.change(within(datasetDialog).getByLabelText('Search tasks'), { target: { value: 'sqlite' } })

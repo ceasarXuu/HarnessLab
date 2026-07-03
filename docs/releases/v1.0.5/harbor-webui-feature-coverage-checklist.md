@@ -150,7 +150,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
 | Dataset list | `harbor dataset list` | `GET /api/benchmarks` 静态返回两项 | Datasets 表格 seed 数据 + 本地导入 mock row | Partial | 接 Harbor registry list，支持分页、registry source。 |
-| Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 默认展示 task 数、source、本地 path/size、registry 与 task 列表；底层 digest/ref/split/manifest 命令不默认展示 | Partial | 接真实 dataset detail API，必要时增加高级 metadata 折叠区。 |
+| Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 默认展示 task 数、source、本地 path/size、registry 与 task 列表，task 列表支持 split 筛选与搜索；底层 digest/ref/manifest 命令不默认展示 | Partial | 接真实 dataset detail API，必要时增加高级 metadata 折叠区。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | 列表和 drawer 按下载状态展示下载、取消、拉取更新、删除本地数据 | Partial | 接真实 download/cancel/delete/pull API。 |
 | Dataset local import/init | `harbor dataset init`、`harbor add`、`harbor run --path` | 无 | Datasets 页“导入本地 Dataset”mock 表单，登记本地路径 | Partial | 接真实本地路径选择、manifest 探测与 JobConfig source。 |
 | Dataset visibility | `harbor dataset visibility` | 无 | Dataset drawer 不展示 leaderboard inclusion | Deferred | 若 Harbor dataset visibility 进入 v1.0.5，再定义独立 dataset 可见性 UI。 |

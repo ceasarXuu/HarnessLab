@@ -78,6 +78,7 @@ export const DatasetDrawer: Story = {
     await userEvent.click(canvas.getByText('terminal-bench'))
     await expect(canvas.getByText('Dataset tasks')).toBeVisible()
     await expect(canvas.queryByText('Manifest tools')).not.toBeInTheDocument()
+    await expect(canvas.getByLabelText('Split')).toHaveTextContent('All splits')
     await userEvent.type(canvas.getByLabelText('Search tasks'), 'sqlite')
     await expect(canvas.getByText('sqlite-log-repair')).toBeVisible()
     await expect(canvas.queryByText('apt-setup')).not.toBeInTheDocument()

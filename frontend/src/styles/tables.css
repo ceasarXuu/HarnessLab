@@ -81,7 +81,15 @@ tbody tr:hover,
 }
 .drawer-search {
   width: 100%;
+}
+.drawer-task-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px);
+  gap: 8px;
   margin-bottom: 10px;
+}
+.drawer-task-toolbar .toolbar-select.custom-select {
+  width: 100%;
 }
 .empty-row {
   padding: 12px;

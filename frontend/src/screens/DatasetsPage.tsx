@@ -1,6 +1,7 @@
 import { Box, Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { CustomSelect } from '../ui/components/CustomSelect'
 import type { DatasetRow, TaskRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
@@ -29,6 +30,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [taskSearch, setTaskSearch] = useState('')
+  const [taskSplit, setTaskSplit] = useState('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -67,11 +69,18 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
   )
   const visibleSelectedTasks = useMemo(() => {
     const query = taskSearch.trim().toLowerCase()
-    if (!query) return selectedTasks
-    return selectedTasks.filter((row) =>
+    const splitFilteredTasks = taskSplit === 'all'
+      ? selectedTasks
+      : selectedTasks.filter((row) => row.splits?.includes(taskSplit))
+    if (!query) return splitFilteredTasks
+    return splitFilteredTasks.filter((row) =>
       [row.name, row.description, row.state].some((value) => value.toLowerCase().includes(query)),
     )
-  }, [selectedTasks, taskSearch])
+  }, [selectedTasks, taskSearch, taskSplit])
+  const splitOptions = [
+    { label: t('allSplits'), value: 'all' },
+    ...(selected?.splits ?? []).map((split) => ({ label: split, value: split })),
+  ]
 
   useEffect(() => {
     const activeDownloads = Object.entries(downloads).filter(([, value]) => value.status === 'downloading')
@@ -140,6 +149,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
     setSelected(nextRow)
     setExpandedTaskName(null)
     setTaskSearch('')
+    setTaskSplit('all')
     setDrawerOpen(true)
     setImportDialogOpen(false)
     setImportDraft(defaultImportDraft)
@@ -195,6 +205,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                       setSelected(row)
                       setExpandedTaskName(null)
                       setTaskSearch('')
+                      setTaskSplit('all')
                       setDrawerOpen(true)
                     }}
                   >
@@ -307,15 +318,24 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 <Box aria-hidden="true" />
                 <h3>{t('datasetTasks')}</h3>
               </div>
-              <label className="search-field drawer-search">
-                <Search aria-hidden="true" />
-                <input
-                  aria-label={t('searchTasks')}
-                  value={taskSearch}
-                  onChange={(event) => setTaskSearch(event.target.value)}
-                  placeholder={t('searchTasks')}
+              <div className="drawer-task-toolbar">
+                <label className="search-field drawer-search">
+                  <Search aria-hidden="true" />
+                  <input
+                    aria-label={t('searchTasks')}
+                    value={taskSearch}
+                    onChange={(event) => setTaskSearch(event.target.value)}
+                    placeholder={t('searchTasks')}
+                  />
+                </label>
+                <CustomSelect
+                  ariaLabel={t('split')}
+                  className="toolbar-select"
+                  value={taskSplit}
+                  options={splitOptions}
+                  onChange={setTaskSplit}
                 />
-              </label>
+              </div>
               <div className="mini-table">
                 <div className="mini-row task-row mini-header" role="row">
                   <span>{t('taskName')}</span>

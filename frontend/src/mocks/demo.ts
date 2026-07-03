@@ -92,6 +92,7 @@ export interface TaskRow {
   dataset: string
   description: string
   jobId: string
+  splits?: string[]
   os: string
   state: string
   duration: string
