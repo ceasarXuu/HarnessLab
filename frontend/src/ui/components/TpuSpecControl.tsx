@@ -1,3 +1,5 @@
+import { CustomSelect } from './CustomSelect'
+
 const tpuTypes = ['none', 'v6e', 'trillium', 'v4', 'tpu-v6e-slice', 'tpu7x']
 
 interface TpuSpecControlProps {
@@ -24,11 +26,12 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
       <span className="tpu-spec-label">{label}</span>
       <label>
         TPU type
-        <select value={parsed.type} onChange={(event) => update({ type: event.target.value })}>
-          {tpuTypes.map((type) => (
-            <option key={type} value={type}>{type === 'none' ? 'Not configured' : type}</option>
-          ))}
-        </select>
+        <CustomSelect
+          ariaLabel="TPU type"
+          value={parsed.type}
+          options={tpuTypes.map((type) => ({ label: type === 'none' ? 'Not configured' : type, value: type }))}
+          onChange={(type) => update({ type })}
+        />
       </label>
       <label>
         Topology X

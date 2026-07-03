@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
+import { Metric } from './Metric'
 
 interface DetailRailProps {
   job: HarborJob
@@ -160,13 +161,4 @@ function getJobRootPath(job: HarborJob) {
   }
 
   return `/Users/xuzhang/.ornnlab/HarnessLab/${job.jobDir ?? `jobs/${job.id}`}`
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
 }

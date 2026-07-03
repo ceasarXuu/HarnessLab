@@ -1,8 +1,8 @@
-import { Box, Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
+import { Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
-import { CustomSelect } from '../ui/components/CustomSelect'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
+import { DatasetDetail } from '../ui/components/DatasetDetail'
 import type { DatasetRow, TaskRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
@@ -269,115 +269,23 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
       </section>
       {selected && (
         <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <aside className="detail-rail dataset-detail">
-            <section className="surface rail-card">
-              <div className="rail-heading">
-                <div>
-                  <h2>{selected.name}</h2>
-                  <p>{selected.version}</p>
-                </div>
-                <span className={`status-dot ${selected.visibility === 'public' ? 'success' : 'queued'}`}>
-                  {selected.visibility}
-                </span>
-              </div>
-              <div className="metric-grid">
-                <Metric label={t('tasksCount')} value={String(selected.tasks)} />
-                <Metric label={t('sourceRef')} value={selected.source} />
-                <Metric label={t('path')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.path : t('notDownloaded')} />
-                <Metric label={t('size')} value={selectedDownloadState.status === 'downloaded' ? selectedDownloadState.size : t('notDownloaded')} />
-                <Metric label={t('registry')} value={selected.registryUrl ?? '-'} />
-              </div>
-              <div className="button-row tight">
-                {selectedDownloadState.status === 'not-downloaded' && (
-                  <button className="secondary-button" onClick={() => startDownload(selected)}>
-                    <Download aria-hidden="true" />
-                    {t('download')}
-                  </button>
-                )}
-                {selectedDownloadState.status === 'downloading' && (
-                  <>
-                    <span className="progress-label">{selectedDownloadState.progress}%</span>
-                    <button className="secondary-button" onClick={() => cancelDownload(selected)}>
-                      <X aria-hidden="true" />
-                      {t('cancelDownload')}
-                    </button>
-                  </>
-                )}
-                {selectedDownloadState.status === 'downloaded' && selectedIsRegistryDataset && (
-                  <button className="secondary-button">{t('pullUpdates')}</button>
-                )}
-                {selectedDownloadState.status === 'downloaded' && (
-                  <button className="secondary-button" onClick={() => setDeleteTarget(selected)}>
-                    <Trash2 aria-hidden="true" />
-                    {t('delete')}
-                  </button>
-                )}
-              </div>
-            </section>
-            <section className="surface rail-card">
-              <div className="rail-title">
-                <Box aria-hidden="true" />
-                <h3>{t('datasetTasks')}</h3>
-              </div>
-              <div className="drawer-task-toolbar">
-                <label className="search-field drawer-search">
-                  <Search aria-hidden="true" />
-                  <input
-                    aria-label={t('searchTasks')}
-                    value={taskSearch}
-                    onChange={(event) => setTaskSearch(event.target.value)}
-                    placeholder={t('searchTasks')}
-                  />
-                </label>
-                <CustomSelect
-                  ariaLabel={t('split')}
-                  className="toolbar-select"
-                  value={taskSplit}
-                  options={splitOptions}
-                  onChange={setTaskSplit}
-                />
-              </div>
-              <div className="mini-table">
-                <div className="mini-row task-row mini-header" role="row">
-                  <span>{t('taskName')}</span>
-                  <span>{t('actions')}</span>
-                </div>
-                {visibleSelectedTasks.map((row) => (
-                  <div key={row.name} className="task-entry">
-                    <div
-                      className="mini-row task-row task-toggle"
-                      role="button"
-                      tabIndex={0}
-                      aria-expanded={expandedTaskName === row.name}
-                      onClick={() => setExpandedTaskName((current) => (current === row.name ? null : row.name))}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter' && event.key !== ' ') return
-                        event.preventDefault()
-                        setExpandedTaskName((current) => (current === row.name ? null : row.name))
-                      }}
-                    >
-                      <span>{row.name}</span>
-                      <div className="row-actions">
-                        <button
-                          className="row-action"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {t('runSingleTask')}
-                        </button>
-                      </div>
-                    </div>
-                    {expandedTaskName === row.name && (
-                      <div className="task-expanded">
-                        <span>{t('description')}</span>
-                        <p>{row.description}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {visibleSelectedTasks.length === 0 && <div className="empty-row">{t('noTasksAvailable')}</div>}
-              </div>
-            </section>
-          </aside>
+          <DatasetDetail
+            downloadState={selectedDownloadState}
+            expandedTaskName={expandedTaskName}
+            isRegistryDataset={selectedIsRegistryDataset}
+            selected={selected}
+            splitOptions={splitOptions}
+            taskSearch={taskSearch}
+            taskSplit={taskSplit}
+            tasks={visibleSelectedTasks}
+            t={t}
+            onCancelDownload={cancelDownload}
+            onDelete={setDeleteTarget}
+            onExpandedTaskName={setExpandedTaskName}
+            onStartDownload={startDownload}
+            onTaskSearch={setTaskSearch}
+            onTaskSplit={setTaskSplit}
+          />
         </DetailDrawer>
       )}
       {deleteTarget && (
@@ -434,14 +342,5 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
         </ConfirmDialog>
       )}
     </main>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   )
 }

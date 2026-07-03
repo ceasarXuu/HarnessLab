@@ -2,6 +2,7 @@ import { Bot, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
+import { AgentDetail } from '../ui/components/AgentDetail'
 import type { AgentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
@@ -112,63 +113,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
       </section>
       {selected && (
         <DetailDrawer label={t('selectedAgent')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <aside className="detail-rail agent-detail">
-            <section className="surface rail-card">
-              <div className="rail-heading">
-                <div>
-                  <h2>{selected.agentName}</h2>
-                  <p>{selected.harness}</p>
-                </div>
-                <span className={`status-dot ${selected.status === 'needs-token' ? 'warning' : 'success'}`}>
-                  {selected.status}
-                </span>
-              </div>
-              <div className="metric-grid">
-                <Metric label={t('agentName')} value={selected.agentName} />
-                <Metric label={t('harness')} value={selected.harness} />
-                <Metric label={t('agentType')} value={selected.type} />
-                <Metric label={t('models')} value={selected.models} />
-                <Metric label={t('sourceRef')} value={selected.source} />
-                <Metric label={t('updated')} value={selected.updated} />
-                <Metric label="env readiness" value={selected.env ?? '-'} />
-                <Metric label="kwargs" value={selected.kwargs ?? '-'} />
-                <Metric label="runtime" value={selected.runtime ?? '-'} />
-                <Metric label="setup timeout" value={selected.setupTimeout ?? '-'} />
-                <Metric label="max timeout" value={selected.maxTimeout ?? '-'} />
-                <Metric label="allowed hosts" value={selected.allowedHosts ?? '-'} />
-                <Metric label="compatible models" value={selected.compatibleModels ?? '-'} />
-              </div>
-            </section>
-            <section className="surface rail-card">
-              <div className="rail-title">
-                <Bot aria-hidden="true" />
-                <h3>{t('adapter')}</h3>
-              </div>
-              <div className="path-list">
-                <code>{selected.adapter}</code>
-                <code>{selected.skills ?? 'skills: none'}</code>
-                <code>{selected.mcp ?? 'mcp: none'}</code>
-                <code>{selected.adapterReview ?? 'adapter review: none'}</code>
-              </div>
-              <div className="button-row tight">
-                <button className="secondary-button">Adapter init</button>
-                <button className="secondary-button">Adapter review</button>
-              </div>
-            </section>
-            <section className="surface rail-card">
-              <div className="rail-title">
-                <Bot aria-hidden="true" />
-                <h3>{t('adapterTools')}</h3>
-              </div>
-              <div className="path-list">
-                <code>harbor adapter init --agent {selected.harness}</code>
-                <code>harbor adapter review {selected.adapter}</code>
-                <code>max_timeout_sec: {selected.maxTimeout ?? '-'}</code>
-                <code>override_setup_timeout_sec: {selected.setupTimeout ?? '-'}</code>
-                <code>extra_allowed_hosts: {selected.allowedHosts ?? '-'}</code>
-              </div>
-            </section>
-          </aside>
+          <AgentDetail agent={selected} t={t} />
         </DetailDrawer>
       )}
       {deleteTarget && (
@@ -182,14 +127,5 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         />
       )}
     </main>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   )
 }
