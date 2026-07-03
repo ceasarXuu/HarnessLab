@@ -2,6 +2,7 @@ import { Box, Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { CustomSelect } from '../ui/components/CustomSelect'
+import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import type { DatasetRow, TaskRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
@@ -380,28 +381,24 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
         </DetailDrawer>
       )}
       {deleteTarget && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteDatasetTitle')}>
-            <div className="confirm-heading">
-              <h2>{t('deleteDatasetTitle')}</h2>
-            </div>
-            <ul className="cleanup-impact-list">
-              <li>{t('deleteDatasetLocalImpact')}</li>
-              <li>{datasetKey(deleteTarget)}</li>
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmDelete')}
+          impacts={[t('deleteDatasetLocalImpact'), datasetKey(deleteTarget)]}
+          title={t('deleteDatasetTitle')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        />
       )}
       {importDialogOpen && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('importLocalDataset')}>
-            <div className="confirm-heading">
-              <h2>{t('importLocalDataset')}</h2>
-            </div>
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmImport')}
+          impacts={[t('importLocalDatasetImpact')]}
+          title={t('importLocalDataset')}
+          onCancel={() => setImportDialogOpen(false)}
+          onConfirm={confirmImportDataset}
+        >
             <div className="import-dataset-form">
               <label>
                 {t('datasetName')}
@@ -434,15 +431,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 />
               </label>
             </div>
-            <ul className="cleanup-impact-list">
-              <li>{t('importLocalDatasetImpact')}</li>
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setImportDialogOpen(false)}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmImportDataset}>{t('confirmImport')}</button>
-            </div>
-          </section>
-        </div>
+        </ConfirmDialog>
       )}
     </main>
   )

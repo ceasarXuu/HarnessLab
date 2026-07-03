@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { SystemRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
+import { ConfirmDialog } from '../ui/components/ConfirmDialog'
+import { Toast } from '../ui/components/Toast'
 
 interface SystemPageProps {
   rows: SystemRow[]
@@ -147,29 +149,17 @@ export function SystemPage({ rows, t }: SystemPageProps) {
         </div>
       </section>
       {toast && (
-        <div className="toast" role="status">
-          <span>{toast.message}</span>
-          <span className="toast-countdown">{toast.remaining}s</span>
-          <button className="toast-close" aria-label={t('dismiss')} onClick={() => setToast(null)}>x</button>
-        </div>
+        <Toast dismissLabel={t('dismiss')} message={toast.message} remaining={toast.remaining} onDismiss={() => setToast(null)} />
       )}
       {confirmAction && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={confirmContent.title}>
-            <div className="confirm-heading">
-              <h2>{confirmContent.title}</h2>
-            </div>
-            <ul className="cleanup-impact-list">
-              {confirmContent.impact.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={closeConfirm}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmAndClose}>{confirmContent.confirm}</button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={confirmContent.confirm}
+          impacts={confirmContent.impact}
+          title={confirmContent.title}
+          onCancel={closeConfirm}
+          onConfirm={confirmAndClose}
+        />
       )}
     </main>
   )

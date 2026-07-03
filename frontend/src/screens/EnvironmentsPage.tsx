@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import type { EnvironmentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { KeyValueControl } from '../ui/components/KeyValueControl'
 import { TpuSpecControl } from '../ui/components/TpuSpecControl'
 
@@ -254,21 +255,14 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
         </DetailDrawer>
       )}
       {deleteTarget && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteEnvironmentTitle')}>
-            <div className="confirm-heading">
-              <h2>{t('deleteEnvironmentTitle')}</h2>
-            </div>
-            <ul className="cleanup-impact-list">
-              <li>{t('deleteEnvironmentLocalImpact')}</li>
-              <li>{deleteTarget.name}</li>
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmDelete')}
+          impacts={[t('deleteEnvironmentLocalImpact'), deleteTarget.name]}
+          title={t('deleteEnvironmentTitle')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </main>
   )

@@ -1,6 +1,7 @@
 import { Bot, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import type { AgentRow } from '../mocks/demo'
 import type { Translate } from '../i18n'
 
@@ -171,21 +172,14 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
         </DetailDrawer>
       )}
       {deleteTarget && (
-        <div className="confirm-overlay">
-          <section className="surface confirm-dialog" role="dialog" aria-modal="true" aria-label={t('deleteAgentTitle')}>
-            <div className="confirm-heading">
-              <h2>{t('deleteAgentTitle')}</h2>
-            </div>
-            <ul className="cleanup-impact-list">
-              <li>{t('deleteAgentLocalImpact')}</li>
-              <li>{deleteTarget.agentName}</li>
-            </ul>
-            <div className="button-row confirm-actions">
-              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>{t('cancel')}</button>
-              <button className="primary-button" onClick={confirmDelete}>{t('confirmDelete')}</button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmDelete')}
+          impacts={[t('deleteAgentLocalImpact'), deleteTarget.agentName]}
+          title={t('deleteAgentTitle')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </main>
   )

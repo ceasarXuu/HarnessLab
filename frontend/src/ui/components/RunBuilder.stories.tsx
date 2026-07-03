@@ -4,6 +4,7 @@ import { getTranslator } from '../../i18n'
 import { initialDraft } from '../../mocks/demo'
 import { datasetRows, environmentRows, taskRows } from '../../mocks/demoCatalog'
 import { RunBuilder } from './RunBuilder'
+import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
 function RunBuilderFixture({ initial = initialDraft }: { initial?: typeof initialDraft }) {
   const [draft, setDraft] = useState(initial)
@@ -36,3 +37,19 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NewJobFlow: Story = {}
+
+function RuntimePanelFixture() {
+  const [draft, setDraft] = useState(initialDraft)
+
+  return (
+    <main className="workspace single-page">
+      <section className="surface rail-card">
+        <RunBuilderRuntimePanel draft={draft} t={getTranslator('en')} onDraft={setDraft} />
+      </section>
+    </main>
+  )
+}
+
+export const RuntimePanel: StoryObj<typeof RuntimePanelFixture> = {
+  render: () => <RuntimePanelFixture />,
+}

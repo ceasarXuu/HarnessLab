@@ -2,12 +2,20 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
+import { ConfirmDialog } from './ConfirmDialog'
 import { CustomSelect } from './CustomSelect'
+import { FolderPathInput } from './FolderPathInput'
+import { KeyValueControl } from './KeyValueControl'
 import { Field, Toggle } from './RunBuilderChrome'
+import { Toast } from './Toast'
+import { TpuSpecControl } from './TpuSpecControl'
 
 function ControlsFixture() {
   const [dataset, setDataset] = useState('terminal-bench@2.0')
+  const [envVars, setEnvVars] = useState('HTTP_PROXY=${HTTP_PROXY:-}')
+  const [folder, setFolder] = useState('jobs/terminal-bench-smoke')
   const [enabled, setEnabled] = useState(true)
+  const [tpu, setTpu] = useState('v6e=2x4')
   const t = getTranslator('en')
 
   return (
@@ -32,6 +40,15 @@ function ControlsFixture() {
         </div>
       </section>
       <section className="surface rail-card">
+        <div className="run-grid">
+          <Field label="jobs_dir" wide>
+            <FolderPathInput chooseLabel="Choose" label="Choose folder" value={folder} onChange={setFolder} />
+          </Field>
+          <KeyValueControl label="env" value={envVars} onChange={setEnvVars} />
+          <TpuSpecControl label="tpu" value={tpu} onChange={setTpu} />
+        </div>
+      </section>
+      <section className="surface rail-card">
         <div className="drawer-task-toolbar">
           <label className="search-field drawer-search">
             <input aria-label="Search tasks" placeholder="Search tasks" />
@@ -53,6 +70,26 @@ function ControlsFixture() {
   )
 }
 
+function FeedbackFixture() {
+  const [toastOpen, setToastOpen] = useState(true)
+
+  return (
+    <main className="workspace single-page">
+      <ConfirmDialog
+        cancelLabel="Cancel"
+        confirmLabel="Confirm cleanup"
+        impacts={['Deletes local Harbor cache directory ~/.cache/harbor.', 'Next dataset access may recreate files.']}
+        title="Clean local cache"
+        onCancel={() => undefined}
+        onConfirm={() => undefined}
+      />
+      {toastOpen && (
+        <Toast dismissLabel="Dismiss" message="OrnnLab is already up to date" remaining={3} onDismiss={() => setToastOpen(false)} />
+      )}
+    </main>
+  )
+}
+
 const meta = {
   title: 'Components/Controls',
   component: ControlsFixture,
@@ -69,5 +106,14 @@ export const FormControls: Story = {
     await expect(split).toHaveTextContent('All splits')
     const bounds = split.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
+  },
+}
+
+export const FeedbackControls: StoryObj<typeof FeedbackFixture> = {
+  render: () => <FeedbackFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('dialog', { name: 'Clean local cache' })).toBeVisible()
+    await expect(canvas.getByRole('status')).toHaveTextContent('3s')
   },
 }
