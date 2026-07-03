@@ -204,14 +204,24 @@
 .header-select.custom-select,
 .toolbar-select.custom-select {
   width: auto;
+  box-sizing: border-box;
+}
+.header-select.custom-select {
+  padding: 0 6px 0 8px;
+}
+.toolbar-select.custom-select {
+  min-width: 180px;
+  padding: 0 8px;
 }
 .header-select .select-trigger {
   min-width: 54px;
   padding: 0 4px 0 2px;
 }
 .toolbar-select .select-trigger {
-  min-width: 210px;
-  padding: 0 8px 0 0;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
 }
 .select-trigger svg {
   width: 15px;

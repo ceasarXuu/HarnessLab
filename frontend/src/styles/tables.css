@@ -90,6 +90,7 @@ tbody tr:hover,
 }
 .drawer-task-toolbar .toolbar-select.custom-select {
   width: 100%;
+  min-width: 0;
 }
 .empty-row {
   padding: 12px;
