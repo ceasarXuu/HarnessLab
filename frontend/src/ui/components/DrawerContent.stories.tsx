@@ -16,10 +16,18 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Agent: Story = {
+export const BuiltInAgent: Story = {
   render: () => (
     <main className="workspace single-page">
       <AgentDetail agent={agentRows[0]} t={t} />
+    </main>
+  ),
+}
+
+export const CustomAgent: Story = {
+  render: () => (
+    <main className="workspace single-page">
+      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} />
     </main>
   ),
 }

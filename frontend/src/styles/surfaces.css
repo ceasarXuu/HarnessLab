@@ -136,6 +136,34 @@ code {
   overflow-wrap: anywhere;
   white-space: normal;
 }
+.agent-advanced {
+  display: grid;
+  gap: 12px;
+}
+.agent-advanced summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.agent-advanced summary::-webkit-details-marker {
+  display: none;
+}
+.agent-advanced summary::after {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--muted);
+  content: "";
+}
+.agent-advanced[open] summary::after {
+  transform: rotate(90deg);
+}
 .drawer-layer {
   position: fixed;
   inset: 0;

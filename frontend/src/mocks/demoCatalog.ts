@@ -198,7 +198,7 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '7200s',
     allowedHosts: 'api.anthropic.com',
     compatibleModels: 'claude-haiku-4-5, claude-sonnet-4-5',
-    adapterReview: 'harbor adapter review passed',
+    adapterReview: 'config check passed',
   },
   {
     agentName: 'Codex CLI default',
@@ -218,7 +218,7 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '7200s',
     allowedHosts: 'api.openai.com',
     compatibleModels: 'gpt-5.1, gpt-5.1-mini',
-    adapterReview: 'harbor adapter review pending',
+    adapterReview: 'config check pending',
   },
   {
     agentName: 'Oracle baseline',
