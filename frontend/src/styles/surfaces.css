@@ -90,6 +90,22 @@ code {
   font-weight: 500;
   line-height: 1.35;
 }
+.agent-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.agent-form-grid label,
+.agent-form-grid .metric,
+.agent-form-grid .key-value-control {
+  min-width: 0;
+}
+.agent-form-grid textarea {
+  min-height: 72px;
+}
+.field-wide {
+  grid-column: 1 / -1;
+}
 .tight {
   margin: 14px 0 0;
 }
@@ -163,6 +179,11 @@ code {
 }
 .agent-advanced[open] summary::after {
   transform: rotate(90deg);
+}
+@media (max-width: 760px) {
+  .agent-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .drawer-layer {
   position: fixed;

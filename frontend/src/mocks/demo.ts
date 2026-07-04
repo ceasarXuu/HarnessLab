@@ -177,6 +177,15 @@ export interface AgentRow {
   maxTimeout?: string
   allowedHosts?: string
   compatibleModels?: string
+  reasoningEffort?: string
+  reasoningSummary?: string
+  temperature?: string
+  contextLength?: string
+  permissionMode?: string
+  allowedTools?: string
+  disallowedTools?: string
+  apiKeyEnv?: string
+  baseUrlEnv?: string
 }
 
 export interface EnvironmentRow {
