@@ -352,7 +352,6 @@ interface Agent {
   maxTimeout?: string
   allowedHosts?: string
   compatibleModels?: string
-  adapterReview?: string
 }
 ```
 
@@ -482,7 +481,6 @@ interface CreateJobResponse {
 | `GET` | `/agents/{agentId}` | Agent 详情抽屉 |
 | `PATCH` | `/agents/{agentId}` | 更新 custom Agent 配置 |
 | `DELETE` | `/agents/{agentId}` | 删除 custom Agent |
-| `POST` | `/agents/{agentId}/adapter/review` | 检查 harness/adapter 配置 |
 
 `DELETE /agents/{agentId}` 对 built-in Agent 必须返回 `403` 或业务错误 `AGENT_BUILT_IN_IMMUTABLE`。
 
@@ -567,7 +565,7 @@ interface CacheCleanResult {
 | Datasets 列表 | 搜索、下载、取消下载、删除本地 | `GET /datasets`、`POST /download`、`POST /download/cancel`、`DELETE /local` |
 | Dataset 详情 | task 列表、task 操作、新建 Job | `/datasets/{datasetRef}/tasks`、task 子接口、`POST /jobs` |
 | Agents 列表 | 搜索、新建、删除 custom | `GET /agents`、`POST /agents`、`DELETE /agents/{agentId}` |
-| Agent 详情 | 查看 harness、运行配置、adapter review | `GET /agents/{agentId}`、`POST /adapter/review` |
+| Agent 详情 | 查看 harness、运行配置 | `GET /agents/{agentId}` |
 | Leaderboard | dataset 搜索/切换、移除 Job、打开 Job 详情 | `/leaderboard/datasets`、`GET /leaderboard`、`PATCH /jobs/{jobId}/leaderboard`、`GET /jobs/{jobId}` |
 | System | 健康检查、检查更新、重启、清理缓存 | `/system/health`、`/service/update/check`、`/service/restart`、cache clean 接口 |
 

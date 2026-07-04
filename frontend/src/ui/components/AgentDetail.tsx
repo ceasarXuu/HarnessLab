@@ -20,10 +20,7 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
             <h2>{agent.agentName}</h2>
             <p>{agent.harness}</p>
           </div>
-          <div className="rail-heading-actions">
-            <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
-            <button className="secondary-button compact-button">{t('checkConfig')}</button>
-          </div>
+          <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
         </div>
         <div className="metric-grid">
           <Metric label={t('agentName')} value={agent.agentName} />
@@ -52,19 +49,10 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
           <Metric label={t('mcpConfig')} value={agent.mcp ?? '-'} />
         </div>
       </section>
-      <section className="surface rail-card">
-        <div className="rail-title">
-          <Bot aria-hidden="true" />
-          <h3>{t('configReview')}</h3>
-        </div>
-        <div className="metric-grid">
-          <Metric label={t('lastCheck')} value={agent.adapterReview ?? '-'} />
-          <Metric label={t('entrypoint')} value={agent.adapter} />
-        </div>
-      </section>
       <details className="surface rail-card agent-advanced">
         <summary>{t('advancedDefaults')}</summary>
         <div className="metric-grid">
+          <Metric label={t('entrypoint')} value={agent.adapter} />
           <Metric label={t('runtimeDefaults')} value={agent.runtime ?? '-'} />
           <Metric label={t('setupTimeout')} value={agent.setupTimeout ?? '-'} />
           <Metric label={t('maxTimeout')} value={agent.maxTimeout ?? '-'} />

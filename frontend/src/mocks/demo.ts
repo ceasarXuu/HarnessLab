@@ -177,7 +177,6 @@ export interface AgentRow {
   maxTimeout?: string
   allowedHosts?: string
   compatibleModels?: string
-  adapterReview?: string
 }
 
 export interface EnvironmentRow {

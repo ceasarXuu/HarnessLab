@@ -198,7 +198,6 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '7200s',
     allowedHosts: 'api.anthropic.com',
     compatibleModels: 'claude-haiku-4-5, claude-sonnet-4-5',
-    adapterReview: 'config check passed',
   },
   {
     agentName: 'Codex CLI default',
@@ -218,7 +217,6 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '7200s',
     allowedHosts: 'api.openai.com',
     compatibleModels: 'gpt-5.1, gpt-5.1-mini',
-    adapterReview: 'config check pending',
   },
   {
     agentName: 'Oracle baseline',
@@ -238,7 +236,6 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '900s',
     allowedHosts: 'none',
     compatibleModels: 'local-sim',
-    adapterReview: 'built-in oracle',
   },
   {
     agentName: 'Local repair agent',
@@ -258,7 +255,6 @@ export const agentRows: AgentRow[] = [
     maxTimeout: '3600s',
     allowedHosts: 'localhost, model.internal',
     compatibleModels: 'qwen3-coder-local',
-    adapterReview: 'needs token before review',
   },
 ]
 
