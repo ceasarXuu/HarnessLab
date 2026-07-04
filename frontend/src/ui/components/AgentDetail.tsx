@@ -238,8 +238,12 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function ModelListControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const models = parseModelNames(value)
-  const commit = (nextModels: string[]) => onChange(formatModelNames(nextModels))
+  const [models, setModels] = useState(() => parseModelNames(value))
+
+  const commit = (nextModels: string[]) => {
+    setModels(nextModels.length ? nextModels : [''])
+    onChange(formatModelNames(nextModels))
+  }
 
   return (
     <div className="model-list-control field-wide">
@@ -253,16 +257,18 @@ function ModelListControl({ label, value, onChange }: { label: string; value: st
       <div className="rule-list-rows">
         {models.map((modelName, index) => (
           <div className="rule-list-row" key={index}>
-            <label>
-              model-name
-              <input
-                value={modelName}
-                onChange={(event) => commit(models.map((item, rowIndex) => rowIndex === index ? event.target.value : item))}
-              />
-            </label>
-            <button className="secondary-button compact-action" type="button" onClick={() => commit(models.filter((_, rowIndex) => rowIndex !== index))}>
+            <input
+              aria-label="Model name"
+              value={modelName}
+              onChange={(event) => commit(models.map((item, rowIndex) => rowIndex === index ? event.target.value : item))}
+            />
+            <button
+              aria-label={`Delete model ${modelName || index + 1}`}
+              className="icon-button"
+              type="button"
+              onClick={() => commit(models.filter((_, rowIndex) => rowIndex !== index))}
+            >
               <Trash2 aria-hidden="true" />
-              Delete
             </button>
           </div>
         ))}

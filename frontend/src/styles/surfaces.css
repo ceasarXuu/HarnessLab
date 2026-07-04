@@ -104,6 +104,20 @@ code {
 .agent-form-grid textarea {
   min-height: 72px;
 }
+.model-list-control {
+  display: grid;
+  gap: 12px;
+}
+.model-list-control .rule-list-rows {
+  gap: 10px;
+}
+.model-list-control .rule-list-row {
+  align-items: end;
+}
+.model-list-control .icon-button {
+  width: 34px;
+  min-width: 34px;
+}
 .field-wide {
   grid-column: 1 / -1;
 }

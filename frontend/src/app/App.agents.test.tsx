@@ -59,7 +59,7 @@ describe('App agents and leaderboard', () => {
       ['Base URL env', 'LOCAL_MODEL_URL'],
       ['Agent access hosts', 'localhost, model.internal'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
-    expect(agentForm.getByLabelText('model-name')).toHaveValue('qwen3-coder-local')
+    expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.getByText('Permissions and tools')).toBeInTheDocument()
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
