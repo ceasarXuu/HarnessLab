@@ -53,13 +53,13 @@ describe('App agents and leaderboard', () => {
       ['Harness', 'custom-harness'],
       ['Type', 'custom'],
       ['Custom import path', 'agents.local_repair:Agent'],
-      ['Model', 'qwen3-coder-local'],
       ['Temperature', '0.2'],
       ['Context length', '131072'],
       ['API key env', 'LOCAL_MODEL_API_KEY'],
       ['Base URL env', 'LOCAL_MODEL_URL'],
       ['Agent access hosts', 'localhost, model.internal'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
+    expect(agentForm.getByLabelText('model-name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.getByText('Permissions and tools')).toBeInTheDocument()
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 import type { AgentRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { KeyValueControl } from './KeyValueControl'
@@ -98,11 +99,11 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
       <section className="surface rail-card">
         <SectionTitle>{t('modelSettings')}</SectionTitle>
         <div className="agent-form-grid">
-          <label>
-            {t('model')}
-            <input value={draft.models} onChange={(event) => setField('models', event.target.value)} />
-          </label>
-          <Metric label={t('supportedModels')} value={draft.compatibleModels ?? draft.models} />
+          <ModelListControl
+            label={t('supportedModels')}
+            value={draft.models}
+            onChange={(value) => setField('models', value)}
+          />
           {config.reasoning && (
             <label>
               {t('reasoningEffort')}
@@ -234,6 +235,50 @@ function SectionTitle({ children }: { children: string }) {
       <h3>{children}</h3>
     </div>
   )
+}
+
+function ModelListControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const models = parseModelNames(value)
+  const commit = (nextModels: string[]) => onChange(formatModelNames(nextModels))
+
+  return (
+    <div className="model-list-control field-wide">
+      <div className="rule-list-header">
+        <span>{label}</span>
+        <button className="secondary-button compact-action" type="button" onClick={() => commit([...models, ''])}>
+          <Plus aria-hidden="true" />
+          Add
+        </button>
+      </div>
+      <div className="rule-list-rows">
+        {models.map((modelName, index) => (
+          <div className="rule-list-row" key={index}>
+            <label>
+              model-name
+              <input
+                value={modelName}
+                onChange={(event) => commit(models.map((item, rowIndex) => rowIndex === index ? event.target.value : item))}
+              />
+            </label>
+            <button className="secondary-button compact-action" type="button" onClick={() => commit(models.filter((_, rowIndex) => rowIndex !== index))}>
+              <Trash2 aria-hidden="true" />
+              Delete
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function parseModelNames(value: string) {
+  const names = value.split(',').map((item) => item.trim()).filter(Boolean)
+  return names.length ? names : ['']
+}
+
+function formatModelNames(models: string[]) {
+  const names = models.map((item) => item.trim()).filter(Boolean)
+  return names.join(', ')
 }
 
 function getAgentStatusLabel(status: AgentRow['status'], t: Translate) {

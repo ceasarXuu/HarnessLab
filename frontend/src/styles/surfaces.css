@@ -97,7 +97,8 @@ code {
 }
 .agent-form-grid label,
 .agent-form-grid .metric,
-.agent-form-grid .key-value-control {
+.agent-form-grid .key-value-control,
+.agent-form-grid .model-list-control {
   min-width: 0;
 }
 .agent-form-grid textarea {
