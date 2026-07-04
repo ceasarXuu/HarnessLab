@@ -3,20 +3,21 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.run-grid > label,
+.run-grid > div,
+.run-grid > fieldset {
+  min-width: 0;
+}
 .run-grid .field-wide {
   grid-column: 1 / -1;
 }
 .run-grid .custom-select { min-height: 34px; border: 1px solid var(--border-strong); background: var(--surface); }
 .run-grid .custom-select:focus-within { border-color: var(--foreground); background: var(--subtle); }
-.run-grid .custom-select.open {
-  flex-wrap: wrap;
-}
 .run-grid .select-menu {
-  position: static;
-  flex-basis: calc(100% + 2px);
-  width: calc(100% + 2px);
-  margin: 4px -1px -1px;
-  box-shadow: none;
+  right: -1px;
+  left: -1px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 .run-builder-actions {
   display: inline-flex;
@@ -223,9 +224,14 @@
 .environment-editor {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 .environment-editor .run-config-group {
+  min-width: 0;
   padding: 12px;
+}
+.environment-editor .run-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 .environment-switch {
   width: 100%;
@@ -233,7 +239,7 @@
 }
 .tpu-spec-control {
   display: grid;
-  grid-template-columns: 92px minmax(180px, 1.4fr) repeat(3, minmax(90px, 1fr));
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(72px, 0.8fr));
   align-items: end;
   gap: 10px;
   min-width: 0;
@@ -242,7 +248,7 @@
   border: 0;
 }
 .tpu-spec-label {
-  align-self: center;
+  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 12px;
 }
@@ -264,9 +270,25 @@
 }
 .key-value-row {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.2fr) auto;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
   align-items: end;
   gap: 8px;
+}
+.key-value-row > label {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .run-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tpu-spec-control,
+  .key-value-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .key-value-row .secondary-button {
+    justify-self: start;
+  }
 }
 
 .runtime-checklist {

@@ -229,7 +229,10 @@
   flex: 0 0 auto;
 }
 .select-trigger span {
+  min-width: 0;
+  overflow: hidden;
   color: var(--foreground);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .select-menu {
