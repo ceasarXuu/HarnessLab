@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface KeyValueControlProps {
@@ -13,15 +14,23 @@ interface KeyValueRow {
 }
 
 export function KeyValueControl({ label, value, onChange, compact = false }: KeyValueControlProps) {
-  const rows = parseRows(value)
-  const commit = (nextRows: KeyValueRow[]) => onChange(formatRows(nextRows))
+  const [rows, setRows] = useState(() => parseRows(value))
+  const commit = (nextRows: KeyValueRow[]) => {
+    setRows(nextRows.length ? nextRows : [{ key: '', value: '' }])
+    onChange(formatRows(nextRows))
+  }
   const className = compact ? 'key-value-control compact-key-value field-wide' : 'key-value-control field-wide'
 
   return (
     <div className={className}>
       <div className="key-value-header">
         <span>{label}</span>
-        <button className="secondary-button compact-action" type="button" onClick={() => commit([...rows, { key: '', value: '' }])}>
+        <button
+          aria-label={compact ? `Add ${label}` : undefined}
+          className="secondary-button compact-action"
+          type="button"
+          onClick={() => commit([...rows, { key: '', value: '' }])}
+        >
           <Plus aria-hidden="true" />
           Add
         </button>

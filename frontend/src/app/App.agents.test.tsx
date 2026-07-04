@@ -65,6 +65,12 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor adapter/)).not.toBeInTheDocument()
     expect(screen.getByText('Advanced agent params')).toBeInTheDocument()
+    expect(agentForm.getAllByLabelText('Env key')).toHaveLength(2)
+    fireEvent.click(agentForm.getByRole('button', { name: 'Add agent env' }))
+    expect(agentForm.getAllByLabelText('Env key')).toHaveLength(3)
+    const newEnvKeys = agentForm.getAllByLabelText('Env key')
+    fireEvent.change(newEnvKeys[2], { target: { value: 'LOCAL_TIMEOUT' } })
+    expect(newEnvKeys[2]).toHaveValue('LOCAL_TIMEOUT')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
     fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
