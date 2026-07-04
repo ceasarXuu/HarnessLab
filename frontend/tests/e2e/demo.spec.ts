@@ -286,6 +286,27 @@ test('manages agents and dataset scoped leaderboard surfaces', async ({ page }) 
   expect(Math.abs(openGroupHeight - closedGroupHeight)).toBeLessThanOrEqual(2)
   await expect(environmentDialog.locator('[role="listbox"][aria-label="type options"]')).toBeVisible()
   expect(await environmentDialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+  await page.keyboard.press('Escape')
+  await environmentDialog.evaluate((element) => {
+    element.scrollTop = element.scrollHeight
+  })
+  const widthBeforeResize = await environmentDialog.evaluate((element) => element.getBoundingClientRect().width)
+  const resizeHandle = page.getByRole('separator', { name: 'Resize detail drawer' })
+  const handleBox = await resizeHandle.boundingBox()
+  const viewportHeight = await page.evaluate(() => window.innerHeight)
+  const maxDrawerWidth = await page.evaluate(() => window.innerWidth - 32)
+  expect(handleBox?.height).toBeGreaterThanOrEqual(viewportHeight - 2)
+  if (!handleBox) throw new Error('missing resize handle bounds')
+  if (widthBeforeResize < maxDrawerWidth - 2) {
+    await page.mouse.move(handleBox.x + 5, viewportHeight - 24)
+    await page.mouse.down()
+    await page.mouse.move(handleBox.x - 75, viewportHeight - 24)
+    await page.mouse.up()
+    const widthAfterResize = await environmentDialog.evaluate((element) => element.getBoundingClientRect().width)
+    expect(widthAfterResize).toBeGreaterThan(widthBeforeResize + 60)
+  } else {
+    expect(widthBeforeResize).toBeCloseTo(maxDrawerWidth, 0)
+  }
   await page.getByRole('button', { name: 'Close detail drawer', exact: true }).click()
 
   await page.getByRole('link', { name: 'Leaderboard' }).click()

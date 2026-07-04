@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
-import type { PointerEvent, ReactNode } from 'react'
+import type { CSSProperties, PointerEvent, ReactNode } from 'react'
 
 const DEFAULT_DRAWER_WIDTH = 560
 const VIEWPORT_SAFE_GAP = 32
@@ -21,6 +21,7 @@ export function DetailDrawer({ children, label, open, onClose }: DetailDrawerPro
   const minWidth = Math.min(DEFAULT_DRAWER_WIDTH, viewportWidth - VIEWPORT_SAFE_GAP)
   const maxWidth = Math.max(minWidth, viewportWidth - VIEWPORT_SAFE_GAP)
   const currentWidth = Math.min(Math.max(drawerWidth, minWidth), maxWidth)
+  const drawerStyle = { '--drawer-width': `${currentWidth}px`, width: currentWidth } as CSSProperties
 
   function resizeDrawer(event: PointerEvent<HTMLButtonElement>) {
     if (event.buttons !== 1) return
@@ -31,7 +32,7 @@ export function DetailDrawer({ children, label, open, onClose }: DetailDrawerPro
   return (
     <div className="drawer-layer">
       <button className="drawer-scrim" aria-label="Close detail drawer overlay" onClick={onClose} />
-      <aside className="detail-drawer" aria-label={label} role="dialog" style={{ width: currentWidth }}>
+      <aside className="detail-drawer" aria-label={label} role="dialog" style={drawerStyle}>
         <button
           type="button"
           className="drawer-resize-handle"
