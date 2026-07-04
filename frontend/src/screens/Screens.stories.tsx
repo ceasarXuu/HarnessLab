@@ -97,6 +97,8 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByRole('dialog', { name: 'Selected agent' })).toBeVisible()
     await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Claude Code default')
     await expect(canvas.getByLabelText('Harness')).toHaveValue('claude-code')
+    await expect(canvas.getByLabelText('Type')).toHaveValue('built-in')
+    await expect(canvas.queryByLabelText('Custom import path')).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Reasoning effort')).toHaveValue('high')
     await expect(canvas.getByLabelText('API key env')).toHaveValue('ANTHROPIC_API_KEY')
     await expect(canvas.getByLabelText('Allowed tools')).toHaveValue('Read, Glob, Grep, Bash')

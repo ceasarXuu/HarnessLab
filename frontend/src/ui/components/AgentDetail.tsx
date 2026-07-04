@@ -57,6 +57,7 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
   const statusLabel = getAgentStatusLabel(draft.status, t)
   const config = useMemo(() => harnessConfigs[draft.harness] ?? harnessConfigs['custom-harness'], [draft.harness])
   const setField = (field: keyof AgentRow, value: string) => setDraft((current) => ({ ...current, [field]: value }))
+  const isCustomAgent = draft.type === 'custom' || draft.harness === 'custom-harness'
 
   return (
     <aside className="detail-rail agent-detail">
@@ -81,11 +82,16 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
               ))}
             </select>
           </label>
-          <Metric label={t('agentType')} value={draft.type} />
           <label>
-            {t('customImportPath')}
-            <input value={draft.adapter} onChange={(event) => setField('adapter', event.target.value)} />
+            {t('agentType')}
+            <input readOnly value={draft.type} />
           </label>
+          {isCustomAgent && (
+            <label>
+              {t('customImportPath')}
+              <input value={draft.adapter} onChange={(event) => setField('adapter', event.target.value)} />
+            </label>
+          )}
         </div>
       </section>
 

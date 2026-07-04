@@ -51,6 +51,8 @@ describe('App agents and leaderboard', () => {
     ;[
       ['Agent Name', 'Local repair agent'],
       ['Harness', 'custom-harness'],
+      ['Type', 'custom'],
+      ['Custom import path', 'agents.local_repair:Agent'],
       ['Model', 'qwen3-coder-local'],
       ['Temperature', '0.2'],
       ['Context length', '131072'],
