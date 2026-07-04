@@ -152,7 +152,7 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
             </>
           )}
           <div className="field-wide">
-            <KeyValueControl label={t('genericAgentEnv')} value={draft.env ?? 'none'} onChange={(value) => setField('env', value)} />
+            <KeyValueControl compact label={t('genericAgentEnv')} value={draft.env ?? 'none'} onChange={(value) => setField('env', value)} />
           </div>
         </div>
       </section>

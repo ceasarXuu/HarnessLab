@@ -108,6 +108,12 @@ export const AgentDrawer: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'medium' }))
     await expect(canvas.getByRole('button', { name: 'medium' })).toHaveAttribute('aria-pressed', 'true')
     await expect(canvas.getByLabelText('API key env')).toHaveValue('ANTHROPIC_API_KEY')
+    await expect(canvas.queryByText('Key')).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Value')).not.toBeInTheDocument()
+    await expect(canvas.getAllByLabelText('Env key')[0]).toHaveValue('ANTHROPIC_API_KEY')
+    await expect(canvas.getAllByLabelText('Env value')[0]).toHaveValue('${ANTHROPIC_API_KEY}')
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Add' })[1])
+    await expect(canvas.getAllByLabelText('Env key')).toHaveLength(2)
     await expect(canvas.getByLabelText('Allowed tools')).toHaveValue('Read, Glob, Grep, Bash')
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },

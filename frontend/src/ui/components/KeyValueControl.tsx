@@ -4,6 +4,7 @@ interface KeyValueControlProps {
   label: string
   value: string
   onChange: (value: string) => void
+  compact?: boolean
 }
 
 interface KeyValueRow {
@@ -11,12 +12,13 @@ interface KeyValueRow {
   value: string
 }
 
-export function KeyValueControl({ label, value, onChange }: KeyValueControlProps) {
+export function KeyValueControl({ label, value, onChange, compact = false }: KeyValueControlProps) {
   const rows = parseRows(value)
   const commit = (nextRows: KeyValueRow[]) => onChange(formatRows(nextRows))
+  const className = compact ? 'key-value-control compact-key-value field-wide' : 'key-value-control field-wide'
 
   return (
-    <div className="key-value-control field-wide">
+    <div className={className}>
       <div className="key-value-header">
         <span>{label}</span>
         <button className="secondary-button compact-action" type="button" onClick={() => commit([...rows, { key: '', value: '' }])}>
@@ -28,22 +30,29 @@ export function KeyValueControl({ label, value, onChange }: KeyValueControlProps
         {rows.map((row, index) => (
           <div className="key-value-row" key={index}>
             <label>
-              Key
+              <span className={compact ? 'visually-hidden' : undefined}>Key</span>
               <input
+                aria-label={compact ? 'Env key' : undefined}
                 value={row.key}
                 onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, key: event.target.value } : item))}
               />
             </label>
             <label>
-              Value
+              <span className={compact ? 'visually-hidden' : undefined}>Value</span>
               <input
+                aria-label={compact ? 'Env value' : undefined}
                 value={row.value}
                 onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))}
               />
             </label>
-            <button className="secondary-button compact-action" type="button" onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}>
+            <button
+              aria-label={`Delete env ${row.key || index + 1}`}
+              className={compact ? 'icon-button' : 'secondary-button compact-action'}
+              type="button"
+              onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}
+            >
               <Trash2 aria-hidden="true" />
-              Delete
+              {!compact && 'Delete'}
             </button>
           </div>
         ))}

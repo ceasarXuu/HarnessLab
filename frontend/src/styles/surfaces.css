@@ -119,6 +119,23 @@ code {
   width: 34px;
   min-width: 34px;
 }
+.compact-key-value {
+  gap: 12px;
+}
+.compact-key-value .key-value-list {
+  gap: 10px;
+}
+.compact-key-value .key-value-row {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+  align-items: end;
+}
+.compact-key-value .key-value-row > label {
+  gap: 0;
+}
+.compact-key-value .icon-button {
+  width: 34px;
+  min-width: 34px;
+}
 .tag-group-control {
   display: grid;
   gap: 8px;
