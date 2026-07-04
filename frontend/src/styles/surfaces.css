@@ -98,7 +98,8 @@ code {
 .agent-form-grid label,
 .agent-form-grid .metric,
 .agent-form-grid .key-value-control,
-.agent-form-grid .model-list-control {
+.agent-form-grid .model-list-control,
+.agent-form-grid .tag-group-control {
   min-width: 0;
 }
 .agent-form-grid textarea {
@@ -117,6 +118,28 @@ code {
 .model-list-control .icon-button {
   width: 34px;
   min-width: 34px;
+}
+.tag-group-control {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag-option {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+}
+.tag-option[aria-pressed="true"] {
+  background: var(--foreground);
+  color: var(--background);
 }
 .field-wide {
   grid-column: 1 / -1;

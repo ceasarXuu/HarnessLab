@@ -105,13 +105,12 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
             onChange={(value) => setField('models', value)}
           />
           {config.reasoning && (
-            <label>
-              {t('reasoningEffort')}
-              <select value={draft.reasoningEffort ?? ''} onChange={(event) => setField('reasoningEffort', event.target.value)}>
-                <option value="">-</option>
-                {config.reasoning.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            </label>
+            <TagGroupControl
+              label={t('reasoningEffort')}
+              options={config.reasoning}
+              value={draft.reasoningEffort ?? ''}
+              onChange={(value) => setField('reasoningEffort', value)}
+            />
           )}
           {config.reasoningSummary && (
             <label>
@@ -277,9 +276,45 @@ function ModelListControl({ label, value, onChange }: { label: string; value: st
   )
 }
 
+function TagGroupControl({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (value: string) => void }) {
+  const selected = new Set(parseList(value))
+  const toggle = (option: string) => {
+    const next = new Set(selected)
+    if (next.has(option)) {
+      next.delete(option)
+    } else {
+      next.add(option)
+    }
+    onChange(options.filter((item) => next.has(item)).join(', '))
+  }
+
+  return (
+    <div className="tag-group-control field-wide">
+      <span>{label}</span>
+      <div className="tag-group" role="group" aria-label={label}>
+        {options.map((option) => (
+          <button
+            aria-pressed={selected.has(option)}
+            className="tag-option"
+            key={option}
+            type="button"
+            onClick={() => toggle(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function parseModelNames(value: string) {
-  const names = value.split(',').map((item) => item.trim()).filter(Boolean)
+  const names = parseList(value)
   return names.length ? names : ['']
+}
+
+function parseList(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean)
 }
 
 function formatModelNames(models: string[]) {
