@@ -60,7 +60,11 @@ describe('App agents and leaderboard', () => {
       ['Agent access hosts', 'localhost, model.internal'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
-    expect(agentForm.getByText('Permissions and tools')).toBeInTheDocument()
+    expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
+    expect(agentForm.queryByLabelText('Permission mode')).not.toBeInTheDocument()
+    expect(agentForm.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
+    expect(agentForm.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
+    expect(agentForm.getByText('Network access')).toBeInTheDocument()
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor adapter/)).not.toBeInTheDocument()

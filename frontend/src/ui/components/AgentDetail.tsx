@@ -15,16 +15,12 @@ interface HarnessConfig {
   reasoningSummary?: string[]
   temperature?: boolean
   contextLength?: boolean
-  tools?: boolean
-  permissions?: boolean
   credentials?: 'anthropic' | 'openai' | 'custom' | 'none'
 }
 
 const harnessConfigs: Record<string, HarnessConfig> = {
   'claude-code': {
     reasoning: ['low', 'medium', 'high', 'xhigh', 'max'],
-    tools: true,
-    permissions: true,
     credentials: 'anthropic',
   },
   codex: {
@@ -43,8 +39,6 @@ const harnessConfigs: Record<string, HarnessConfig> = {
   'custom-harness': {
     temperature: true,
     contextLength: true,
-    tools: true,
-    permissions: true,
     credentials: 'custom',
   },
   oracle: {
@@ -156,38 +150,6 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
           </div>
         </div>
       </section>
-
-      {(config.permissions || config.tools) && (
-        <section className="surface rail-card">
-          <SectionTitle>{t('permissionsAndTools')}</SectionTitle>
-          <div className="agent-form-grid">
-            {config.permissions && (
-              <label>
-                {t('permissionMode')}
-                <select value={draft.permissionMode ?? ''} onChange={(event) => setField('permissionMode', event.target.value)}>
-                  <option value="">-</option>
-                  <option value="tool allowlist">tool allowlist</option>
-                  <option value="allow">allow</option>
-                  <option value="deny">deny</option>
-                  <option value="custom harness policy">custom harness policy</option>
-                </select>
-              </label>
-            )}
-            {config.tools && (
-              <>
-                <label>
-                  {t('allowedTools')}
-                  <textarea value={draft.allowedTools ?? ''} onChange={(event) => setField('allowedTools', event.target.value)} />
-                </label>
-                <label>
-                  {t('disallowedTools')}
-                  <textarea value={draft.disallowedTools ?? ''} onChange={(event) => setField('disallowedTools', event.target.value)} />
-                </label>
-              </>
-            )}
-          </div>
-        </section>
-      )}
 
       <section className="surface rail-card">
         <SectionTitle>{t('networkAccess')}</SectionTitle>

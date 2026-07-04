@@ -181,9 +181,6 @@ export interface AgentRow {
   reasoningSummary?: string
   temperature?: string
   contextLength?: string
-  permissionMode?: string
-  allowedTools?: string
-  disallowedTools?: string
   apiKeyEnv?: string
   baseUrlEnv?: string
 }
