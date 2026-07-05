@@ -162,13 +162,19 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
       </section>
 
       <section className="surface rail-card">
-        <SectionTitle>{t('capabilityConfig')}</SectionTitle>
+        <SectionTitle>{t('skillsConfig')}</SectionTitle>
         <div className="agent-form-grid">
-          <label>
+          <label className="field-wide">
             {t('skills')}
             <textarea value={draft.skills ?? ''} onChange={(event) => setField('skills', event.target.value)} />
           </label>
-          <label>
+        </div>
+      </section>
+
+      <section className="surface rail-card">
+        <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
+        <div className="agent-form-grid">
+          <label className="field-wide">
             {t('mcpConfig')}
             <textarea value={draft.mcp ?? ''} onChange={(event) => setField('mcp', event.target.value)} />
           </label>

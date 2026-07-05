@@ -120,6 +120,9 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByText('Network access')).toBeVisible()
     await expect(canvas.getByRole('checkbox', { name: 'Enable network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Domain allowlist')).toHaveValue('api.anthropic.com')
+    await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
+    await expect(canvas.getByText('Skills config')).toBeVisible()
+    await expect(canvas.getByText('MCP config')).toBeVisible()
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
 }

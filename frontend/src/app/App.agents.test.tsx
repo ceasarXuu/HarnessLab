@@ -46,7 +46,6 @@ describe('App agents and leaderboard', () => {
     expect(agentDialog).toBeInTheDocument()
     expect(within(agentDialog).queryByText('Selected agent')).not.toBeInTheDocument()
     expect(screen.getByText('Credentials and parameters')).toBeInTheDocument()
-    expect(screen.getByText('Capability config')).toBeInTheDocument()
     const agentForm = within(agentDialog)
     ;[
       ['Agent Name', 'Local repair agent'],
@@ -73,6 +72,11 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor adapter/)).not.toBeInTheDocument()
+    expect(agentForm.queryByText('Capability config')).not.toBeInTheDocument()
+    expect(agentForm.getByText('Skills config')).toBeInTheDocument()
+    expect(agentForm.getByText('MCP config')).toBeInTheDocument()
+    expect(agentForm.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/repair')
+    expect(agentForm.getByLabelText('mcp config')).toHaveValue('~/.ornnlab/mcp/local.mcp.json')
     expect(screen.getByText('Advanced agent params')).toBeInTheDocument()
     expect(agentForm.getAllByLabelText('Env key')).toHaveLength(2)
     fireEvent.click(agentForm.getByRole('button', { name: 'Add agent env' }))
