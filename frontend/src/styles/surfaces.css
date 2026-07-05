@@ -235,6 +235,13 @@ code {
 .agent-advanced[open] summary::after {
   transform: rotate(90deg);
 }
+.network-access-control {
+  display: grid;
+  gap: 12px;
+}
+.network-access-toggle {
+  width: 100%;
+}
 @media (max-width: 760px) {
   .agent-form-grid {
     grid-template-columns: minmax(0, 1fr);

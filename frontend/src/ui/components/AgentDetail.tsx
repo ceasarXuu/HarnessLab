@@ -153,12 +153,12 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
 
       <section className="surface rail-card">
         <SectionTitle>{t('networkAccess')}</SectionTitle>
-        <div className="agent-form-grid">
-          <label className="field-wide">
-            {t('agentAllowedHosts')}
-            <textarea value={draft.allowedHosts ?? ''} onChange={(event) => setField('allowedHosts', event.target.value)} />
-          </label>
-        </div>
+        <NetworkAccessControl
+          enabledLabel={t('networkAccessToggle')}
+          hostsLabel={t('agentAllowedHosts')}
+          value={draft.allowedHosts ?? '*'}
+          onChange={(value) => setField('allowedHosts', value)}
+        />
       </section>
 
       <section className="surface rail-card">
@@ -187,6 +187,42 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
         </div>
       </details>
     </aside>
+  )
+}
+
+function NetworkAccessControl({
+  enabledLabel,
+  hostsLabel,
+  value,
+  onChange,
+}: {
+  enabledLabel: string
+  hostsLabel: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const normalizedValue = value.trim() || '*'
+  const enabled = normalizedValue !== 'none'
+  const hostsValue = enabled ? normalizedValue : '*'
+
+  return (
+    <div className="network-access-control">
+      <label className="switch-control network-access-toggle">
+        <span>{enabledLabel}</span>
+        <input
+          aria-label={enabledLabel}
+          checked={enabled}
+          type="checkbox"
+          onChange={(event) => onChange(event.target.checked ? '*' : 'none')}
+        />
+      </label>
+      {enabled && (
+        <label className="field-wide">
+          {hostsLabel}
+          <textarea value={hostsValue} onChange={(event) => onChange(event.target.value.trim() || '*')} />
+        </label>
+      )}
+    </div>
   )
 }
 

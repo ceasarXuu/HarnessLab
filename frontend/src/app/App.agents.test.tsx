@@ -57,7 +57,7 @@ describe('App agents and leaderboard', () => {
       ['Context length', '131072'],
       ['API key env', 'LOCAL_MODEL_API_KEY'],
       ['Base URL env', 'LOCAL_MODEL_URL'],
-      ['Agent access hosts', 'localhost, model.internal'],
+      ['Domain allowlist', 'localhost, model.internal'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
@@ -65,6 +65,11 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
     expect(agentForm.getByText('Network access')).toBeInTheDocument()
+    expect(agentForm.getByRole('checkbox', { name: 'Enable network access' })).toBeChecked()
+    fireEvent.click(agentForm.getByRole('checkbox', { name: 'Enable network access' }))
+    expect(agentForm.queryByLabelText('Domain allowlist')).not.toBeInTheDocument()
+    fireEvent.click(agentForm.getByRole('checkbox', { name: 'Enable network access' }))
+    expect(agentForm.getByLabelText('Domain allowlist')).toHaveValue('*')
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor adapter/)).not.toBeInTheDocument()
