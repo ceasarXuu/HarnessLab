@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { FolderOpen, Plus, Trash2 } from 'lucide-react'
 import type { AgentRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { KeyValueControl } from './KeyValueControl'
@@ -163,12 +163,13 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
 
       <section className="surface rail-card">
         <SectionTitle>{t('skillsConfig')}</SectionTitle>
-        <div className="agent-form-grid">
-          <label className="field-wide">
-            {t('skills')}
-            <textarea value={draft.skills ?? ''} onChange={(event) => setField('skills', event.target.value)} />
-          </label>
-        </div>
+        <DirectoryListControl
+          chooseLabel={t('chooseFolder')}
+          description={t('skillsConfigDescription')}
+          label={t('skills')}
+          value={draft.skills ?? 'none'}
+          onChange={(value) => setField('skills', value)}
+        />
       </section>
 
       <section className="surface rail-card">
@@ -228,6 +229,83 @@ function NetworkAccessControl({
           <textarea value={hostsValue} onChange={(event) => onChange(event.target.value.trim() || '*')} />
         </label>
       )}
+    </div>
+  )
+}
+
+function DirectoryListControl({
+  chooseLabel,
+  description,
+  label,
+  value,
+  onChange,
+}: {
+  chooseLabel: string
+  description: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [paths, setPaths] = useState(() => parseDirectoryPaths(value))
+
+  const commit = (nextPaths: string[]) => {
+    setPaths(nextPaths.length ? nextPaths : [''])
+    onChange(formatDirectoryPaths(nextPaths))
+  }
+
+  const updateFromFiles = (files: FileList | null) => {
+    const firstFile = files?.item(0)
+    const selectedPath = firstFile ? getSelectedDirectoryPath(firstFile) : ''
+    if (!selectedPath) return
+    const nextPaths = paths.filter((path) => path.trim())
+    commit([...nextPaths, selectedPath])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  return (
+    <div className="directory-list-control field-wide">
+      <p className="field-hint">{description}</p>
+      <div className="rule-list-header">
+        <span>{label}</span>
+        <div className="directory-list-actions">
+          <button className="secondary-button compact-action" type="button" onClick={() => commit([...paths, ''])}>
+            <Plus aria-hidden="true" />
+            Add
+          </button>
+          <button className="secondary-button compact-action" type="button" onClick={() => fileInputRef.current?.click()}>
+            <FolderOpen aria-hidden="true" />
+            {chooseLabel}
+          </button>
+        </div>
+      </div>
+      <div className="rule-list-rows">
+        {paths.map((path, index) => (
+          <div className="rule-list-row" key={index}>
+            <input
+              aria-label={label}
+              value={path}
+              onChange={(event) => commit(paths.map((item, rowIndex) => rowIndex === index ? event.target.value : item))}
+            />
+            <button
+              aria-label={`Delete ${label} ${path || index + 1}`}
+              className="icon-button"
+              type="button"
+              onClick={() => commit(paths.filter((_, rowIndex) => rowIndex !== index))}
+            >
+              <Trash2 aria-hidden="true" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <input
+        ref={fileInputRef}
+        aria-label={`${chooseLabel}: ${label}`}
+        className="visually-hidden"
+        type="file"
+        onChange={(event) => updateFromFiles(event.target.files)}
+        {...{ directory: '', webkitdirectory: '' }}
+      />
     </div>
   )
 }
@@ -324,6 +402,27 @@ function parseList(value: string) {
 function formatModelNames(models: string[]) {
   const names = models.map((item) => item.trim()).filter(Boolean)
   return names.join(', ')
+}
+
+function parseDirectoryPaths(value: string) {
+  if (!value || value === 'none') return ['']
+  const paths = value.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
+  return paths.length ? paths : ['']
+}
+
+function formatDirectoryPaths(paths: string[]) {
+  const cleanPaths = paths.map((item) => item.trim()).filter(Boolean)
+  return cleanPaths.length ? cleanPaths.join('\n') : 'none'
+}
+
+function getSelectedDirectoryPath(file: File) {
+  const relativePath = file.webkitRelativePath
+  const folderName = relativePath?.split('/').filter(Boolean)[0]
+  const fullPath = (file as File & { path?: string }).path
+  if (fullPath && relativePath && folderName && fullPath.endsWith(relativePath)) {
+    return `${fullPath.slice(0, -relativePath.length)}${folderName}`
+  }
+  return folderName ?? fullPath ?? ''
 }
 
 function getAgentStatusLabel(status: AgentRow['status'], t: Translate) {

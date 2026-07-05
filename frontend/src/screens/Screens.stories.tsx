@@ -122,6 +122,9 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByLabelText('Domain allowlist')).toHaveValue('api.anthropic.com')
     await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
     await expect(canvas.getByText('Skills config')).toBeVisible()
+    await expect(canvas.getByText('Enter one or more skills collection folders. Each folder can contain multiple skills.')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Choose folder' })).toBeVisible()
+    await expect(canvas.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/terminal-bench')
     await expect(canvas.getByText('MCP config')).toBeVisible()
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
