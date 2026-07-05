@@ -355,7 +355,7 @@ interface Agent {
 }
 ```
 
-`agentName` 是用户自定义名称；`harness` 是 Harbor/OrnnLab 执行适配层，例如 `claude-code`、`codex-cli`、`custom-harness`。只有 `type = custom` 的 Agent 可以删除。`allowedHosts` 在 WebUI 中按网络访问开关展示：`none` 表示关闭网络访问，`*` 表示允许所有域名，其他值表示逗号分隔的域名白名单。
+`agentName` 是用户自定义名称；`harness` 是 Harbor/OrnnLab 执行适配层，例如 `claude-code`、`codex-cli`、`custom-harness`。只有 `type = custom` 的 Agent 可以删除。`allowedHosts` 在 WebUI 中按网络访问开关展示：`none` 表示关闭网络访问，`*` 表示允许所有域名，其他值表示逗号分隔的域名白名单。`skills` 是 Harbor skill source 列表，每个 source 可以是包含 `SKILL.md` 的单个 skill 目录，也可以是包含多个 skill 子目录的集合目录。
 
 ### LeaderboardEntry
 
