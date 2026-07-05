@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, Plus, Trash2 } from 'lucide-react'
 import type { AgentRow } from '../../mocks/demo'
 import type { Translate } from '../../i18n'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
+import { McpServersControl } from './McpServersControl'
 
 interface AgentDetailProps {
   agent: AgentRow
@@ -53,6 +54,10 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
   const config = useMemo(() => harnessConfigs[draft.harness] ?? harnessConfigs['custom-harness'], [draft.harness])
   const setField = (field: keyof AgentRow, value: string) => setDraft((current) => ({ ...current, [field]: value }))
   const isCustomAgent = draft.type === 'custom' || draft.harness === 'custom-harness'
+
+  useEffect(() => {
+    setDraft(agent)
+  }, [agent])
 
   return (
     <aside className="detail-rail agent-detail">
@@ -174,12 +179,22 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
 
       <section className="surface rail-card">
         <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
-        <div className="agent-form-grid">
-          <label className="field-wide">
-            {t('mcpConfig')}
-            <textarea value={draft.mcp ?? ''} onChange={(event) => setField('mcp', event.target.value)} />
-          </label>
-        </div>
+        <McpServersControl
+          labels={{
+            addItem: t('add'),
+            addServer: t('addMcpServer'),
+            args: t('mcpArgs'),
+            command: t('mcpCommand'),
+            description: t('mcpConfigDescription'),
+            enabled: t('enabled'),
+            env: t('mcpEnv'),
+            name: t('mcpServerName'),
+            transport: t('mcpTransport'),
+            url: t('mcpUrl'),
+          }}
+          value={draft.mcp ?? 'none'}
+          onChange={(value) => setField('mcp', value)}
+        />
       </section>
 
       <details className="surface rail-card agent-advanced">

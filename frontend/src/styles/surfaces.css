@@ -132,6 +132,34 @@ code {
   width: 34px;
   min-width: 34px;
 }
+.mcp-server-control,
+.mcp-server-list,
+.argument-list-control {
+  display: grid;
+  gap: 10px;
+}
+.mcp-server-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+.mcp-server-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mcp-server-header .switch-control {
+  flex: 1;
+}
+.mcp-server-header .icon-button,
+.argument-list-control .icon-button {
+  width: 34px;
+  min-width: 34px;
+}
 .model-list-control .rule-list-rows {
   gap: 10px;
 }

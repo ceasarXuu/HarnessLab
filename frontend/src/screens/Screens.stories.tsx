@@ -125,7 +125,11 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByText('Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Choose folder' })).toBeVisible()
     await expect(canvas.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/terminal-bench')
-    await expect(canvas.getByText('MCP config')).toBeVisible()
+    await expect(canvas.getByText('MCP Servers')).toBeVisible()
+    await expect(canvas.getByText('Configure MCP sidecar servers for this harness. HTTP transports use URL; stdio uses command, args, and env.')).toBeVisible()
+    await expect(canvas.getByLabelText('Name')).toHaveValue('terminal-bench-mcp')
+    await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
+    await expect(canvas.getByLabelText('URL')).toHaveValue('http://mcp-server:8000/mcp')
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
 }
