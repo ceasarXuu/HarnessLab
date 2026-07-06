@@ -3,16 +3,26 @@ import { useEffect, useState } from 'react'
 import { KeyValueControl } from './KeyValueControl'
 
 type McpTransport = 'streamable-http' | 'sse' | 'stdio'
+type McpDeployment = 'compose-sidecar' | 'external-service' | 'stdio'
 
 export interface McpServerLabels {
   addServer: string
   addItem: string
   args: string
+  composeSidecar: string
+  composeYaml: string
   command: string
+  deployment: string
   description: string
   enabled: string
+  endpointPath: string
   env: string
+  externalService: string
+  generatedUrl: string
   name: string
+  port: string
+  serviceName: string
+  stdio: string
   transport: string
   url: string
 }
@@ -20,9 +30,14 @@ export interface McpServerLabels {
 interface McpServer {
   args?: string[]
   command?: string
+  composeYaml?: string
+  deployment: McpDeployment
   enabled: boolean
+  endpointPath?: string
   env?: string
   name: string
+  port?: string
+  serviceName?: string
   transport: McpTransport
   url?: string
 }
@@ -34,8 +49,13 @@ interface McpServersControlProps {
 }
 
 const emptyServer: McpServer = {
+  composeYaml: composeTemplate('mcp-server', 'mcp-server:latest', '8000'),
+  deployment: 'compose-sidecar',
+  endpointPath: '/mcp',
   enabled: true,
   name: 'mcp-server',
+  port: '8000',
+  serviceName: 'mcp-server',
   transport: 'streamable-http',
   url: 'http://mcp-server:8000/mcp',
 }
@@ -98,17 +118,59 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                 <input value={server.name} onChange={(event) => updateServer(index, { name: event.target.value })} />
               </label>
               <label>
+                {labels.deployment}
+                <select
+                  value={server.deployment}
+                  onChange={(event) => updateServer(index, { deployment: event.target.value as McpDeployment })}
+                >
+                  <option value="compose-sidecar">{labels.composeSidecar}</option>
+                  <option value="external-service">{labels.externalService}</option>
+                  <option value="stdio">{labels.stdio}</option>
+                </select>
+              </label>
+              <label>
                 {labels.transport}
                 <select
                   value={server.transport}
                   onChange={(event) => updateServer(index, { transport: event.target.value as McpTransport })}
+                  disabled={server.deployment === 'stdio'}
                 >
                   <option value="streamable-http">streamable-http</option>
                   <option value="sse">sse</option>
-                  <option value="stdio">stdio</option>
+                  {server.deployment === 'stdio' && <option value="stdio">stdio</option>}
                 </select>
               </label>
-          {server.transport === 'stdio' ? (
+              {server.deployment === 'compose-sidecar' && (
+                <>
+                  <label>
+                    {labels.serviceName}
+                    <input value={server.serviceName ?? ''} onChange={(event) => updateServer(index, { serviceName: event.target.value })} />
+                  </label>
+                  <label>
+                    {labels.port}
+                    <input inputMode="numeric" value={server.port ?? ''} onChange={(event) => updateServer(index, { port: event.target.value })} />
+                  </label>
+                  <label>
+                    {labels.endpointPath}
+                    <input value={server.endpointPath ?? ''} onChange={(event) => updateServer(index, { endpointPath: event.target.value })} />
+                  </label>
+                  <label>
+                    {labels.generatedUrl}
+                    <input readOnly value={composeUrl(server)} />
+                  </label>
+                  <label className="field-wide">
+                    {labels.composeYaml}
+                    <textarea value={server.composeYaml ?? ''} onChange={(event) => updateServer(index, { composeYaml: event.target.value })} />
+                  </label>
+                </>
+              )}
+              {server.deployment === 'external-service' && (
+                <label className="field-wide">
+                  {labels.url}
+                  <input value={server.url ?? ''} onChange={(event) => updateServer(index, { url: event.target.value })} />
+                </label>
+              )}
+              {server.deployment === 'stdio' && (
                 <>
                   <label className="field-wide">
                     {labels.command}
@@ -129,11 +191,6 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                     />
                   </div>
                 </>
-              ) : (
-                <label className="field-wide">
-                  {labels.url}
-                  <input value={server.url ?? ''} onChange={(event) => updateServer(index, { url: event.target.value })} />
-                </label>
               )}
             </div>
           </section>
@@ -196,6 +253,7 @@ function parseMcpServers(value: string): McpServer[] {
     return Array.isArray(parsed) ? parsed.map(normalizeServer) : []
   } catch {
     return [{
+      deployment: 'stdio',
       enabled: true,
       name: 'legacy-mcp-config',
       transport: 'stdio',
@@ -214,22 +272,44 @@ function formatMcpServers(servers: McpServer[]) {
 }
 
 function normalizeServer(server: McpServer): McpServer {
-  if (server.transport === 'stdio') {
+  if (server.deployment === 'stdio' || (!server.deployment && server.transport === 'stdio')) {
     return {
       args: (server.args ?? []).map((arg) => arg.trim()).filter(Boolean),
       command: server.command ?? '',
+      deployment: 'stdio',
       enabled: server.enabled,
       env: server.env ?? 'none',
       name: server.name,
       transport: 'stdio',
     }
   }
+  if (server.deployment === 'external-service') {
+    return {
+      deployment: 'external-service',
+      enabled: server.enabled,
+      name: server.name,
+      transport: normalizeNetworkTransport(server.transport),
+      url: server.url ?? '',
+    }
+  }
+  const serviceName = server.serviceName ?? hostFromUrl(server.url) ?? server.name
+  const port = server.port ?? portFromUrl(server.url) ?? '8000'
+  const endpointPath = normalizePath(server.endpointPath ?? pathFromUrl(server.url))
   return {
+    composeYaml: server.composeYaml ?? composeTemplate(serviceName, `${serviceName}:latest`, port),
+    deployment: 'compose-sidecar',
+    endpointPath,
     enabled: server.enabled,
     name: server.name,
-    transport: server.transport,
-    url: server.url ?? '',
+    port,
+    serviceName,
+    transport: normalizeNetworkTransport(server.transport),
+    url: `http://${serviceName}:${port}${endpointPath}`,
   }
+}
+
+function normalizeNetworkTransport(transport: McpTransport) {
+  return transport === 'stdio' ? 'streamable-http' : transport
 }
 
 function uniqueServerName(servers: McpServer[]) {
@@ -237,4 +317,50 @@ function uniqueServerName(servers: McpServer[]) {
   let index = servers.length + 1
   while (existing.has(`mcp-server-${index}`)) index += 1
   return `mcp-server-${index}`
+}
+
+function composeUrl(server: McpServer) {
+  const serviceName = server.serviceName?.trim() || server.name || 'mcp-server'
+  const port = server.port?.trim() || '8000'
+  const endpointPath = normalizePath(server.endpointPath)
+  return `http://${serviceName}:${port}${endpointPath}`
+}
+
+function composeTemplate(serviceName: string, image: string, port: string) {
+  return [
+    'services:',
+    `  ${serviceName}:`,
+    `    image: ${image}`,
+    '    expose:',
+    `      - "${port}"`,
+  ].join('\n')
+}
+
+function hostFromUrl(value?: string) {
+  try {
+    return value ? new URL(value).hostname : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function portFromUrl(value?: string) {
+  try {
+    return value ? new URL(value).port || undefined : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function pathFromUrl(value?: string) {
+  try {
+    return value ? new URL(value).pathname : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function normalizePath(value?: string) {
+  const path = value?.trim() || '/mcp'
+  return path.startsWith('/') ? path : `/${path}`
 }

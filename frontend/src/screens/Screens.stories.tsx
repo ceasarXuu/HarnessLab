@@ -126,10 +126,11 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByRole('button', { name: 'Choose folder' })).toBeVisible()
     await expect(canvas.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/terminal-bench')
     await expect(canvas.getByText('MCP Servers')).toBeVisible()
-    await expect(canvas.getByText('Configure MCP sidecar servers for this harness. HTTP transports use URL; stdio uses command, args, and env.')).toBeVisible()
+    await expect(canvas.getByText('Manage MCP templates on the Agent. OrnnLab expands compose sidecars into Harbor task environment and registers the generated connection in task.toml.')).toBeVisible()
     await expect(canvas.getByLabelText('Name')).toHaveValue('terminal-bench-mcp')
+    await expect(canvas.getByLabelText('Deployment')).toHaveValue('compose-sidecar')
     await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
-    await expect(canvas.getByLabelText('URL')).toHaveValue('http://mcp-server:8000/mcp')
+    await expect(canvas.getByLabelText('Generated URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
 }
