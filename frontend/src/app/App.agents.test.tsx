@@ -75,7 +75,7 @@ describe('App agents and leaderboard', () => {
     const newEnvKeys = agentForm.getAllByLabelText('Env key')
     fireEvent.change(newEnvKeys[envKeyCount], { target: { value: 'LOCAL_TIMEOUT' } })
     expect(newEnvKeys[envKeyCount]).toHaveValue('LOCAL_TIMEOUT')
-    expect(screen.getByText('Advanced agent params')).toBeInTheDocument()
+    expect(agentForm.queryByText('Advanced agent params')).not.toBeInTheDocument()
     expect(screen.queryByText('Config check')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Adapter init' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor adapter/)).not.toBeInTheDocument()
@@ -95,6 +95,9 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.getByLabelText('Command')).toHaveValue('uvx')
     expect(agentForm.getByLabelText('Args')).toHaveValue('local-repair-mcp')
     expect(agentForm.getAllByLabelText('Env key').map((input) => (input as HTMLInputElement).value)).toContain('LOCAL_MODEL_URL')
+    fireEvent.click(agentForm.getByRole('tab', { name: 'Advanced' }))
+    expect(agentForm.getByText('Advanced agent params')).toBeInTheDocument()
+    expect(agentForm.getByText('agent kwargs')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
     fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))

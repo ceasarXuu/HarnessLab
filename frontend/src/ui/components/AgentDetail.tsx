@@ -49,7 +49,7 @@ const harnessConfigs: Record<string, HarnessConfig> = {
 
 export function AgentDetail({ agent, t }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
-  const [activeTab, setActiveTab] = useState<'base' | 'skills' | 'mcps'>('base')
+  const [activeTab, setActiveTab] = useState<'base' | 'skills' | 'mcps' | 'advanced'>('base')
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
   const config = useMemo(() => harnessConfigs[draft.harness] ?? harnessConfigs['custom-harness'], [draft.harness])
@@ -101,6 +101,7 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
           { key: 'base' as const, label: t('runTabCore') },
           { key: 'skills' as const, label: 'Skills' },
           { key: 'mcps' as const, label: 'MCPs' },
+          { key: 'advanced' as const, label: t('agentAdvancedTab') },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -162,17 +163,6 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
             <NetworkAccessControl enabledLabel={t('networkAccessToggle')} hostsLabel={t('agentAllowedHosts')} value={draft.allowedHosts ?? '*'} onChange={(value) => setField('allowedHosts', value)} />
           </section>
 
-          <details className="surface rail-card agent-advanced">
-            <summary>{t('advancedAgentParams')}</summary>
-            <div className="agent-form-grid">
-              <KeyValueControl label={t('genericAgentKwargs')} value={draft.kwargs ?? 'none'} onChange={(value) => setField('kwargs', value)} />
-              <Metric label={t('runtimeDefaults')} value={draft.runtime ?? '-'} />
-              <Metric label={t('setupTimeout')} value={draft.setupTimeout ?? '-'} />
-              <Metric label={t('maxTimeout')} value={draft.maxTimeout ?? '-'} />
-              <Metric label={t('sourceRef')} value={draft.source} />
-              <Metric label={t('updated')} value={draft.updated} />
-            </div>
-          </details>
         </>
       )}
 
@@ -187,6 +177,20 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
         <section className="surface rail-card">
           <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
           <McpServersControl labels={mcpLabels(t)} value={draft.mcp ?? 'none'} onChange={(value) => setField('mcp', value)} />
+        </section>
+      )}
+
+      {activeTab === 'advanced' && (
+        <section className="surface rail-card">
+          <SectionTitle>{t('advancedAgentParams')}</SectionTitle>
+          <div className="agent-form-grid">
+            <KeyValueControl label={t('genericAgentKwargs')} value={draft.kwargs ?? 'none'} onChange={(value) => setField('kwargs', value)} />
+            <Metric label={t('runtimeDefaults')} value={draft.runtime ?? '-'} />
+            <Metric label={t('setupTimeout')} value={draft.setupTimeout ?? '-'} />
+            <Metric label={t('maxTimeout')} value={draft.maxTimeout ?? '-'} />
+            <Metric label={t('sourceRef')} value={draft.source} />
+            <Metric label={t('updated')} value={draft.updated} />
+          </div>
         </section>
       )}
     </aside>

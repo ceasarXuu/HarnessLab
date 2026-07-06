@@ -121,7 +121,7 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByRole('checkbox', { name: 'Enable network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Domain allowlist')).toHaveValue('api.anthropic.com')
     await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
-    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
+    await expect(canvas.queryByText('Advanced agent params')).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
     await expect(canvas.getByText('Skills sources')).toBeVisible()
     await expect(canvas.getByText('Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.')).toBeVisible()
@@ -134,6 +134,8 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByLabelText('Deployment')).toHaveValue('compose-sidecar')
     await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
     await expect(canvas.getByLabelText('Generated URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
+    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
 }
 
