@@ -14,7 +14,12 @@ describe('Environment templates', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
     expect(screen.getByRole('heading', { name: 'Environment catalog' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New Environment' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'profile' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Docker image' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Network mode' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'CPU / memory policy' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Runtime overrides' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
 
     const builtinRow = screen.getByText('Docker default').closest('tr')

@@ -114,12 +114,12 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
             <thead>
               <tr>
                 <th>{t('environmentName')}</th>
-                <th>profile</th>
-                <th>type</th>
-                <th>docker_image</th>
-                <th>network_mode</th>
-                <th>cpu / memory policy</th>
-                <th>runtime overrides</th>
+                <th>{t('environmentProfile')}</th>
+                <th>{t('agentType')}</th>
+                <th>{t('environmentDockerImage')}</th>
+                <th>{t('environmentNetworkMode')}</th>
+                <th>{t('environmentResourcePolicy')}</th>
+                <th>{t('environmentRuntimeOverrides')}</th>
                 <th>{t('actions')}</th>
               </tr>
             </thead>
