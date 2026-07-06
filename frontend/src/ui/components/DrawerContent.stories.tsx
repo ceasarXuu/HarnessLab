@@ -65,7 +65,7 @@ function EnvironmentEditorFixture() {
   return (
     <main className="workspace single-page">
       <section className="surface rail-card">
-        <EnvironmentProfileEditor value={environment} onChange={setEnvironment} />
+        <EnvironmentProfileEditor value={environment} t={t} onChange={setEnvironment} />
       </section>
     </main>
   )

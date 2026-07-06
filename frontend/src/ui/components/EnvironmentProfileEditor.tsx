@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import type { EnvironmentRow } from '../../mocks/demo'
+import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { KeyValueControl } from './KeyValueControl'
 import { NetworkAccessControl } from './NetworkAccessControl'
 import { TpuSpecControl } from './TpuSpecControl'
 
+type EnvironmentTab = 'base' | 'runtime' | 'network' | 'advanced'
 type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch' | 'tpu'
 
 interface EnvironmentField {
@@ -15,6 +18,7 @@ interface EnvironmentField {
 }
 
 interface EnvironmentFieldGroup {
+  tab: EnvironmentTab
   title: string
   fields: EnvironmentField[]
 }
@@ -25,6 +29,7 @@ const resourcePolicies = ['auto', 'limit', 'request', 'guarantee', 'ignore']
 
 const environmentFieldGroups: EnvironmentFieldGroup[] = [
   {
+    tab: 'base',
     title: 'OrnnLab template',
     fields: [
       { key: 'name', label: 'Environment Name', kind: 'text' },
@@ -33,6 +38,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     ],
   },
   {
+    tab: 'runtime',
     title: 'Task environment baseline',
     fields: [
       { key: 'dockerImage', label: 'docker_image', kind: 'text', placeholder: 'python:3.13-slim' },
@@ -49,6 +55,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     ],
   },
   {
+    tab: 'advanced',
     title: 'Runtime overrides',
     fields: [
       { key: 'forceBuild', label: 'force_build', kind: 'switch' },
@@ -68,7 +75,25 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
   },
 ]
 
-export function EnvironmentProfileEditor({ value, onChange }: { value: EnvironmentRow; onChange: (value: EnvironmentRow) => void }) {
+function environmentTabs(t: Translate): Array<{ key: EnvironmentTab; label: string }> {
+  return [
+    { key: 'base', label: t('runTabCore') },
+    { key: 'runtime', label: t('runTabEnvironment') },
+    { key: 'network', label: t('environmentNetwork') },
+    { key: 'advanced', label: t('agentAdvancedTab') },
+  ]
+}
+
+export function EnvironmentProfileEditor({
+  value,
+  t,
+  onChange,
+}: {
+  value: EnvironmentRow
+  t: Translate
+  onChange: (value: EnvironmentRow) => void
+}) {
+  const [activeTab, setActiveTab] = useState<EnvironmentTab>('base')
   const setNetworkAccess = (nextValue: string) => {
     if (nextValue === 'none') {
       onChange({ ...value, networkMode: 'no-network' })
@@ -83,30 +108,57 @@ export function EnvironmentProfileEditor({ value, onChange }: { value: Environme
 
   return (
     <div className="environment-editor">
-      {environmentFieldGroups.map((group) => (
+      <div className="run-tabs environment-detail-tabs" role="tablist" aria-label={t('selectedEnvironment')}>
+        {environmentTabs(t).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={activeTab === tab.key ? 'active' : undefined}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {environmentFieldGroups.filter((group) => group.tab === activeTab).map((group) => (
         <section className="run-config-group" key={group.title}>
-          {group.title !== 'OrnnLab template' && (
-            <div className="run-config-group-heading">
-              <h3>{group.title}</h3>
-            </div>
-          )}
+          <div className="run-config-group-heading">
+            <h3>{getEnvironmentGroupTitle(group.tab, t)}</h3>
+          </div>
           <div className="run-grid">
             {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
               <EnvironmentFieldControl field={field} key={field.key} value={value} onChange={onChange} />
             ))}
-            {group.title === 'Task environment baseline' && (
-              <NetworkAccessControl
-                enabledLabel="network_access"
-                hostsLabel="allowed_hosts"
-                value={value.networkMode === 'no-network' ? 'none' : value.allowedHosts || '*'}
-                onChange={setNetworkAccess}
-              />
-            )}
           </div>
         </section>
       ))}
+
+      {activeTab === 'network' && (
+        <section className="run-config-group">
+          <div className="run-config-group-heading">
+            <h3>{t('environmentNetworkAccess')}</h3>
+          </div>
+          <div className="run-grid">
+            <NetworkAccessControl
+              enabledLabel={t('environmentNetworkAccess')}
+              hostsLabel={t('environmentAllowedHosts')}
+              value={value.networkMode === 'no-network' ? 'none' : value.allowedHosts || '*'}
+              onChange={setNetworkAccess}
+            />
+          </div>
+        </section>
+      )}
     </div>
   )
+}
+
+function getEnvironmentGroupTitle(tab: EnvironmentTab, t: Translate) {
+  if (tab === 'base') return t('runTabCore')
+  if (tab === 'runtime') return t('runTabEnvironment')
+  return t('agentAdvancedTab')
 }
 
 function EnvironmentFieldControl({

@@ -178,7 +178,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   />
                 </div>
               </div>
-              {editingDraft && <EnvironmentProfileEditor value={editingDraft} onChange={setEditingDraft} />}
+              {editingDraft && <EnvironmentProfileEditor value={editingDraft} t={t} onChange={setEditingDraft} />}
             </section>
           </aside>
         </DetailDrawer>
@@ -236,7 +236,7 @@ function EnvironmentFormPage({
               </button>
             </div>
           </div>
-          <EnvironmentProfileEditor value={draft} onChange={setDraft} />
+          <EnvironmentProfileEditor value={draft} t={t} onChange={setDraft} />
         </section>
       </div>
     </main>

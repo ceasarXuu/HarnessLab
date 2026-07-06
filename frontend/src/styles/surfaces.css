@@ -132,7 +132,8 @@ code {
   width: 34px;
   min-width: 34px;
 }
-.agent-detail-tabs {
+.agent-detail-tabs,
+.environment-detail-tabs {
   margin: 0;
 }
 .mcp-server-control,

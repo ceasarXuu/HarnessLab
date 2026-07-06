@@ -48,8 +48,8 @@ function ControlsFixture() {
           </Field>
           <KeyValueControl label="env" value={envVars} onChange={setEnvVars} />
           <NetworkAccessControl
-            enabledLabel="network_access"
-            hostsLabel="allowed_hosts"
+            enabledLabel={t('environmentNetworkAccess')}
+            hostsLabel={t('environmentAllowedHosts')}
             value={networkAccess}
             onChange={setNetworkAccess}
           />
@@ -114,8 +114,8 @@ export const FormControls: Story = {
     await expect(split).toHaveTextContent('All splits')
     const bounds = split.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
-    await expect(canvas.getByRole('checkbox', { name: 'network_access' })).toBeChecked()
-    await expect(canvas.getByLabelText('allowed_hosts')).toHaveValue('*')
+    await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
+    await expect(canvas.getByLabelText('Allowed hosts')).toHaveValue('*')
   },
 }
 

@@ -199,6 +199,26 @@ export const Environments: Story = {
   render: () => <EnvironmentsFixture />,
 }
 
+export const EnvironmentDrawer: Story = {
+  render: () => <EnvironmentsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByText('Docker GPU'))
+    await expect(canvas.getByRole('dialog', { name: 'Selected environment' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
+    await expect(canvas.getByLabelText('Environment Name')).toHaveValue('Docker GPU')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Environment' }))
+    await expect(canvas.getByLabelText('docker_image')).toHaveValue('nvidia/cuda:12.4-runtime')
+    await expect(canvas.getByLabelText('os')).toHaveTextContent('linux')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Network' }))
+    await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
+    await expect(canvas.getByLabelText('Allowed hosts')).toHaveValue('pypi.org, github.com, huggingface.co')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
+    await expect(canvas.getByLabelText('cpu_enforcement_policy')).toHaveTextContent('limit')
+    await expect(canvas.getByLabelText('extra_allowed_hosts')).toHaveValue('model.internal')
+  },
+}
+
 export const Leaderboard: Story = {
   render: () => <LeaderboardFixture />,
 }
