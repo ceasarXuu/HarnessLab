@@ -10,6 +10,7 @@ import { DatasetsPage } from './DatasetsPage'
 import { EnvironmentsPage } from './EnvironmentsPage'
 import { JobsPage } from './JobsPage'
 import { LeaderboardPage } from './LeaderboardPage'
+import { NewAgentPage } from './NewAgentPage'
 import { SystemPage } from './SystemPage'
 
 const t = getTranslator('en')
@@ -86,11 +87,11 @@ export const DatasetDrawer: Story = {
 }
 
 export const Agents: Story = {
-  render: () => <AgentsPage rows={agentRows} t={t} />,
+  render: () => <AgentsFixture />,
 }
 
 export const AgentDrawer: Story = {
-  render: () => <AgentsPage rows={agentRows} t={t} />,
+  render: () => <AgentsFixture />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByText('Claude Code default'))
@@ -134,6 +135,42 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByLabelText('Deployment')).toHaveValue('compose-sidecar')
     await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
     await expect(canvas.getByLabelText('Generated URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
+    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
+  },
+}
+
+function AgentsFixture() {
+  const [rows, setRows] = useState(agentRows)
+  const [view, setView] = useState<'list' | 'new'>('list')
+  if (view === 'new') {
+    return (
+      <NewAgentPage
+        rows={rows}
+        t={t}
+        onAgents={() => setView('list')}
+        onSave={(agent) => {
+          setRows((current) => [agent, ...current])
+          setView('list')
+        }}
+      />
+    )
+  }
+  return <AgentsPage rows={rows} t={t} onNewAgent={() => setView('new')} onRowsChange={setRows} />
+}
+
+export const NewAgent: Story = {
+  render: () => <NewAgentPage rows={agentRows} t={t} onAgents={() => undefined} onSave={() => undefined} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'New Agent' })).toBeVisible()
+    await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Custom Agent')
+    await expect(canvas.getByLabelText('Harness')).toHaveValue('custom-harness')
+    await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
+    await expect(canvas.getByText('Skills sources')).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'MCPs' }))
+    await expect(canvas.getByText('MCP Servers')).toBeVisible()
     await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },

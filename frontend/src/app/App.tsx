@@ -17,12 +17,15 @@ import { DatasetsPage } from '../screens/DatasetsPage'
 import { EnvironmentsPage } from '../screens/EnvironmentsPage'
 import { LeaderboardPage } from '../screens/LeaderboardPage'
 import { NewRunPage } from '../screens/NewRunPage'
+import { NewAgentPage } from '../screens/NewAgentPage'
 import { SystemPage } from '../screens/SystemPage'
 
 type JobView = 'list' | 'new'
 type EnvironmentView = 'list' | 'new' | 'copy'
+type AgentView = 'list' | 'new'
 
 interface RouteState {
+  agentView: AgentView
   environmentId?: string
   environmentView: EnvironmentView
   jobView: JobView
@@ -34,16 +37,20 @@ const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'environments',
 function readRouteFromHash(): RouteState {
   const hash = window.location.hash.replace('#', '')
   if (hash === 'jobs/new' || hash === 'new-run') {
-    return { page: 'jobs', jobView: 'new', environmentView: 'list' }
+    return { page: 'jobs', jobView: 'new', agentView: 'list', environmentView: 'list' }
+  }
+  if (hash === 'agents/new') {
+    return { page: 'agents', jobView: 'list', agentView: 'new', environmentView: 'list' }
   }
   if (hash === 'environments/new') {
-    return { page: 'environments', jobView: 'list', environmentView: 'new' }
+    return { page: 'environments', jobView: 'list', agentView: 'list', environmentView: 'new' }
   }
   const environmentMatch = hash.match(/^environments\/([^/]+)\/copy$/)
   if (environmentMatch) {
     return {
       page: 'environments',
       jobView: 'list',
+      agentView: 'list',
       environmentView: 'copy',
       environmentId: environmentMatch[1],
     }
@@ -51,6 +58,7 @@ function readRouteFromHash(): RouteState {
   return {
     page: pageKeys.has(hash as PageKey) ? (hash as PageKey) : 'jobs',
     jobView: 'list',
+    agentView: 'list',
     environmentView: 'list',
   }
 }
@@ -66,6 +74,7 @@ function readTheme(): 'light' | 'dark' {
 export function App() {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const [jobs, setJobs] = useState(seedJobs)
+  const [agents, setAgents] = useState(agentRows)
   const [environmentProfiles, setEnvironmentProfiles] = useState(environmentRows)
   const [leaderboardEntries, setLeaderboardEntries] = useState(leaderboardRows)
   const [datasetSearch, setDatasetSearch] = useState('')
@@ -120,7 +129,12 @@ export function App() {
   }, [language, theme])
 
   function navigate(page: PageKey, jobView: JobView = 'list') {
-    const nextRoute: RouteState = { page, jobView: page === 'jobs' ? jobView : 'list', environmentView: 'list' }
+    const nextRoute: RouteState = {
+      page,
+      jobView: page === 'jobs' ? jobView : 'list',
+      agentView: 'list',
+      environmentView: 'list',
+    }
     const nextHash = nextRoute.page === 'jobs' && nextRoute.jobView === 'new' ? '#jobs/new' : `#${nextRoute.page}`
     setRoute(nextRoute)
     if (window.location.hash !== nextHash) {
@@ -128,8 +142,17 @@ export function App() {
     }
   }
 
+  function navigateAgent(agentView: AgentView) {
+    const nextRoute: RouteState = { page: 'agents', jobView: 'list', agentView, environmentView: 'list' }
+    const nextHash = agentView === 'new' ? '#agents/new' : '#agents'
+    setRoute(nextRoute)
+    if (window.location.hash !== nextHash) {
+      window.history.pushState(null, '', nextHash)
+    }
+  }
+
   function navigateEnvironment(environmentView: EnvironmentView, environmentId?: string) {
-    const nextRoute: RouteState = { page: 'environments', jobView: 'list', environmentView, environmentId }
+    const nextRoute: RouteState = { page: 'environments', jobView: 'list', agentView: 'list', environmentView, environmentId }
     const nextHash =
       environmentView === 'list'
         ? '#environments'
@@ -240,7 +263,20 @@ export function App() {
           onSearch={setDatasetSearch}
         />
       )}
-      {route.page === 'agents' && <AgentsPage rows={agentRows} t={t} />}
+      {route.page === 'agents' && route.agentView === 'list' && (
+        <AgentsPage rows={agents} t={t} onNewAgent={() => navigateAgent('new')} onRowsChange={setAgents} />
+      )}
+      {route.page === 'agents' && route.agentView === 'new' && (
+        <NewAgentPage
+          rows={agents}
+          t={t}
+          onAgents={() => navigateAgent('list')}
+          onSave={(agent) => {
+            setAgents((current) => [agent, ...current])
+            navigateAgent('list')
+          }}
+        />
+      )}
       {route.page === 'environments' && (
         <EnvironmentsPage
           environmentId={route.environmentId}

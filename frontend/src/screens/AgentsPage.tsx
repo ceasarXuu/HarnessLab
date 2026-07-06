@@ -9,28 +9,29 @@ import type { Translate } from '../i18n'
 interface AgentsPageProps {
   rows: AgentRow[]
   t: Translate
+  onNewAgent: () => void
+  onRowsChange: (rows: AgentRow[]) => void
 }
 
-export function AgentsPage({ rows, t }: AgentsPageProps) {
-  const [agentRows, setAgentRows] = useState(rows)
+export function AgentsPage({ rows, t, onNewAgent, onRowsChange }: AgentsPageProps) {
   const [selected, setSelected] = useState<AgentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<AgentRow | null>(null)
   const [search, setSearch] = useState('')
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return agentRows
-    return agentRows.filter((row) =>
+    if (!query) return rows
+    return rows.filter((row) =>
       [row.agentName, row.harness, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [agentRows, search])
+  }, [rows, search])
 
   const confirmDelete = () => {
     if (!deleteTarget) return
-    setAgentRows((current) => current.filter((row) => row.harness !== deleteTarget.harness))
-    if (selected?.harness === deleteTarget.harness) {
+    onRowsChange(rows.filter((row) => getAgentKey(row) !== getAgentKey(deleteTarget)))
+    if (selected && getAgentKey(selected) === getAgentKey(deleteTarget)) {
       setDrawerOpen(false)
       setSelected(null)
     }
@@ -54,7 +55,7 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
                 placeholder={t('searchAgentsPlaceholder')}
               />
             </label>
-            <button className="primary-button">{t('newAgent')}</button>
+            <button className="primary-button" onClick={onNewAgent}>{t('newAgent')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -72,8 +73,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
             <tbody>
               {filteredRows.map((row) => (
                 <tr
-                  key={row.harness}
-                  className={selected?.harness === row.harness ? 'selected-row' : undefined}
+                  key={getAgentKey(row)}
+                  className={selected && getAgentKey(selected) === getAgentKey(row) ? 'selected-row' : undefined}
                   onClick={() => {
                     setSelected(row)
                     setDrawerOpen(true)
@@ -128,4 +129,8 @@ export function AgentsPage({ rows, t }: AgentsPageProps) {
       )}
     </main>
   )
+}
+
+function getAgentKey(row: AgentRow) {
+  return `${row.agentName}:${row.harness}`
 }
