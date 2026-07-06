@@ -6,7 +6,7 @@ import { KeyValueControl } from './KeyValueControl'
 import { NetworkAccessControl } from './NetworkAccessControl'
 import { TpuSpecControl } from './TpuSpecControl'
 
-type EnvironmentTab = 'base' | 'runtime' | 'network' | 'advanced'
+type EnvironmentTab = 'base' | 'network' | 'advanced'
 type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch' | 'tpu'
 
 interface EnvironmentField {
@@ -38,7 +38,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     ],
   },
   {
-    tab: 'runtime',
+    tab: 'base',
     title: 'Task environment baseline',
     fields: [
       { key: 'dockerImage', label: 'docker_image', kind: 'text', placeholder: 'python:3.13-slim' },
@@ -78,7 +78,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
 function environmentTabs(t: Translate): Array<{ key: EnvironmentTab; label: string }> {
   return [
     { key: 'base', label: t('runTabCore') },
-    { key: 'runtime', label: t('runTabEnvironment') },
     { key: 'network', label: t('environmentNetwork') },
     { key: 'advanced', label: t('agentAdvancedTab') },
   ]
@@ -126,7 +125,7 @@ export function EnvironmentProfileEditor({
       {environmentFieldGroups.filter((group) => group.tab === activeTab).map((group) => (
         <section className="run-config-group" key={group.title}>
           <div className="run-config-group-heading">
-            <h3>{getEnvironmentGroupTitle(group.tab, t)}</h3>
+            <h3>{getEnvironmentGroupTitle(group.title, t)}</h3>
           </div>
           <div className="run-grid">
             {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
@@ -155,9 +154,9 @@ export function EnvironmentProfileEditor({
   )
 }
 
-function getEnvironmentGroupTitle(tab: EnvironmentTab, t: Translate) {
-  if (tab === 'base') return t('runTabCore')
-  if (tab === 'runtime') return t('runTabEnvironment')
+function getEnvironmentGroupTitle(title: string, t: Translate) {
+  if (title === 'OrnnLab template') return t('runTabCore')
+  if (title === 'Task environment baseline') return t('runTabEnvironment')
   return t('agentAdvancedTab')
 }
 
