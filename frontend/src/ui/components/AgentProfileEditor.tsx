@@ -107,11 +107,6 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
               </div>
             </div>
           </section>
-
-          <section className="surface rail-card">
-            <SectionTitle>{t('networkAccess')}</SectionTitle>
-            <NetworkAccessControl enabledLabel={t('networkAccessToggle')} hostsLabel={t('agentAllowedHosts')} value={value.allowedHosts ?? '*'} onChange={(nextValue) => setField('allowedHosts', nextValue)} />
-          </section>
         </>
       )}
 
@@ -172,27 +167,6 @@ export function AgentIdentityEditor({ value, t, onChange }: AgentProfileEditorPr
         <label>
           {t('customImportPath')}
           <input value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
-        </label>
-      )}
-    </div>
-  )
-}
-
-function NetworkAccessControl({ enabledLabel, hostsLabel, value, onChange }: { enabledLabel: string; hostsLabel: string; value: string; onChange: (value: string) => void }) {
-  const normalizedValue = value.trim() || '*'
-  const enabled = normalizedValue !== 'none'
-  const hostsValue = enabled ? normalizedValue : '*'
-
-  return (
-    <div className="network-access-control">
-      <label className="switch-control network-access-toggle">
-        <span>{enabledLabel}</span>
-        <input aria-label={enabledLabel} checked={enabled} type="checkbox" onChange={(event) => onChange(event.target.checked ? '*' : 'none')} />
-      </label>
-      {enabled && (
-        <label className="field-wide">
-          {hostsLabel}
-          <textarea value={hostsValue} onChange={(event) => onChange(event.target.value.trim() || '*')} />
         </label>
       )}
     </div>

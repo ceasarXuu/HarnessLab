@@ -1,6 +1,7 @@
 import type { EnvironmentRow } from '../../mocks/demo'
 import { CustomSelect } from './CustomSelect'
 import { KeyValueControl } from './KeyValueControl'
+import { NetworkAccessControl } from './NetworkAccessControl'
 import { TpuSpecControl } from './TpuSpecControl'
 
 type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch' | 'tpu'
@@ -19,7 +20,6 @@ interface EnvironmentFieldGroup {
 }
 
 const environmentTypes = ['docker', 'e2b', 'daytona', 'modal', 'runloop', 'langsmith', 'gke', 'novita', 'apple-container', 'singularity', 'islo', 'tensorlake', 'cwsandbox', 'wandb', 'use-computer', 'custom']
-const networkModes = ['public', 'no-network', 'allowlist']
 const operatingSystems = ['linux', 'windows']
 const resourcePolicies = ['auto', 'limit', 'request', 'guarantee', 'ignore']
 
@@ -37,8 +37,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     fields: [
       { key: 'dockerImage', label: 'docker_image', kind: 'text', placeholder: 'python:3.13-slim' },
       { key: 'os', label: 'os', kind: 'select', options: operatingSystems },
-      { key: 'networkMode', label: 'network_mode', kind: 'select', options: networkModes },
-      { key: 'allowedHosts', label: 'allowed_hosts', kind: 'tags', placeholder: 'pypi.org, github.com' },
       { key: 'cpus', label: 'cpus', kind: 'number' },
       { key: 'memoryMb', label: 'memory_mb', kind: 'number' },
       { key: 'storageMb', label: 'storage_mb', kind: 'number' },
@@ -71,6 +69,18 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
 ]
 
 export function EnvironmentProfileEditor({ value, onChange }: { value: EnvironmentRow; onChange: (value: EnvironmentRow) => void }) {
+  const setNetworkAccess = (nextValue: string) => {
+    if (nextValue === 'none') {
+      onChange({ ...value, networkMode: 'no-network' })
+      return
+    }
+    onChange({
+      ...value,
+      allowedHosts: nextValue,
+      networkMode: nextValue.trim() === '*' ? 'public' : 'allowlist',
+    })
+  }
+
   return (
     <div className="environment-editor">
       {environmentFieldGroups.map((group) => (
@@ -84,6 +94,14 @@ export function EnvironmentProfileEditor({ value, onChange }: { value: Environme
             {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
               <EnvironmentFieldControl field={field} key={field.key} value={value} onChange={onChange} />
             ))}
+            {group.title === 'Task environment baseline' && (
+              <NetworkAccessControl
+                enabledLabel="network_access"
+                hostsLabel="allowed_hosts"
+                value={value.networkMode === 'no-network' ? 'none' : value.allowedHosts || '*'}
+                onChange={setNetworkAccess}
+              />
+            )}
           </div>
         </section>
       ))}

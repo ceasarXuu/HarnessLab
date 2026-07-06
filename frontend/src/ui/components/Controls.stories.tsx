@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
+import { NetworkAccessControl } from './NetworkAccessControl'
 import { Field, Toggle } from './RunBuilderChrome'
 import { Toast } from './Toast'
 import { TpuSpecControl } from './TpuSpecControl'
@@ -15,6 +16,7 @@ function ControlsFixture() {
   const [envVars, setEnvVars] = useState('HTTP_PROXY=${HTTP_PROXY:-}')
   const [folder, setFolder] = useState('jobs/terminal-bench-smoke')
   const [enabled, setEnabled] = useState(true)
+  const [networkAccess, setNetworkAccess] = useState('*')
   const [tpu, setTpu] = useState('v6e=2x4')
   const t = getTranslator('en')
 
@@ -45,6 +47,12 @@ function ControlsFixture() {
             <FolderPathInput chooseLabel="Choose" label="Choose folder" value={folder} onChange={setFolder} />
           </Field>
           <KeyValueControl label="env" value={envVars} onChange={setEnvVars} />
+          <NetworkAccessControl
+            enabledLabel="network_access"
+            hostsLabel="allowed_hosts"
+            value={networkAccess}
+            onChange={setNetworkAccess}
+          />
           <TpuSpecControl label="tpu" value={tpu} onChange={setTpu} />
         </div>
       </section>
@@ -106,6 +114,8 @@ export const FormControls: Story = {
     await expect(split).toHaveTextContent('All splits')
     const bounds = split.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
+    await expect(canvas.getByRole('checkbox', { name: 'network_access' })).toBeChecked()
+    await expect(canvas.getByLabelText('allowed_hosts')).toHaveValue('*')
   },
 }
 

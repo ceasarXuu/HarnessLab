@@ -72,19 +72,14 @@ describe('App agents and leaderboard', () => {
       ['Context length', '131072'],
       ['API key env', 'LOCAL_MODEL_API_KEY'],
       ['Base URL env', 'LOCAL_MODEL_URL'],
-      ['Domain allowlist', 'localhost, model.internal'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Permission mode')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
-    expect(agentForm.getByText('Network access')).toBeInTheDocument()
-    expect(agentForm.getByRole('checkbox', { name: 'Enable network access' })).toBeChecked()
-    fireEvent.click(agentForm.getByRole('checkbox', { name: 'Enable network access' }))
-    expect(agentForm.queryByLabelText('Domain allowlist')).not.toBeInTheDocument()
-    fireEvent.click(agentForm.getByRole('checkbox', { name: 'Enable network access' }))
-    expect(agentForm.getByLabelText('Domain allowlist')).toHaveValue('*')
+    expect(agentForm.queryByText('Network access')).not.toBeInTheDocument()
+    expect(agentForm.queryByRole('checkbox', { name: 'Enable network access' })).not.toBeInTheDocument()
     const envKeyCount = agentForm.getAllByLabelText('Env key').length
     fireEvent.click(agentForm.getByRole('button', { name: 'Add agent env' }))
     expect(agentForm.getAllByLabelText('Env key')).toHaveLength(envKeyCount + 1)
