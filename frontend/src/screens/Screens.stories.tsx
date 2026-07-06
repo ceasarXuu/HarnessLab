@@ -208,14 +208,14 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     await expect(canvas.queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Environment Name')).toHaveValue('Docker GPU')
-    await expect(canvas.getByLabelText('docker_image')).toHaveValue('nvidia/cuda:12.4-runtime')
-    await expect(canvas.getByLabelText('os')).toHaveTextContent('linux')
+    await expect(canvas.getByLabelText('Docker image')).toHaveValue('nvidia/cuda:12.4-runtime')
+    await expect(canvas.getByLabelText('OS')).toHaveTextContent('linux')
     await userEvent.click(canvas.getByRole('tab', { name: 'Network' }))
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Allowed hosts')).toHaveValue('pypi.org, github.com, huggingface.co')
     await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
-    await expect(canvas.getByLabelText('cpu_enforcement_policy')).toHaveTextContent('limit')
-    await expect(canvas.getByLabelText('extra_allowed_hosts')).toHaveValue('model.internal')
+    await expect(canvas.getByLabelText('CPU policy')).toHaveTextContent('limit')
+    await expect(canvas.getByLabelText('Extra allowed hosts')).toHaveValue('model.internal')
   },
 }
 

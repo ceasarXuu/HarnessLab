@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { EnvironmentRow } from '../../mocks/demo'
-import type { Translate } from '../../i18n'
+import type { MessageKey, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { KeyValueControl } from './KeyValueControl'
 import { NetworkAccessControl } from './NetworkAccessControl'
@@ -11,7 +11,7 @@ type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' |
 
 interface EnvironmentField {
   key: keyof EnvironmentRow
-  label: string
+  labelKey: MessageKey
   kind: EnvironmentFieldKind
   options?: string[]
   placeholder?: string
@@ -32,45 +32,45 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     tab: 'base',
     title: 'OrnnLab template',
     fields: [
-      { key: 'name', label: 'Environment Name', kind: 'text' },
-      { key: 'environmentType', label: 'type', kind: 'select', options: environmentTypes },
-      { key: 'importPath', label: 'import_path', kind: 'path', placeholder: 'module.path:ClassName' },
+      { key: 'name', labelKey: 'environmentName', kind: 'text' },
+      { key: 'environmentType', labelKey: 'agentType', kind: 'select', options: environmentTypes },
+      { key: 'importPath', labelKey: 'environmentImportPath', kind: 'path', placeholder: 'module.path:ClassName' },
     ],
   },
   {
     tab: 'base',
     title: 'Task environment baseline',
     fields: [
-      { key: 'dockerImage', label: 'docker_image', kind: 'text', placeholder: 'python:3.13-slim' },
-      { key: 'os', label: 'os', kind: 'select', options: operatingSystems },
-      { key: 'cpus', label: 'cpus', kind: 'number' },
-      { key: 'memoryMb', label: 'memory_mb', kind: 'number' },
-      { key: 'storageMb', label: 'storage_mb', kind: 'number' },
-      { key: 'gpus', label: 'gpus', kind: 'number' },
-      { key: 'gpuTypes', label: 'gpu_types', kind: 'tags', placeholder: 'A100, H100' },
-      { key: 'tpu', label: 'tpu', kind: 'tpu' },
-      { key: 'env', label: 'env', kind: 'keyValue', placeholder: 'KEY=value' },
-      { key: 'healthcheck', label: 'healthcheck', kind: 'json' },
-      { key: 'workdir', label: 'workdir', kind: 'path' },
+      { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', placeholder: 'python:3.13-slim' },
+      { key: 'os', labelKey: 'os', kind: 'select', options: operatingSystems },
+      { key: 'cpus', labelKey: 'cpuCores', kind: 'number' },
+      { key: 'memoryMb', labelKey: 'memoryMb', kind: 'number' },
+      { key: 'storageMb', labelKey: 'storageMb', kind: 'number' },
+      { key: 'gpus', labelKey: 'gpus', kind: 'number' },
+      { key: 'gpuTypes', labelKey: 'gpuTypes', kind: 'tags', placeholder: 'A100, H100' },
+      { key: 'tpu', labelKey: 'tpu', kind: 'tpu' },
+      { key: 'env', labelKey: 'environmentVariables', kind: 'keyValue', placeholder: 'KEY=value' },
+      { key: 'healthcheck', labelKey: 'healthcheck', kind: 'json' },
+      { key: 'workdir', labelKey: 'workdir', kind: 'path' },
     ],
   },
   {
     tab: 'advanced',
     title: 'Runtime overrides',
     fields: [
-      { key: 'forceBuild', label: 'force_build', kind: 'switch' },
-      { key: 'deleteAfterRun', label: 'delete', kind: 'switch' },
-      { key: 'cpuPolicy', label: 'cpu_enforcement_policy', kind: 'select', options: resourcePolicies },
-      { key: 'memoryPolicy', label: 'memory_enforcement_policy', kind: 'select', options: resourcePolicies },
-      { key: 'overrideCpus', label: 'override_cpus', kind: 'number' },
-      { key: 'overrideMemoryMb', label: 'override_memory_mb', kind: 'number' },
-      { key: 'overrideStorageMb', label: 'override_storage_mb', kind: 'number' },
-      { key: 'overrideGpus', label: 'override_gpus', kind: 'number' },
-      { key: 'overrideTpu', label: 'override_tpu', kind: 'tpu' },
-      { key: 'mounts', label: 'mounts', kind: 'json' },
-      { key: 'dockerCompose', label: 'extra_docker_compose', kind: 'path' },
-      { key: 'extraAllowedHosts', label: 'extra_allowed_hosts', kind: 'tags', placeholder: 'model.internal' },
-      { key: 'kwargs', label: 'kwargs', kind: 'keyValue' },
+      { key: 'forceBuild', labelKey: 'forceBuild', kind: 'switch' },
+      { key: 'deleteAfterRun', labelKey: 'deleteAfterRun', kind: 'switch' },
+      { key: 'cpuPolicy', labelKey: 'resourcePolicy', kind: 'select', options: resourcePolicies },
+      { key: 'memoryPolicy', labelKey: 'memoryPolicy', kind: 'select', options: resourcePolicies },
+      { key: 'overrideCpus', labelKey: 'overrideCpus', kind: 'number' },
+      { key: 'overrideMemoryMb', labelKey: 'overrideMemoryMb', kind: 'number' },
+      { key: 'overrideStorageMb', labelKey: 'overrideStorageMb', kind: 'number' },
+      { key: 'overrideGpus', labelKey: 'overrideGpus', kind: 'number' },
+      { key: 'overrideTpu', labelKey: 'overrideTpu', kind: 'tpu' },
+      { key: 'mounts', labelKey: 'mounts', kind: 'json' },
+      { key: 'dockerCompose', labelKey: 'dockerCompose', kind: 'path' },
+      { key: 'extraAllowedHosts', labelKey: 'extraAllowedHosts', kind: 'tags', placeholder: 'model.internal' },
+      { key: 'kwargs', labelKey: 'environmentKwargs', kind: 'keyValue' },
     ],
   },
 ]
@@ -129,7 +129,7 @@ export function EnvironmentProfileEditor({
           </div>
           <div className="run-grid">
             {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
-              <EnvironmentFieldControl field={field} key={field.key} value={value} onChange={onChange} />
+              <EnvironmentFieldControl field={field} key={field.key} t={t} value={value} onChange={onChange} />
             ))}
           </div>
         </section>
@@ -162,19 +162,22 @@ function getEnvironmentGroupTitle(title: string, t: Translate) {
 
 function EnvironmentFieldControl({
   field,
+  t,
   value,
   onChange,
 }: {
   field: EnvironmentField
+  t: Translate
   value: EnvironmentRow
   onChange: (value: EnvironmentRow) => void
 }) {
   const currentValue = value[field.key]
+  const label = t(field.labelKey)
   const setValue = (nextValue: string | boolean) => onChange({ ...value, [field.key]: nextValue })
   if (field.kind === 'switch') {
     return (
       <label className="switch-control environment-switch">
-        <span>{field.label}</span>
+        <span>{label}</span>
         <input checked={Boolean(currentValue)} onChange={(event) => setValue(event.target.checked)} type="checkbox" />
       </label>
     )
@@ -182,9 +185,9 @@ function EnvironmentFieldControl({
   if (field.kind === 'select') {
     return (
       <label>
-        {field.label}
+        {label}
         <CustomSelect
-          ariaLabel={field.label}
+          ariaLabel={label}
           value={String(currentValue)}
           options={field.options?.map((option) => ({ label: option, value: option })) ?? []}
           onChange={setValue}
@@ -193,23 +196,43 @@ function EnvironmentFieldControl({
     )
   }
   if (field.kind === 'keyValue') {
-    return <KeyValueControl label={field.label} value={String(currentValue)} onChange={setValue} />
+    return (
+      <KeyValueControl
+        label={label}
+        labels={{ add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }}
+        value={String(currentValue)}
+        onChange={setValue}
+      />
+    )
   }
   if (field.kind === 'json') {
     return (
       <label className="field-wide">
-        {field.label}
+        {label}
         <textarea placeholder={field.placeholder} value={String(currentValue)} onChange={(event) => setValue(event.target.value)} />
       </label>
     )
   }
   if (field.kind === 'tpu') {
-    return <TpuSpecControl label={field.label} value={String(currentValue)} onChange={setValue} />
+    return (
+      <TpuSpecControl
+        label={label}
+        labels={{
+          notConfigured: t('notConfigured'),
+          topologyX: t('topologyX'),
+          topologyY: t('topologyY'),
+          topologyZ: t('topologyZ'),
+          type: t('tpuType'),
+        }}
+        value={String(currentValue)}
+        onChange={setValue}
+      />
+    )
   }
   const displayValue = field.kind === 'number' ? normalizeNumberValue(currentValue) : normalizeInputValue(currentValue)
   return (
     <label>
-      {field.label}
+      {label}
       <input
         inputMode={field.kind === 'number' ? 'numeric' : undefined}
         placeholder={field.placeholder}

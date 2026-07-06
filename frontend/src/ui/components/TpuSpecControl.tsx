@@ -6,6 +6,13 @@ interface TpuSpecControlProps {
   label: string
   value: string
   onChange: (value: string) => void
+  labels?: {
+    notConfigured: string
+    topologyX: string
+    topologyY: string
+    topologyZ: string
+    type: string
+  }
 }
 
 interface ParsedTpuSpec {
@@ -15,8 +22,15 @@ interface ParsedTpuSpec {
   z: string
 }
 
-export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) {
+export function TpuSpecControl({ label, labels, value, onChange }: TpuSpecControlProps) {
   const parsed = parseTpuSpec(value)
+  const controlLabels = labels ?? {
+    notConfigured: 'Not configured',
+    topologyX: 'Topology X',
+    topologyY: 'Topology Y',
+    topologyZ: 'Topology Z',
+    type: 'TPU type',
+  }
   const update = (next: Partial<ParsedTpuSpec>) => {
     onChange(formatTpuSpec({ ...parsed, ...next }))
   }
@@ -25,16 +39,16 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
     <div className="tpu-spec-control field-wide">
       <span className="tpu-spec-label">{label}</span>
       <label>
-        TPU type
+        {controlLabels.type}
         <CustomSelect
-          ariaLabel="TPU type"
+          ariaLabel={controlLabels.type}
           value={parsed.type}
-          options={tpuTypes.map((type) => ({ label: type === 'none' ? 'Not configured' : type, value: type }))}
+          options={tpuTypes.map((type) => ({ label: type === 'none' ? controlLabels.notConfigured : type, value: type }))}
           onChange={(type) => update({ type })}
         />
       </label>
       <label>
-        Topology X
+        {controlLabels.topologyX}
         <input
           disabled={parsed.type === 'none'}
           min="1"
@@ -44,7 +58,7 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
         />
       </label>
       <label>
-        Topology Y
+        {controlLabels.topologyY}
         <input
           disabled={parsed.type === 'none'}
           min="1"
@@ -54,7 +68,7 @@ export function TpuSpecControl({ label, value, onChange }: TpuSpecControlProps) 
         />
       </label>
       <label>
-        Topology Z
+        {controlLabels.topologyZ}
         <input
           disabled={parsed.type === 'none'}
           min="1"
