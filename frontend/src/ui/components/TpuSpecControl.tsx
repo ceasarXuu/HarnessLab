@@ -6,6 +6,7 @@ interface TpuSpecControlProps {
   label: string
   value: string
   onChange: (value: string) => void
+  className?: string
   labels?: {
     notConfigured: string
     topologyX: string
@@ -22,7 +23,7 @@ interface ParsedTpuSpec {
   z: string
 }
 
-export function TpuSpecControl({ label, labels, value, onChange }: TpuSpecControlProps) {
+export function TpuSpecControl({ label, className, labels, value, onChange }: TpuSpecControlProps) {
   const parsed = parseTpuSpec(value)
   const controlLabels = labels ?? {
     notConfigured: 'Not configured',
@@ -36,7 +37,7 @@ export function TpuSpecControl({ label, labels, value, onChange }: TpuSpecContro
   }
 
   return (
-    <div className="tpu-spec-control field-wide">
+    <div className={`tpu-spec-control field-wide ${className ?? ''}`}>
       <span className="tpu-spec-label">{label}</span>
       <label>
         {controlLabels.type}

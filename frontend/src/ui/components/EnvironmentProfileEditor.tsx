@@ -8,11 +8,13 @@ import { TpuSpecControl } from './TpuSpecControl'
 
 type EnvironmentTab = 'base' | 'network' | 'advanced'
 type EnvironmentFieldKind = 'text' | 'select' | 'number' | 'tags' | 'keyValue' | 'json' | 'path' | 'switch' | 'tpu'
+type EnvironmentFieldLayout = 'short' | 'medium' | 'wide' | 'full'
 
 interface EnvironmentField {
   key: keyof EnvironmentRow
   labelKey: MessageKey
   kind: EnvironmentFieldKind
+  layout?: EnvironmentFieldLayout
   options?: string[]
   placeholder?: string
 }
@@ -32,45 +34,45 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     tab: 'base',
     title: 'OrnnLab template',
     fields: [
-      { key: 'name', labelKey: 'environmentName', kind: 'text' },
-      { key: 'environmentType', labelKey: 'agentType', kind: 'select', options: environmentTypes },
-      { key: 'importPath', labelKey: 'environmentImportPath', kind: 'path', placeholder: 'module.path:ClassName' },
+      { key: 'name', labelKey: 'environmentName', kind: 'text', layout: 'medium' },
+      { key: 'environmentType', labelKey: 'agentType', kind: 'select', layout: 'medium', options: environmentTypes },
+      { key: 'importPath', labelKey: 'environmentImportPath', kind: 'path', layout: 'full', placeholder: 'module.path:ClassName' },
     ],
   },
   {
     tab: 'base',
     title: 'Task environment baseline',
     fields: [
-      { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', placeholder: 'python:3.13-slim' },
-      { key: 'os', labelKey: 'os', kind: 'select', options: operatingSystems },
-      { key: 'cpus', labelKey: 'cpuCores', kind: 'number' },
-      { key: 'memoryMb', labelKey: 'memoryMb', kind: 'number' },
-      { key: 'storageMb', labelKey: 'storageMb', kind: 'number' },
-      { key: 'gpus', labelKey: 'gpus', kind: 'number' },
-      { key: 'gpuTypes', labelKey: 'gpuTypes', kind: 'tags', placeholder: 'A100, H100' },
-      { key: 'tpu', labelKey: 'tpu', kind: 'tpu' },
-      { key: 'env', labelKey: 'environmentVariables', kind: 'keyValue', placeholder: 'KEY=value' },
-      { key: 'healthcheck', labelKey: 'healthcheck', kind: 'json' },
-      { key: 'workdir', labelKey: 'workdir', kind: 'path' },
+      { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', layout: 'full', placeholder: 'python:3.13-slim' },
+      { key: 'os', labelKey: 'os', kind: 'select', layout: 'short', options: operatingSystems },
+      { key: 'cpus', labelKey: 'cpuCores', kind: 'number', layout: 'short' },
+      { key: 'memoryMb', labelKey: 'memoryMb', kind: 'number', layout: 'short' },
+      { key: 'storageMb', labelKey: 'storageMb', kind: 'number', layout: 'short' },
+      { key: 'gpus', labelKey: 'gpus', kind: 'number', layout: 'short' },
+      { key: 'gpuTypes', labelKey: 'gpuTypes', kind: 'tags', layout: 'wide', placeholder: 'A100, H100' },
+      { key: 'tpu', labelKey: 'tpu', kind: 'tpu', layout: 'full' },
+      { key: 'env', labelKey: 'environmentVariables', kind: 'keyValue', layout: 'full', placeholder: 'KEY=value' },
+      { key: 'healthcheck', labelKey: 'healthcheck', kind: 'json', layout: 'full' },
+      { key: 'workdir', labelKey: 'workdir', kind: 'path', layout: 'full' },
     ],
   },
   {
     tab: 'advanced',
     title: 'Runtime overrides',
     fields: [
-      { key: 'forceBuild', labelKey: 'forceBuild', kind: 'switch' },
-      { key: 'deleteAfterRun', labelKey: 'deleteAfterRun', kind: 'switch' },
-      { key: 'cpuPolicy', labelKey: 'resourcePolicy', kind: 'select', options: resourcePolicies },
-      { key: 'memoryPolicy', labelKey: 'memoryPolicy', kind: 'select', options: resourcePolicies },
-      { key: 'overrideCpus', labelKey: 'overrideCpus', kind: 'number' },
-      { key: 'overrideMemoryMb', labelKey: 'overrideMemoryMb', kind: 'number' },
-      { key: 'overrideStorageMb', labelKey: 'overrideStorageMb', kind: 'number' },
-      { key: 'overrideGpus', labelKey: 'overrideGpus', kind: 'number' },
-      { key: 'overrideTpu', labelKey: 'overrideTpu', kind: 'tpu' },
-      { key: 'mounts', labelKey: 'mounts', kind: 'json' },
-      { key: 'dockerCompose', labelKey: 'dockerCompose', kind: 'path' },
-      { key: 'extraAllowedHosts', labelKey: 'extraAllowedHosts', kind: 'tags', placeholder: 'model.internal' },
-      { key: 'kwargs', labelKey: 'environmentKwargs', kind: 'keyValue' },
+      { key: 'forceBuild', labelKey: 'forceBuild', kind: 'switch', layout: 'medium' },
+      { key: 'deleteAfterRun', labelKey: 'deleteAfterRun', kind: 'switch', layout: 'medium' },
+      { key: 'cpuPolicy', labelKey: 'resourcePolicy', kind: 'select', layout: 'medium', options: resourcePolicies },
+      { key: 'memoryPolicy', labelKey: 'memoryPolicy', kind: 'select', layout: 'medium', options: resourcePolicies },
+      { key: 'overrideCpus', labelKey: 'overrideCpus', kind: 'number', layout: 'short' },
+      { key: 'overrideMemoryMb', labelKey: 'overrideMemoryMb', kind: 'number', layout: 'short' },
+      { key: 'overrideStorageMb', labelKey: 'overrideStorageMb', kind: 'number', layout: 'short' },
+      { key: 'overrideGpus', labelKey: 'overrideGpus', kind: 'number', layout: 'short' },
+      { key: 'overrideTpu', labelKey: 'overrideTpu', kind: 'tpu', layout: 'full' },
+      { key: 'mounts', labelKey: 'mounts', kind: 'json', layout: 'full' },
+      { key: 'dockerCompose', labelKey: 'dockerCompose', kind: 'path', layout: 'full' },
+      { key: 'extraAllowedHosts', labelKey: 'extraAllowedHosts', kind: 'tags', layout: 'wide', placeholder: 'model.internal' },
+      { key: 'kwargs', labelKey: 'environmentKwargs', kind: 'keyValue', layout: 'full' },
     ],
   },
 ]
@@ -173,10 +175,11 @@ function EnvironmentFieldControl({
 }) {
   const currentValue = value[field.key]
   const label = t(field.labelKey)
+  const className = getEnvironmentFieldClassName(field)
   const setValue = (nextValue: string | boolean) => onChange({ ...value, [field.key]: nextValue })
   if (field.kind === 'switch') {
     return (
-      <label className="switch-control environment-switch">
+      <label className={`switch-control environment-switch ${className}`}>
         <span>{label}</span>
         <input checked={Boolean(currentValue)} onChange={(event) => setValue(event.target.checked)} type="checkbox" />
       </label>
@@ -184,7 +187,7 @@ function EnvironmentFieldControl({
   }
   if (field.kind === 'select') {
     return (
-      <label>
+      <label className={className}>
         {label}
         <CustomSelect
           ariaLabel={label}
@@ -198,6 +201,7 @@ function EnvironmentFieldControl({
   if (field.kind === 'keyValue') {
     return (
       <KeyValueControl
+        className={className}
         label={label}
         labels={{ add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }}
         value={String(currentValue)}
@@ -207,7 +211,7 @@ function EnvironmentFieldControl({
   }
   if (field.kind === 'json') {
     return (
-      <label className="field-wide">
+      <label className={className}>
         {label}
         <textarea placeholder={field.placeholder} value={String(currentValue)} onChange={(event) => setValue(event.target.value)} />
       </label>
@@ -216,6 +220,7 @@ function EnvironmentFieldControl({
   if (field.kind === 'tpu') {
     return (
       <TpuSpecControl
+        className={className}
         label={label}
         labels={{
           notConfigured: t('notConfigured'),
@@ -231,7 +236,7 @@ function EnvironmentFieldControl({
   }
   const displayValue = field.kind === 'number' ? normalizeNumberValue(currentValue) : normalizeInputValue(currentValue)
   return (
-    <label>
+    <label className={className}>
       {label}
       <input
         inputMode={field.kind === 'number' ? 'numeric' : undefined}
@@ -242,6 +247,16 @@ function EnvironmentFieldControl({
       />
     </label>
   )
+}
+
+function getEnvironmentFieldClassName(field: EnvironmentField) {
+  return `environment-field environment-field--${field.layout ?? getDefaultFieldLayout(field.kind)}`
+}
+
+function getDefaultFieldLayout(kind: EnvironmentFieldKind): EnvironmentFieldLayout {
+  if (kind === 'number' || kind === 'select' || kind === 'switch') return 'short'
+  if (kind === 'keyValue' || kind === 'json' || kind === 'path' || kind === 'tpu') return 'full'
+  return 'medium'
 }
 
 function isEnvironmentFieldVisible(field: EnvironmentField, value: EnvironmentRow) {

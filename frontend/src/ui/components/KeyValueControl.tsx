@@ -5,6 +5,7 @@ interface KeyValueControlProps {
   label: string
   value: string
   onChange: (value: string) => void
+  className?: string
   compact?: boolean
   labels?: {
     add: string
@@ -19,17 +20,17 @@ interface KeyValueRow {
   value: string
 }
 
-export function KeyValueControl({ label, value, onChange, compact = false, labels }: KeyValueControlProps) {
+export function KeyValueControl({ label, value, onChange, className, compact = false, labels }: KeyValueControlProps) {
   const [rows, setRows] = useState(() => parseRows(value))
   const controlLabels = labels ?? { add: 'Add', delete: 'Delete', key: 'Key', value: 'Value' }
   const commit = (nextRows: KeyValueRow[]) => {
     setRows(nextRows.length ? nextRows : [{ key: '', value: '' }])
     onChange(formatRows(nextRows))
   }
-  const className = compact ? 'key-value-control compact-key-value field-wide' : 'key-value-control field-wide'
+  const rootClassName = compact ? 'key-value-control compact-key-value field-wide' : `key-value-control field-wide ${className ?? ''}`
 
   return (
-    <div className={className}>
+    <div className={rootClassName}>
       <div className="key-value-header">
         <span>{label}</span>
         <button

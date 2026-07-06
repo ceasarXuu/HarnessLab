@@ -231,7 +231,22 @@
   padding: 12px;
 }
 .environment-editor .run-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.environment-field {
+  min-width: 0;
+}
+.environment-field--short {
+  grid-column: span 1;
+}
+.environment-field--medium {
+  grid-column: span 2;
+}
+.environment-field--wide {
+  grid-column: span 3;
+}
+.environment-field--full {
+  grid-column: 1 / -1;
 }
 .environment-switch {
   width: 100%;
@@ -281,6 +296,13 @@
 @media (max-width: 720px) {
   .run-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .environment-editor .run-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .environment-field--wide,
+  .environment-field--full {
+    grid-column: 1 / -1;
   }
   .tpu-spec-control,
   .key-value-row {
