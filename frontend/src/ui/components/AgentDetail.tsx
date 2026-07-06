@@ -49,6 +49,7 @@ const harnessConfigs: Record<string, HarnessConfig> = {
 
 export function AgentDetail({ agent, t }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
+  const [activeTab, setActiveTab] = useState<'base' | 'skills' | 'mcps'>('base')
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
   const config = useMemo(() => harnessConfigs[draft.harness] ?? harnessConfigs['custom-harness'], [draft.harness])
@@ -95,128 +96,99 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
         </div>
       </section>
 
-      <section className="surface rail-card">
-        <SectionTitle>{t('modelSettings')}</SectionTitle>
-        <div className="agent-form-grid">
-          <ModelListControl
-            label={t('supportedModels')}
-            value={draft.models}
-            onChange={(value) => setField('models', value)}
-          />
-          {config.reasoning && (
-            <TagGroupControl
-              label={t('reasoningEffort')}
-              options={config.reasoning}
-              value={draft.reasoningEffort ?? ''}
-              onChange={(value) => setField('reasoningEffort', value)}
-            />
-          )}
-          {config.reasoningSummary && (
-            <label>
-              {t('reasoningSummary')}
-              <select value={draft.reasoningSummary ?? ''} onChange={(event) => setField('reasoningSummary', event.target.value)}>
-                <option value="">-</option>
-                {config.reasoningSummary.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-            </label>
-          )}
-          {config.temperature && (
-            <label>
-              {t('temperature')}
-              <input inputMode="decimal" value={draft.temperature ?? ''} onChange={(event) => setField('temperature', event.target.value)} />
-            </label>
-          )}
-          {config.contextLength && (
-            <label>
-              {t('contextLength')}
-              <input inputMode="numeric" value={draft.contextLength ?? ''} onChange={(event) => setField('contextLength', event.target.value)} />
-            </label>
-          )}
-        </div>
-      </section>
+      <div className="run-tabs agent-detail-tabs" role="tablist" aria-label={t('selectedAgent')}>
+        {[
+          { key: 'base' as const, label: t('runTabCore') },
+          { key: 'skills' as const, label: 'Skills' },
+          { key: 'mcps' as const, label: 'MCPs' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={activeTab === tab.key ? 'active' : undefined}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      <section className="surface rail-card">
-        <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
-        <div className="agent-form-grid">
-          {config.credentials !== 'none' && (
-            <>
-              <label>
-                {t('apiKeyEnv')}
-                <input value={draft.apiKeyEnv ?? ''} onChange={(event) => setField('apiKeyEnv', event.target.value)} />
-              </label>
-              <label>
-                {t('baseUrlEnv')}
-                <input value={draft.baseUrlEnv ?? ''} onChange={(event) => setField('baseUrlEnv', event.target.value)} />
-              </label>
-            </>
-          )}
-          <div className="field-wide">
-            <KeyValueControl compact label={t('genericAgentEnv')} value={draft.env ?? 'none'} onChange={(value) => setField('env', value)} />
-          </div>
-        </div>
-      </section>
+      {activeTab === 'base' && (
+        <>
+          <section className="surface rail-card">
+            <SectionTitle>{t('modelSettings')}</SectionTitle>
+            <div className="agent-form-grid">
+              <ModelListControl label={t('supportedModels')} value={draft.models} onChange={(value) => setField('models', value)} />
+              {config.reasoning && (
+                <TagGroupControl label={t('reasoningEffort')} options={config.reasoning} value={draft.reasoningEffort ?? ''} onChange={(value) => setField('reasoningEffort', value)} />
+              )}
+              {config.reasoningSummary && (
+                <label>
+                  {t('reasoningSummary')}
+                  <select value={draft.reasoningSummary ?? ''} onChange={(event) => setField('reasoningSummary', event.target.value)}>
+                    <option value="">-</option>
+                    {config.reasoningSummary.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+              )}
+              {config.temperature && (
+                <label>{t('temperature')}<input inputMode="decimal" value={draft.temperature ?? ''} onChange={(event) => setField('temperature', event.target.value)} /></label>
+              )}
+              {config.contextLength && (
+                <label>{t('contextLength')}<input inputMode="numeric" value={draft.contextLength ?? ''} onChange={(event) => setField('contextLength', event.target.value)} /></label>
+              )}
+            </div>
+          </section>
 
-      <section className="surface rail-card">
-        <SectionTitle>{t('networkAccess')}</SectionTitle>
-        <NetworkAccessControl
-          enabledLabel={t('networkAccessToggle')}
-          hostsLabel={t('agentAllowedHosts')}
-          value={draft.allowedHosts ?? '*'}
-          onChange={(value) => setField('allowedHosts', value)}
-        />
-      </section>
+          <section className="surface rail-card">
+            <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
+            <div className="agent-form-grid">
+              {config.credentials !== 'none' && (
+                <>
+                  <label>{t('apiKeyEnv')}<input value={draft.apiKeyEnv ?? ''} onChange={(event) => setField('apiKeyEnv', event.target.value)} /></label>
+                  <label>{t('baseUrlEnv')}<input value={draft.baseUrlEnv ?? ''} onChange={(event) => setField('baseUrlEnv', event.target.value)} /></label>
+                </>
+              )}
+              <div className="field-wide">
+                <KeyValueControl compact label={t('genericAgentEnv')} value={draft.env ?? 'none'} onChange={(value) => setField('env', value)} />
+              </div>
+            </div>
+          </section>
 
-      <section className="surface rail-card">
-        <SectionTitle>{t('skillsConfig')}</SectionTitle>
-        <DirectoryListControl
-          chooseLabel={t('chooseFolder')}
-          description={t('skillsConfigDescription')}
-          label={t('skills')}
-          value={draft.skills ?? 'none'}
-          onChange={(value) => setField('skills', value)}
-        />
-      </section>
+          <section className="surface rail-card">
+            <SectionTitle>{t('networkAccess')}</SectionTitle>
+            <NetworkAccessControl enabledLabel={t('networkAccessToggle')} hostsLabel={t('agentAllowedHosts')} value={draft.allowedHosts ?? '*'} onChange={(value) => setField('allowedHosts', value)} />
+          </section>
 
-      <section className="surface rail-card">
-        <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
-        <McpServersControl
-          labels={{
-            addItem: t('add'),
-            addServer: t('addMcpServer'),
-            args: t('mcpArgs'),
-            composeSidecar: t('mcpComposeSidecar'),
-            composeYaml: t('mcpComposeYaml'),
-            command: t('mcpCommand'),
-            deployment: t('mcpDeployment'),
-            description: t('mcpConfigDescription'),
-            enabled: t('enabled'),
-            endpointPath: t('mcpEndpointPath'),
-            env: t('mcpEnv'),
-            externalService: t('mcpExternalService'),
-            generatedUrl: t('mcpGeneratedUrl'),
-            name: t('mcpServerName'),
-            port: t('mcpPort'),
-            serviceName: t('mcpServiceName'),
-            stdio: t('mcpStdio'),
-            transport: t('mcpTransport'),
-            url: t('mcpUrl'),
-          }}
-          value={draft.mcp ?? 'none'}
-          onChange={(value) => setField('mcp', value)}
-        />
-      </section>
+          <details className="surface rail-card agent-advanced">
+            <summary>{t('advancedAgentParams')}</summary>
+            <div className="agent-form-grid">
+              <KeyValueControl label={t('genericAgentKwargs')} value={draft.kwargs ?? 'none'} onChange={(value) => setField('kwargs', value)} />
+              <Metric label={t('runtimeDefaults')} value={draft.runtime ?? '-'} />
+              <Metric label={t('setupTimeout')} value={draft.setupTimeout ?? '-'} />
+              <Metric label={t('maxTimeout')} value={draft.maxTimeout ?? '-'} />
+              <Metric label={t('sourceRef')} value={draft.source} />
+              <Metric label={t('updated')} value={draft.updated} />
+            </div>
+          </details>
+        </>
+      )}
 
-      <details className="surface rail-card agent-advanced">
-        <summary>{t('advancedAgentParams')}</summary>
-        <div className="agent-form-grid">
-          <KeyValueControl label={t('genericAgentKwargs')} value={draft.kwargs ?? 'none'} onChange={(value) => setField('kwargs', value)} />
-          <Metric label={t('runtimeDefaults')} value={draft.runtime ?? '-'} />
-          <Metric label={t('setupTimeout')} value={draft.setupTimeout ?? '-'} />
-          <Metric label={t('maxTimeout')} value={draft.maxTimeout ?? '-'} />
-          <Metric label={t('sourceRef')} value={draft.source} />
-          <Metric label={t('updated')} value={draft.updated} />
-        </div>
-      </details>
+      {activeTab === 'skills' && (
+        <section className="surface rail-card">
+          <SectionTitle>{t('skillsConfig')}</SectionTitle>
+          <DirectoryListControl chooseLabel={t('chooseFolder')} description={t('skillsConfigDescription')} label={t('skills')} value={draft.skills ?? 'none'} onChange={(value) => setField('skills', value)} />
+        </section>
+      )}
+
+      {activeTab === 'mcps' && (
+        <section className="surface rail-card">
+          <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
+          <McpServersControl labels={mcpLabels(t)} value={draft.mcp ?? 'none'} onChange={(value) => setField('mcp', value)} />
+        </section>
+      )}
     </aside>
   )
 }
@@ -255,6 +227,30 @@ function NetworkAccessControl({
       )}
     </div>
   )
+}
+
+function mcpLabels(t: Translate) {
+  return {
+    addItem: t('add'),
+    addServer: t('addMcpServer'),
+    args: t('mcpArgs'),
+    composeSidecar: t('mcpComposeSidecar'),
+    composeYaml: t('mcpComposeYaml'),
+    command: t('mcpCommand'),
+    deployment: t('mcpDeployment'),
+    description: t('mcpConfigDescription'),
+    enabled: t('enabled'),
+    endpointPath: t('mcpEndpointPath'),
+    env: t('mcpEnv'),
+    externalService: t('mcpExternalService'),
+    generatedUrl: t('mcpGeneratedUrl'),
+    name: t('mcpServerName'),
+    port: t('mcpPort'),
+    serviceName: t('mcpServiceName'),
+    stdio: t('mcpStdio'),
+    transport: t('mcpTransport'),
+    url: t('mcpUrl'),
+  }
 }
 
 function DirectoryListControl({

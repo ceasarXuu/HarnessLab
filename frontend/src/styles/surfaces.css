@@ -132,6 +132,9 @@ code {
   width: 34px;
   min-width: 34px;
 }
+.agent-detail-tabs {
+  margin: 0;
+}
 .mcp-server-control,
 .mcp-server-list,
 .argument-list-control {

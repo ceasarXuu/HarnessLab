@@ -121,17 +121,19 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByRole('checkbox', { name: 'Enable network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Domain allowlist')).toHaveValue('api.anthropic.com')
     await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
+    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
     await expect(canvas.getByText('Skills sources')).toBeVisible()
     await expect(canvas.getByText('Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Choose folder' })).toBeVisible()
     await expect(canvas.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/terminal-bench')
+    await userEvent.click(canvas.getByRole('tab', { name: 'MCPs' }))
     await expect(canvas.getByText('MCP Servers')).toBeVisible()
     await expect(canvas.getByText('Manage MCP templates on the Agent. OrnnLab expands compose sidecars into Harbor task environment and registers the generated connection in task.toml.')).toBeVisible()
     await expect(canvas.getByLabelText('Name')).toHaveValue('terminal-bench-mcp')
     await expect(canvas.getByLabelText('Deployment')).toHaveValue('compose-sidecar')
     await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
     await expect(canvas.getByLabelText('Generated URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
-    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
   },
 }
 
