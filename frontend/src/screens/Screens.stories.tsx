@@ -209,7 +209,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Environment Name')).toHaveValue('Docker GPU')
     await expect(canvas.getByLabelText('Import path')).toHaveValue('')
-    await expect(canvas.getByLabelText('Docker image')).toHaveValue('nvidia/cuda:12.4-runtime')
+    await expect(canvas.getByLabelText('Docker image name / registry URL')).toHaveValue('nvidia/cuda:12.4-runtime')
     await expect(canvas.getByLabelText('OS')).toHaveTextContent('linux')
     await userEvent.click(canvas.getByRole('tab', { name: 'Network' }))
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()

@@ -216,7 +216,7 @@ interface EnvironmentPreset {
   importPath: string
   networkMode: string
   allowedHosts: string
-  dockerImage: string
+  dockerImage: string // Harbor [environment].docker_image, Docker image reference, not a local image file path.
   os: string
   cpus: string
   memoryMb: string

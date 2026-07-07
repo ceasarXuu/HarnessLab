@@ -44,7 +44,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
     tab: 'base',
     title: 'Task environment baseline',
     fields: [
-      { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', layout: 'full', placeholder: 'python:3.13-slim' },
+      { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', layout: 'full', placeholder: 'python:3.13-slim or ghcr.io/org/image:tag' },
       { key: 'os', labelKey: 'os', kind: 'select', layout: 'short', options: operatingSystems },
       { key: 'cpus', labelKey: 'cpuCores', kind: 'number', layout: 'short' },
       { key: 'memoryMb', labelKey: 'memoryMb', kind: 'number', layout: 'short' },

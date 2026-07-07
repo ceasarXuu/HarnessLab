@@ -16,7 +16,7 @@ describe('Environment templates', () => {
     expect(screen.getByRole('button', { name: 'New Environment' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Profile' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Docker image' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Docker image name / registry URL' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Network mode' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'CPU / memory policy' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Runtime overrides' })).toBeInTheDocument()
