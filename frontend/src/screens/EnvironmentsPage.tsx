@@ -117,9 +117,6 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                 <th>{t('environmentProfile')}</th>
                 <th>{t('agentType')}</th>
                 <th>{t('environmentDockerImage')}</th>
-                <th>{t('environmentNetworkMode')}</th>
-                <th>{t('environmentResourcePolicy')}</th>
-                <th>{t('environmentRuntimeOverrides')}</th>
                 <th>{t('actions')}</th>
               </tr>
             </thead>
@@ -139,9 +136,6 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   <td>{row.profileType}</td>
                   <td>{row.environmentType}</td>
                   <td>{row.dockerImage}</td>
-                  <td>{row.networkMode}</td>
-                  <td>{row.cpuPolicy} / {row.memoryPolicy}</td>
-                  <td>{formatOverrides(row)}</td>
                   <td>
                     <EnvironmentActions
                       row={row}
@@ -291,9 +285,4 @@ function buildEnvironmentId(rows: EnvironmentRow[], name: string) {
     index += 1
   }
   return candidate
-}
-
-function formatOverrides(row: EnvironmentRow) {
-  const values = [row.overrideCpus, row.overrideMemoryMb, row.overrideStorageMb, row.overrideGpus, row.overrideTpu]
-  return values.some((value) => value !== 'none') ? values.filter((value) => value !== 'none').join(' / ') : 'none'
 }

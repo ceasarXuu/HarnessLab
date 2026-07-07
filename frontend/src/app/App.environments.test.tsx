@@ -17,9 +17,9 @@ describe('Environment templates', () => {
     expect(screen.getByRole('columnheader', { name: 'Profile' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Docker image name / registry URL' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Network mode' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'CPU / memory policy' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Runtime overrides' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Network mode' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'CPU / memory policy' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Runtime overrides' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
 
     const builtinRow = screen.getByText('Docker default').closest('tr')
