@@ -292,6 +292,28 @@
 .key-value-row > label {
   min-width: 0;
 }
+.path-list-control {
+  display: grid;
+  gap: 8px;
+}
+.path-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.path-list-rows {
+  display: grid;
+  gap: 8px;
+}
+.path-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
 
 @media (max-width: 720px) {
   .run-grid {
@@ -305,10 +327,12 @@
     grid-column: 1 / -1;
   }
   .tpu-spec-control,
-  .key-value-row {
+  .key-value-row,
+  .path-list-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  .key-value-row .secondary-button {
+  .key-value-row .secondary-button,
+  .path-list-row .icon-button {
     justify-self: start;
   }
 }

@@ -208,6 +208,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     await expect(canvas.queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Environment Name')).toHaveValue('Docker GPU')
+    await expect(canvas.getByLabelText('Import path')).toHaveValue('')
     await expect(canvas.getByLabelText('Docker image')).toHaveValue('nvidia/cuda:12.4-runtime')
     await expect(canvas.getByLabelText('OS')).toHaveTextContent('linux')
     await userEvent.click(canvas.getByRole('tab', { name: 'Network' }))
@@ -215,6 +216,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByLabelText('Allowed hosts')).toHaveValue('pypi.org, github.com, huggingface.co')
     await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
     await expect(canvas.getByLabelText('CPU policy')).toHaveTextContent('limit')
+    await expect(canvas.getByLabelText('Extra Docker Compose 1')).toHaveValue('compose.gpu.yml')
     await expect(canvas.getByLabelText('Extra allowed hosts')).toHaveValue('model.internal')
   },
 }

@@ -201,7 +201,7 @@ interface JobConfig {
 }
 ```
 
-`environmentPresetId` 指向 Environment 页面管理的 OrnnLab-local 环境模板。后端创建 JobConfig 时负责把模板展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
+`environmentPresetId` 指向 Environment 页面管理的 OrnnLab-local 环境模板。后端创建 JobConfig 时负责把模板展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。`environmentType` 只能取 Harbor 官方 `EnvironmentType` 枚举值；如果模板填写了 `importPath`，后端应生成 Harbor `import_path` 并省略 `type`，不得把 `custom` 作为 Harbor type 下发。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
 
 ### EnvironmentPreset
 
@@ -239,7 +239,7 @@ interface EnvironmentPreset {
   overrideStorageMb: string
   overrideGpus: string
   overrideTpu: string
-  dockerCompose: string
+  dockerCompose: string[] // Harbor extra_docker_compose, 支持多个 overlay path.
 }
 ```
 
