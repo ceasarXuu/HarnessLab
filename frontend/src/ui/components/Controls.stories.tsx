@@ -50,6 +50,8 @@ function ControlsFixture() {
           <NetworkAccessControl
             enabledLabel={t('environmentNetworkAccess')}
             hostsLabel={t('environmentAllowedHosts')}
+            addLabel={t('add')}
+            deleteLabel={t('delete')}
             value={networkAccess}
             onChange={setNetworkAccess}
           />
@@ -115,7 +117,7 @@ export const FormControls: Story = {
     const bounds = split.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
-    await expect(canvas.getByLabelText('Allowed hosts')).toHaveValue('*')
+    await expect(canvas.getByLabelText('Allowed hosts 1')).toHaveValue('*')
   },
 }
 

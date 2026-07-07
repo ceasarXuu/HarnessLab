@@ -147,6 +147,8 @@ export function EnvironmentProfileEditor({
             <NetworkAccessControl
               enabledLabel={t('environmentNetworkAccess')}
               hostsLabel={t('environmentAllowedHosts')}
+              addLabel={t('add')}
+              deleteLabel={t('delete')}
               value={value.networkMode === 'no-network' ? 'none' : value.allowedHosts || '*'}
               onChange={setNetworkAccess}
             />
