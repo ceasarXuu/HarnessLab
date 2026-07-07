@@ -320,7 +320,7 @@ export const environmentRows: EnvironmentRow[] = [
     gpuTypes: 'A100, H100',
     tpu: 'none',
     skillsDir: 'none',
-    healthcheck: 'none',
+    healthcheck: '{"command":"python --version","interval_sec":5,"timeout_sec":30,"start_period_sec":0,"start_interval_sec":5,"retries":3}',
     workdir: '/workspace',
     mounts: '[{"type":"bind","source":"./models","target":"/models"}]',
     env: 'CUDA_VISIBLE_DEVICES=0',

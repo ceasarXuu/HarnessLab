@@ -314,6 +314,24 @@
   align-items: center;
   gap: 8px;
 }
+.healthcheck-control {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.healthcheck-switch {
+  width: 100%;
+}
+.healthcheck-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+}
 
 @media (max-width: 720px) {
   .run-grid {
@@ -328,7 +346,8 @@
   }
   .tpu-spec-control,
   .key-value-row,
-  .path-list-row {
+  .path-list-row,
+  .healthcheck-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .key-value-row .secondary-button,
