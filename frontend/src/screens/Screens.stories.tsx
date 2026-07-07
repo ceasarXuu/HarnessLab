@@ -207,6 +207,8 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByRole('dialog', { name: 'Selected environment' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     await expect(canvas.queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('heading', { name: 'Basic' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('heading', { name: 'Environment' })).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Environment Name')).toHaveValue('Docker GPU')
     await expect(canvas.getByLabelText('Import path')).toHaveValue('')
     await expect(canvas.getByLabelText('Docker image name / registry URL')).toHaveValue('nvidia/cuda:12.4-runtime')

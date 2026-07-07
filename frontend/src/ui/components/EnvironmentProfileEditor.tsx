@@ -125,11 +125,13 @@ export function EnvironmentProfileEditor({
         ))}
       </div>
 
-      {environmentFieldGroups.filter((group) => group.tab === activeTab).map((group) => (
+      {getEnvironmentGroupsForTab(activeTab).map((group) => (
         <section className="run-config-group" key={group.title}>
-          <div className="run-config-group-heading">
-            <h3>{getEnvironmentGroupTitle(group.title, t)}</h3>
-          </div>
+          {activeTab !== 'base' && (
+            <div className="run-config-group-heading">
+              <h3>{getEnvironmentGroupTitle(group.title, t)}</h3>
+            </div>
+          )}
           <div className="run-grid">
             {group.fields.filter((field) => isEnvironmentFieldVisible(field, value)).map((field) => (
               <EnvironmentFieldControl field={field} key={field.key} t={t} value={value} onChange={onChange} />
@@ -159,9 +161,13 @@ export function EnvironmentProfileEditor({
   )
 }
 
+function getEnvironmentGroupsForTab(activeTab: EnvironmentTab): EnvironmentFieldGroup[] {
+  const groups = environmentFieldGroups.filter((group) => group.tab === activeTab)
+  if (activeTab !== 'base') return groups
+  return [{ tab: 'base', title: 'Base fields', fields: groups.flatMap((group) => group.fields) }]
+}
+
 function getEnvironmentGroupTitle(title: string, t: Translate) {
-  if (title === 'OrnnLab template') return t('runTabCore')
-  if (title === 'Task environment baseline') return t('runTabEnvironment')
   return t('agentAdvancedTab')
 }
 

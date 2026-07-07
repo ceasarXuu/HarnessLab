@@ -52,6 +52,8 @@ describe('Environment templates', () => {
     const editableEnvironmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
     expect(within(editableEnvironmentDialog).getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     expect(within(editableEnvironmentDialog).queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
+    expect(within(editableEnvironmentDialog).queryByRole('heading', { name: 'Basic' })).not.toBeInTheDocument()
+    expect(within(editableEnvironmentDialog).queryByRole('heading', { name: 'Environment' })).not.toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByRole('tab', { name: 'Network' })).toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByRole('tab', { name: 'Advanced' })).toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByLabelText('Environment Name')).toBeInTheDocument()
