@@ -216,6 +216,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByRole('checkbox', { name: 'Healthcheck' })).toBeChecked()
     await expect(canvas.getByLabelText('Command')).toHaveValue('python --version')
     await expect(canvas.getByLabelText('Retries')).toHaveValue(3)
+    await expect(canvas.queryByLabelText('Working directory')).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('tab', { name: 'Network' }))
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Allowed hosts 1')).toHaveValue('pypi.org')
@@ -225,6 +226,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByLabelText('CPU policy')).toHaveTextContent('limit')
     await expect(canvas.getByLabelText('Extra Docker Compose 1')).toHaveValue('compose.gpu.yml')
     await expect(canvas.getByLabelText('Extra allowed hosts')).toHaveValue('model.internal')
+    await expect(canvas.getByLabelText('Working directory')).toHaveValue('/workspace')
   },
 }
 
