@@ -96,6 +96,8 @@ describe('Environment templates', () => {
     expect(within(editableEnvironmentDialog).getByLabelText('Extra Docker Compose 1')).toHaveValue('compose.gpu.yml')
     expect(within(editableEnvironmentDialog).getByLabelText('Extra allowed hosts')).toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByLabelText('Working directory')).toHaveValue('/workspace')
+    expect(within(editableEnvironmentDialog).getByText('Backend params')).toBeInTheDocument()
+    expect(within(editableEnvironmentDialog).queryByText('Environment kwargs')).not.toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getAllByRole('button', { name: 'Add' }).length).toBeGreaterThan(0)
     expect(within(editableEnvironmentDialog).getAllByRole('button', { name: 'Delete' }).length).toBeGreaterThan(0)
     fireEvent.click(within(editableEnvironmentDialog).getByRole('tab', { name: 'Basic' }))

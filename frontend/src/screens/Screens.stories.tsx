@@ -227,6 +227,7 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByLabelText('Extra Docker Compose 1')).toHaveValue('compose.gpu.yml')
     await expect(canvas.getByLabelText('Extra allowed hosts')).toHaveValue('model.internal')
     await expect(canvas.getByLabelText('Working directory')).toHaveValue('/workspace')
+    await expect(canvas.getByText('Backend params')).toBeVisible()
   },
 }
 
