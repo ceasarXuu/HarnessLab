@@ -53,7 +53,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'gpuTypes', labelKey: 'gpuTypes', kind: 'tags', layout: 'wide', placeholder: 'A100, H100' },
       { key: 'tpu', labelKey: 'tpu', kind: 'tpu', layout: 'full' },
       { key: 'env', labelKey: 'environmentVariables', kind: 'keyValue', layout: 'full', placeholder: 'KEY=value' },
-      { key: 'healthcheck', labelKey: 'healthcheck', kind: 'healthcheck', layout: 'full' },
     ],
   },
   {
@@ -71,6 +70,7 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'mounts', labelKey: 'mounts', kind: 'json', layout: 'full' },
       { key: 'dockerCompose', labelKey: 'dockerCompose', kind: 'pathList', layout: 'full' },
       { key: 'extraAllowedHosts', labelKey: 'extraAllowedHosts', kind: 'tags', layout: 'wide', placeholder: 'model.internal' },
+      { key: 'healthcheck', labelKey: 'healthcheck', kind: 'healthcheck', layout: 'full' },
       { key: 'workdir', labelKey: 'workdir', kind: 'path', layout: 'full', placeholder: '/workspace' },
       { key: 'kwargs', labelKey: 'environmentKwargs', kind: 'keyValue', layout: 'full' },
     ],
