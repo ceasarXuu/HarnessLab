@@ -93,6 +93,7 @@ describe('Environment templates', () => {
     fireEvent.click(within(editableEnvironmentDialog).getByRole('tab', { name: 'Advanced' }))
     expect(within(editableEnvironmentDialog).getByLabelText('Force rebuild')).toHaveAttribute('type', 'checkbox')
     expect(within(editableEnvironmentDialog).getByLabelText('CPU policy')).toHaveAttribute('aria-haspopup', 'listbox')
+    expect(within(editableEnvironmentDialog).queryByText('Override TPU')).not.toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByLabelText('Extra Docker Compose 1')).toHaveValue('compose.gpu.yml')
     expect(within(editableEnvironmentDialog).getByLabelText('Extra allowed hosts')).toBeInTheDocument()
     expect(within(editableEnvironmentDialog).getByLabelText('Working directory')).toHaveValue('/workspace')

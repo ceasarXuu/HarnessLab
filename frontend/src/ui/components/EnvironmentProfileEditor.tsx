@@ -68,7 +68,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
       { key: 'overrideMemoryMb', labelKey: 'overrideMemoryMb', kind: 'number', layout: 'short' },
       { key: 'overrideStorageMb', labelKey: 'overrideStorageMb', kind: 'number', layout: 'short' },
       { key: 'overrideGpus', labelKey: 'overrideGpus', kind: 'number', layout: 'short' },
-      { key: 'overrideTpu', labelKey: 'overrideTpu', kind: 'tpu', layout: 'full' },
       { key: 'mounts', labelKey: 'mounts', kind: 'json', layout: 'full' },
       { key: 'dockerCompose', labelKey: 'dockerCompose', kind: 'pathList', layout: 'full' },
       { key: 'extraAllowedHosts', labelKey: 'extraAllowedHosts', kind: 'tags', layout: 'wide', placeholder: 'model.internal' },
