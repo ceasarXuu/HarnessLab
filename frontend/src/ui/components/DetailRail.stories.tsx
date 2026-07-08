@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { EventLog } from '../../domain/harbor'
 import { getTranslator } from '../../i18n'
-import { events, jobs, trialRows, type EventLog } from '../../mocks/demo'
+import { events, jobs, trialRows } from '../../mocks/demo'
 import { DetailRail } from './DetailRail'
 
 const t = getTranslator('en')

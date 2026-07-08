@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import type { HarborJob, JobStatus } from '../../mocks/demo'
+import type { HarborJob, JobStatus } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 
 const statusLabels: Record<JobStatus, string> = {

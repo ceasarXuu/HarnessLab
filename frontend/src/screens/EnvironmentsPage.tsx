@@ -1,6 +1,6 @@
 import { Box, Copy, Plus, Save, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { EnvironmentRow } from '../mocks/demo'
+import type { EnvironmentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'

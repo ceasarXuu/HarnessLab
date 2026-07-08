@@ -1,4 +1,4 @@
-import type { LeaderboardRow, SystemRow } from './demo'
+import type { LeaderboardRow, SystemRow } from '../domain/harbor'
 
 export const leaderboardRows: LeaderboardRow[] = [
   {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentRow } from '../../mocks/demo'
+import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentIdentityEditor, AgentProfileEditor, getAgentStatusLabel } from './AgentProfileEditor'
 

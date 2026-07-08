@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { AgentDetail } from '../ui/components/AgentDetail'
-import type { AgentRow } from '../mocks/demo'
+import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface AgentsPageProps {

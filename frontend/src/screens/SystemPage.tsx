@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { SystemRow } from '../mocks/demo'
+import type { SystemRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { Toast } from '../ui/components/Toast'

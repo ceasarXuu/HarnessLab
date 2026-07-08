@@ -1,6 +1,6 @@
 import { Box, Download, Search, Trash2, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { DatasetRow, TaskRow } from '../../mocks/demo'
+import type { DatasetRow, TaskRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Metric } from './Metric'

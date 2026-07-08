@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { FolderOpen, Plus, Trash2 } from 'lucide-react'
-import type { AgentRow } from '../../mocks/demo'
+import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'

@@ -1,4 +1,4 @@
-import type { AgentRow, DatasetRow, EnvironmentRow, TaskRow } from './demo'
+import type { AgentRow, DatasetRow, EnvironmentRow, TaskRow } from '../domain/harbor'
 
 export const datasetRows: DatasetRow[] = [
   {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
-import type { EventLog, HarborJob, TrialRow } from '../../mocks/demo'
+import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { Metric } from './Metric'
 

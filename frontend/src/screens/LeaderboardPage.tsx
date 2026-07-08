@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { CustomSelect } from '../ui/components/CustomSelect'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { DetailRail } from '../ui/components/DetailRail'
-import type { DatasetRow, EventLog, HarborJob, LeaderboardRow, TrialRow } from '../mocks/demo'
+import type { DatasetRow, EventLog, HarborJob, LeaderboardRow, TrialRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface LeaderboardPageProps {

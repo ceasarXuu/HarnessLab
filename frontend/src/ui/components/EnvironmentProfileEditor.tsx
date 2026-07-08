@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import type { EnvironmentRow } from '../../mocks/demo'
+import type { EnvironmentRow } from '../../domain/harbor'
 import type { MessageKey, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { KeyValueControl } from './KeyValueControl'

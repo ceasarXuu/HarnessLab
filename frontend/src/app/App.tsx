@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { HarborJob, LeaderboardRow } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
-import {
-  events,
-  initialDraft,
-  jobs as seedJobs,
-  trialRows,
-  type HarborJob,
-  type LeaderboardRow,
-} from '../mocks/demo'
+import { events, initialDraft, jobs as seedJobs, trialRows } from '../mocks/demo'
 import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { getTranslator, type Locale } from '../i18n'

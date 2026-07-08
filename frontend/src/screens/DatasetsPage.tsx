@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
-import type { DatasetRow, TaskRow } from '../mocks/demo'
+import type { DatasetRow, TaskRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {

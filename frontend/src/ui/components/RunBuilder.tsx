@@ -1,6 +1,6 @@
 import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
-import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../mocks/demo'
+import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
@@ -189,13 +189,13 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
             />
           </Field>
           <label>
-            debug模式
+            {t('debugMode')}
             <CustomSelect
-              ariaLabel="debug模式"
+              ariaLabel={t('debugMode')}
               value={draft.debug ? 'enabled' : 'disabled'}
               options={[
-                { label: 'disabled', value: 'disabled' },
-                { label: 'enabled', value: 'enabled' },
+                { label: t('disabled'), value: 'disabled' },
+                { label: t('enabled'), value: 'enabled' },
               ]}
               onChange={(value) => onDraft({ ...draft, debug: value === 'enabled' })}
             />
@@ -207,8 +207,8 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
               value={!leaderboardLockedByVerifier && draft.includeInLeaderboard ? 'enabled' : 'disabled'}
               disabled={leaderboardLockedByVerifier}
               options={[
-                { label: 'enabled', value: 'enabled' },
-                { label: 'disabled', value: 'disabled' },
+                { label: t('enabled'), value: 'enabled' },
+                { label: t('disabled'), value: 'disabled' },
               ]}
               onChange={(value) => {
                 if (!leaderboardLockedByVerifier) {
