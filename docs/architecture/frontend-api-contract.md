@@ -3,7 +3,7 @@
 - 状态：草案
 - 适用版本：v1.0.5
 - 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
-- 当前实现：仍使用 `frontend/src/mocks/` mock 数据，不直接接入后端
+- 当前实现：仍使用 `frontend/src/mocks/` mock 数据，不直接接入后端；联调前需新增 `frontend/src/api/` contract adapter
 
 ## 目标
 
@@ -20,13 +20,15 @@
 
 ### API 根路径
 
-建议使用版本化根路径：
+联调统一使用版本化 WebUI 根路径：
 
 ```text
 /api/webui/v1
 ```
 
 后端可以内部再分 Harbor CLI、Harbor Hub、OrnnLab Service、本机系统探针，但对前端暴露统一 WebUI API。
+
+当前后端已有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 等路由。它们可以作为 WebUI facade 的实现来源，但不作为 React 页面直接消费的契约。若后端暂时不新增 `/api/webui/v1`，前端必须在 `frontend/src/api/` 提供 adapter，把旧路由响应转换为本规范模型。
 
 ### 响应包络
 
@@ -102,6 +104,14 @@ interface Operation {
 - Agent 列表不再暴露 `adapter`、`source`、`updated` 三列；harness/adapter 的技术检查只进入详情或 review 操作。
 - Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
 - Environment 页面提供 OrnnLab-local 模板 CRUD。模板不是 Harbor 原生资源，但每个模板必须完整映射到 Harbor `EnvironmentConfig` / task `[environment]` 支持字段，并由 New Job 下拉引用。
+
+联调前应新增 `frontend/src/domain/`，把生产 UI 类型从 mock fixture 中迁出。mock 可以继续导出 fixture，但不再作为 screen/component 的类型来源。
+
+后端 DTO 与 UI ViewModel 必须分离：
+
+- token、cost、duration、score 等由数字/结构化字段进入 adapter，再由 UI 格式化。
+- artifact、event、operation 等由后端返回结构化类型，UI 负责分组和展示。
+- 页面不得把已经格式化的字符串再提交给后端。
 
 ## 数据模型
 
@@ -571,11 +581,13 @@ interface CacheCleanResult {
 
 ## 前端接入顺序
 
-1. 保留 `frontend/src/mocks/` 作为 Storybook 与离线演示夹具。
-2. 新增 `frontend/src/api/`，先只放 typed client 与 contract adapter，不直接改页面。
-3. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch`。
-4. 接入一个接口就同步补充 MSW mock 或等价测试夹具，保证 Storybook 不依赖真实后端。
-5. 接入完成后，mock 字段不得再比接口模型多出 demo-only 能力；新增字段必须先改本规范。
+1. 修复当前 e2e 断言漂移，恢复 `npm run e2e` 全绿。
+2. 保留 `frontend/src/mocks/` 作为 Storybook 与离线演示夹具。
+3. 新增 `frontend/src/domain/`，迁出生产 UI 类型。
+4. 新增 `frontend/src/api/`，先只放 typed client、contract adapter、ApiResponse、Operation，不直接改页面。
+5. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch`。
+6. 接入一个接口就同步补充 MSW mock 或等价测试夹具，保证 Storybook 不依赖真实后端。
+7. 接入完成后，mock 字段不得再比接口模型多出 demo-only 能力；新增字段必须先改本规范。
 
 ## 待确认问题
 
