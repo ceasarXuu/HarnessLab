@@ -8,6 +8,8 @@
   - Harbor Viewer: `https://github.com/harbor-framework/harbor/tree/main/apps/viewer`
   - Harbor Hub: `https://hub.harborframework.com/`
 
+> 文档定位：本文记录前端重建背景和架构决策支撑信息。v1.0.5 当前技术权威入口见 [技术设计](technical-design.md)，实施进度见 [工程计划与进度](engineering-plan.md)。
+
 ## 1. 决策
 
 v1.0.5 前端不再延续旧 Vue demo。新的 `frontend/` 以 React/Vite demo 重新建立，

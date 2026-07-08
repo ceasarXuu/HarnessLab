@@ -7,6 +7,8 @@
 - Source: 本机 `harbor --help` 与主要子命令 help。
 - Frontend decision: [v1.0.5 前端重建架构决策](frontend-rebuild-architecture.md)
 
+> 文档定位：本文是 Harbor CLI 能力到 WebUI 工作流的映射支撑资料。产品范围以 [PRD](prd.md) 为准，技术边界以 [技术设计](technical-design.md) 为准，实施状态以 [工程计划与进度](engineering-plan.md) 为准。
+
 ## 1. 核心判断
 
 v1.0.5 的关键不是把 Harbor CLI 命令搬到 Web 上显示，而是把 Harbor 日常操作改造成

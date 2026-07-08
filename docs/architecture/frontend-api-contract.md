@@ -5,6 +5,8 @@
 - 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
 - 当前实现：仍使用 `frontend/src/mocks/` mock 数据，不直接接入后端；联调前需新增 `frontend/src/api/` contract adapter
 
+> v1.0.5 引用关系：本文是 WebUI API 契约源文件。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
+
 ## 目标
 
 这份规范用于把当前 WebUI 可见功能固化为前后端接口边界。后续接入后端时，前端页面、Storybook mock、后端 API、Harbor CLI/Hub 能力映射都应以这里的资源模型和接口分组为基准。

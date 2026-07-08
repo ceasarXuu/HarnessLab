@@ -2,9 +2,11 @@
 
 - Status: Tracking
 - Created: 2026-06-28
-- Updated: 2026-06-28
+- Updated: 2026-07-09
 - Harbor baseline: 本机 `harbor` Python 包与 CLI help，`harbor_version` 由 OrnnLab runtime 读取为 `0.13.x`
 - Goal: 让 demo 中可见的配置与操作逐步和 Harbor 支持能力 1:1 对等，避免做成只展示少量字段的假 WebUI。
+
+> 文档定位：本文是 Harbor 能力覆盖跟踪清单和历史审查记录。产品范围以 [PRD](prd.md) 为准，技术边界以 [技术设计](technical-design.md) 为准，实施状态以 [工程计划与进度](engineering-plan.md) 为准。
 
 ## 1. 证据来源
 

@@ -4,6 +4,8 @@
 - 适用版本：v1.0.5
 - 范围：`frontend/`，暂时保持 mock 数据，不接入后端
 
+> v1.0.5 引用关系：本文是跨版本前端治理规则。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
+
 ## 目录边界
 
 `frontend/src/app/` 放应用装配、路由状态和跨页面状态流。

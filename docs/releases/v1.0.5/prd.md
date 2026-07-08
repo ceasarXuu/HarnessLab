@@ -6,6 +6,10 @@
 - Owner / requester: OrnnLab
 - Source request: 将前面讨论过的 Harbor WebUI 功能逻辑整理成早期 PRD 草稿，后续随着前端完善持续补充。
 
+## 文档关系
+
+本文只维护 v1.0.5 的产品范围、交互原则和验收标准。技术架构见 [技术设计](technical-design.md)，实施进度见 [工程计划与进度](engineering-plan.md)，版本文档入口见 [README](README.md)。
+
 ## Requester Review Summary
 
 - Key decisions: v1.0.5 先做 Harbor WebUI 产品化；OrnnLab 仍是基于 Harbor 的实验控制台，不改写为脱离 Harbor 的独立产品。

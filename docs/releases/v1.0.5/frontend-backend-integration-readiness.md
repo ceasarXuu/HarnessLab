@@ -5,6 +5,8 @@
 - Owner / requester: OrnnLab
 - Scope: Harbor WebUI 当前 mock 前端进入真实后端联调前的架构与治理修复
 
+> 文档定位：本文是 v1.0.5 联调准备支撑资料。权威技术设计见 [技术设计](technical-design.md)，实施状态和阶段计划见 [工程计划与进度](engineering-plan.md)。
+
 ## 1. 设计结论
 
 当前前端已经具备 Harbor WebUI 的主要页面和交互形态，但还不能直接进入联调。联调前必须先修复四个设计边界：
