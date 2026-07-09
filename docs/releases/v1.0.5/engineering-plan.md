@@ -105,6 +105,8 @@
 - 写操作、Operation 状态流、权限状态和所有资源的 loading/empty/error Storybook 矩阵尚未建立。
 - 后端尚未提供 `/api/webui/v1`；此项属于 Stage 3，不能以 mock mode 代替真实联调。
 
+运行记录：执行 `npm run e2e` 前先确认 `4174` 未被旧的 preview/server 占用；否则 `start-server-and-test` 可能复用现有监听器，使测试不能证明它正在验证最新构建。可先执行 `lsof -nP -iTCP:4174 -sTCP:LISTEN` 检查。
+
 验收：
 
 - screen/component 不再从 `frontend/src/mocks/` 导入生产类型。
