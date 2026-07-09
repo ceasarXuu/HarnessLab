@@ -347,11 +347,13 @@
   .tpu-spec-control,
   .key-value-row,
   .path-list-row,
+  .rule-list-row,
   .healthcheck-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .key-value-row .secondary-button,
-  .path-list-row .icon-button {
+  .path-list-row .icon-button,
+  .rule-list-row .icon-button {
     justify-self: start;
   }
 }
@@ -394,6 +396,13 @@
   gap: 10px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.editable-string-list-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .rule-list-rows {

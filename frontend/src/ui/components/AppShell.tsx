@@ -1,6 +1,6 @@
 import { Github, Languages, Moon, Sun, TerminalSquare } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { Locale, Translate } from '../../i18n'
+import { localeNames, type Locale, type Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 
 export type PageKey = 'jobs' | 'datasets' | 'agents' | 'environments' | 'leaderboard' | 'system'
@@ -41,7 +41,7 @@ export function AppShell({
         <a
           className="brand"
           href="#jobs"
-          aria-label="OrnnLab home"
+          aria-label={t('appHome')}
           onClick={(event) => {
             event.preventDefault()
             onNavigate('jobs')
@@ -51,7 +51,7 @@ export function AppShell({
           <span>OrnnLab</span>
           <small>{t('harbor')}</small>
         </a>
-        <nav className="nav-links" aria-label="Primary">
+        <nav className="nav-links" aria-label={t('primaryNavigation')}>
           {navItems.map((item) => (
             <a
               key={item.key}
@@ -72,13 +72,13 @@ export function AppShell({
             {t('harborAuthReady')}
           </button>
           <CustomSelect
-            ariaLabel="Language"
+            ariaLabel={t('language')}
             className="header-select"
             leadingIcon={<Languages aria-hidden="true" />}
             value={language}
             options={[
-              { label: 'EN', value: 'en' },
-              { label: '中', value: 'zh' },
+              { label: localeNames.en, value: 'en' },
+              { label: localeNames.zh, value: 'zh' },
             ]}
             onChange={(value) => onLanguage(value as Locale)}
           />

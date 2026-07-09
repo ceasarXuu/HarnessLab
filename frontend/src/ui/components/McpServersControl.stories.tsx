@@ -10,6 +10,8 @@ const labels: McpServerLabels = {
   composeSidecar: 'Docker Compose sidecar',
   composeYaml: 'Compose YAML',
   command: 'Command',
+  deleteItem: 'Delete',
+  deleteServer: 'Delete MCP Server',
   deployment: 'Deployment',
   description: 'Manage MCP templates on the Agent. OrnnLab expands compose sidecars into Harbor task environment and registers the generated connection in task.toml.',
   enabled: 'Enabled',
@@ -17,12 +19,14 @@ const labels: McpServerLabels = {
   env: 'Env',
   externalService: 'External service',
   generatedUrl: 'Generated URL',
+  key: 'Env key',
   name: 'Name',
   port: 'Port',
   serviceName: 'Service name',
   stdio: 'stdio command',
   transport: 'Transport',
   url: 'URL',
+  value: 'Env value',
 }
 
 function McpServersFixture() {

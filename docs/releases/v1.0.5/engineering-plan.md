@@ -16,7 +16,7 @@
 
 ## 2. 当前进度
 
-截至 2026-07-09，v1.0.5 处于“前端 mock 产品化基本成型，准备进入契约层和联调基建”的阶段。
+截至 2026-07-09，v1.0.5 已完成 Stage 1“前端 mock 产品化”收尾，下一阶段进入 Stage 2“前端契约层建设”。当前前端仍保持 mock 模式，但组件治理、Storybook 基线、i18n 基线和测试门禁已经达到进入契约层改造的要求。
 
 | 工作项 | 状态 | 当前证据 | 下一步 |
 |---|---|---|---|
@@ -25,12 +25,12 @@
 | 前端重建 | Done | `frontend/` 已采用 React/Vite/Storybook；旧 Vue demo 不作为开发基础 | 继续按正式前端治理推进 |
 | 主页面 mock | Done | Jobs、Datasets、Agents、Environment、Leaderboard、System、New Job、New Agent 已具备 mock 页面与主要交互 | 继续修 UI 细节和状态覆盖 |
 | 样式拆分 | Done | `frontend/src/styles/` 已按 token/base/layout/controls/tables/surfaces/screens/run-builder 拆分 | 后续禁止回到巨型样式文件 |
-| Storybook 基线 | Partial | 已有 theme/locale globals、MSW handlers、a11y 参数和主要 story | 补 loading/empty/error/operation-running 状态矩阵 |
-| i18n 基线 | Partial | 已有 `i18n.zh.ts`、`i18n.en.ts`、`i18n.ts` | 继续清除组件硬编码文案和翻译字符串判断 |
+| Storybook 基线 | Done | App、Screens、Controls、RunBuilder 等 story 已覆盖 theme/locale、路由、empty、downloading、operation-running、confirm、task bulk、verifier skip 等 Stage 1 状态 | Stage 2 接入 API hook 后继续补真实 loading/error/permission 状态 |
+| i18n 基线 | Done | `i18n.zh.ts`、`i18n.en.ts`、`i18n.ts` 已覆盖新增通用组件文案；生产 UI 硬编码扫描未命中中英文残留 | 新增文案继续先入 locale 文件 |
 | 领域类型治理 | Partial | 已有 `frontend/src/domain/harbor.ts` | 继续把生产 UI 类型从 `frontend/src/mocks/` 剥离 |
 | API 契约规范 | Draft | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation` | 建立 `frontend/src/api/` typed client 和 legacy adapter |
 | 后端 WebUI facade | Not started | 现有后端仍是 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧路由 | 设计并实现 `/api/webui/v1` 或明确 adapter 过渡期 |
-| 联调门禁 | Not ready | 测试脚本存在，但 contract client、状态矩阵和真实 smoke 未完成 | 补齐 API 层后跑完整门禁 |
+| 联调门禁 | Stage 1 passed | `typecheck`、unit、lint、build、Storybook smoke、e2e 已通过；但 contract client 和真实 API smoke 未完成 | Stage 2/3 补齐 API 层和后端 facade 后再跑联调门禁 |
 
 ## 3. 阶段计划
 
@@ -49,7 +49,7 @@
 
 ### Stage 1: 前端 mock 产品化
 
-状态：Mostly done
+状态：Done
 
 已完成：
 
@@ -60,12 +60,21 @@
 - Jobs、Datasets、Agents 详情已使用右侧抽屉。
 - Storybook 已作为组件注册入口。
 - 样式文件已拆分。
+- Storybook 已补充 App/Screens/RunBuilder/Controls 的 Stage 1 状态矩阵。
+- `EditableStringList`、`KeyValueControl`、`NetworkAccessControl` 等相似 add/delete、key-value、allowlist 交互已收敛到通用组件。
+- 组件内新增硬编码文案已收敛到 locale 文件，生产 UI 硬编码扫描未发现新增残留。
+- Stage 1 测试门禁已通过：
+  - `npm run typecheck`
+  - `npm test -- --reporter=dot`
+  - `npm run lint`
+  - `npm run build`
+  - `npm run storybook:test`
+  - `npm run e2e`
 
-剩余：
+后续延伸：
 
-- 补齐 Storybook 页面状态矩阵。
-- 继续清理组件中剩余硬编码多语言文案。
-- 继续压缩相似组件的重复实现，特别是 select、key-value、路径选择、add/delete 列表、抽屉表格。
+- API-specific loading、error、permission、operation polling 状态需要在 Stage 2 建立 `frontend/src/api/` 和 MSW/adapter 后继续补齐。
+- 生产 UI 类型继续从 mock fixture 中剥离，作为 Stage 2 的核心任务。
 
 ### Stage 2: 前端契约层建设
 
@@ -178,7 +187,7 @@ npm run e2e
 |---|---|---|
 | 前端缺 `src/api` 层 | 页面继续绑定 mock 或旧路由会放大联调返工 | Stage 2 优先处理 |
 | 后端缺 `/api/webui/v1` facade | React 页面无法稳定消费契约 | Stage 3 建 facade，或短期前端 adapter 过渡 |
-| Storybook 状态矩阵不足 | 复杂交互容易回归，例如抽屉溢出、select 样式不一致 | Stage 1/6 持续补齐 |
+| API 状态矩阵尚未接入 | 当前 Storybook 仍以 mock fixture 为主，无法真实覆盖 API loading/error/permission | Stage 2 建 API adapter 和 MSW/fixture 后补真实接口状态 |
 | Harbor 能力边界仍需核验 | UI 可能重新出现 fake-only action | 功能清单只做证据，PRD 和技术设计只收敛确认后的能力 |
 | Environment / Agent / MCP 语义复杂 | 容易把 Harbor、OrnnLab-local 和 harness 责任混在一起 | PRD 保持产品语义，技术设计保持契约边界 |
 

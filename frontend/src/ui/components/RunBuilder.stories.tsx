@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { initialDraft } from '../../mocks/demo'
@@ -37,6 +38,32 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NewJobFlow: Story = {}
+
+export const VerifierSkipLocksLeaderboard: Story = {
+  render: () => <RunBuilderFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Verifier' }))
+    await userEvent.click(canvas.getByLabelText('Verifier mode'))
+    await userEvent.click(canvas.getByRole('option', { name: 'Skip verification' }))
+    await userEvent.click(canvas.getByRole('tab', { name: 'Basic' }))
+    await expect(canvas.getByLabelText('Include in leaderboard')).toBeDisabled()
+    await expect(canvas.getByLabelText('Include in leaderboard')).toHaveTextContent('Disabled')
+  },
+}
+
+export const TaskSearchBulkSelection: Story = {
+  render: () => <RunBuilderFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Tasks' }))
+    await userEvent.type(canvas.getByLabelText('Search tasks'), 'sqlite')
+    await expect(canvas.getByText('sqlite-log-repair')).toBeVisible()
+    await expect(canvas.queryByText('apt-setup')).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Disable all' }))
+    await expect(canvas.getByText('Selected tasks: 3 / 4')).toBeVisible()
+  },
+}
 
 function RuntimePanelFixture() {
   const [draft, setDraft] = useState(initialDraft)

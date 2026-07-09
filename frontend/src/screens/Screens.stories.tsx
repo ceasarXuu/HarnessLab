@@ -68,8 +68,56 @@ export const Jobs: Story = {
   ),
 }
 
+export const JobsEmpty: Story = {
+  render: () => (
+    <JobsPage
+      events={[]}
+      jobs={[]}
+      open={false}
+      search=""
+      selected={null}
+      trialRows={[]}
+      t={t}
+      onClose={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+}
+
+export const JobOperationRunning: Story = {
+  render: () => (
+    <JobsPage
+      events={events}
+      jobs={jobs}
+      open
+      search=""
+      selected={jobs[0]}
+      trialRows={trialRows}
+      t={t}
+      onClose={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+}
+
 export const Datasets: Story = {
   render: () => <DatasetsFixture />,
+}
+
+export const DatasetDownloading: Story = {
+  render: () => <DatasetsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Download' })[0])
+    await expect(canvas.getByText('0%')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Cancel download' })).toBeVisible()
+  },
 }
 
 export const DatasetDrawer: Story = {
@@ -86,8 +134,28 @@ export const DatasetDrawer: Story = {
   },
 }
 
+export const DatasetSplitEmpty: Story = {
+  render: () => <DatasetsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByText('swe-bench-lite'))
+    await expect(canvas.getByText('No tasks available for this dataset in mock data.')).toBeVisible()
+  },
+}
+
 export const Agents: Story = {
   render: () => <AgentsFixture />,
+}
+
+export const AgentDeleteConfirm: Story = {
+  render: () => <AgentsFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const customRow = canvas.getByText('Local repair agent').closest('tr')
+    if (!customRow) throw new Error('Custom agent row not found')
+    await userEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
+    await expect(canvas.getByRole('dialog', { name: 'Delete custom agent' })).toBeVisible()
+  },
 }
 
 export const AgentDrawer: Story = {
@@ -240,4 +308,13 @@ export const Leaderboard: Story = {
 
 export const System: Story = {
   render: () => <SystemPage rows={systemRows} t={t} />,
+}
+
+export const SystemDestructiveConfirm: Story = {
+  render: () => <SystemPage rows={systemRows} t={t} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Clean cache' })[0])
+    await expect(canvas.getByRole('dialog', { name: 'Clean Docker cache' })).toBeVisible()
+  },
 }

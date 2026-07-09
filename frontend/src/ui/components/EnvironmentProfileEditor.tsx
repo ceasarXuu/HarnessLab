@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
 import type { EnvironmentRow } from '../../domain/harbor'
 import type { MessageKey, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
+import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { NetworkAccessControl } from './NetworkAccessControl'
 import { TpuSpecControl } from './TpuSpecControl'
@@ -22,7 +22,6 @@ interface EnvironmentField {
 
 interface EnvironmentFieldGroup {
   tab: EnvironmentTab
-  title: string
   fields: EnvironmentField[]
 }
 
@@ -33,7 +32,6 @@ const resourcePolicies = ['auto', 'limit', 'request', 'guarantee', 'ignore']
 const environmentFieldGroups: EnvironmentFieldGroup[] = [
   {
     tab: 'base',
-    title: 'OrnnLab template',
     fields: [
       { key: 'name', labelKey: 'environmentName', kind: 'text', layout: 'medium' },
       { key: 'environmentType', labelKey: 'agentType', kind: 'select', layout: 'medium', options: environmentTypes },
@@ -42,7 +40,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
   },
   {
     tab: 'base',
-    title: 'Task environment baseline',
     fields: [
       { key: 'dockerImage', labelKey: 'environmentDockerImage', kind: 'text', layout: 'full', placeholder: 'python:3.13-slim or ghcr.io/org/image:tag' },
       { key: 'os', labelKey: 'os', kind: 'select', layout: 'short', options: operatingSystems },
@@ -57,7 +54,6 @@ const environmentFieldGroups: EnvironmentFieldGroup[] = [
   },
   {
     tab: 'advanced',
-    title: 'Runtime overrides',
     fields: [
       { key: 'forceBuild', labelKey: 'forceBuild', kind: 'switch', layout: 'medium' },
       { key: 'deleteAfterRun', labelKey: 'deleteAfterRun', kind: 'switch', layout: 'medium' },
@@ -124,11 +120,11 @@ export function EnvironmentProfileEditor({
         ))}
       </div>
 
-      {getEnvironmentGroupsForTab(activeTab).map((group) => (
-        <section className="run-config-group" key={group.title}>
+      {getEnvironmentGroupsForTab(activeTab).map((group, index) => (
+        <section className="run-config-group" key={`${group.tab}-${index}`}>
           {activeTab !== 'base' && (
             <div className="run-config-group-heading">
-              <h3>{getEnvironmentGroupTitle(group.title, t)}</h3>
+              <h3>{t('agentAdvancedTab')}</h3>
             </div>
           )}
           <div className="run-grid">
@@ -163,11 +159,7 @@ export function EnvironmentProfileEditor({
 function getEnvironmentGroupsForTab(activeTab: EnvironmentTab): EnvironmentFieldGroup[] {
   const groups = environmentFieldGroups.filter((group) => group.tab === activeTab)
   if (activeTab !== 'base') return groups
-  return [{ tab: 'base', title: 'Base fields', fields: groups.flatMap((group) => group.fields) }]
-}
-
-function getEnvironmentGroupTitle(title: string, t: Translate) {
-  return t('agentAdvancedTab')
+  return [{ tab: 'base', fields: groups.flatMap((group) => group.fields) }]
 }
 
 function EnvironmentFieldControl({
@@ -434,34 +426,15 @@ function PathListControl({
   const paths = parsePathList(value)
   const commit = (nextPaths: string[]) => onChange(formatPathList(nextPaths))
   return (
-    <div className={`path-list-control ${className}`}>
-      <div className="path-list-header">
-        <span>{label}</span>
-        <button className="secondary-button compact-action" type="button" onClick={() => commit([...paths, ''])}>
-          <Plus aria-hidden="true" />
-          {addLabel}
-        </button>
-      </div>
-      <div className="path-list-rows">
-        {paths.map((path, index) => (
-          <div className="path-list-row" key={index}>
-            <input
-              aria-label={`${label} ${index + 1}`}
-              value={path}
-              onChange={(event) => commit(paths.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
-            />
-            <button
-              aria-label={`${deleteLabel} ${label} ${index + 1}`}
-              className="icon-button"
-              type="button"
-              onClick={() => commit(paths.filter((_, itemIndex) => itemIndex !== index))}
-            >
-              <Trash2 aria-hidden="true" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <EditableStringList
+      addLabel={addLabel}
+      className={`path-list-control ${className}`}
+      deleteLabel={deleteLabel}
+      itemAriaLabel={(_, index) => `${label} ${index + 1}`}
+      label={label}
+      values={paths}
+      onChange={commit}
+    />
   )
 }
 

@@ -1,10 +1,10 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { EditableStringList } from './EditableStringList'
 
 interface NetworkAccessControlProps {
   enabledLabel: string
   hostsLabel: string
-  addLabel?: string
-  deleteLabel?: string
+  addLabel: string
+  deleteLabel: string
   value: string
   onChange: (value: string) => void
 }
@@ -12,8 +12,8 @@ interface NetworkAccessControlProps {
 export function NetworkAccessControl({
   enabledLabel,
   hostsLabel,
-  addLabel = 'Add',
-  deleteLabel = 'Delete',
+  addLabel,
+  deleteLabel,
   value,
   onChange,
 }: NetworkAccessControlProps) {
@@ -34,34 +34,15 @@ export function NetworkAccessControl({
         />
       </label>
       {enabled && (
-        <div className="network-host-list">
-          <div className="network-host-list-header">
-            <span>{hostsLabel}</span>
-            <button className="secondary-button compact-action" type="button" onClick={() => commitHosts([...hosts, ''])}>
-              <Plus aria-hidden="true" />
-              {addLabel}
-            </button>
-          </div>
-          <div className="network-host-list-rows">
-            {hosts.map((host, index) => (
-              <div className="network-host-list-row" key={index}>
-                <input
-                  aria-label={`${hostsLabel} ${index + 1}`}
-                  value={host}
-                  onChange={(event) => commitHosts(hosts.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
-                />
-                <button
-                  aria-label={`${deleteLabel} ${hostsLabel} ${index + 1}`}
-                  className="icon-button"
-                  type="button"
-                  onClick={() => commitHosts(hosts.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  <Trash2 aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <EditableStringList
+          addLabel={addLabel}
+          className="network-host-list"
+          deleteLabel={deleteLabel}
+          itemAriaLabel={(_, index) => `${hostsLabel} ${index + 1}`}
+          label={hostsLabel}
+          values={hosts}
+          onChange={commitHosts}
+        />
       )}
     </div>
   )

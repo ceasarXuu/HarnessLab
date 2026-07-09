@@ -7,7 +7,7 @@ interface KeyValueControlProps {
   onChange: (value: string) => void
   className?: string
   compact?: boolean
-  labels?: {
+  labels: {
     add: string
     delete: string
     key: string
@@ -22,7 +22,6 @@ interface KeyValueRow {
 
 export function KeyValueControl({ label, value, onChange, className, compact = false, labels }: KeyValueControlProps) {
   const [rows, setRows] = useState(() => parseRows(value))
-  const controlLabels = labels ?? { add: 'Add', delete: 'Delete', key: 'Key', value: 'Value' }
   const commit = (nextRows: KeyValueRow[]) => {
     setRows(nextRows.length ? nextRows : [{ key: '', value: '' }])
     onChange(formatRows(nextRows))
@@ -34,42 +33,42 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
       <div className="key-value-header">
         <span>{label}</span>
         <button
-          aria-label={compact ? `${controlLabels.add} ${label}` : undefined}
+          aria-label={compact ? `${labels.add} ${label}` : undefined}
           className="secondary-button compact-action"
           type="button"
           onClick={() => commit([...rows, { key: '', value: '' }])}
         >
           <Plus aria-hidden="true" />
-          {controlLabels.add}
+          {labels.add}
         </button>
       </div>
       <div className="key-value-list">
         {rows.map((row, index) => (
           <div className="key-value-row" key={index}>
             <label>
-              <span className={compact ? 'visually-hidden' : undefined}>{controlLabels.key}</span>
+              <span className={compact ? 'visually-hidden' : undefined}>{labels.key}</span>
               <input
-                aria-label={compact ? 'Env key' : undefined}
+                aria-label={compact ? labels.key : undefined}
                 value={row.key}
                 onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, key: event.target.value } : item))}
               />
             </label>
             <label>
-              <span className={compact ? 'visually-hidden' : undefined}>{controlLabels.value}</span>
+              <span className={compact ? 'visually-hidden' : undefined}>{labels.value}</span>
               <input
-                aria-label={compact ? 'Env value' : undefined}
+                aria-label={compact ? labels.value : undefined}
                 value={row.value}
                 onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))}
               />
             </label>
             <button
-              aria-label={`${controlLabels.delete} env ${row.key || index + 1}`}
+              aria-label={`${labels.delete} ${label} ${row.key || index + 1}`}
               className={compact ? 'icon-button' : 'secondary-button compact-action'}
               type="button"
               onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}
             >
               <Trash2 aria-hidden="true" />
-              {!compact && controlLabels.delete}
+              {!compact && labels.delete}
             </button>
           </div>
         ))}

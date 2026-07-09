@@ -298,25 +298,17 @@ code {
   width: 100%;
 }
 .network-host-list,
-.network-host-list-rows {
+.network-host-list .rule-list-rows {
   display: grid;
   gap: 8px;
 }
-.network-host-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.network-host-list-row {
+.network-host-list .rule-list-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
-.network-host-list-row .icon-button {
+.network-host-list .icon-button {
   width: 34px;
   min-width: 34px;
 }
@@ -324,10 +316,10 @@ code {
   .agent-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .network-host-list-row {
+  .network-host-list .rule-list-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  .network-host-list-row .icon-button {
+  .network-host-list .icon-button {
     justify-self: start;
   }
 }

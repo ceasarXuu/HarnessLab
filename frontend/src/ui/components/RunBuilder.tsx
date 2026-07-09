@@ -330,11 +330,13 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
               </Field>
               <KeyValueControl
                 label={t('verifierEnv')}
+                labels={{ add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }}
                 value={draft.verifierEnv}
                 onChange={(value) => onDraft({ ...draft, verifierEnv: value })}
               />
               <KeyValueControl
                 label={t('verifierKwargs')}
+                labels={{ add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }}
                 value={draft.verifierKwargs}
                 onChange={(value) => onDraft({ ...draft, verifierKwargs: value })}
               />

@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 
 type McpTransport = 'streamable-http' | 'sse' | 'stdio'
@@ -12,6 +13,8 @@ export interface McpServerLabels {
   composeSidecar: string
   composeYaml: string
   command: string
+  deleteItem: string
+  deleteServer: string
   deployment: string
   description: string
   enabled: string
@@ -19,12 +22,14 @@ export interface McpServerLabels {
   env: string
   externalService: string
   generatedUrl: string
+  key: string
   name: string
   port: string
   serviceName: string
   stdio: string
   transport: string
   url: string
+  value: string
 }
 
 interface McpServer {
@@ -104,7 +109,7 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                 />
               </label>
               <button
-                aria-label={`Delete MCP server ${server.name || index + 1}`}
+                aria-label={`${labels.deleteServer} ${server.name || index + 1}`}
                 className="icon-button"
                 type="button"
                 onClick={() => commit(servers.filter((_, rowIndex) => rowIndex !== index))}
@@ -178,6 +183,7 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                   </label>
                   <ArgumentList
                     addLabel={labels.addItem}
+                    deleteLabel={labels.deleteItem}
                     label={labels.args}
                     value={server.args ?? ['']}
                     onChange={(args) => updateServer(index, { args })}
@@ -186,6 +192,7 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                     <KeyValueControl
                       compact
                       label={labels.env}
+                      labels={{ add: labels.addItem, delete: labels.deleteServer, key: labels.key, value: labels.value }}
                       value={server.env ?? 'none'}
                       onChange={(env) => updateServer(index, { env })}
                     />
@@ -202,11 +209,13 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
 
 function ArgumentList({
   addLabel,
+  deleteLabel,
   label,
   value,
   onChange,
 }: {
   addLabel: string
+  deleteLabel: string
   label: string
   value: string[]
   onChange: (value: string[]) => void
@@ -215,34 +224,15 @@ function ArgumentList({
   const commit = (nextArgs: string[]) => onChange(nextArgs.length ? nextArgs : [''])
 
   return (
-    <div className="argument-list-control field-wide">
-      <div className="rule-list-header">
-        <span>{label}</span>
-        <button className="secondary-button compact-action" type="button" onClick={() => commit([...args, ''])}>
-          <Plus aria-hidden="true" />
-          {addLabel}
-        </button>
-      </div>
-      <div className="rule-list-rows">
-        {args.map((arg, index) => (
-          <div className="rule-list-row" key={index}>
-            <input
-              aria-label={label}
-              value={arg}
-              onChange={(event) => commit(args.map((item, rowIndex) => rowIndex === index ? event.target.value : item))}
-            />
-            <button
-              aria-label={`Delete ${label} ${index + 1}`}
-              className="icon-button"
-              type="button"
-              onClick={() => commit(args.filter((_, rowIndex) => rowIndex !== index))}
-            >
-              <Trash2 aria-hidden="true" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <EditableStringList
+      addLabel={addLabel}
+      className="argument-list-control field-wide"
+      deleteLabel={deleteLabel}
+      itemAriaLabel={() => label}
+      label={label}
+      values={args}
+      onChange={commit}
+    />
   )
 }
 

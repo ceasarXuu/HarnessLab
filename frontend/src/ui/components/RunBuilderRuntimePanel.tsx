@@ -1,7 +1,8 @@
 import type { RunDraft } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CustomSelect } from './CustomSelect'
+import { EditableStringList } from './EditableStringList'
 import { Field } from './RunBuilderChrome'
 
 interface RuntimePanelProps {
@@ -313,36 +314,29 @@ function RuleListControl({
   value: string
 }) {
   const [rows, setRows] = useState(() => {
-    const rules = splitRules(value)
-    return rules.length ? rules : ['']
+    const initialRows = splitRules(value)
+    return initialRows.length ? initialRows : ['']
   })
-  const commit = (nextRows: string[]) => {
+
+  useEffect(() => {
+    const nextRows = splitRules(value)
     setRows(nextRows.length ? nextRows : [''])
+  }, [value])
+
+  const commit = (nextRows: string[]) => {
+    setRows(nextRows)
     onChange(formatRules(nextRows))
   }
 
   return (
-    <div className="rule-list-control field-wide">
-      <div className="rule-list-header">
-        <span>{label}</span>
-        <button className="secondary-button compact-action" type="button" onClick={() => setRows([...rows, ''])}>
-          {addLabel}
-        </button>
-      </div>
-      <div className="rule-list-rows">
-        {rows.map((rule, index) => (
-          <div className="rule-list-row" key={index}>
-            <input
-              aria-label={`${label} ${index + 1}`}
-              value={rule}
-              onChange={(event) => commit(rows.map((item, rowIndex) => (rowIndex === index ? event.target.value : item)))}
-            />
-            <button className="secondary-button compact-action" type="button" onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}>
-              {deleteLabel}
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <EditableStringList
+      addLabel={addLabel}
+      className="rule-list-control field-wide"
+      deleteLabel={deleteLabel}
+      itemAriaLabel={(_, index) => `${label} ${index + 1}`}
+      label={label}
+      values={rows}
+      onChange={commit}
+    />
   )
 }

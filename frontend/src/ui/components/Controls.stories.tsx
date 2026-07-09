@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { ConfirmDialog } from './ConfirmDialog'
 import { CustomSelect } from './CustomSelect'
+import { EditableStringList } from './EditableStringList'
 import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
 import { NetworkAccessControl } from './NetworkAccessControl'
@@ -18,6 +19,7 @@ function ControlsFixture() {
   const [enabled, setEnabled] = useState(true)
   const [networkAccess, setNetworkAccess] = useState('*')
   const [tpu, setTpu] = useState('v6e=2x4')
+  const [paths, setPaths] = useState(['compose.gpu.yml'])
   const t = getTranslator('en')
 
   return (
@@ -46,7 +48,12 @@ function ControlsFixture() {
           <Field label="jobs_dir" wide>
             <FolderPathInput chooseLabel="Choose" label="Choose folder" value={folder} onChange={setFolder} />
           </Field>
-          <KeyValueControl label="env" value={envVars} onChange={setEnvVars} />
+          <KeyValueControl
+            label="env"
+            labels={{ add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }}
+            value={envVars}
+            onChange={setEnvVars}
+          />
           <NetworkAccessControl
             enabledLabel={t('environmentNetworkAccess')}
             hostsLabel={t('environmentAllowedHosts')}
@@ -54,6 +61,14 @@ function ControlsFixture() {
             deleteLabel={t('delete')}
             value={networkAccess}
             onChange={setNetworkAccess}
+          />
+          <EditableStringList
+            addLabel={t('add')}
+            deleteLabel={t('delete')}
+            itemAriaLabel={(_, index) => `Compose path ${index + 1}`}
+            label="Compose paths"
+            values={paths}
+            onChange={setPaths}
           />
           <TpuSpecControl label="tpu" value={tpu} onChange={setTpu} />
         </div>

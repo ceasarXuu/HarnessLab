@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
-import { FolderOpen, Plus, Trash2 } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
 import { McpServersControl } from './McpServersControl'
@@ -49,8 +50,8 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
       <div className="run-tabs agent-detail-tabs" role="tablist" aria-label={t('selectedAgent')}>
         {[
           { key: 'base' as const, label: t('runTabCore') },
-          { key: 'skills' as const, label: 'Skills' },
-          { key: 'mcps' as const, label: 'MCPs' },
+          { key: 'skills' as const, label: t('skillsTab') },
+          { key: 'mcps' as const, label: t('mcpsTab') },
           { key: 'advanced' as const, label: t('agentAdvancedTab') },
         ].map((tab) => (
           <button
@@ -71,7 +72,14 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
           <section className="surface rail-card">
             <SectionTitle>{t('modelSettings')}</SectionTitle>
             <div className="agent-form-grid">
-              <ModelListControl label={t('supportedModels')} value={value.models} onChange={(nextValue) => setField('models', nextValue)} />
+              <ModelListControl
+                addLabel={t('add')}
+                deleteLabel={t('delete')}
+                itemLabel={t('modelName')}
+                label={t('supportedModels')}
+                value={value.models}
+                onChange={(nextValue) => setField('models', nextValue)}
+              />
               {config.reasoning && (
                 <TagGroupControl label={t('reasoningEffort')} options={config.reasoning} value={value.reasoningEffort ?? ''} onChange={(nextValue) => setField('reasoningEffort', nextValue)} />
               )}
@@ -103,7 +111,13 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
                 </>
               )}
               <div className="field-wide">
-                <KeyValueControl compact label={t('genericAgentEnv')} value={value.env ?? 'none'} onChange={(nextValue) => setField('env', nextValue)} />
+                <KeyValueControl
+                  compact
+                  label={t('genericAgentEnv')}
+                  labels={envKeyValueLabels(t)}
+                  value={value.env ?? 'none'}
+                  onChange={(nextValue) => setField('env', nextValue)}
+                />
               </div>
             </div>
           </section>
@@ -113,7 +127,15 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
       {activeTab === 'skills' && (
         <section className="surface rail-card">
           <SectionTitle>{t('skillsConfig')}</SectionTitle>
-          <DirectoryListControl chooseLabel={t('chooseFolder')} description={t('skillsConfigDescription')} label={t('skills')} value={value.skills ?? 'none'} onChange={(nextValue) => setField('skills', nextValue)} />
+          <DirectoryListControl
+            addLabel={t('add')}
+            chooseLabel={t('chooseFolder')}
+            deleteLabel={t('delete')}
+            description={t('skillsConfigDescription')}
+            label={t('skills')}
+            value={value.skills ?? 'none'}
+            onChange={(nextValue) => setField('skills', nextValue)}
+          />
         </section>
       )}
 
@@ -128,7 +150,12 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
         <section className="surface rail-card">
           <SectionTitle>{t('advancedAgentParams')}</SectionTitle>
           <div className="agent-form-grid">
-            <KeyValueControl label={t('genericAgentKwargs')} value={value.kwargs ?? 'none'} onChange={(nextValue) => setField('kwargs', nextValue)} />
+            <KeyValueControl
+              label={t('genericAgentKwargs')}
+              labels={defaultKeyValueLabels(t)}
+              value={value.kwargs ?? 'none'}
+              onChange={(nextValue) => setField('kwargs', nextValue)}
+            />
             <Metric label={t('runtimeDefaults')} value={value.runtime ?? '-'} />
             <Metric label={t('setupTimeout')} value={value.setupTimeout ?? '-'} />
             <Metric label={t('maxTimeout')} value={value.maxTimeout ?? '-'} />
@@ -176,14 +203,38 @@ export function AgentIdentityEditor({ value, t, onChange }: AgentProfileEditorPr
 function mcpLabels(t: Translate) {
   return {
     addItem: t('add'), addServer: t('addMcpServer'), args: t('mcpArgs'), composeSidecar: t('mcpComposeSidecar'),
-    composeYaml: t('mcpComposeYaml'), command: t('mcpCommand'), deployment: t('mcpDeployment'), description: t('mcpConfigDescription'),
+    composeYaml: t('mcpComposeYaml'), command: t('mcpCommand'), deleteItem: t('deleteItem'), deleteServer: t('deleteMcpServer'), deployment: t('mcpDeployment'), description: t('mcpConfigDescription'),
     enabled: t('enabled'), endpointPath: t('mcpEndpointPath'), env: t('mcpEnv'), externalService: t('mcpExternalService'),
-    generatedUrl: t('mcpGeneratedUrl'), name: t('mcpServerName'), port: t('mcpPort'), serviceName: t('mcpServiceName'),
-    stdio: t('mcpStdio'), transport: t('mcpTransport'), url: t('mcpUrl'),
+    generatedUrl: t('mcpGeneratedUrl'), key: t('envKey'), name: t('mcpServerName'), port: t('mcpPort'), serviceName: t('mcpServiceName'),
+    stdio: t('mcpStdio'), transport: t('mcpTransport'), url: t('mcpUrl'), value: t('envValue'),
   }
 }
 
-function DirectoryListControl({ chooseLabel, description, label, value, onChange }: { chooseLabel: string; description: string; label: string; value: string; onChange: (value: string) => void }) {
+function defaultKeyValueLabels(t: Translate) {
+  return { add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }
+}
+
+function envKeyValueLabels(t: Translate) {
+  return { add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }
+}
+
+function DirectoryListControl({
+  addLabel,
+  chooseLabel,
+  deleteLabel,
+  description,
+  label,
+  value,
+  onChange,
+}: {
+  addLabel: string
+  chooseLabel: string
+  deleteLabel: string
+  description: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [paths, setPaths] = useState(() => parseDirectoryPaths(value))
   const commit = (nextPaths: string[]) => {
@@ -201,21 +252,18 @@ function DirectoryListControl({ chooseLabel, description, label, value, onChange
   return (
     <div className="directory-list-control field-wide">
       <p className="field-hint">{description}</p>
-      <div className="rule-list-header">
-        <span>{label}</span>
-        <div className="directory-list-actions">
-          <button className="secondary-button compact-action" type="button" onClick={() => commit([...paths, ''])}><Plus aria-hidden="true" />Add</button>
+      <EditableStringList
+        addLabel={addLabel}
+        className="directory-string-list"
+        deleteLabel={deleteLabel}
+        itemAriaLabel={() => label}
+        label={label}
+        values={paths}
+        onChange={commit}
+        extraActions={(
           <button className="secondary-button compact-action" type="button" onClick={() => fileInputRef.current?.click()}><FolderOpen aria-hidden="true" />{chooseLabel}</button>
-        </div>
-      </div>
-      <div className="rule-list-rows">
-        {paths.map((path, index) => (
-          <div className="rule-list-row" key={index}>
-            <input aria-label={label} value={path} onChange={(event) => commit(paths.map((item, rowIndex) => rowIndex === index ? event.target.value : item))} />
-            <button aria-label={`Delete ${label} ${path || index + 1}`} className="icon-button" type="button" onClick={() => commit(paths.filter((_, rowIndex) => rowIndex !== index))}><Trash2 aria-hidden="true" /></button>
-          </div>
-        ))}
-      </div>
+        )}
+      />
       <input ref={fileInputRef} aria-label={`${chooseLabel}: ${label}`} className="visually-hidden" type="file" onChange={(event) => updateFromFiles(event.target.files)} {...{ directory: '', webkitdirectory: '' }} />
     </div>
   )
@@ -225,24 +273,36 @@ function SectionTitle({ children }: { children: string }) {
   return <div className="rail-title"><h3>{children}</h3></div>
 }
 
-function ModelListControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function ModelListControl({
+  addLabel,
+  deleteLabel,
+  itemLabel,
+  label,
+  value,
+  onChange,
+}: {
+  addLabel: string
+  deleteLabel: string
+  itemLabel: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
   const [models, setModels] = useState(() => parseModelNames(value))
   const commit = (nextModels: string[]) => {
     setModels(nextModels.length ? nextModels : [''])
     onChange(formatModelNames(nextModels))
   }
   return (
-    <div className="model-list-control field-wide">
-      <div className="rule-list-header"><span>{label}</span><button className="secondary-button compact-action" type="button" onClick={() => commit([...models, ''])}><Plus aria-hidden="true" />Add</button></div>
-      <div className="rule-list-rows">
-        {models.map((modelName, index) => (
-          <div className="rule-list-row" key={index}>
-            <input aria-label="Model name" value={modelName} onChange={(event) => commit(models.map((item, rowIndex) => rowIndex === index ? event.target.value : item))} />
-            <button aria-label={`Delete model ${modelName || index + 1}`} className="icon-button" type="button" onClick={() => commit(models.filter((_, rowIndex) => rowIndex !== index))}><Trash2 aria-hidden="true" /></button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <EditableStringList
+      addLabel={addLabel}
+      className="model-list-control field-wide"
+      deleteLabel={deleteLabel}
+      itemAriaLabel={() => itemLabel}
+      label={label}
+      values={models}
+      onChange={commit}
+    />
   )
 }
 

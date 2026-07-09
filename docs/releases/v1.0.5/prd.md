@@ -15,7 +15,7 @@
 - Key decisions: v1.0.5 先做 Harbor WebUI 产品化；OrnnLab 仍是基于 Harbor 的实验控制台，不改写为脱离 Harbor 的独立产品。
 - Important exceptions: 当前仍保持 mock 数据，不接入后端；但 UI 上不能出现 Harbor 没有真实能力支撑的 fake 功能。
 - Must-confirm before implementation: Harbor CLI/Hub 对 dataset、plugin、cache、leaderboard 提交等能力的精确命令边界仍需继续核验。
-- Status reason: 已有一轮较完整的前端功能讨论；进入联调前还需要完成 API contract adapter、domain 类型迁移、Storybook 状态矩阵和 e2e 口径修复。
+- Status reason: 已有一轮较完整的前端功能讨论，前端 mock 产品化 Stage 1 已完成；进入联调前还需要完成 API contract adapter、domain 类型迁移和真实 contract smoke。
 
 ## 1. Background And Product Intent
 
@@ -196,4 +196,4 @@ OrnnLab Service 支持检查更新和重启服务。Docker 行支持清理 Harbo
 | Header | 保留 Hub、语言、主题；移除运行 Job、Docker、通知 | 避免 header 堆叠非全局能力 | 前序讨论 |
 | System | 只保留真实系统健康和系统操作 | 移除认证重复、命令列表、verifier 等不属于系统页的内容 | 前序讨论 |
 | 弹窗 | 默认无副标题，标题和内容左对齐 | 减少说明噪音，保持工具页面清晰 | 前序讨论 |
-| 联调准备 | 先补 WebUI API adapter、domain 类型、Storybook 状态矩阵和 e2e 绿灯，再接真实后端 | 防止页面直接绑定旧 API 或 mock 字段，减少联调返工 | 2026-07-09 设计审查 |
+| 联调准备 | Stage 1 前端 mock 产品化完成后，先补 WebUI API adapter、domain 类型和真实 contract smoke，再接真实后端 | 防止页面直接绑定旧 API 或 mock 字段，减少联调返工 | 2026-07-09 设计审查 |
