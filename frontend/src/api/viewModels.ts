@@ -1,5 +1,5 @@
-import type { DatasetRow, HarborJob } from '../domain/harbor'
-import type { DatasetDto, JobDto, ScoreDto } from './contract'
+import type { DatasetRow, DatasetTask, EventLog, HarborJob, TrialRow } from '../domain/harbor'
+import type { DatasetDto, DatasetTaskDto, JobDto, JobEventDto, ScoreDto, TrialDto } from './contract'
 
 export function jobDtoToHarborJob(job: JobDto): HarborJob {
   return {
@@ -40,6 +40,33 @@ export function datasetDtoToRow(dataset: DatasetDto): DatasetRow {
     path: dataset.download.path,
     ref: dataset.ref,
     splits: dataset.splits,
+  }
+}
+
+export function datasetTaskDtoToDatasetTask(task: DatasetTaskDto): DatasetTask {
+  return { datasetRef: task.datasetRef, description: task.description, name: task.name, splits: task.splits }
+}
+
+export function jobEventDtoToEventLog(event: JobEventDto): EventLog {
+  return { level: event.level, message: event.message, time: event.occurredAt }
+}
+
+export function trialDtoToTrialRow(trial: TrialDto): TrialRow {
+  return {
+    analysisPath: '',
+    artifactPath: '',
+    cost: `$${trial.costUsd.toFixed(2)}`,
+    duration: formatDuration(trial.runtimeSeconds),
+    id: trial.id,
+    jobId: trial.jobId,
+    logPath: trial.logPath,
+    progress: trial.status,
+    result: trial.status,
+    retries: trial.retryCount,
+    score: formatScore(trial.score),
+    task: trial.taskName,
+    tokens: formatTokenUsage(trial.tokenUsageM),
+    verifierEvidence: '',
   }
 }
 

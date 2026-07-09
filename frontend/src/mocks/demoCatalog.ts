@@ -1,4 +1,4 @@
-import type { AgentRow, DatasetRow, EnvironmentRow, TaskRow } from '../domain/harbor'
+import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, TaskRow } from '../domain/harbor'
 
 export const datasetRows: DatasetRow[] = [
   {
@@ -178,6 +178,16 @@ export const taskRows: TaskRow[] = [
     artifacts: 'lockfile, logs/',
   },
 ]
+
+export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
+  const dataset = datasetRows.find((row) => row.name === task.dataset)
+  return {
+    datasetRef: dataset?.ref ?? task.dataset,
+    description: task.description,
+    name: task.name,
+    splits: task.splits ?? [],
+  }
+})
 
 export const agentRows: AgentRow[] = [
   {

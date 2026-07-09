@@ -98,6 +98,29 @@ export interface DatasetTaskDto {
   splits: string[]
 }
 
+export type EventLevel = 'info' | 'success' | 'warning' | 'error'
+
+export interface JobEventDto {
+  level: EventLevel
+  message: string
+  occurredAt: string
+}
+
+export type TrialStatus = 'passed' | 'running' | 'failed'
+
+export interface TrialDto {
+  costUsd: number
+  id: string
+  jobId: string
+  logPath: string
+  retryCount: number
+  runtimeSeconds: number
+  score: ScoreDto | null
+  status: TrialStatus
+  taskName: string
+  tokenUsageM: number
+}
+
 export interface ListQuery {
   cursor?: string
   limit?: number

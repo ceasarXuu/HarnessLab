@@ -1,13 +1,13 @@
 # Subagent VS Review: Stage 2 Legacy API Residue
 
 - Created: 2026-07-10T02:14:27+0800
-- Updated: 2026-07-10T03:10:00+0800
+- Updated: 2026-07-10T04:30:00+0800
 - Report schema: adversarial-v1
 - Task: Review Stage 2 contract-layer work, with emphasis on old API documentation and code residue.
 - Report path: `vs_review/2026-07-10-stage-2-legacy-api-review.md`
 - Review mode: fresh internal subagents
 - Source session policy: no inherited main-agent context; approved CLI substitutes receive only the review packet
-- Status: open
+- Status: open — Stage 2 remains partial; accepted Job/Dataset detail and MSW-boundary findings are remediated and independently re-reviewed.
 
 ## Round 1: Legacy API boundary review
 
@@ -346,6 +346,66 @@ It independently confirmed the previously accepted Job event/trial and Dataset t
 - Stage 2 closure: **not eligible**. The report remains open until the accepted read-resource and MSW-boundary remediation lands and passes another fresh implementation re-review.
 - Stage 3 dependency: backend `/api/webui/v1` implementation remains open and is not a reason to represent Stage 2 as completed.
 
+## Round 4: Detail Resource, MSW and API-Mode Write Remediation
+
+### Implementation Scope
+
+- Added typed `JobEventDto` and `TrialDto`, corresponding `WebUiClient` methods and resource hooks.
+- Migrated Job/Dataset detail resources, Job events, Job trials, Dataset tasks and New Job task selection to client/hook reads.
+- Removed unowned Agents、Environments、Leaderboard and System routes from MSW; only Jobs/Datasets contract routes remain.
+- Made `api` mode a strict read boundary: it does not seed un-migrated resources and it disables mock-only writes.
+- Updated authority documentation to record the exact partial migration state.
+
+### Reviewer Launch Record
+
+- Reviewer role: `code-reviewer`
+- Mechanism: `multi_agent_v1__spawn_agent`
+- Agent id: `019f4887-bfd5-7962-a8f2-7eeea3844315`
+- Nickname: Gibbs
+- Context policy: fresh session, `fork_context=false`
+- Review result: request changes
+
+### Reviewer Output and Main Agent Response
+
+| Finding | Decision | Remediation |
+|---|---|---|
+| `api` mode still let a user open the Dataset delete confirmation dialog; the handler returned only after the dialog appeared. | accept | Disabled Dataset table `Download`、`Cancel download` and `Delete` actions when `allowMockWrites=false`; retained handler guards; added API-mode assertions that every rendered Dataset delete action is disabled. |
+| `listJobEvents(id)` ignored `id`, so every Job received the same fixture event stream. | accept | Added `jobId` ownership to mock event fixtures; `listJobEvents(id)` now filters by it; extended client and MSW tests to compare two Job IDs. |
+
+### Verification
+
+- Targeted regression: `npm run test -- src/app/App.api.test.tsx src/api/detailResources.test.ts src/mocks/mswHandlers.test.ts` — 8 passed.
+- Full unit suite: `npm run test -- --run` — 11 files, 30 passed.
+- Static gates: `npm run typecheck`, `npm run lint` — passed.
+- Production build: `npm run build` — passed.
+- Storybook smoke: `npm run storybook:test` — passed.
+- End-to-end regression: `npm run e2e` — 10 passed. The port `4174` preflight found no stale preview listener.
+
+## Round 5: Fresh Remediation Re-review
+
+### Reviewer Launch Record
+
+- Reviewer role: `code-reviewer`
+- Mechanism: `multi_agent_v1__spawn_agent`
+- Agent id: `019f4890-0912-78f0-90b9-bef0508351d9`
+- Nickname: Heisenberg
+- Context policy: fresh session, `fork_context=false`
+- Review result: approve
+
+### Reviewer Output
+
+The reviewer found **no blocking issue** in the repaired Dataset write path or Job event path. It confirmed that Dataset table and drawer write controls receive `allowMockWrites`/`writeDisabled`, the callbacks retain defensive guards, and Job event fixtures are filtered by `jobId` through both mock client and MSW. The reviewer also confirmed the two regression suites cover the corrected paths.
+
+### Closure Status
+
+- Round 2/3 accepted detail-resource fixture bypass: **resolved for Jobs/Datasets**.
+- Round 2/3 accepted unowned MSW surface: **resolved**; un-migrated resources no longer masquerade as WebUI HTTP endpoints.
+- Round 4 API-mode Dataset write escape: **resolved**.
+- Round 4 Job-event cross-Job fixture leakage: **resolved**.
+- Fresh implementation re-review: **passed**.
+- Stage 2 overall: **still in progress**, not closed. Agents、Environments、Leaderboard、System read resources remain fixture-backed and lack typed client/hook ownership. Operation-backed writes, permission states and their Storybook status matrices are still pending.
+- Stage 3 remains required to implement the actual backend `/api/webui/v1` routes. No document may describe the product as real-API integrated before that work and a backend contract review complete.
+
 ## Final Conclusion
 
-Round 1 completed with a fresh Codex internal reviewer. The review requests changes. The work may proceed, but Stage 2 cannot be closed and `/api/webui/v1` cannot be presented as the active product path until F1, F2, and F3 are resolved and independently re-reviewed.
+The accepted Stage 2 detail-resource, MSW-boundary and API-mode mock-write findings are now closed with a fresh independent approval. Stage 2 remains intentionally partial: the next batch must migrate Agents、Environments、Leaderboard and System through the same typed resource boundary, then Stage 3 can replace the old backend routes directly with `/api/webui/v1`.

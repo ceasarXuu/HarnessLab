@@ -32,4 +32,30 @@ describe('WebUI MSW handlers', () => {
     expect(body.data.items.map((task: { name: string }) => task.name)).toEqual(['apt-setup', 'git-rebase-conflict'])
     expect(body.error).toBeNull()
   })
+
+  it('returns Job details through contract-shaped event and trial routes', async () => {
+    const [eventsResponse, otherEventsResponse, trialsResponse] = await Promise.all([
+      fetch('http://localhost/api/webui/v1/jobs/job_91a7/events'),
+      fetch('http://localhost/api/webui/v1/jobs/job_55e9/events'),
+      fetch('http://localhost/api/webui/v1/jobs/job_91a7/trials'),
+    ])
+    const [eventsBody, otherEventsBody, trialsBody] = await Promise.all([
+      eventsResponse.json(),
+      otherEventsResponse.json(),
+      trialsResponse.json(),
+    ])
+
+    expect(eventsBody.data[0]).toEqual(expect.objectContaining({
+      occurredAt: '14:18:21',
+      level: 'success',
+    }))
+    expect(eventsBody.data[0]).not.toHaveProperty('time')
+    expect(otherEventsBody.data).not.toEqual(eventsBody.data)
+    expect(trialsBody.data[0]).toEqual(expect.objectContaining({
+      jobId: 'job_91a7',
+      retryCount: 0,
+      taskName: 'apt-setup',
+    }))
+    expect(trialsBody.data[0]).not.toHaveProperty('task')
+  })
 })

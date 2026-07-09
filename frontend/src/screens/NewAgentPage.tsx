@@ -5,13 +5,14 @@ import type { Translate } from '../i18n'
 import { AgentIdentityEditor, AgentProfileEditor } from '../ui/components/AgentProfileEditor'
 
 interface NewAgentPageProps {
+  canSave?: boolean
   rows: AgentRow[]
   t: Translate
   onAgents: () => void
   onSave: (agent: AgentRow) => void
 }
 
-export function NewAgentPage({ rows, t, onAgents, onSave }: NewAgentPageProps) {
+export function NewAgentPage({ canSave = true, rows, t, onAgents, onSave }: NewAgentPageProps) {
   const [draft, setDraft] = useState(() => buildNewAgent(rows))
 
   return (
@@ -33,7 +34,7 @@ export function NewAgentPage({ rows, t, onAgents, onSave }: NewAgentPageProps) {
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" onClick={() => onSave(normalizeNewAgent(rows, draft))}>
+              <button className="primary-button" disabled={!canSave} onClick={() => onSave(normalizeNewAgent(rows, draft))}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>

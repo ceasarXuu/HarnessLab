@@ -175,12 +175,16 @@ export const jobs: HarborJob[] = [
   },
 ]
 
-export const events: EventLog[] = [
-  { time: '14:18:21', level: 'success', message: 'JobConfig persisted to harbor.config.json' },
-  { time: '14:18:23', level: 'info', message: 'Docker context resolved: colima' },
-  { time: '14:18:26', level: 'info', message: 'Trial terminal-bench/apt-setup started' },
-  { time: '14:19:04', level: 'warning', message: 'Verifier retry scheduled for flaky shell assertion' },
-  { time: '14:19:12', level: 'success', message: '18 trials completed, 46 still pending' },
+type JobEventFixture = EventLog & { jobId: string }
+
+export const events: JobEventFixture[] = [
+  { jobId: 'job_91a7', time: '14:18:21', level: 'success', message: 'JobConfig persisted to harbor.config.json' },
+  { jobId: 'job_91a7', time: '14:18:23', level: 'info', message: 'Docker context resolved: colima' },
+  { jobId: 'job_91a7', time: '14:18:26', level: 'info', message: 'Trial terminal-bench/apt-setup started' },
+  { jobId: 'job_91a7', time: '14:19:04', level: 'warning', message: 'Verifier retry scheduled for flaky shell assertion' },
+  { jobId: 'job_91a7', time: '14:19:12', level: 'success', message: '18 trials completed, 46 still pending' },
+  { jobId: 'job_55e9', time: '11:09:42', level: 'info', message: 'Trial harbor/hello-world started' },
+  { jobId: 'job_55e9', time: '11:10:20', level: 'error', message: 'Verifier assertion failed' },
 ]
 
 export const trialRows: TrialRow[] = [

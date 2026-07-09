@@ -1,10 +1,12 @@
-import type { ApiError, ApiResponse, DatasetDto, DatasetTaskDto, DatasetTaskQuery, JobDto, ListQuery, Page } from './contract'
+import type { ApiError, ApiResponse, DatasetDto, DatasetTaskDto, DatasetTaskQuery, JobDto, JobEventDto, ListQuery, Page, TrialDto } from './contract'
 
 export interface WebUiClient {
   getDataset(ref: string): Promise<ApiResponse<DatasetDto | null>>
   getJob(id: string): Promise<ApiResponse<JobDto | null>>
   listDatasetTasks(ref: string, query?: DatasetTaskQuery): Promise<ApiResponse<Page<DatasetTaskDto> | null>>
   listDatasets(query?: ListQuery): Promise<ApiResponse<Page<DatasetDto> | null>>
+  listJobEvents(id: string): Promise<ApiResponse<JobEventDto[] | null>>
+  listJobTrials(id: string): Promise<ApiResponse<TrialDto[] | null>>
   listJobs(query?: ListQuery): Promise<ApiResponse<Page<JobDto> | null>>
 }
 
@@ -15,6 +17,8 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     listDatasetTasks: (ref, query) =>
       requestJson<Page<DatasetTaskDto>>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/tasks${toSearch(query)}`),
     listDatasets: (query) => requestJson<Page<DatasetDto>>(request, `${baseUrl}/datasets${toSearch(query)}`),
+    listJobEvents: (id) => requestJson<JobEventDto[]>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/events`),
+    listJobTrials: (id) => requestJson<TrialDto[]>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/trials`),
     listJobs: (query) => requestJson<Page<JobDto>>(request, `${baseUrl}/jobs${toSearch(query)}`),
   }
 }

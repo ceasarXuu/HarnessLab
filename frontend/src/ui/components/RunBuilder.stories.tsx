@@ -3,7 +3,7 @@ import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { initialDraft } from '../../mocks/demo'
-import { datasetRows, environmentRows, taskRows } from '../../mocks/demoCatalog'
+import { datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
 import { RunBuilder } from './RunBuilder'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
@@ -17,7 +17,7 @@ function RunBuilderFixture({ initial = initialDraft }: { initial?: typeof initia
           datasets={datasetRows}
           draft={draft}
           environments={environmentRows}
-          taskRows={taskRows}
+          taskRows={datasetTaskRows}
           t={getTranslator('en')}
           onDraft={setDraft}
           onCancel={() => undefined}

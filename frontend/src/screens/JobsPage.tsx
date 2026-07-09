@@ -1,16 +1,19 @@
+import { useJob, useJobEvents, useJobTrials } from '../api/hooks'
+import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
+import type { WebUiClient } from '../api/webUiClient'
 import { DetailRail } from '../ui/components/DetailRail'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { JobsTable } from '../ui/components/JobsTable'
-import type { EventLog, HarborJob, TrialRow } from '../domain/harbor'
+import type { HarborJob } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface JobsPageProps {
-  events: EventLog[]
+  allowMockWrites?: boolean
+  client: WebUiClient
   jobs: HarborJob[]
   open: boolean
   search: string
   selected: HarborJob | null
-  trialRows: TrialRow[]
   t: Translate
   onClose: () => void
   onNewJob: () => void
@@ -20,12 +23,12 @@ interface JobsPageProps {
 }
 
 export function JobsPage({
-  events,
+  allowMockWrites = true,
+  client,
   jobs,
   open,
   search,
   selected,
-  trialRows,
   t,
   onClose,
   onNewJob,
@@ -33,6 +36,13 @@ export function JobsPage({
   onSearch,
   onSelect,
 }: JobsPageProps) {
+  const detailResource = useJob(client, selected?.id)
+  const eventsResource = useJobEvents(client, selected?.id)
+  const trialsResource = useJobTrials(client, selected?.id)
+  const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
+  const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
+  const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
+
   return (
     <main className="workspace single-page">
       <div className="content-column">
@@ -46,13 +56,14 @@ export function JobsPage({
           onSelect={onSelect}
         />
       </div>
-      {selected && (
+      {detailJob && (
         <DetailDrawer label={t('selectedJob')} open={open} onClose={onClose}>
           <DetailRail
-            job={selected}
+            job={detailJob}
             events={events}
-            trials={trialRows.filter((row) => row.jobId === selected.id)}
+            trials={trials}
             t={t}
+            allowMockWrites={allowMockWrites}
             onLeaderboardChange={onLeaderboardChange}
           />
         </DetailDrawer>

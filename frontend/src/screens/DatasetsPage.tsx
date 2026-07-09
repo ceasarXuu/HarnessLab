@@ -1,15 +1,19 @@
 import { Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useDataset, useDatasetTasks } from '../api/hooks'
+import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
+import type { WebUiClient } from '../api/webUiClient'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
-import type { DatasetRow, TaskRow } from '../domain/harbor'
+import type { DatasetRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {
+  allowMockWrites?: boolean
+  client: WebUiClient
   rows: DatasetRow[]
   search: string
-  taskRows: TaskRow[]
   t: Translate
   onSearch: (value: string) => void
 }
@@ -35,7 +39,7 @@ const defaultImportDraft = {
   version: 'local',
 }
 
-export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPageProps) {
+export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [taskSearch, setTaskSearch] = useState('')
@@ -60,26 +64,24 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
 
     return [...visibleImportedRows, ...rows]
   }, [importedRows, rows, search])
-  const selectedTasks = useMemo(
-    () =>
-      selected
-        ? taskRows.filter((row) => row.dataset === selected.name || row.dataset === `${selected.name}@${selected.version}`)
-        : [],
-    [selected, taskRows],
-  )
+  const selectedRef = selected?.ref ?? (selected ? datasetKey(selected) : undefined)
+  const detailResource = useDataset(client, selectedRef)
+  const tasksResource = useDatasetTasks(client, selectedRef)
+  const detailRow = detailResource.data ? datasetDtoToRow(detailResource.data) : selected
+  const selectedTasks = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
   const visibleSelectedTasks = useMemo(() => {
     const query = taskSearch.trim().toLowerCase()
     const splitFilteredTasks = taskSplit === 'all'
       ? selectedTasks
-      : selectedTasks.filter((row) => row.splits?.includes(taskSplit))
+      : selectedTasks.filter((row) => row.splits.includes(taskSplit))
     if (!query) return splitFilteredTasks
     return splitFilteredTasks.filter((row) =>
-      [row.name, row.description, row.state].some((value) => value.toLowerCase().includes(query)),
+      [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
     )
   }, [selectedTasks, taskSearch, taskSplit])
   const splitOptions = [
     { label: t('allSplits'), value: 'all' },
-    ...(selected?.splits ?? []).map((split) => ({ label: split, value: split })),
+    ...(detailRow?.splits ?? []).map((split) => ({ label: split, value: split })),
   ]
 
   useEffect(() => {
@@ -116,17 +118,21 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
 
   const downloadStateFor = (row: DatasetRow) => downloads[datasetKey(row)] ?? { status: 'not-downloaded' }
   const startDownload = (row: DatasetRow) => {
+    if (!allowMockWrites) return
     setDownloads((current) => ({ ...current, [datasetKey(row)]: { progress: 0, status: 'downloading' } }))
   }
   const cancelDownload = (row: DatasetRow) => {
+    if (!allowMockWrites) return
     setDownloads((current) => ({ ...current, [datasetKey(row)]: { status: 'not-downloaded' } }))
   }
   const confirmDelete = () => {
+    if (!allowMockWrites) return
     if (!deleteTarget) return
     setDownloads((current) => ({ ...current, [datasetKey(deleteTarget)]: { status: 'not-downloaded' } }))
     setDeleteTarget(null)
   }
   const confirmImportDataset = () => {
+    if (!allowMockWrites) return
     const taskCount = Number.parseInt(importDraft.tasks, 10)
     const nextRow: DatasetRow = {
       name: importDraft.name.trim() || defaultImportDraft.name,
@@ -185,7 +191,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
-            <button className="secondary-button" onClick={() => setImportDialogOpen(true)}>
+            <button className="secondary-button" disabled={!allowMockWrites} onClick={() => setImportDialogOpen(true)}>
               <Plus aria-hidden="true" />
               {t('importLocalDataset')}
             </button>
@@ -239,7 +245,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                     <td>
                       <div className="row-actions">
                         {downloadState.status === 'not-downloaded' && (
-                          <button className="secondary-button compact-action" onClick={(event) => {
+                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
                             event.stopPropagation()
                             startDownload(row)
                           }}>
@@ -250,7 +256,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                         {downloadState.status === 'downloading' && (
                           <>
                             <span className="progress-label">{downloadState.progress}%</span>
-                            <button className="secondary-button compact-action" onClick={(event) => {
+                            <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
                               event.stopPropagation()
                               cancelDownload(row)
                             }}>
@@ -260,7 +266,7 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
                           </>
                         )}
                         {downloadState.status === 'downloaded' && (
-                          <button className="secondary-button compact-action" onClick={(event) => {
+                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
                             event.stopPropagation()
                             setDeleteTarget(row)
                           }}>
@@ -277,18 +283,19 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
           </table>
         </div>
       </section>
-      {selected && (
+      {detailRow && selected && (
         <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <DatasetDetail
             downloadState={selectedDownloadState}
             expandedTaskName={expandedTaskName}
             isRegistryDataset={selectedIsRegistryDataset}
-            selected={selected}
+            selected={detailRow}
             splitOptions={splitOptions}
             taskSearch={taskSearch}
             taskSplit={taskSplit}
             tasks={visibleSelectedTasks}
             t={t}
+            writeDisabled={!allowMockWrites}
             onCancelDownload={cancelDownload}
             onDelete={setDeleteTarget}
             onExpandedTaskName={setExpandedTaskName}

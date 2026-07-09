@@ -16,7 +16,7 @@
 
 ## 2. 当前进度
 
-截至 2026-07-10，v1.0.5 已完成 Stage 1“前端 mock 产品化”，Stage 2“前端契约层建设”已启动。当前前端仍保持 mock 模式；`frontend/src/api/` 已建立契约类型、HTTP client 与 mock client，但页面尚未迁移到资源 hooks。
+截至 2026-07-10，v1.0.5 已完成 Stage 1“前端 mock 产品化”，Stage 2“前端契约层建设”正在推进。当前默认仍为 mock 模式；Jobs/Datasets 的列表、详情和附属读资源已迁移到 resource hooks，Agents、Environments、Leaderboard、System 仍待迁移。`api` 模式不展示未迁移资源的 fixture，也不执行模拟写操作。
 
 | 工作项 | 状态 | 当前证据 | 下一步 |
 |---|---|---|---|
@@ -28,7 +28,7 @@
 | Storybook 基线 | Done | App、Screens、Controls、RunBuilder 等 story 已覆盖 theme/locale、路由、empty、downloading、operation-running、confirm、task bulk、verifier skip 等 Stage 1 状态 | Stage 2 接入 API hook 后继续补真实 loading/error/permission 状态 |
 | i18n 基线 | Done | `i18n.zh.ts`、`i18n.en.ts`、`i18n.ts` 已覆盖新增通用组件文案；生产 UI 硬编码扫描未命中中英文残留 | 新增文案继续先入 locale 文件 |
 | 领域类型治理 | Partial | 已有 `frontend/src/domain/harbor.ts` | 继续把生产 UI 类型从 `frontend/src/mocks/` 剥离 |
-| API 契约规范 | In progress | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation`；已新增 `frontend/src/api/contract.ts`、`webUiClient.ts`、`mockClient.ts` | 建立 resource hooks，并把页面从 seed data 迁移到 client |
+| API 契约规范 | In progress | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation`；Jobs/Datasets 的列表、详情、events、trials、tasks 已由 `webUiClient.ts`、hooks 和 DTO/ViewModel 接入 | 迁移 Agents、Environments、Leaderboard、System；为写操作建立 Operation client |
 | 后端 API 破坏性升级 | Not started | 现有后端仍是 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧语义路由 | 直接升级旧 API 到 `/api/webui/v1` 产品契约，不维护新旧两套 |
 | 联调门禁 | Stage 1 passed | `typecheck`、unit、lint、build、Storybook smoke、e2e 已通过；但 contract client 和真实 API smoke 未完成 | Stage 2/3 补齐前端 client 和后端破坏性升级后再跑联调门禁 |
 
@@ -96,13 +96,16 @@
 - 新增 mock client 契约测试，覆盖 Job 搜索、Task split 筛选和 not-found 错误包络。
 - 新增 runtime client 模式：`VITE_ORNNLAB_DATA_MODE=api` 时只请求 `/api/webui/v1`，请求失败不会回退到 mock；默认 mock 模式仅用于离线开发。
 - 新增通用资源 hook，并将 App 的 Jobs、Datasets 列表迁移为通过 client + DTO/ViewModel 读取；页面具备 loading 与 API unavailable 状态。
+- Job 详情、Job events、Job trials、Dataset 详情、Dataset tasks 与 New Job Task 白名单已迁移到 client + hook；App 不再直接导入这些 detail fixture。
+- MSW 只保留已有 DTO、client 和 hook 消费者的 Jobs/Datasets HTTP 路由；未迁移资源不再伪装为 `/api/webui/v1` 接口。
+- `api` 模式不回退未迁移资源的 fixture，且禁用全部 mock 写操作，避免出现本地伪造成功。
 - 补充 HTTP response envelope 校验、网络失败测试、MSW Jobs/Datasets 路由与包络测试，以及 App 的 API unavailable Storybook 状态。
 - 统一 Leaderboard 正式路由为 `GET /leaderboard`；`/leaderboards` 不作为 v1.0.5 契约路径。
 
 仍未完成：
 
-- Agents、Environments、Leaderboard、System 及 Job/Dataset 详情附属资源仍使用离线 fixture，尚未迁移到统一 data hook。
-- 写操作、Operation 状态流、权限状态和所有资源的 loading/empty/error Storybook 矩阵尚未建立。
+- Agents、Environments、Leaderboard、System 仍使用离线 fixture，尚未迁移到统一 data hook。
+- 写操作、Operation 状态流、权限状态和所有资源的 loading/empty/error Storybook 矩阵尚未建立；现阶段仅允许 mock mode 的显式 UI 模拟。
 - 后端尚未提供 `/api/webui/v1`；此项属于 Stage 3，不能以 mock mode 代替真实联调。
 
 运行记录：执行 `npm run e2e` 前先确认 `4174` 未被旧的 preview/server 占用；否则 `start-server-and-test` 可能复用现有监听器，使测试不能证明它正在验证最新构建。可先执行 `lsof -nP -iTCP:4174 -sTCP:LISTEN` 检查。

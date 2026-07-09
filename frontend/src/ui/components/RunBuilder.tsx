@@ -1,6 +1,6 @@
 import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
-import type { DatasetRow, EnvironmentRow, RunDraft, TaskRow } from '../../domain/harbor'
+import type { DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
@@ -9,10 +9,11 @@ import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
 interface RunBuilderProps {
+  canLaunch?: boolean
   datasets: DatasetRow[]
   draft: RunDraft
   environments: EnvironmentRow[]
-  taskRows: TaskRow[]
+  taskRows: DatasetTask[]
   t: Translate
   onDraft: (draft: RunDraft) => void
   onCancel: () => void
@@ -29,7 +30,7 @@ const agentOptions = [
 ]
 type VerifierMode = 'dataset-default' | 'custom' | 'skip'
 
-export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ canLaunch = true, datasets, draft, environments, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
@@ -37,13 +38,11 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
   const availableSplits = selectedDataset?.splits ?? []
   const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
-  const selectedDatasetTasks = taskRows.filter(
-    (row) => row.dataset === selectedDataset?.name || row.dataset === selectedDatasetKey,
-  )
+  const selectedDatasetTasks = taskRows.filter((row) => row.datasetRef === selectedDatasetKey)
   const searchedTasks = selectedDatasetTasks.filter((row) => {
     const query = taskSearch.trim().toLowerCase()
     if (!query) return true
-    return [row.name, row.description, row.state].some((value) => value.toLowerCase().includes(query))
+    return [row.name, row.description].some((value) => value.toLowerCase().includes(query))
   })
   const selectedTaskNames = draft.selectedTaskNames ?? selectedDatasetTasks.map((task) => task.name)
   const selectedTaskNameSet = new Set(selectedTaskNames)
@@ -102,7 +101,7 @@ export function RunBuilder({ datasets, draft, environments, taskRows, t, onDraft
             <RotateCcw aria-hidden="true" />
             {t('reset')}
           </button>
-          <button className="primary-button" onClick={onLaunch}>
+          <button className="primary-button" disabled={!canLaunch} onClick={onLaunch}>
             <Play aria-hidden="true" />
             {t('runJob')}
           </button>

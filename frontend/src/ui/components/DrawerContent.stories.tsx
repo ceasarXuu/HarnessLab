@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
-import { agentRows, datasetRows, environmentRows, taskRows } from '../../mocks/demoCatalog'
+import { agentRows, datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
 import { AgentDetail } from './AgentDetail'
 import { DatasetDetail } from './DatasetDetail'
 import { EnvironmentProfileEditor } from './EnvironmentProfileEditor'
@@ -45,7 +45,7 @@ export const Dataset: Story = {
           splitOptions={[{ label: 'All splits', value: 'all' }, { label: 'test', value: 'test' }]}
           taskSearch=""
           taskSplit="all"
-          tasks={taskRows.filter((row) => row.dataset === dataset.name)}
+          tasks={datasetTaskRows.filter((row) => row.datasetRef === dataset.ref)}
           t={t}
           onCancelDownload={() => undefined}
           onDelete={() => undefined}

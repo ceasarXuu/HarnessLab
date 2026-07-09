@@ -29,6 +29,13 @@ export interface EventLog {
   message: string
 }
 
+export interface DatasetTask {
+  datasetRef: string
+  description: string
+  name: string
+  splits: string[]
+}
+
 export interface RunDraft {
   jobName: string
   jobsDir: string

@@ -1,7 +1,7 @@
-import { jobs } from '../mocks/demo'
+import { events, jobs, trialRows } from '../mocks/demo'
 import { datasetRows, taskRows } from '../mocks/demoCatalog'
-import type { HarborJob, DatasetRow, TaskRow } from '../domain/harbor'
-import type { ApiError, ApiResponse, DatasetDto, DatasetTaskDto, JobDto, Page, ScoreDto } from './contract'
+import type { HarborJob, DatasetRow, TaskRow, TrialRow } from '../domain/harbor'
+import type { ApiError, ApiResponse, DatasetDto, DatasetTaskDto, JobDto, JobEventDto, Page, ScoreDto, TrialDto } from './contract'
 import type { DatasetTaskQuery, ListQuery } from './contract'
 import type { WebUiClient } from './webUiClient'
 
@@ -11,6 +11,8 @@ export function createMockWebUiClient(): WebUiClient {
   const jobDtos = jobs.map(toJobDto)
   const datasetDtos = datasetRows.map(toDatasetDto)
   const taskDtos = taskRows.map(toDatasetTaskDto)
+  const eventDtos = events.map((event) => ({ event: toJobEventDto(event), jobId: event.jobId }))
+  const trialDtos = trialRows.map(toTrialDto)
 
   return {
     async getDataset(ref) {
@@ -28,6 +30,12 @@ export function createMockWebUiClient(): WebUiClient {
     },
     async listDatasets(query) {
       return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source])))
+    },
+    async listJobEvents(id) {
+      return success(eventDtos.filter((entry) => entry.jobId === id).map((entry) => entry.event))
+    },
+    async listJobTrials(id) {
+      return success(trialDtos.filter((trial) => trial.jobId === id))
     },
     async listJobs(query) {
       return success(page(filterByQuery(jobDtos, query, (job) => [job.name, job.datasetRef, job.agentName, job.harness, job.model, job.status])))
@@ -113,6 +121,25 @@ function toDatasetTaskDto(task: TaskRow): DatasetTaskDto {
   }
 }
 
+function toJobEventDto(event: typeof events[number]): JobEventDto {
+  return { level: event.level, message: event.message, occurredAt: event.time }
+}
+
+function toTrialDto(trial: TrialRow): TrialDto {
+  return {
+    costUsd: parseNumber(trial.cost),
+    id: trial.id,
+    jobId: trial.jobId,
+    logPath: trial.logPath,
+    retryCount: trial.retries,
+    runtimeSeconds: parseDuration(trial.duration),
+    score: parseScore(trial.score),
+    status: trial.result as TrialDto['status'],
+    taskName: trial.task,
+    tokenUsageM: parseTokenUsageM(trial.tokens),
+  }
+}
+
 function parseTrial(value: string) {
   const [completed = '0', total = '0'] = value.split('/').map((part) => part.trim())
   return { completed: Number(completed), total: Number(total) }
@@ -126,8 +153,18 @@ function parseScore(value: string): ScoreDto | null {
 }
 
 function parseDuration(value: string): number {
+  if (value.endsWith('h')) return Number(value.slice(0, -1)) * 3600
+  if (value.endsWith('m')) return Number(value.slice(0, -1)) * 60
+  if (value.endsWith('s')) return Number(value.slice(0, -1))
   const [hours, minutes, seconds] = value.split(':').map(Number)
   return hours * 3600 + minutes * 60 + seconds
+}
+
+function parseTokenUsageM(value: string): number {
+  if (value === '-') return 0
+  if (value.endsWith('M')) return parseNumber(value)
+  if (value.endsWith('k')) return parseNumber(value) / 1_000
+  return parseNumber(value) / 1_000_000
 }
 
 function parseNumber(value: string): number {

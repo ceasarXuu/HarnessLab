@@ -36,6 +36,8 @@ const unavailableClient: WebUiClient = {
   getJob: async () => ({ data: null, error: null }),
   listDatasetTasks: async () => ({ data: null, error: null }),
   listDatasets: async () => ({ data: null, error: null }),
+  listJobEvents: async () => ({ data: null, error: null }),
+  listJobTrials: async () => ({ data: null, error: null }),
   listJobs: async () => ({
     data: null,
     error: { code: 'NETWORK_REQUEST_FAILED', message: 'The API request could not be completed.' },

@@ -2,8 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../i18n'
-import { events, jobs, trialRows } from '../mocks/demo'
-import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
+import { createMockWebUiClient } from '../api/mockClient'
+import { jobs } from '../mocks/demo'
+import { agentRows, datasetRows, environmentRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
@@ -14,6 +15,7 @@ import { NewAgentPage } from './NewAgentPage'
 import { SystemPage } from './SystemPage'
 
 const t = getTranslator('en')
+const client = createMockWebUiClient()
 
 const meta = {
   title: 'Screens/Harbor WebUI',
@@ -25,7 +27,7 @@ type Story = StoryObj<typeof meta>
 
 function DatasetsFixture() {
   const [search, setSearch] = useState('')
-  return <DatasetsPage rows={datasetRows} search={search} taskRows={taskRows} t={t} onSearch={setSearch} />
+  return <DatasetsPage client={client} rows={datasetRows} search={search} t={t} onSearch={setSearch} />
 }
 
 function LeaderboardFixture() {
@@ -36,11 +38,10 @@ function LeaderboardFixture() {
       dataset={dataset}
       datasetSearch=""
       datasets={datasetRows}
-      events={events}
+      client={client}
       jobs={jobs}
       rows={rows}
       t={t}
-      trialRows={trialRows}
       onDataset={setDataset}
       onDatasetSearch={() => undefined}
       onLeaderboardChange={() => undefined}
@@ -52,12 +53,11 @@ function LeaderboardFixture() {
 export const Jobs: Story = {
   render: () => (
     <JobsPage
-      events={events}
+      client={client}
       jobs={jobs}
       open={false}
       search=""
       selected={jobs[0]}
-      trialRows={trialRows}
       t={t}
       onClose={() => undefined}
       onLeaderboardChange={() => undefined}
@@ -71,12 +71,11 @@ export const Jobs: Story = {
 export const JobsEmpty: Story = {
   render: () => (
     <JobsPage
-      events={[]}
+      client={client}
       jobs={[]}
       open={false}
       search=""
       selected={null}
-      trialRows={[]}
       t={t}
       onClose={() => undefined}
       onLeaderboardChange={() => undefined}
@@ -90,12 +89,11 @@ export const JobsEmpty: Story = {
 export const JobOperationRunning: Story = {
   render: () => (
     <JobsPage
-      events={events}
+      client={client}
       jobs={jobs}
       open
       search=""
       selected={jobs[0]}
-      trialRows={trialRows}
       t={t}
       onClose={() => undefined}
       onLeaderboardChange={() => undefined}

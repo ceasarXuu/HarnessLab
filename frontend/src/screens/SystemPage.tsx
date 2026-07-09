@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { Toast } from '../ui/components/Toast'
 
 interface SystemPageProps {
+  allowMockWrites?: boolean
   rows: SystemRow[]
   t: Translate
 }
@@ -21,7 +22,7 @@ const ornnlabVersion = {
   latest: '0.1.3',
 }
 
-export function SystemPage({ rows, t }: SystemPageProps) {
+export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
   const confirmContent = confirmAction === 'docker-cache'
@@ -49,6 +50,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
       }
 
   const handleCheckUpdate = () => {
+    if (!allowMockWrites) return
     if (ornnlabVersion.current !== ornnlabVersion.latest) {
       setConfirmAction('service-update')
       return
@@ -75,6 +77,7 @@ export function SystemPage({ rows, t }: SystemPageProps) {
 
   const closeConfirm = () => setConfirmAction(null)
   const confirmAndClose = () => {
+    if (!allowMockWrites) return
     setConfirmAction(null)
     if (confirmAction === 'service-restart') {
       showToast(t('restartRequestQueued'))
@@ -122,21 +125,21 @@ export function SystemPage({ rows, t }: SystemPageProps) {
                     <div className="row-actions">
                       {row.kind === 'ornnlab-service' && (
                         <>
-                          <button className="secondary-button compact-action" onClick={handleCheckUpdate}>
+                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={handleCheckUpdate}>
                             {t('checkUpdate')}
                           </button>
-                          <button className="secondary-button compact-action" onClick={() => setConfirmAction('service-restart')}>
+                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('service-restart')}>
                             {t('restart')}
                           </button>
                         </>
                       )}
                       {row.kind === 'docker' && (
-                        <button className="secondary-button compact-action" onClick={() => setConfirmAction('docker-cache')}>
+                        <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('docker-cache')}>
                           {t('cleanCache')}
                         </button>
                       )}
                       {row.kind === 'storage' && (
-                        <button className="secondary-button compact-action" onClick={() => setConfirmAction('local-cache')}>
+                        <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('local-cache')}>
                           {t('cleanCache')}
                         </button>
                       )}

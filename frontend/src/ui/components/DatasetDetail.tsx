@@ -1,6 +1,6 @@
 import { Box, Download, Search, Trash2, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { DatasetRow, TaskRow } from '../../domain/harbor'
+import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { Metric } from './Metric'
@@ -18,8 +18,9 @@ interface DatasetDetailProps {
   splitOptions: Array<{ label: string; value: string }>
   taskSearch: string
   taskSplit: string
-  tasks: TaskRow[]
+  tasks: DatasetTask[]
   t: Translate
+  writeDisabled?: boolean
   onCancelDownload: (row: DatasetRow) => void
   onDelete: (row: DatasetRow) => void
   onExpandedTaskName: Dispatch<SetStateAction<string | null>>
@@ -44,6 +45,7 @@ export function DatasetDetail({
   taskSplit,
   tasks,
   t,
+  writeDisabled = false,
 }: DatasetDetailProps) {
   return (
     <aside className="detail-rail dataset-detail">
@@ -66,7 +68,7 @@ export function DatasetDetail({
         </div>
         <div className="button-row tight">
           {downloadState.status === 'not-downloaded' && (
-            <button className="secondary-button" onClick={() => onStartDownload(selected)}>
+            <button className="secondary-button" disabled={writeDisabled} onClick={() => onStartDownload(selected)}>
               <Download aria-hidden="true" />
               {t('download')}
             </button>
@@ -74,17 +76,17 @@ export function DatasetDetail({
           {downloadState.status === 'downloading' && (
             <>
               <span className="progress-label">{downloadState.progress}%</span>
-              <button className="secondary-button" onClick={() => onCancelDownload(selected)}>
+              <button className="secondary-button" disabled={writeDisabled} onClick={() => onCancelDownload(selected)}>
                 <X aria-hidden="true" />
                 {t('cancelDownload')}
               </button>
             </>
           )}
           {downloadState.status === 'downloaded' && isRegistryDataset && (
-            <button className="secondary-button">{t('pullUpdates')}</button>
+            <button className="secondary-button" disabled={writeDisabled}>{t('pullUpdates')}</button>
           )}
           {downloadState.status === 'downloaded' && (
-            <button className="secondary-button" onClick={() => onDelete(selected)}>
+            <button className="secondary-button" disabled={writeDisabled} onClick={() => onDelete(selected)}>
               <Trash2 aria-hidden="true" />
               {t('delete')}
             </button>

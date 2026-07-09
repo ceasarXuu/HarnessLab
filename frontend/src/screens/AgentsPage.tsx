@@ -7,13 +7,14 @@ import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface AgentsPageProps {
+  allowMockWrites?: boolean
   rows: AgentRow[]
   t: Translate
   onNewAgent: () => void
   onRowsChange: (rows: AgentRow[]) => void
 }
 
-export function AgentsPage({ rows, t, onNewAgent, onRowsChange }: AgentsPageProps) {
+export function AgentsPage({ allowMockWrites = true, rows, t, onNewAgent, onRowsChange }: AgentsPageProps) {
   const [selected, setSelected] = useState<AgentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<AgentRow | null>(null)
@@ -29,6 +30,7 @@ export function AgentsPage({ rows, t, onNewAgent, onRowsChange }: AgentsPageProp
   }, [rows, search])
 
   const confirmDelete = () => {
+    if (!allowMockWrites) return
     if (!deleteTarget) return
     onRowsChange(rows.filter((row) => getAgentKey(row) !== getAgentKey(deleteTarget)))
     if (selected && getAgentKey(selected) === getAgentKey(deleteTarget)) {
@@ -55,7 +57,7 @@ export function AgentsPage({ rows, t, onNewAgent, onRowsChange }: AgentsPageProp
                 placeholder={t('searchAgentsPlaceholder')}
               />
             </label>
-            <button className="primary-button" onClick={onNewAgent}>{t('newAgent')}</button>
+            <button className="primary-button" disabled={!allowMockWrites} onClick={onNewAgent}>{t('newAgent')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -97,7 +99,7 @@ export function AgentsPage({ rows, t, onNewAgent, onRowsChange }: AgentsPageProp
                   <td>
                     <div className="row-actions">
                       {row.type === 'custom' && (
-                        <button className="secondary-button compact-action" onClick={(event) => {
+                        <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
                           event.stopPropagation()
                           setDeleteTarget(row)
                         }}>

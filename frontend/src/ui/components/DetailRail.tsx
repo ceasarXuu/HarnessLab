@@ -5,6 +5,7 @@ import type { Translate } from '../../i18n'
 import { Metric } from './Metric'
 
 interface DetailRailProps {
+  allowMockWrites?: boolean
   job: HarborJob
   events: EventLog[]
   trials: TrialRow[]
@@ -12,7 +13,7 @@ interface DetailRailProps {
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ job, events, trials, t, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ allowMockWrites = true, job, events, trials, t, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job.status, t)
@@ -27,7 +28,7 @@ export function DetailRail({ job, events, trials, t, onLeaderboardChange }: Deta
           </div>
           <div className="rail-heading-actions">
             <span className={`status-dot ${job.status}`}>{job.status}</span>
-            <button className="secondary-button compact-button">
+            <button className="secondary-button compact-button" disabled={!allowMockWrites}>
               {primaryJobAction.kind === 'pause' ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
               {primaryJobAction.label}
             </button>
@@ -47,12 +48,13 @@ export function DetailRail({ job, events, trials, t, onLeaderboardChange }: Deta
             <span>{t('includeInLeaderboard')}</span>
             <input
               type="checkbox"
+              disabled={!allowMockWrites}
               checked={job.includeInLeaderboard}
               onChange={(event) => onLeaderboardChange(job.id, event.target.checked)}
             />
           </label>
-          <button className="secondary-button">{t('openViewer')}</button>
-          <button className="secondary-button">
+          <button className="secondary-button" disabled={!allowMockWrites}>{t('openViewer')}</button>
+          <button className="secondary-button" disabled={!allowMockWrites}>
             <Upload aria-hidden="true" />
             {t('upload')}
           </button>

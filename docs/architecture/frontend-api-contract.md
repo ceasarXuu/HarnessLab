@@ -3,7 +3,7 @@
 - 状态：草案
 - 适用版本：v1.0.5
 - 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
-- 当前实现：`frontend/src/api/` 已有首批契约类型、HTTP client 与 mock client；页面仍使用 mock seed data。联调前需将页面迁移到资源 hooks，并将后端旧 API 破坏性升级为本契约
+- 当前实现：Jobs/Datasets 列表、详情、events、trials 与 tasks 已通过 `frontend/src/api/` 的 client/hook 读取；Agents、Environments、Leaderboard、System 尚未迁移。`api` 模式不回退 fixture 或模拟写入，联调前仍需完成其余资源迁移，并将后端旧 API 破坏性升级为本契约。
 
 > v1.0.5 引用关系：本文是 WebUI API 契约源文件。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
 

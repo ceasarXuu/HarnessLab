@@ -9,6 +9,7 @@ import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEdi
 type EnvironmentView = 'list' | 'new' | 'copy'
 
 interface EnvironmentsPageProps {
+  allowMockWrites?: boolean
   environmentId?: string
   rows: EnvironmentRow[]
   t: Translate
@@ -17,7 +18,7 @@ interface EnvironmentsPageProps {
   onView: (view: EnvironmentView, environmentId?: string) => void
 }
 
-export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, onView }: EnvironmentsPageProps) {
+export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, t, view, onRowsChange, onView }: EnvironmentsPageProps) {
   const [selected, setSelected] = useState<EnvironmentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<EnvironmentRow | null>(null)
@@ -40,6 +41,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
   }
 
   const saveNewTemplate = (draft: EnvironmentRow) => {
+    if (!allowMockWrites) return
     const saved = { ...draft, id: buildEnvironmentId(rows, draft.name), profileType: 'custom' as const }
     onRowsChange([...rows, saved])
     setSelected(saved)
@@ -49,6 +51,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
   }
 
   const saveDrawerEdit = () => {
+    if (!allowMockWrites) return
     if (!editingDraft) return
     const saved = { ...editingDraft, name: editingDraft.name.trim() || 'Custom Environment' }
     onRowsChange(rows.map((row) => (row.id === saved.id ? saved : row)))
@@ -57,6 +60,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
   }
 
   const confirmDelete = () => {
+    if (!allowMockWrites) return
     if (!deleteTarget) return
     const nextRows = rows.filter((row) => row.id !== deleteTarget.id)
     onRowsChange(nextRows)
@@ -78,6 +82,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
       <EnvironmentFormPage
         key={`${view}-${environmentId ?? 'new'}`}
         initialValue={initialValue}
+        canSave={allowMockWrites}
         title={view === 'copy' ? t('copyEnvironment') : t('newEnvironment')}
         t={t}
         onCancel={() => onView('list')}
@@ -103,7 +108,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                 placeholder={t('searchEnvironmentsPlaceholder')}
               />
             </label>
-            <button className="primary-button" onClick={() => onView('new')}>
+            <button className="primary-button" disabled={!allowMockWrites} onClick={() => onView('new')}>
               <Plus aria-hidden="true" />
               {t('newEnvironment')}
             </button>
@@ -139,6 +144,7 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   <td>
                     <EnvironmentActions
                       row={row}
+                      disabled={!allowMockWrites}
                       t={t}
                       onCopy={(target) => onView('copy', target.id)}
                       onDelete={setDeleteTarget}
@@ -160,12 +166,13 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
                   <p>{selected.environmentType}</p>
                 </div>
                 <div className="row-actions">
-                  <button className="primary-button compact-action" onClick={saveDrawerEdit}>
+                  <button className="primary-button compact-action" disabled={!allowMockWrites} onClick={saveDrawerEdit}>
                     <Save aria-hidden="true" />
                     {t('save')}
                   </button>
                   <EnvironmentActions
                     row={selected}
+                    disabled={!allowMockWrites}
                     t={t}
                     onCopy={(target) => onView('copy', target.id)}
                     onDelete={setDeleteTarget}
@@ -193,12 +200,14 @@ export function EnvironmentsPage({ environmentId, rows, t, view, onRowsChange, o
 
 function EnvironmentFormPage({
   initialValue,
+  canSave,
   title,
   t,
   onCancel,
   onSave,
 }: {
   initialValue: EnvironmentRow
+  canSave: boolean
   title: string
   t: Translate
   onCancel: () => void
@@ -224,7 +233,7 @@ function EnvironmentFormPage({
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" onClick={() => onSave(draft)}>
+              <button className="primary-button" disabled={!canSave} onClick={() => onSave(draft)}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>
@@ -239,23 +248,25 @@ function EnvironmentFormPage({
 
 function EnvironmentActions({
   row,
+  disabled,
   t,
   onCopy,
   onDelete,
 }: {
   row: EnvironmentRow
+  disabled: boolean
   t: Translate
   onCopy: (row: EnvironmentRow) => void
   onDelete: (row: EnvironmentRow) => void
 }) {
   return (
     <div className="row-actions" onClick={(event) => event.stopPropagation()}>
-      <button className="secondary-button compact-action" onClick={() => onCopy(row)}>
+      <button className="secondary-button compact-action" disabled={disabled} onClick={() => onCopy(row)}>
         <Copy aria-hidden="true" />
         {t('copy')}
       </button>
       {row.profileType === 'custom' && (
-        <button className="secondary-button compact-action" onClick={() => onDelete(row)}>
+        <button className="secondary-button compact-action" disabled={disabled} onClick={() => onDelete(row)}>
           <Trash2 aria-hidden="true" />
           {t('delete')}
         </button>
