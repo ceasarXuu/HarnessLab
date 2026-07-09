@@ -283,4 +283,8 @@ export const enMessages = {
     value: 'Value',
     path: 'Path',
     actions: 'Actions',
+    loadingDatasets: 'Loading Datasets.',
+    loadingJobs: 'Loading Jobs.',
+    unableToLoadDatasets: 'Unable to load Datasets.',
+    unableToLoadJobs: 'Unable to load Jobs.',
 } as const

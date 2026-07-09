@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { WebUiClient } from '../api/webUiClient'
 import type { Locale } from '../i18n'
 import { App } from './App'
 
@@ -17,7 +18,9 @@ function AppFixture({
   hash = '#jobs',
   locale = 'en',
   theme = 'dark',
+  client,
 }: {
+  client?: WebUiClient
   hash?: string
   locale?: Locale
   theme?: 'dark' | 'light'
@@ -25,7 +28,18 @@ function AppFixture({
   window.history.replaceState(null, '', hash)
   window.localStorage.setItem('ornnlab.locale', locale)
   window.localStorage.setItem('ornnlab.theme', theme)
-  return <App />
+  return <App client={client} />
+}
+
+const unavailableClient: WebUiClient = {
+  getDataset: async () => ({ data: null, error: null }),
+  getJob: async () => ({ data: null, error: null }),
+  listDatasetTasks: async () => ({ data: null, error: null }),
+  listDatasets: async () => ({ data: null, error: null }),
+  listJobs: async () => ({
+    data: null,
+    error: { code: 'NETWORK_REQUEST_FAILED', message: 'The API request could not be completed.' },
+  }),
 }
 
 export const Default: Story = {
@@ -47,4 +61,9 @@ export const EnvironmentsRoute: Story = {
 
 export const AgentsNewRoute: Story = {
   render: () => <AppFixture hash="#agents/new" />,
+}
+
+export const JobsApiUnavailable: Story = {
+  name: 'Jobs / API unavailable',
+  render: () => <AppFixture client={unavailableClient} />,
 }

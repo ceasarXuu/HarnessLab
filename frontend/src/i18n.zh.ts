@@ -285,4 +285,8 @@ export const zhMessages = {
     value: '值',
     path: '路径',
     actions: '操作',
+    loadingDatasets: '正在加载 Dataset。',
+    loadingJobs: '正在加载 Job。',
+    unableToLoadDatasets: '无法加载 Dataset。',
+    unableToLoadJobs: '无法加载 Job。',
 } satisfies Record<keyof typeof enMessages, string>

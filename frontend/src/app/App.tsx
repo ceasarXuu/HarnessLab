@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDatasets, useJobs } from '../api/hooks'
+import { createRuntimeWebUiClient } from '../api/runtimeClient'
+import { datasetDtoToRow, jobDtoToHarborJob } from '../api/viewModels'
+import type { WebUiClient } from '../api/webUiClient'
 import type { HarborJob, LeaderboardRow } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
-import { events, initialDraft, jobs as seedJobs, trialRows } from '../mocks/demo'
-import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
+import { events, initialDraft, trialRows } from '../mocks/demo'
+import { agentRows, environmentRows, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { getTranslator, type Locale } from '../i18n'
 import { JobsPage } from '../screens/JobsPage'
@@ -24,6 +28,10 @@ interface RouteState {
   environmentView: EnvironmentView
   jobView: JobView
   page: PageKey
+}
+
+interface AppProps {
+  client?: WebUiClient
 }
 
 const pageKeys = new Set<PageKey>(['jobs', 'datasets', 'agents', 'environments', 'leaderboard', 'system'])
@@ -65,9 +73,12 @@ function readTheme(): 'light' | 'dark' {
   return window.localStorage.getItem('ornnlab.theme') === 'dark' ? 'dark' : 'light'
 }
 
-export function App() {
+export function App({ client: injectedClient }: AppProps) {
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
-  const [jobs, setJobs] = useState(seedJobs)
+  const client = useMemo(() => injectedClient ?? createRuntimeWebUiClient(), [injectedClient])
+  const jobsResource = useJobs(client)
+  const datasetsResource = useDatasets(client)
+  const [jobs, setJobs] = useState<HarborJob[]>([])
   const [agents, setAgents] = useState(agentRows)
   const [environmentProfiles, setEnvironmentProfiles] = useState(environmentRows)
   const [leaderboardEntries, setLeaderboardEntries] = useState(leaderboardRows)
@@ -81,6 +92,11 @@ export function App() {
   const [language, setLanguage] = useState<Locale>(readLocale)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
   const t = useMemo(() => getTranslator(language), [language])
+  const datasets = useMemo(() => datasetsResource.data?.items.map(datasetDtoToRow) ?? [], [datasetsResource.data])
+
+  useEffect(() => {
+    if (jobsResource.data) setJobs(jobsResource.data.items.map(jobDtoToHarborJob))
+  }, [jobsResource.data])
 
   const filteredJobs = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -94,13 +110,13 @@ export function App() {
 
   const filteredDatasets = useMemo(() => {
     const query = datasetSearch.trim().toLowerCase()
-    if (!query) return datasetRows
-    return datasetRows.filter((row) =>
+    if (!query) return datasets
+    return datasets.filter((row) =>
       [row.name, row.version, row.visibility, row.source, row.digest].some((value) =>
-        value.toLowerCase().includes(query),
+        (value ?? '').toLowerCase().includes(query),
       ),
     )
-  }, [datasetSearch])
+  }, [datasetSearch, datasets])
 
   const filteredLeaderboard = useMemo(() => {
     const excludedJobIds = new Set(jobs.filter((job) => !job.includeInLeaderboard).map((job) => job.id))
@@ -162,7 +178,7 @@ export function App() {
   function launchDraft() {
     const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
     const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
-    const draftDataset = datasetRows.find((row) => `${row.name}@${row.version}` === draft.source)
+    const draftDataset = datasets.find((row) => `${row.name}@${row.version}` === draft.source)
     const draftEnvironment = environmentProfiles.find((row) => row.id === draft.environment)
     const draftTaskRows = taskRows.filter((row) => row.dataset === draftDataset?.name || row.dataset === draft.source)
     const selectedTaskCount = draft.selectedTaskNames?.length ?? draftTaskRows.length
@@ -249,13 +265,20 @@ export function App() {
       onTheme={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
     >
       {route.page === 'datasets' && (
-        <DatasetsPage
-          rows={filteredDatasets}
-          search={datasetSearch}
-          taskRows={taskRows}
-          t={t}
-          onSearch={setDatasetSearch}
-        />
+        <>
+          <DatasetsPage
+            rows={filteredDatasets}
+            search={datasetSearch}
+            taskRows={taskRows}
+            t={t}
+            onSearch={setDatasetSearch}
+          />
+          <ResourceStatus
+            error={datasetsResource.error ? t('unableToLoadDatasets') : null}
+            loading={datasetsResource.loading}
+            loadingLabel={t('loadingDatasets')}
+          />
+        </>
       )}
       {route.page === 'agents' && route.agentView === 'list' && (
         <AgentsPage rows={agents} t={t} onNewAgent={() => navigateAgent('new')} onRowsChange={setAgents} />
@@ -285,7 +308,7 @@ export function App() {
         <LeaderboardPage
           dataset={leaderboardDataset}
           datasetSearch={leaderboardDatasetSearch}
-          datasets={datasetRows}
+          datasets={datasets}
           events={events}
           jobs={jobs}
           rows={filteredLeaderboard}
@@ -298,27 +321,34 @@ export function App() {
         />
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (
-        <JobsPage
-          events={events}
-          jobs={filteredJobs}
-          open={jobDrawerOpen}
-          search={search}
-          selected={selected}
-          trialRows={trialRows}
-          t={t}
-          onClose={() => setJobDrawerOpen(false)}
-          onLeaderboardChange={updateJobLeaderboardInclusion}
-          onNewJob={() => navigate('jobs', 'new')}
-          onSearch={setSearch}
-          onSelect={(job) => {
-            setSelected(job)
-            setJobDrawerOpen(true)
-          }}
-        />
+        <>
+          <JobsPage
+            events={events}
+            jobs={filteredJobs}
+            open={jobDrawerOpen}
+            search={search}
+            selected={selected}
+            trialRows={trialRows}
+            t={t}
+            onClose={() => setJobDrawerOpen(false)}
+            onLeaderboardChange={updateJobLeaderboardInclusion}
+            onNewJob={() => navigate('jobs', 'new')}
+            onSearch={setSearch}
+            onSelect={(job) => {
+              setSelected(job)
+              setJobDrawerOpen(true)
+            }}
+          />
+          <ResourceStatus
+            error={jobsResource.error ? t('unableToLoadJobs') : null}
+            loading={jobsResource.loading}
+            loadingLabel={t('loadingJobs')}
+          />
+        </>
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (
         <NewRunPage
-          datasets={datasetRows}
+          datasets={datasets}
           draft={draft}
           environments={environmentProfiles}
           taskRows={taskRows}
@@ -331,6 +361,12 @@ export function App() {
       {route.page === 'system' && <SystemPage rows={systemRows} t={t} />}
     </AppShell>
   )
+}
+
+function ResourceStatus({ error, loading, loadingLabel }: { error: string | null; loading: boolean; loadingLabel: string }) {
+  if (error) return <div className="resource-state error" role="alert">{error}</div>
+  if (loading) return <div className="resource-state" role="status">{loadingLabel}</div>
+  return null
 }
 
 function buildLeaderboardEntryFromJob(job: HarborJob, metric = 'pass@1 mean'): LeaderboardRow {

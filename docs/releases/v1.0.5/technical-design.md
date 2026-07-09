@@ -193,5 +193,5 @@ npm run e2e
 - `frontend/src/mocks/` 只提供 fixture、MSW handler 和测试数据。
 - 主要页面 Storybook 状态矩阵补齐。
 - API 契约和页面可见操作一一对应。
-- 后端已将旧 API 破坏性升级为 `/api/webui/v1` WebUI 契约；不保留新旧并行入口，不依赖前端 legacy adapter。
+- 进入 Stage 4 前，后端必须将旧 API 破坏性升级为 `/api/webui/v1` WebUI 契约；不保留新旧并行入口，不依赖前端 legacy adapter。
 - e2e、unit、storybook smoke 至少达到当前联调最低门禁。

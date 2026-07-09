@@ -20,6 +20,8 @@ describe('MockWebUiClient', () => {
     const response = await client.listJobs({ q: 'terminal' })
 
     expect(response.error).toBeNull()
+    expect(response.data).not.toBeNull()
+    if (!response.data) throw new Error('Expected Job page data')
     expect(response.data.items).toHaveLength(2)
     expect(response.data.items[0]).toMatchObject({
       id: 'job_91a7',
@@ -35,6 +37,8 @@ describe('MockWebUiClient', () => {
     const response = await client.listDatasetTasks('terminal-bench@2.0', { split: 'test' })
 
     expect(response.error).toBeNull()
+    expect(response.data).not.toBeNull()
+    if (!response.data) throw new Error('Expected Dataset Task page data')
     expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup', 'git-rebase-conflict'])
   })
 

@@ -1,6 +1,9 @@
 .button-row {
   margin: 0 16px 16px;
 }
+.resource-state {
+  margin: 0 16px 16px;
+}
 code {
   color: var(--foreground);
 }

@@ -12,9 +12,10 @@ describe('App', () => {
     vi.useRealTimers()
   })
 
-  it('renders jobs as the default Harbor operating surface', () => {
+  it('renders jobs as the default Harbor operating surface', async () => {
     render(<App />)
 
+    await screen.findByText('72.5%')
     expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Jobs' })).toHaveClass('active')
     expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Run job' })).not.toBeInTheDocument()
@@ -66,10 +67,11 @@ describe('App', () => {
     expect(screen.getByText('log path: trials/job_91a7/apt-setup.log')).toBeInTheDocument()
   })
 
-  it('renders datasets as the Harbor catalog surface', () => {
+  it('renders datasets as the Harbor catalog surface', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+    await screen.findByText('terminal-bench')
     expect(screen.getByRole('heading', { name: 'Dataset catalog' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Import local Dataset' }))
     expect(screen.getByRole('dialog', { name: 'Import local Dataset' })).toBeInTheDocument()
@@ -146,10 +148,11 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
   })
 
-  it('renders the jobs hierarchy without flattening the run builder into it', () => {
+  it('renders the jobs hierarchy without flattening the run builder into it', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
+    await screen.findByText('terminal-bench-smoke')
     expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
     expect(screen.getAllByText('terminal-bench-smoke').length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'terminal-bench-smoke' }))
@@ -162,10 +165,11 @@ describe('App', () => {
     expect(screen.queryByLabelText('Job creation path')).not.toBeInTheDocument()
   })
 
-  it('filters jobs and keeps the table as the primary surface', () => {
+  it('filters jobs and keeps the table as the primary surface', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
+    await screen.findByText('terminal-bench-smoke')
     fireEvent.change(screen.getByLabelText('Search jobs'), { target: { value: 'swe' } })
 
     const jobsTable = screen.getByRole('table')
@@ -173,12 +177,13 @@ describe('App', () => {
     expect(within(jobsTable).queryByText('terminal-bench-smoke')).not.toBeInTheDocument()
   })
 
-  it('keeps task and trial concepts nested under datasets and jobs', () => {
+  it('keeps task and trial concepts nested under datasets and jobs', async () => {
     render(<App />)
 
     expect(screen.queryByRole('link', { name: 'Tasks' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Trials' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+    await screen.findByText('terminal-bench')
     fireEvent.click(screen.getByText('terminal-bench'))
     expect(screen.getByText('Dataset tasks')).toBeInTheDocument()
 
@@ -203,9 +208,10 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('dark')
   })
 
-  it('adds a queued job from the dedicated new run flow', () => {
+  it('adds a queued job from the dedicated new run flow', async () => {
     render(<App />)
 
+    await screen.findByText('terminal-bench-smoke')
     fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
     expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Run job' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'New Job' }))

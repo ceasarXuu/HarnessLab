@@ -8,8 +8,9 @@ describe('App agents and leaderboard', () => {
     window.location.hash = ''
   })
 
-  it('renders configurable agents and dataset-scoped leaderboard pages', () => {
+  it('renders configurable agents and dataset-scoped leaderboard pages', async () => {
     render(<App />)
+    await screen.findByText('terminal-bench-smoke')
 
     fireEvent.click(screen.getByRole('link', { name: 'Agents' }))
     expect(screen.getByRole('heading', { name: 'Agent catalog' })).toBeInTheDocument()

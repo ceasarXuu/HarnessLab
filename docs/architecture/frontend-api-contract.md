@@ -586,8 +586,8 @@ interface CacheCleanResult {
 1. 修复当前 e2e 断言漂移，恢复 `npm run e2e` 全绿。
 2. 保留 `frontend/src/mocks/` 作为 Storybook 与离线演示夹具。
 3. 新增 `frontend/src/domain/`，迁出生产 UI 类型。
-4. 新增 `frontend/src/api/`，先只放 typed client、ApiResponse、Operation 和 mock client，不实现 legacy adapter。
-5. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch`。
+4. 新增 `frontend/src/api/`，放 typed client、ApiResponse、Operation、mock client 与 data hook；不实现 legacy adapter。
+5. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch` 或直接读取 mock seed。
 6. 接入一个接口就同步补充 MSW mock 或等价测试夹具，保证 Storybook 不依赖真实后端。
 7. 接入完成后，mock 字段不得再比接口模型多出 demo-only 能力；新增字段必须先改本规范。
 

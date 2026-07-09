@@ -1,7 +1,7 @@
 # Subagent VS Review: Stage 2 Legacy API Residue
 
 - Created: 2026-07-10T02:14:27+0800
-- Updated: 2026-07-10T02:22:00+0800
+- Updated: 2026-07-10T03:10:00+0800
 - Report schema: adversarial-v1
 - Task: Review Stage 2 contract-layer work, with emphasis on old API documentation and code residue.
 - Report path: `vs_review/2026-07-10-stage-2-legacy-api-review.md`
@@ -219,6 +219,21 @@ The reviewer did not find a frontend legacy adapter, but found that the backend 
 - Target benefit warnings recorded: yes
 - Blocked reason: accepted blocking findings require Stage 2 page/hook migration and Stage 3 backend work before closure.
 - Allowed to proceed: yes, only as an explicitly partial Stage 2 implementation; no readiness or integration-complete claim is permitted.
+
+## Implementation Update: 2026-07-10
+
+The following remediation has landed after Round 1. This is not a closure review.
+
+| Finding | Remediation | Current state |
+|---|---|---|
+| F2 | Added runtime `api`/`mock` modes, resource hooks, DTO/ViewModel mappers, and migrated App-level Jobs/Datasets reads through `WebUiClient`. API mode does not fall back to seed data. | Partially resolved. Agents, Environments, Leaderboard, System and detail-side resources still use fixture state. |
+| F3 | Replaced MSW's unrelated legacy-shaped mocks with `/api/webui/v1` Jobs/Datasets routes backed by the mock client; added route/envelope tests and an API-unavailable App story. | Partially resolved. The remaining resources need contract clients, handlers and client-backed state stories. |
+| R1 | Standardized the planned resource path as `GET /leaderboard`. | Resolved in authority documentation. |
+| R2 | Added runtime `ApiResponse` envelope validation plus malformed-response and transport-failure tests. | Resolved for the current HTTP client surface. |
+| R3 | Marked historical `/api/*` entries as current legacy-backend evidence and named their Stage 3 replacement. | Resolved in the v1.0.5 coverage checklist. |
+| F1 | No frontend-only fix is valid: the backend still does not serve `/api/webui/v1`. | Open; Stage 3 scope. |
+
+The report remains open. A fresh independent closure review is required only after the remaining Stage 2 read-resource migration and the Stage 3 backend route upgrade are complete.
 
 ## Final Conclusion
 

@@ -20,6 +20,14 @@ type DatasetDownloadState =
   | { path: string; size: string; status: 'downloaded' }
 
 const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
+const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
+  row.downloadStatus === 'downloaded'
+    ? {
+        path: row.downloadPath ?? row.path ?? row.downloadDir ?? 'local dataset path',
+        size: row.size ?? 'unknown',
+        status: 'downloaded',
+      }
+    : { status: 'not-downloaded' }
 const defaultImportDraft = {
   name: 'local/custom-dataset',
   path: './datasets/custom-dataset',
@@ -38,23 +46,14 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
   const [importDraft, setImportDraft] = useState(defaultImportDraft)
   const [importedRows, setImportedRows] = useState<DatasetRow[]>([])
   const [downloads, setDownloads] = useState<Record<string, DatasetDownloadState>>(() =>
-    Object.fromEntries(rows.map((row) => [
-      datasetKey(row),
-      row.downloadStatus === 'downloaded'
-        ? {
-            path: row.downloadPath ?? row.path ?? row.downloadDir ?? 'local dataset path',
-            size: row.size ?? 'unknown',
-            status: 'downloaded' as const,
-          }
-        : { status: 'not-downloaded' as const },
-    ])),
+    Object.fromEntries(rows.map((row) => [datasetKey(row), initialDownloadState(row)])),
   )
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase()
     const visibleImportedRows = query
       ? importedRows.filter((row) =>
           [row.name, row.version, row.visibility, row.source, row.digest, row.path ?? ''].some((value) =>
-            value.toLowerCase().includes(query),
+            (value ?? '').toLowerCase().includes(query),
           ),
         )
       : importedRows
@@ -82,6 +81,17 @@ export function DatasetsPage({ rows, search, taskRows, t, onSearch }: DatasetsPa
     { label: t('allSplits'), value: 'all' },
     ...(selected?.splits ?? []).map((split) => ({ label: split, value: split })),
   ]
+
+  useEffect(() => {
+    setDownloads((current) => {
+      const next = { ...current }
+      for (const row of rows) {
+        const key = datasetKey(row)
+        if (!next[key]) next[key] = initialDownloadState(row)
+      }
+      return next
+    })
+  }, [rows])
 
   useEffect(() => {
     const activeDownloads = Object.entries(downloads).filter(([, value]) => value.status === 'downloading')

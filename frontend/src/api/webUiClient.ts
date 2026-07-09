@@ -1,11 +1,11 @@
-import type { ApiResponse, DatasetDto, DatasetTaskDto, DatasetTaskQuery, JobDto, ListQuery, Page } from './contract'
+import type { ApiError, ApiResponse, DatasetDto, DatasetTaskDto, DatasetTaskQuery, JobDto, ListQuery, Page } from './contract'
 
 export interface WebUiClient {
   getDataset(ref: string): Promise<ApiResponse<DatasetDto | null>>
   getJob(id: string): Promise<ApiResponse<JobDto | null>>
-  listDatasetTasks(ref: string, query?: DatasetTaskQuery): Promise<ApiResponse<Page<DatasetTaskDto>>>
-  listDatasets(query?: ListQuery): Promise<ApiResponse<Page<DatasetDto>>>
-  listJobs(query?: ListQuery): Promise<ApiResponse<Page<JobDto>>>
+  listDatasetTasks(ref: string, query?: DatasetTaskQuery): Promise<ApiResponse<Page<DatasetTaskDto> | null>>
+  listDatasets(query?: ListQuery): Promise<ApiResponse<Page<DatasetDto> | null>>
+  listJobs(query?: ListQuery): Promise<ApiResponse<Page<JobDto> | null>>
 }
 
 export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch): WebUiClient {
@@ -19,9 +19,15 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
   }
 }
 
-async function requestJson<T>(request: typeof fetch, url: string): Promise<ApiResponse<T>> {
-  const response = await request(url)
-  return response.json() as Promise<ApiResponse<T>>
+async function requestJson<T>(request: typeof fetch, url: string): Promise<ApiResponse<T | null>> {
+  try {
+    const response = await request(url)
+    const payload: unknown = await response.json()
+    if (isApiResponse<T>(payload)) return payload
+    return contractFailure('INVALID_API_RESPONSE', 'The server returned an invalid API response.')
+  } catch {
+    return contractFailure('NETWORK_REQUEST_FAILED', 'The API request could not be completed.')
+  }
 }
 
 function toSearch(query: ListQuery | DatasetTaskQuery | undefined): string {
@@ -32,4 +38,16 @@ function toSearch(query: ListQuery | DatasetTaskQuery | undefined): string {
   }
   const result = params.toString()
   return result ? `?${result}` : ''
+}
+
+function contractFailure(code: string, message: string): ApiResponse<null> {
+  const error: ApiError = { code, message }
+  return { data: null, error }
+}
+
+function isApiResponse<T>(value: unknown): value is ApiResponse<T> {
+  if (!value || typeof value !== 'object') return false
+  const payload = value as Record<string, unknown>
+  const error = payload.error
+  return 'data' in payload && (error === null || (typeof error === 'object' && error !== null))
 }

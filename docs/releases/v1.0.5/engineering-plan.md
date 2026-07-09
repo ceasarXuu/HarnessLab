@@ -78,7 +78,7 @@
 
 ### Stage 2: 前端契约层建设
 
-状态：In progress
+状态：In progress（首批资源已迁移，未达到收口条件）
 
 目标：
 
@@ -94,6 +94,16 @@
 - 新增 `frontend/src/api/webUiClient.ts`，提供 `/api/webui/v1` HTTP client 读取接口。
 - 新增 `frontend/src/api/mockClient.ts`，以现有 fixture 适配首批 Jobs/Datasets 契约，供离线开发、测试和后续 Storybook 使用。
 - 新增 mock client 契约测试，覆盖 Job 搜索、Task split 筛选和 not-found 错误包络。
+- 新增 runtime client 模式：`VITE_ORNNLAB_DATA_MODE=api` 时只请求 `/api/webui/v1`，请求失败不会回退到 mock；默认 mock 模式仅用于离线开发。
+- 新增通用资源 hook，并将 App 的 Jobs、Datasets 列表迁移为通过 client + DTO/ViewModel 读取；页面具备 loading 与 API unavailable 状态。
+- 补充 HTTP response envelope 校验、网络失败测试、MSW Jobs/Datasets 路由与包络测试，以及 App 的 API unavailable Storybook 状态。
+- 统一 Leaderboard 正式路由为 `GET /leaderboard`；`/leaderboards` 不作为 v1.0.5 契约路径。
+
+仍未完成：
+
+- Agents、Environments、Leaderboard、System 及 Job/Dataset 详情附属资源仍使用离线 fixture，尚未迁移到统一 data hook。
+- 写操作、Operation 状态流、权限状态和所有资源的 loading/empty/error Storybook 矩阵尚未建立。
+- 后端尚未提供 `/api/webui/v1`；此项属于 Stage 3，不能以 mock mode 代替真实联调。
 
 验收：
 
@@ -126,7 +136,7 @@
 - `POST /operations/{operationId}/cancel`
 - `GET /agents`
 - `GET /environments`
-- `GET /leaderboards`
+- `GET /leaderboard`
 - `GET /system/health`
 
 ### Stage 4: 只读联调
@@ -193,18 +203,18 @@ npm run e2e
 
 | 风险 | 影响 | 处理方式 |
 |---|---|---|
-| 前端缺 `src/api` 层 | 页面继续绑定 mock 会放大联调返工 | Stage 2 优先处理 |
+| 前端资源迁移未完成 | Agents、Environments、Leaderboard、System 仍绑定 fixture，会放大联调返工 | Stage 2 继续迁移剩余读资源并补状态矩阵 |
 | 后端旧 API 尚未破坏性升级 | React 页面无法稳定消费 v1.0.5 产品契约 | Stage 3 直接升级旧 API，不做新旧并行和前端 legacy adapter |
-| API 状态矩阵尚未接入 | 当前 Storybook 仍以 mock fixture 为主，无法真实覆盖 API loading/error/permission | Stage 2 建 API client 和 MSW/fixture 后补真实接口状态 |
+| API 状态矩阵未收口 | 仅 Jobs/Datasets 已有 API loading/error 样板，其余页面仍以 fixture story 为主 | Stage 2 为剩余资源补 client-backed story 与 MSW handler 测试 |
 | Harbor 能力边界仍需核验 | UI 可能重新出现 fake-only action | 功能清单只做证据，PRD 和技术设计只收敛确认后的能力 |
 | Environment / Agent / MCP 语义复杂 | 容易把 Harbor、OrnnLab-local 和 harness 责任混在一起 | PRD 保持产品语义，技术设计保持契约边界 |
 
 ## 5. 下一轮建议
 
-建议下一轮先做 Stage 2：
+Stage 2 下一轮：
 
-1. 新增 `frontend/src/api/hooks.ts` 或等价资源 hook，让 screens 不直接读 mock。
-2. 迁移 Jobs 和 Datasets 作为第一批样板，再迁移 Agents、Environment、Leaderboard、System。
-3. 为 API 读取状态补齐 Storybook 的 loading、error、permission 状态矩阵。
+1. 将 Agents、Environments、Leaderboard、System 和详情附属资源迁移到统一 client/hook。
+2. 为每个资源补齐 contract-accurate MSW handler、loading/error/empty/permission Storybook 状态。
+3. 完成读资源迁移后进行一次新的独立对抗性审查；Stage 3 再直接升级后端旧 API。
 
 完成 Stage 2 后，进入 Stage 3：把现有后端 API 直接破坏性升级到 `/api/webui/v1`，再做只读联调。

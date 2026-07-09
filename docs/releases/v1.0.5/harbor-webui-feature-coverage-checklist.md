@@ -189,12 +189,12 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | Harbor / OrnnLab 能力 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| List agents | `GET /api/agents` | Agents seed 表格 | Partial | demo 接真实 API。 |
+| List agents | 当前旧后端 `GET /api/agents`（Stage 3 将破坏性升级为 `/api/webui/v1/agents`） | Agents seed 表格 | Partial | 迁移到 WebUI contract client，再接真实 API。 |
 | Built-in agents | Harbor `--agent` 支持 agent name/ACP registry shorthand | 表格展示 built-in rows | Partial | 拉取 Harbor built-ins/registry shorthand 列表。 |
-| Custom agent create | `POST /api/agents`，AgentProfile v2 | Add custom agent 按钮未接 | Backend only | 创建/编辑抽屉。 |
-| Agent validate | `POST /api/agents/validate` | 未展示 | Backend only | 表单实时校验。 |
-| Agent compile | `POST /api/agents/{id}/compile` | 未展示 | Backend only | Compile action + 编译结果。 |
-| Agent update/delete | `PUT/DELETE /api/agents/{id}` | 未展示 | Backend only | Settings/edit/delete 操作。 |
+| Custom agent create | 当前旧后端 `POST /api/agents`，AgentProfile v2（Stage 3 待升级） | Add custom agent 按钮未接 | Backend only | 创建/编辑抽屉。 |
+| Agent validate | 当前旧后端 `POST /api/agents/validate`（Stage 3 待升级） | 未展示 | Backend only | 表单实时校验。 |
+| Agent compile | 当前旧后端 `POST /api/agents/{id}/compile`（Stage 3 待升级） | 未展示 | Backend only | Compile action + 编译结果。 |
+| Agent update/delete | 当前旧后端 `PUT/DELETE /api/agents/{id}`（Stage 3 待升级） | 未展示 | Backend only | Settings/edit/delete 操作。 |
 | Agent auth/env readiness | `AuthProfile.inherit_env/include_paths` | 未展示 | Backend only | 显示缺失 secret，不泄露值。 |
 | Skills/MCP | `SkillsProfile` / `McpProfile` | 未展示 | Backend only | Agent detail 增加配置区。 |
 | Runtime backend/timeouts | `RuntimeProfile.backend/agent_timeout/setup_timeout` | 未展示 | Backend only | Agent detail 增加 runtime 区域。 |
@@ -204,7 +204,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | 项目 | Harbor / OrnnLab 证据 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| Dataset-scoped ranking | `GET /api/leaderboard?benchmark=`，`harbor leaderboard submit` | 支持 dataset 搜索 + 下拉切换；一次展示一个 dataset | Covered | 接真实 leaderboard API。 |
+| Dataset-scoped ranking | 当前旧后端 `GET /api/leaderboard?benchmark=`，`harbor leaderboard submit`；Stage 3 目标为 `GET /api/webui/v1/leaderboard` | 支持 dataset 搜索 + 下拉切换；一次展示一个 dataset | Partial | 迁移到 WebUI contract client，再接真实 leaderboard API。 |
 | Rank | score desc, finished desc | 展示 `#1/#2` | Covered | 后端返回 rank 或前端计算。 |
 | Agent / model | runs.agent_id；Harbor agent model | 展示 agent/model | Covered | 接真实 row。 |
 | Score | runs.score | 展示 score | Covered | 增加 metric name、pass@k、confidence。 |

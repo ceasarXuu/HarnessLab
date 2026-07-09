@@ -142,8 +142,8 @@ export interface DatasetRow {
   visibility: 'public' | 'private'
   tasks: number
   source: string
-  digest: string
-  updated: string
+  digest?: string
+  updated?: string
   downloadStatus: 'downloaded' | 'not-downloaded'
   downloadPath?: string
   size?: string
