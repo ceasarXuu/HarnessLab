@@ -2,7 +2,7 @@
 
 - Status: Active
 - Created: 2026-07-09
-- Updated: 2026-07-09
+- Updated: 2026-07-10
 - Scope: Harbor WebUI 前端架构、契约边界、治理规则和联调设计
 
 ## 1. 文档定位
@@ -27,7 +27,7 @@ v1.0.5 的技术目标不是继续扩展 mock demo，而是把当前前端收敛
 - 页面和组件不直接依赖旧后端路由字段。
 - 生产 UI 类型不再从 `frontend/src/mocks/` 导出。
 - mock 数据只作为 Storybook、测试和离线预览 fixture。
-- 所有后端接入走 WebUI contract client 或 adapter。
+- 所有后端接入走 WebUI contract client；mock client 只用于 Storybook、测试和离线开发，不做 legacy adapter。
 - 所有耗时或破坏性动作通过统一 `Operation` 状态表达。
 - Storybook 覆盖主要页面状态，而不是只展示 happy path。
 - i18n、样式、基础控件、抽屉、弹窗、toast、表格都在统一组件和样式层治理。
@@ -61,13 +61,13 @@ v1.0.5 的技术目标不是继续扩展 mock demo，而是把当前前端收敛
 |---|---|---|
 | `frontend/src/app/` | 应用装配、全局偏好、页面切换、资源级状态装配 | 不承载资源业务模型和后端字段转换 |
 | `frontend/src/domain/` | WebUI 领域模型、状态枚举、未格式化业务字段、ViewModel 边界 | 不导入 mock seed data |
-| `frontend/src/api/` | WebUI contract client、DTO、`ApiResponse`、`Operation`、legacy adapter、data hook | 不导入 React 组件，不把旧后端字段泄漏到页面 |
+| `frontend/src/api/` | WebUI contract client、DTO、`ApiResponse`、`Operation`、mock client、data hook | 不导入 React 组件，不实现旧路由兼容层，不把旧后端字段泄漏到页面 |
 | `frontend/src/mocks/` | Storybook、测试、离线 demo fixture 和 MSW handlers | 不作为生产 UI 类型来源 |
 | `frontend/src/screens/` | 页面级编排、资源状态组合、路由页面 | 不直接 `fetch`，不直接适配旧路由 |
 | `frontend/src/ui/components/` | 可复用组件、pattern 组件、受 Storybook 约束的交互单元 | 不知道后端路由 |
 | `frontend/src/styles/` | token、base、layout、controls、tables、surfaces、screen 专属样式 | 不恢复单个巨型样式文件 |
 
-当前已存在 `frontend/src/domain/harbor.ts`，但还缺 `frontend/src/api/`。联调前必须先补 API 层，再让页面从 data hook 或 adapter 获取数据。
+当前已存在 `frontend/src/domain/harbor.ts`，但还缺 `frontend/src/api/`。联调前必须先补 API 层，再让页面从 data hook 获取数据。
 
 ## 5. API 契约
 
@@ -79,7 +79,7 @@ v1.0.5 对前端暴露统一 WebUI API 语义，根路径为：
 
 权威接口规范见 [前后端接口规范](../../architecture/frontend-api-contract.md)。
 
-现有后端路由：
+现有后端旧路由：
 
 - `/api/experiments`
 - `/api/runs`
@@ -88,7 +88,7 @@ v1.0.5 对前端暴露统一 WebUI API 语义，根路径为：
 - `/api/system`
 - `/api/agents`
 
-可以作为 facade 的实现来源，但不能成为 React 页面直接消费的契约。如果后端短期无法新增 `/api/webui/v1`，前端必须在 `frontend/src/api/` 里实现 legacy adapter，将旧路由转换为 WebUI 领域模型。
+v1.0.5 不维护新旧两套接口，也不建设前端 legacy adapter。上述旧路由需要被破坏性升级为 `/api/webui/v1` 下的 WebUI 产品契约；实现层可以复用现有 service、worker 和事件流，但对外资源语义、响应包络、错误模型和异步 Operation 必须按新契约重塑。
 
 所有 JSON 接口统一使用：
 
@@ -193,5 +193,5 @@ npm run e2e
 - `frontend/src/mocks/` 只提供 fixture、MSW handler 和测试数据。
 - 主要页面 Storybook 状态矩阵补齐。
 - API 契约和页面可见操作一一对应。
-- 后端新增 `/api/webui/v1` facade，或前端临时 adapter 已明确兼容旧路由。
+- 后端已将旧 API 破坏性升级为 `/api/webui/v1` WebUI 契约；不保留新旧并行入口，不依赖前端 legacy adapter。
 - e2e、unit、storybook smoke 至少达到当前联调最低门禁。

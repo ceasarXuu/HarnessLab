@@ -2,7 +2,7 @@
 
 - Status: Demo implemented; integration boundary needs implementation
 - Created: 2026-06-28
-- Updated: 2026-07-09
+- Updated: 2026-07-10
 - Decision owner: project maintainer
 - Official reference:
   - Harbor Viewer: `https://github.com/harbor-framework/harbor/tree/main/apps/viewer`
@@ -107,7 +107,7 @@ OrnnLab 仍可保留自己的产品组织层：
 
 - `/api/webui/v1`
 
-现有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 可以继续作为后端内部或兼容路由，但 React 页面不得直接适配这些路由字段。若后端 facade 暂时未实现，前端必须在 `frontend/src/api/` 中建立 contract adapter。
+现有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 不再作为正式产品接口兼容保留。v1.0.5 直接把旧 API 破坏性升级为 `/api/webui/v1` WebUI 契约；实现层可以复用现有 service，但 React 页面只通过 `frontend/src/api/` 的 typed client 访问新契约，不建设 legacy adapter。
 
 优先兼容或借鉴 Harbor Viewer API 形态：
 

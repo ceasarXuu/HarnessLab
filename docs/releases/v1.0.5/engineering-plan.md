@@ -2,7 +2,7 @@
 
 - Status: Active
 - Created: 2026-07-09
-- Updated: 2026-07-09
+- Updated: 2026-07-10
 - Scope: Harbor WebUI 产品化实施进度、阶段计划、联调门禁
 
 ## 1. 文档定位
@@ -28,9 +28,9 @@
 | Storybook 基线 | Done | App、Screens、Controls、RunBuilder 等 story 已覆盖 theme/locale、路由、empty、downloading、operation-running、confirm、task bulk、verifier skip 等 Stage 1 状态 | Stage 2 接入 API hook 后继续补真实 loading/error/permission 状态 |
 | i18n 基线 | Done | `i18n.zh.ts`、`i18n.en.ts`、`i18n.ts` 已覆盖新增通用组件文案；生产 UI 硬编码扫描未命中中英文残留 | 新增文案继续先入 locale 文件 |
 | 领域类型治理 | Partial | 已有 `frontend/src/domain/harbor.ts` | 继续把生产 UI 类型从 `frontend/src/mocks/` 剥离 |
-| API 契约规范 | Draft | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation` | 建立 `frontend/src/api/` typed client 和 legacy adapter |
-| 后端 WebUI facade | Not started | 现有后端仍是 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧路由 | 设计并实现 `/api/webui/v1` 或明确 adapter 过渡期 |
-| 联调门禁 | Stage 1 passed | `typecheck`、unit、lint、build、Storybook smoke、e2e 已通过；但 contract client 和真实 API smoke 未完成 | Stage 2/3 补齐 API 层和后端 facade 后再跑联调门禁 |
+| API 契约规范 | Draft | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation` | 建立 `frontend/src/api/` typed client 和 mock client，不做 legacy adapter |
+| 后端 API 破坏性升级 | Not started | 现有后端仍是 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧语义路由 | 直接升级旧 API 到 `/api/webui/v1` 产品契约，不维护新旧两套 |
+| 联调门禁 | Stage 1 passed | `typecheck`、unit、lint、build、Storybook smoke、e2e 已通过；但 contract client 和真实 API smoke 未完成 | Stage 2/3 补齐前端 client 和后端破坏性升级后再跑联调门禁 |
 
 ## 3. 阶段计划
 
@@ -73,7 +73,7 @@
 
 后续延伸：
 
-- API-specific loading、error、permission、operation polling 状态需要在 Stage 2 建立 `frontend/src/api/` 和 MSW/adapter 后继续补齐。
+- API-specific loading、error、permission、operation polling 状态需要在 Stage 2 建立 `frontend/src/api/` 和 MSW/mock client 后继续补齐。
 - 生产 UI 类型继续从 mock fixture 中剥离，作为 Stage 2 的核心任务。
 
 ### Stage 2: 前端契约层建设
@@ -85,7 +85,7 @@
 - 新增 `frontend/src/api/`。
 - 定义 typed WebUI client。
 - 定义 `ApiResponse<T>`、`Operation`、DTO。
-- 建立 mock adapter 和 legacy adapter。
+- 建立 mock client；不建立 legacy adapter。
 - 页面通过 data hook 消费 domain model，不直接读取 mock seed data。
 
 验收：
@@ -95,14 +95,15 @@
 - Job、Dataset、Agent、Environment、Leaderboard、System 资源都能通过统一 data hook 读取。
 - 所有写操作返回 Operation 状态，不在页面内伪造完成。
 
-### Stage 3: 后端 WebUI facade
+### Stage 3: 后端 API 破坏性升级
 
 状态：Not started
 
 目标：
 
-- 新增或规划 `/api/webui/v1`。
-- 将旧路由转换为 WebUI 资源语义。
+- 直接升级现有后端 API 对外契约到 `/api/webui/v1`。
+- 不保留 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧产品契约作为正式入口。
+- 现有 route 文件、service 和 worker 可以复用或重组，但对外资源语义必须改为 Job、Dataset、Agent、Environment、Leaderboard、System、Operation。
 - 给耗时动作建立 Operation 模型。
 - 明确 SSE 或轮询策略。
 
@@ -129,7 +130,7 @@
 
 - 先接只读列表和详情，不接写操作。
 - Jobs、Datasets、Agents、Environment、Leaderboard、System 从真实 API 读取。
-- 保持 mock adapter 可切换，用于 Storybook 和离线开发。
+- 保持 mock client 可切换，用于 Storybook 和离线开发。
 
 验收：
 
@@ -185,9 +186,9 @@ npm run e2e
 
 | 风险 | 影响 | 处理方式 |
 |---|---|---|
-| 前端缺 `src/api` 层 | 页面继续绑定 mock 或旧路由会放大联调返工 | Stage 2 优先处理 |
-| 后端缺 `/api/webui/v1` facade | React 页面无法稳定消费契约 | Stage 3 建 facade，或短期前端 adapter 过渡 |
-| API 状态矩阵尚未接入 | 当前 Storybook 仍以 mock fixture 为主，无法真实覆盖 API loading/error/permission | Stage 2 建 API adapter 和 MSW/fixture 后补真实接口状态 |
+| 前端缺 `src/api` 层 | 页面继续绑定 mock 会放大联调返工 | Stage 2 优先处理 |
+| 后端旧 API 尚未破坏性升级 | React 页面无法稳定消费 v1.0.5 产品契约 | Stage 3 直接升级旧 API，不做新旧并行和前端 legacy adapter |
+| API 状态矩阵尚未接入 | 当前 Storybook 仍以 mock fixture 为主，无法真实覆盖 API loading/error/permission | Stage 2 建 API client 和 MSW/fixture 后补真实接口状态 |
 | Harbor 能力边界仍需核验 | UI 可能重新出现 fake-only action | 功能清单只做证据，PRD 和技术设计只收敛确认后的能力 |
 | Environment / Agent / MCP 语义复杂 | 容易把 Harbor、OrnnLab-local 和 harness 责任混在一起 | PRD 保持产品语义，技术设计保持契约边界 |
 
@@ -197,8 +198,8 @@ npm run e2e
 
 1. 新增 `frontend/src/api/contract.ts`，定义 `ApiResponse<T>`、`ApiError`、`Operation` 和 DTO。
 2. 新增 `frontend/src/api/webuiClient.ts`，封装读取和写操作。
-3. 新增 `frontend/src/api/mockClient.ts`，把当前 fixture 转成 contract response。
+3. 新增 `frontend/src/api/mockClient.ts`，把当前 fixture 转成 contract response；mock client 只服务 Storybook、测试和离线开发。
 4. 新增 `frontend/src/api/hooks.ts` 或等价资源 hook，让 screens 不直接读 mock。
 5. 迁移 Jobs 和 Datasets 作为第一批样板，再迁移 Agents、Environment、Leaderboard、System。
 
-完成 Stage 2 后，再进入后端 `/api/webui/v1` facade 设计和只读联调。
+完成 Stage 2 后，进入 Stage 3：把现有后端 API 直接破坏性升级到 `/api/webui/v1`，再做只读联调。

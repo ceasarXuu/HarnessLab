@@ -2,7 +2,7 @@
 
 - Status: Tracking
 - Created: 2026-06-28
-- Updated: 2026-07-09
+- Updated: 2026-07-10
 - Harbor baseline: 本机 `harbor` Python 包与 CLI help，`harbor_version` 由 OrnnLab runtime 读取为 `0.13.x`
 - Goal: 让 demo 中可见的配置与操作逐步和 Harbor 支持能力 1:1 对等，避免做成只展示少量字段的假 WebUI。
 
@@ -93,10 +93,10 @@
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
 | 创建 JobConfig | `JobConfig`，`harbor run --config` | `HarborConfigBuilder.to_job_config_payload` | New Job 表单 + 右上角 JobConfig 入口 | Partial | 表单字段需要扩展到完整 JobConfig。 |
-| 启动 job | `harbor run` / `harbor job start` | `POST /api/experiments/{id}/run`，worker 执行 Harbor | New Job 的 `运行 Job` 只更新 demo seed state | Partial | demo 要展示真实 API 对接状态，区分 mock/demo 与 real backend。 |
-| Job list | job artifact / OrnnLab runs | `GET /api/experiments`，`GET /api/runs/{id}` | Jobs 表格：name/status/dataset/agent/model/trials/score/cost/updated | Partial | 增加 Harbor job id、job dir、started/finished time、failure class/code。 |
-| Job detail | Harbor viewer/job result | `GET /api/runs/{id}`，events/report | 右侧 drawer：overview、events、trials、artifact paths | Partial | 增加 config/result/job.log/summary/upload/share/resume 入口。 |
-| 取消 run | OrnnLab subprocess cancel + Harbor artifacts | `POST /api/runs/{id}/cancel`，`POST /api/experiments/{id}/cancel` | Job drawer 有 Cancel 按钮但 demo 未接 API | Partial | 按钮接真实 cancel API，并展示 cancel evidence。 |
+| 启动 job | `harbor run` / `harbor job start` | 旧 `/api/experiments/{id}/run` 待破坏性升级为 `/api/webui/v1/jobs` Operation | New Job 的 `运行 Job` 只更新 demo seed state | Partial | 直接升级后端 Job API，不维护旧 experiments run 契约。 |
+| Job list | job artifact / OrnnLab runs | 旧 `/api/experiments`、`/api/runs/{id}` 待破坏性升级为 `/api/webui/v1/jobs` | Jobs 表格：name/status/dataset/agent/model/trials/score/cost/updated | Partial | 增加 Harbor job id、job dir、started/finished time、failure class/code。 |
+| Job detail | Harbor viewer/job result | 旧 run events/report 待破坏性升级为 `/api/webui/v1/jobs/{jobId}` 子资源 | 右侧 drawer：overview、events、trials、artifact paths | Partial | 增加 config/result/job.log/summary/upload/share/resume 入口。 |
+| 取消 run | OrnnLab subprocess cancel + Harbor artifacts | 旧 run/experiment cancel 待破坏性升级为 `/api/webui/v1/jobs/{jobId}/cancel` Operation | Job drawer 有 Cancel 按钮但 demo 未接 API | Partial | 按钮接真实 cancel API，并展示 cancel evidence。 |
 | Retry / rerun | Harbor retry config；OrnnLab clone/template | `clone`、`save-template`、run retry config | Job drawer 有 Retry 按钮但未定义行为 | Partial | 区分 retry failed trial、clone config、rerun whole job。 |
 | Resume job | `harbor job resume` | 无专门 API | Job detail 按状态展示暂停/恢复入口 | Partial | 接真实 resume/cancel API，并展示失败状态。 |
 | Summarize job | `harbor job summarize` | report summary 读取，未接 Harbor summarize | 不展示 | Deferred | 后续确认是否需要可视化摘要生成。 |
@@ -151,7 +151,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
-| Dataset list | `harbor dataset list` | `GET /api/benchmarks` 静态返回两项 | Datasets 表格 seed 数据 + 本地导入 mock row | Partial | 接 Harbor registry list，支持分页、registry source。 |
+| Dataset list | `harbor dataset list` | 旧 `/api/benchmarks` 静态返回待破坏性升级为 `/api/webui/v1/datasets` | Datasets 表格 seed 数据 + 本地导入 mock row | Partial | 接 Harbor registry list，支持分页、registry source。 |
 | Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 默认展示 task 数、source、本地 path/size、registry 与 task 列表，task 列表支持 split 筛选与搜索；底层 digest/ref/manifest 命令不默认展示 | Partial | 接真实 dataset detail API，必要时增加高级 metadata 折叠区。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | 列表和 drawer 按下载状态展示下载、取消、拉取更新、删除本地数据 | Partial | 接真实 download/cancel/delete/pull API。 |
 | Dataset local import/init | `harbor dataset init`、`harbor add`、`harbor run --path` | 无 | Datasets 页“导入本地 Dataset”mock 表单，登记本地路径 | Partial | 接真实本地路径选择、manifest 探测与 JobConfig source。 |

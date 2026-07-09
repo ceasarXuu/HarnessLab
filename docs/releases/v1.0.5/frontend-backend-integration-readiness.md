@@ -2,6 +2,7 @@
 
 - Status: Ready for implementation planning
 - Created: 2026-07-09
+- Updated: 2026-07-10
 - Owner / requester: OrnnLab
 - Scope: Harbor WebUI 当前 mock 前端进入真实后端联调前的架构与治理修复
 
@@ -12,7 +13,7 @@
 当前前端已经具备 Harbor WebUI 的主要页面和交互形态，但还不能直接进入联调。联调前必须先修复四个设计边界：
 
 1. 前端页面不能继续直接依赖 `frontend/src/mocks/` 的类型和 seed data。
-2. 前端看到的 API 必须是稳定 WebUI 契约，而不是散落的旧 `/api/experiments`、`/api/runs`、`/api/benchmarks` 路由。
+2. 前端看到的 API 必须是稳定 WebUI 契约，而不是散落的旧 `/api/experiments`、`/api/runs`、`/api/benchmarks` 路由；旧 API 需要被破坏性升级，不维护新旧两套。
 3. Storybook 必须从页面展示工具升级为接口状态评审面，覆盖 loading、empty、error、permission、operation-running 等状态。
 4. e2e、unit、Storybook play 的断言口径必须一致，不能一个测试期待旧 UI，另一个测试期待新 UI。
 
@@ -30,7 +31,7 @@
 - `SystemHealth`
 - `Operation`
 
-推荐后端新增 `/api/webui/v1` facade。旧路由可以继续保留，但只作为后端内部或兼容层：
+v1.0.5 不做后端 facade 过渡，也不做前端 legacy adapter。现有旧 API 需要直接破坏性升级为 `/api/webui/v1` WebUI 契约；实现层可以复用现有 service，但对外产品接口不保留旧语义：
 
 - `/api/experiments`
 - `/api/runs`
@@ -39,7 +40,7 @@
 - `/api/system`
 - `/api/agents`
 
-如果后端暂时不能新增 facade，前端也必须在 `frontend/src/api/` 里建立 contract adapter，由 adapter 调旧路由并转换成 WebUI 契约。页面和组件不得直接适配旧路由字段。
+页面和组件不得直接适配旧路由字段。旧路由如果在物理文件中短期保留，也必须在同一次升级中改变对外契约，不作为兼容入口维护。
 
 ## 3. 前端分层
 
@@ -48,13 +49,13 @@
 | 层 | 责任 | 禁止事项 |
 |---|---|---|
 | `src/domain/` | WebUI 领域模型、状态枚举、格式化前的业务字段 | 不能导入 mock 数据 |
-| `src/api/` | typed client、DTO、ApiResponse、Operation、legacy adapter | 不能导入 React 组件 |
+| `src/api/` | typed client、DTO、ApiResponse、Operation、mock client | 不能导入 React 组件，不能实现旧路由兼容层 |
 | `src/mocks/` | Storybook、离线 demo、测试夹具 | 不能作为生产 UI 类型来源 |
 | `src/screens/` | 页面编排、空态/错误态/加载态组合 | 不能直接 `fetch` |
 | `src/ui/components/` | 可复用组件和 pattern 组件 | 不能知道后端路由 |
 | `src/app/` | shell、路由、全局偏好和资源级 data hook 装配 | 不能承载所有资源业务逻辑 |
 
-迁移时允许短期存在 mock adapter，但类型必须从 `src/domain/` 或 `src/api/contract` 导出。
+迁移时允许存在 mock client，但类型必须从 `src/domain/` 或 `src/api/contract` 导出。mock client 只服务 Storybook、离线 demo 和测试，不承担旧后端兼容。
 
 ## 4. DTO 与 ViewModel
 
@@ -191,7 +192,7 @@ Storybook 进入联调前至少覆盖以下状态。
 2. 新增 `src/domain/` 与 `src/api/contract`，先不接真实服务。
 3. 将 mock seed 改为 contract fixture。
 4. 建立 jobs、datasets、agents、environments 的 data hook。
-5. 后端新增 `/api/webui/v1` facade 或前端 adapter 兼容旧路由。
+5. 后端旧 API 直接破坏性升级为 `/api/webui/v1`，不做前端 adapter 兼容旧路由。
 6. 先接只读列表，再接详情，再接 Operation 类写操作。
 
 ## 10. 不进入首批联调的内容

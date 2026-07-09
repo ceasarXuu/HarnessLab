@@ -3,7 +3,7 @@
 - 状态：草案
 - 适用版本：v1.0.5
 - 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
-- 当前实现：仍使用 `frontend/src/mocks/` mock 数据，不直接接入后端；联调前需新增 `frontend/src/api/` contract adapter
+- 当前实现：仍使用 `frontend/src/mocks/` mock 数据，不直接接入后端；联调前需新增 `frontend/src/api/` contract client，并将后端旧 API 破坏性升级为本契约
 
 > v1.0.5 引用关系：本文是 WebUI API 契约源文件。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
 
@@ -30,7 +30,7 @@
 
 后端可以内部再分 Harbor CLI、Harbor Hub、OrnnLab Service、本机系统探针，但对前端暴露统一 WebUI API。
 
-当前后端已有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 等路由。它们可以作为 WebUI facade 的实现来源，但不作为 React 页面直接消费的契约。若后端暂时不新增 `/api/webui/v1`，前端必须在 `frontend/src/api/` 提供 adapter，把旧路由响应转换为本规范模型。
+当前后端已有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 等旧路由。v1.0.5 不维护新旧两套产品 API，也不建设 legacy adapter。后续应直接对这些旧 API 做破坏性升级：实现代码和 service 可以复用，但对外路由、资源命名、响应包络、错误模型和异步 Operation 都必须按本规范收敛到 `/api/webui/v1`。
 
 ### 响应包络
 
@@ -101,7 +101,7 @@ interface Operation {
 
 `frontend/src/mocks/` 是当前离线演示和 Storybook 的夹具来源，但后端接口以本规范为准。接入 API 前需要完成以下字段收敛：
 
-- Job 与 Leaderboard 统一使用 `agentName` 和 `harness`；旧 `agent` 字段只允许作为临时 mock 兼容字段。
+- Job 与 Leaderboard 统一使用 `agentName` 和 `harness`；旧 `agent` 字段只允许作为 mock fixture 内部迁移字段，不进入正式 API。
 - Dataset 列表不再向页面暴露 `digest` 和 `updated`，如后端需要保留，应只放在详情或调试信息中。
 - Agent 列表不再暴露 `adapter`、`source`、`updated` 三列；harness/adapter 的技术检查只进入详情或 review 操作。
 - Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
@@ -111,7 +111,7 @@ interface Operation {
 
 后端 DTO 与 UI ViewModel 必须分离：
 
-- token、cost、duration、score 等由数字/结构化字段进入 adapter，再由 UI 格式化。
+- token、cost、duration、score 等由数字/结构化字段进入前端 contract client，再由 UI 格式化。
 - artifact、event、operation 等由后端返回结构化类型，UI 负责分组和展示。
 - 页面不得把已经格式化的字符串再提交给后端。
 
@@ -586,7 +586,7 @@ interface CacheCleanResult {
 1. 修复当前 e2e 断言漂移，恢复 `npm run e2e` 全绿。
 2. 保留 `frontend/src/mocks/` 作为 Storybook 与离线演示夹具。
 3. 新增 `frontend/src/domain/`，迁出生产 UI 类型。
-4. 新增 `frontend/src/api/`，先只放 typed client、contract adapter、ApiResponse、Operation，不直接改页面。
+4. 新增 `frontend/src/api/`，先只放 typed client、ApiResponse、Operation 和 mock client，不实现 legacy adapter。
 5. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch`。
 6. 接入一个接口就同步补充 MSW mock 或等价测试夹具，保证 Storybook 不依赖真实后端。
 7. 接入完成后，mock 字段不得再比接口模型多出 demo-only 能力；新增字段必须先改本规范。
