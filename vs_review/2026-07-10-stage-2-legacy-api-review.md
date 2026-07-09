@@ -1,13 +1,13 @@
 # Subagent VS Review: Stage 2 Legacy API Residue
 
 - Created: 2026-07-10T02:14:27+0800
-- Updated: 2026-07-10T04:30:00+0800
+- Updated: 2026-07-10T07:05:00+0800
 - Report schema: adversarial-v1
 - Task: Review Stage 2 contract-layer work, with emphasis on old API documentation and code residue.
 - Report path: `vs_review/2026-07-10-stage-2-legacy-api-review.md`
 - Review mode: fresh internal subagents
 - Source session policy: no inherited main-agent context; approved CLI substitutes receive only the review packet
-- Status: open — Stage 2 remains partial; accepted Job/Dataset detail and MSW-boundary findings are remediated and independently re-reviewed.
+- Status: closed — Stage 2 frontend contract closure approved; Stage 3 backend implementation remains open.
 
 ## Round 1: Legacy API boundary review
 
@@ -406,6 +406,47 @@ The reviewer found **no blocking issue** in the repaired Dataset write path or J
 - Stage 2 overall: **still in progress**, not closed. Agents、Environments、Leaderboard、System read resources remain fixture-backed and lack typed client/hook ownership. Operation-backed writes, permission states and their Storybook status matrices are still pending.
 - Stage 3 remains required to implement the actual backend `/api/webui/v1` routes. No document may describe the product as real-API integrated before that work and a backend contract review complete.
 
-## Final Conclusion
+## Round 5 Conclusion (Historical, Superseded)
 
-The accepted Stage 2 detail-resource, MSW-boundary and API-mode mock-write findings are now closed with a fresh independent approval. Stage 2 remains intentionally partial: the next batch must migrate Agents、Environments、Leaderboard and System through the same typed resource boundary, then Stage 3 can replace the old backend routes directly with `/api/webui/v1`.
+在 Round 5 结束时，已接受的 Job/Dataset detail、MSW 边界和 API-mode mock-write 发现项均已关闭；当时 Agents、Environments、Leaderboard 和 System 尚未迁移，因此 Stage 2 仍为 partial。该历史结论已由 Round 6 的完整闭环审查取代。
+
+## Round 6: Stage 2 Closure Review
+
+### Closure Scope
+
+- Jobs、Datasets、Agents、Environments、Leaderboard、System 与 Header Hub 状态均已迁移到 DTO、client、hook、ViewModel 边界。
+- 生产 `app`、`screens`、`ui/components` 不直接导入 fixture 或调用旧路由；mock 只经 `WebUiClient`、MSW、Storybook 和测试使用。
+- 所有可见写操作返回并轮询 `Operation`；HTTP、mock 与 MSW 同时支持 `GET /operations/{id}` 和 `POST /operations/{id}/cancel`。
+- API 模式请求失败只呈现错误状态，不回退 mock 成功。
+
+### Independent Reviewers
+
+| Reviewer | Agent ID | Scope | Result |
+|---|---|---|---|
+| `code-reviewer`（Pascal） | `019f4904-9cdf-7c13-b0d9-e71726279424` | Operation 轮询、Dataset 详情刷新、排行榜专用 Dataset、Operation 取消、写后资源刷新与 fixture ID 一致性 | Approve |
+| `verifier`（Boyle） | `019f4904-9c53-7a60-b297-c5ea7a979cfc` | Hub 状态语义、Storybook loading/error 覆盖、权威契约与当前 UI 路由一致性 | Pass |
+
+### Findings And Resolution
+
+| Finding | Resolution | Regression Evidence |
+|---|---|---|
+| 瞬时轮询失败会清空进行中的 Operation | 保留最后有效 Operation，按失败次数指数退避并继续轮询 | `hooks.test.tsx` |
+| Dataset 抽屉使用过期下载状态 | 抽屉动作从刷新后的详情 DTO 推导 | `App.test.tsx` |
+| 排行榜选择器使用通用 Dataset 列表 | 只读取 `/leaderboard/datasets`，写后刷新该资源 | `App.api.test.tsx` |
+| 通用 Operation 取消接口缺失 | 补齐 HTTP、mock、MSW 和测试 | `operationWrites.test.ts`、`mswHandlers.test.ts` |
+| 排行榜 mock 选择项与写后状态不一致 | 每次读取都从当前排名数据派生；所有排行榜 Job ID 均有对应 Job 详情 | `operationWrites.test.ts` |
+| Header Hub 连接状态硬编码 | 读取 `/system/hub-connection`；读取失败显示 UI 状态 `unavailable` | `App.api.test.tsx`、`App.stories.tsx` |
+
+### Final Gates
+
+- `npm run typecheck` — passed.
+- `npm test` — 14 files, 45 tests passed.
+- `npm run lint` — passed.
+- `npm run build` — passed.
+- `npm run storybook:test` — passed.
+- `lsof -nP -iTCP:4174 -sTCP:LISTEN` — no stale listener.
+- `npm run e2e` — 10 desktop/mobile tests passed.
+
+### Final Status
+
+Stage 2：**Done**。本结论只表示前端契约层和离线 mock 治理完成，不表示真实 Harbor/OrnnLab 后端已经接入。Stage 3 必须直接升级旧后端路由到 `/api/webui/v1`，不得恢复旧产品接口、legacy adapter 或 API→mock 成功 fallback。

@@ -7,6 +7,8 @@
 - Goal: 让 demo 中可见的配置与操作逐步和 Harbor 支持能力 1:1 对等，避免做成只展示少量字段的假 WebUI。
 
 > 文档定位：本文是 Harbor 能力覆盖跟踪清单和历史审查记录。产品范围以 [PRD](prd.md) 为准，技术边界以 [技术设计](technical-design.md) 为准，实施状态以 [工程计划与进度](engineering-plan.md) 为准。
+>
+> 2026-07-10 Stage 2 边界：所有当前可见操作均已通过 WebUI client 与 mock `Operation` 执行，不再由页面直接修改 demo seed state。表内的 `Partial` / `Backend only` / `Missing` 表示 Harbor/OrnnLab 后端能力或真实联调尚未完成，不表示前端仍在使用旧路由或 fake-only 成功状态。
 
 ## 1. 证据来源
 
@@ -35,9 +37,11 @@
    - `ornnlab/api/*.py`
    - `ornnlab/models/*.py`
    - `ornnlab/services/harbor_engine.py`
-   - `frontend/src/data/demo.ts`
-   - `frontend/src/pages/*`
-   - `frontend/src/components/*`
+   - `frontend/src/api/*`
+   - `frontend/src/app/*`
+   - `frontend/src/screens/*`
+   - `frontend/src/ui/components/*`
+   - `frontend/src/mocks/*`
 
 ## 2. 覆盖状态定义
 
@@ -51,31 +55,13 @@
 
 ## 2.1 2026-06-28 demo 可见性补齐记录
 
-本次根据清单先补齐 Harbor WebUI demo 中原本不可见的配置项和操作入口，目标是让用户在页面上能看到 Harbor 支持能力的完整信息架构。注意：这些新增项仍是 demo seed data 与前端状态，不能等同于真实 Harbor API 已接管。
+以下为历史审查记录，仅用于解释 v1.0.5 的收敛过程，不构成当前需求或 UI 设计依据。当时尝试露出的 Viewer、Upload、Hub 维护、额外排行榜筛选等入口，均已因缺少已确认的产品语义或 Harbor 对应能力而移除。当前可见能力、后端映射与完成状态一律以第 3-8 节的覆盖表为准。
 
-已补齐的可见面包括：
-
-1. New Job：展开 JobConfig 字段，不再只保留 source/agent/environment/concurrency/attempts；新增 job_name、jobs_dir、task 白名单、extra instructions、agent import/env/kwargs/skills/MCP、环境 backend、force_build/delete、资源限制、mounts、docker compose、verifier、timeout、retry。artifacts、metric、plugins、Hub upload/share 不作为创建前用户决策项展示。
-2. Jobs：Job drawer 新增 job_dir、split、暂停/恢复、Open viewer、Upload、harbor.capability.json、failure code、计入排行榜开关等入口；不展示 summarize/analyze/share/download 等未明确收敛的入口。
-3. Datasets / Tasks：Dataset drawer 新增 registry_url/path、download_dir、manifest、拉取更新、发布；task 行级只保留 run single task 操作。
-4. Agents：Agent drawer 新增 env readiness、kwargs、runtime、skills、MCP，以及 validate、compile、edit、delete 操作。
-5. Leaderboard：表格新增 metric、split、submission/report path 与 submit/open viewer/share 行级操作。
-6. System：补 cache 与 Harbor doctor/maintenance 状态入口；auth 只保留在 Header，plugins 归入 New Job，sync 归入 Dataset manifest editor。
-
-后续仍需把这些可见入口逐项接入真实 API，并在对应表格中从 `Partial` / `Backend only` / `Missing` 更新为真实覆盖状态。
+该轮审查形成的有效结论已吸收到当前设计：New Job 只保留运行前需要决策的配置；Job 详情只保留明确的运行与排行榜操作；Dataset、Agent、Environment 和 System 只表达各自职责内的真实能力；所有写操作都经前端 `Operation` 契约，而不是由页面直接修改 demo 数据。
 
 ## 2.2 2026-06-28 对抗性审查补齐记录
 
-根据对抗性审查，本次继续补齐上一轮仍不可见的 Harbor 能力面：
-
-1. New Job：补 debug、agent/environment allow host、environment import/env/kwargs、全量 environment backend、suppress override warnings、override_cpus、TPU、verifier max timeout、agent setup timeout、environment build timeout、retry wait/min/max 等字段，并进入配置预览。CLI `--yes` 与 `quiet` 不进入 WebUI，由执行层处理非交互运行和输出降噪。`env_file` 作为 CLI 文件输入形式不进入 WebUI，环境变量统一收敛到 Environment 模板。
-2. Jobs：取消独立 Trial diagnostics 模块，改为 Job Trials 表格行展开，仅展示 retries 与 log path；Job 操作只保留与当前 Harbor 产品语义明确对应的暂停/恢复、Open viewer、Upload 与排行榜开关。
-3. Datasets / Tasks：保留 registry 拉取更新与发布入口；Task config explorer、manifest add/init/remove 等用户价值不足或已被收敛的操作在 v1.0.5 不展示。
-4. Agents：补 adapter init/review、setup/max timeout、extra_allowed_hosts、compatible models 和 adapter review 状态。
-5. Leaderboard：补 agent/status/date/comparability filters、uploaded URL、submission id、config hash、agent snapshot hash、open job/open report/download 操作。
-6. System / Header：补 Harbor auth 全局状态，以及 login/logout/status、upload、leaderboard submit、job share 的维护入口。
-
-本次仍只承诺 demo 可见性，不改变“真实 API 接管仍需后续逐项实现”的边界。
+该轮对抗性审查把 CLI 参数与产品操作分离：CLI 的非交互确认、输出降噪和文件输入不进入 WebUI；用户价值不足的 manifest 作者工具、诊断面板和无确认语义的 Hub 入口不进入 v1.0.5。后续实现以当前覆盖表为准，不把当时的 demo 可见性当作真实 API 接管的证据。
 
 ## 2.3 2026-06-30 Environment 双向一致性修正
 
@@ -93,15 +79,15 @@
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
 | 创建 JobConfig | `JobConfig`，`harbor run --config` | `HarborConfigBuilder.to_job_config_payload` | New Job 表单 + 右上角 JobConfig 入口 | Partial | 表单字段需要扩展到完整 JobConfig。 |
-| 启动 job | `harbor run` / `harbor job start` | 旧 `/api/experiments/{id}/run` 待破坏性升级为 `/api/webui/v1/jobs` Operation | New Job 的 `运行 Job` 只更新 demo seed state | Partial | 直接升级后端 Job API，不维护旧 experiments run 契约。 |
-| Job list | job artifact / OrnnLab runs | 旧 `/api/experiments`、`/api/runs/{id}` 待破坏性升级为 `/api/webui/v1/jobs` | Jobs 表格：name/status/dataset/agent/model/trials/score/cost/updated | Partial | 增加 Harbor job id、job dir、started/finished time、failure class/code。 |
-| Job detail | Harbor viewer/job result | 旧 run events/report 待破坏性升级为 `/api/webui/v1/jobs/{jobId}` 子资源 | 右侧 drawer：overview、events、trials、artifact paths | Partial | 增加 config/result/job.log/summary/upload/share/resume 入口。 |
-| 取消 run | OrnnLab subprocess cancel + Harbor artifacts | 旧 run/experiment cancel 待破坏性升级为 `/api/webui/v1/jobs/{jobId}/cancel` Operation | Job drawer 有 Cancel 按钮但 demo 未接 API | Partial | 按钮接真实 cancel API，并展示 cancel evidence。 |
-| Retry / rerun | Harbor retry config；OrnnLab clone/template | `clone`、`save-template`、run retry config | Job drawer 有 Retry 按钮但未定义行为 | Partial | 区分 retry failed trial、clone config、rerun whole job。 |
-| Resume job | `harbor job resume` | 无专门 API | Job detail 按状态展示暂停/恢复入口 | Partial | 接真实 resume/cancel API，并展示失败状态。 |
+| 启动 job | `harbor run` / `harbor job start` | 旧 `/api/experiments/{id}/run` 待破坏性升级为 `/api/webui/v1/jobs` Operation | New Job 通过 `WebUiClient.createJob` 提交并轮询 mock Operation | Partial | Stage 3 直接升级后端 Job API，不维护旧 experiments run 契约。 |
+| Job list | job artifact / OrnnLab runs | 旧 `/api/experiments`、`/api/runs/{id}` 待破坏性升级为 `/api/webui/v1/jobs` | Jobs 表格：name/id/status/dataset/agent/model/trials/score/cost/tokens/duration/created time | Partial | Stage 3 接真实 Harbor job id、failure class/code。 |
+| Job detail | Harbor viewer/job result | 旧 run events/report 待破坏性升级为 `/api/webui/v1/jobs/{jobId}` 子资源 | 右侧 drawer：overview、events、可展开 trials、绝对 artifact paths、状态操作 | Partial | Stage 3 接真实 config/result/job.log 与状态 evidence。 |
+| 取消 run | OrnnLab subprocess cancel + Harbor artifacts | 旧 run/experiment cancel 待破坏性升级为 `/api/webui/v1/jobs/{jobId}/cancel` Operation | Job drawer 通过 `WebUiClient.cancelJob` 提交并轮询 mock Operation | Partial | Stage 3 接真实 cancel API，并展示 cancel evidence。 |
+| Retry / rerun | Harbor retry config；OrnnLab clone/template | `clone`、`save-template`、run retry config | Job drawer 失败态通过 `WebUiClient.retryJob` 提交 mock Operation | Partial | Stage 3 区分 retry failed trial、clone config、rerun whole job。 |
+| Resume job | `harbor job resume` | 无专门 API | Job drawer 暂停态通过 `WebUiClient.resumeJob` 提交 mock Operation | Partial | Stage 3 确认真实 resume 语义并展示失败状态。 |
 | Summarize job | `harbor job summarize` | report summary 读取，未接 Harbor summarize | 不展示 | Deferred | 后续确认是否需要可视化摘要生成。 |
-| Download job | `harbor job download` | 无 API | Jobs 有 Import 按钮但未定义来源 | Missing | Import from Hub 表单：job id/url、download target、conflict policy。 |
-| Upload job | `harbor upload` / `harbor run --upload` | 无 API | Job detail 展示 Upload 入口 | Partial | Upload dialog：visibility、share targets、uploaded url。 |
+| Download job | `harbor job download` | 无 API | 未展示 | Deferred | 后续如需时定义 Hub job 导入语义。 |
+| Upload job | `harbor upload` / `harbor run --upload` | 无 API | 未展示 | Deferred | 后续定义 Upload dialog：visibility、share targets、uploaded URL。 |
 | Share job | `harbor job share` | 无 API | 不展示 | Deferred | 与 Upload 能力边界确认后再进入 UI。 |
 | Leaderboard inclusion | JobConfig leaderboard / submit policy | 无 API | New Job 基础 tab 与 Job detail drawer 展示“计入排行榜”开关 | Partial | 接真实 JobConfig 与 leaderboard submission 状态。 |
 
@@ -118,23 +104,23 @@
 | Extra instructions | `extra_instruction_paths` | Tasks tab 已展示 | Covered | 后端接入时校验路径存在性。 |
 | Metrics | `MetricConfig.type` | New Job 不展示；Leaderboard 展示排名 metric | Deferred | 后续如果用户需要选择评分口径，再按 dataset/leaderboard 语义设计。 |
 | Plugins | `plugins`，`PluginConfig.import_path/kwargs`；CLI `harbor plugins` | New Job 不展示 | Deferred | 接真实 `harbor plugins list` 后进入插件管理或高级扩展入口。 |
-| Hub upload/share | `--upload`、`--public/--private`、`--share-org` | New Job 不展示；Job detail 保留 Upload 入口 | Partial | 上传属于运行后分发动作，接真实 Hub 认证、上传和组织权限状态。 |
+| Hub upload/share | `--upload`、`--public/--private`、`--share-org` | New Job 与 Job detail 均不展示 | Deferred | 上传属于运行后分发动作，接真实 Hub 认证、上传和组织权限后再设计。 |
 
 ### 3.3 Agent 配置字段覆盖
 
 | Harbor AgentConfig 字段 | 当前 OrnnLab 支持 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
 | `name` | `AgentProfile.harbor.agent` | New Job 选择 agent；Agents 表格展示名称 | Covered | 需从真实 agents API 拉取。 |
-| `import_path` | Agent compile 后写入 `harbor_import_path` | Agents detail 展示 adapter/import path | Partial | 增加创建/编辑 import path UI。 |
-| `model_name` | `AgentProfile.harbor.model` | Agents 表格与 Agent detail 展示 models；New Job 通过 Agent 选择隐式带出默认 model | Partial | 支持多 model 和 agent-compatible model list，必要时进入 Agent 配置流修改。 |
-| `kwargs` | `AgentProfile.harbor.kwargs` | 未展示 | Backend only | Agent detail 增加 kwargs editor。 |
-| `env` | `AuthProfile.inherit_env`、编译时 resolve env | 未展示 | Backend only | Agent detail 显示 env readiness，不泄露 secret。 |
-| `skills` | `SkillsProfile.paths` | 未展示 | Backend only | Agent detail / New Job 增加 skills picker。 |
-| `mcp_servers` | `McpProfile.config_paths`，Harbor `MCPServerConfig` | 未展示 | Backend only | Agent detail 增加 MCP config list。 |
-| `override_timeout_sec` | runtime agent timeout | 未展示 | Backend only | Agent runtime 区域展示。 |
-| `override_setup_timeout_sec` | runtime setup timeout | 未展示 | Backend only | Agent runtime 区域展示。 |
-| `max_timeout_sec` | Harbor 支持 | 未支持 | Missing | 加入 advanced runtime。 |
-| `extra_allowed_hosts` | Harbor 支持 | 未展示 | Missing | Agent network policy editor。 |
+| `import_path` | Agent compile 后写入 `harbor_import_path` | New Agent 与 Agent detail 支持配置 custom import path | Partial | Stage 3 校验/持久化 import path。 |
+| `model_name` | `AgentProfile.harbor.model` | Agent detail 以可增删 model-name 列表配置；New Job 选择 Agent 后带出默认 model | Partial | Stage 3 校验 Agent-compatible model。 |
+| `kwargs` | `AgentProfile.harbor.kwargs` | Agent Advanced tab 提供 key/value 编辑 | Partial | Stage 3 持久化与 schema 校验。 |
+| `env` | `AuthProfile.inherit_env`、编译时 resolve env | Agent Basic tab 提供 API key / Base URL env 与 agent env 编辑，不展示 secret 值 | Partial | Stage 3 实现 secret readiness。 |
+| `skills` | `SkillsProfile.paths` | Agent Skills tab 支持技能源路径与文件夹选择 | Partial | Stage 3 校验路径、挂载与执行时解析。 |
+| `mcp_servers` | `McpProfile.config_paths`，Harbor `MCPServerConfig` | Agent MCPs tab 支持 MCP server 列表与部署/传输配置 | Partial | Stage 3 生成真实 task 环境与 MCP connection。 |
+| `override_timeout_sec` | runtime agent timeout | Agent detail 展示 runtime default，未作为编辑项 | Deferred | 后续按实际 Harness 支持范围开放。 |
+| `override_setup_timeout_sec` | runtime setup timeout | Agent detail 展示 setup timeout，未作为编辑项 | Deferred | 后续按实际 Harness 支持范围开放。 |
+| `max_timeout_sec` | Harbor 支持 | Agent detail 展示 max timeout，未作为编辑项 | Deferred | 后续按实际 Harness 支持范围开放。 |
+| `extra_allowed_hosts` | Harbor 支持 | 网络访问配置收敛在 Environment 模板，不在 Agent 层重复展示 | Out of scope | 由 Environment 的 allowlist / runtime override 统一承载。 |
 
 ### 3.4 Environment / Verifier 覆盖
 
@@ -151,7 +137,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | Harbor 能力 | Harbor 证据 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|---|
-| Dataset list | `harbor dataset list` | 旧 `/api/benchmarks` 静态返回待破坏性升级为 `/api/webui/v1/datasets` | Datasets 表格 seed 数据 + 本地导入 mock row | Partial | 接 Harbor registry list，支持分页、registry source。 |
+| Dataset list | `harbor dataset list` | 旧 `/api/benchmarks` 静态返回待破坏性升级为 `/api/webui/v1/datasets` | Datasets 表格通过 WebUI client 读取契约 fixture；本地导入通过 Operation | Partial | Stage 3 接 Harbor registry list，支持分页、registry source。 |
 | Dataset detail | `DatasetConfig`，registry/local fields | 无专门 dataset API | drawer 默认展示 task 数、source、本地 path/size、registry 与 task 列表，task 列表支持 split 筛选与搜索；底层 digest/ref/manifest 命令不默认展示 | Partial | 接真实 dataset detail API，必要时增加高级 metadata 折叠区。 |
 | Dataset download | `harbor dataset download` / `harbor download` | 无 | 列表和 drawer 按下载状态展示下载、取消、拉取更新、删除本地数据 | Partial | 接真实 download/cancel/delete/pull API。 |
 | Dataset local import/init | `harbor dataset init`、`harbor add`、`harbor run --path` | 无 | Datasets 页“导入本地 Dataset”mock 表单，登记本地路径 | Partial | 接真实本地路径选择、manifest 探测与 JobConfig source。 |
@@ -189,7 +175,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | Harbor / OrnnLab 能力 | 当前后端 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| List agents | 当前旧后端 `GET /api/agents`（Stage 3 将破坏性升级为 `/api/webui/v1/agents`） | Agents seed 表格 | Partial | 迁移到 WebUI contract client，再接真实 API。 |
+| List agents | 当前旧后端 `GET /api/agents`（Stage 3 将破坏性升级为 `/api/webui/v1/agents`） | Agents 表格与详情通过 WebUI client 读取契约 fixture | Partial | Stage 3 接真实 API。 |
 | Built-in agents | Harbor `--agent` 支持 agent name/ACP registry shorthand | 表格展示 built-in rows | Partial | 拉取 Harbor built-ins/registry shorthand 列表。 |
 | Custom agent create | 当前旧后端 `POST /api/agents`，AgentProfile v2（Stage 3 待升级） | Add custom agent 按钮未接 | Backend only | 创建/编辑抽屉。 |
 | Agent validate | 当前旧后端 `POST /api/agents/validate`（Stage 3 待升级） | 未展示 | Backend only | 表单实时校验。 |
@@ -204,7 +190,7 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 
 | 项目 | Harbor / OrnnLab 证据 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
-| Dataset-scoped ranking | 当前旧后端 `GET /api/leaderboard?benchmark=`，`harbor leaderboard submit`；Stage 3 目标为 `GET /api/webui/v1/leaderboard` | 支持 dataset 搜索 + 下拉切换；一次展示一个 dataset | Partial | 迁移到 WebUI contract client，再接真实 leaderboard API。 |
+| Dataset-scoped ranking | 当前旧后端 `GET /api/leaderboard?benchmark=`，`harbor leaderboard submit`；Stage 3 目标为 `GET /api/webui/v1/leaderboard` | 通过 WebUI client 支持 dataset 搜索 + 下拉切换；一次展示一个 dataset | Partial | Stage 3 接真实 leaderboard API。 |
 | Rank | score desc, finished desc | 展示 `#1/#2` | Covered | 后端返回 rank 或前端计算。 |
 | Agent / model | runs.agent_id；Harbor agent model | 展示 agent/model | Covered | 接真实 row。 |
 | Score | runs.score | 展示 score | Covered | 增加 metric name、pass@k、confidence。 |
@@ -223,25 +209,25 @@ Environment 字段控件约束：枚举字段使用下拉，布尔字段使用 s
 | 能力域 | Harbor 支持 | 当前 demo | 状态 | 下一步 |
 |---|---|---|---|---|
 | Auth | `harbor auth login/status/logout` | Header 无 auth panel | Missing | Header 增加 Auth 状态和登录/登出。 |
-| Cache | `harbor cache clean` | System 未展示 cache | Missing | Cleanup plan，不直接破坏性删除。 |
+| Cache | `harbor cache clean` | System 展示 Docker / Storage 缓存清理确认与 Operation 状态 | Partial | Stage 3 接真实 cleanup plan，不直接破坏性删除。 |
 | Plugins | `harbor plugins list`，JobConfig plugins | 未展示 | Missing | Integrations 页面或 New Job plugin picker。 |
-| View artifacts | `harbor view` | Job drawer 展示 Open viewer 与绝对 artifact paths | Partial | 受管启动 viewer 或内嵌 Artifact viewer。 |
+| View artifacts | `harbor view` | Job drawer 展示绝对 artifact paths；不展示未接管的 Viewer 按钮 | Deferred | 后续定义受管启动 viewer 或内嵌 Artifact viewer。 |
 | Analyze trajectories | `harbor analyze` | 不展示 | Deferred | 后续确认具体用户场景后再进入 Job/Trial detail。 |
 | Publish | `harbor publish` | 未展示 | Deferred | Dataset/Task publish wizard。 |
-| Upload/share | `harbor upload` / `harbor job share` | Job detail 只展示 Upload；Share 暂不展示 | Partial | 先接 Upload，Share 后续确认语义。 |
-| Real-vs-demo boundary | Harbor real subprocess exists in backend | 前端仍为 seed data | Partial | Demo 内标注/切换真实 API，不能伪装成 real state。 |
+| Upload/share | `harbor upload` / `harbor job share` | 未展示 | Deferred | 后续先定义真实认证、上传与分享语义。 |
+| Real-vs-demo boundary | Harbor real subprocess exists in backend | 前端通过 contract fixture 与 mock Operation 演示；API 模式不回退成功 | Partial | Stage 3 接真实 API，不能伪装成 real state。 |
 
 ## 8. 当前 demo 已覆盖的可见操作
 
 | 页面 | 已有可见操作 | 真实程度 |
 |---|---|---|
-| Jobs | 搜索、Import 按钮、新建 Job、点击行打开 Job drawer、暂停/恢复、Open viewer、Upload、查看 events/trials/artifacts、计入排行榜开关 | 多数为 demo state；暂停/恢复、Upload、Viewer 未接 API。 |
-| New Job | 选择 Dataset/agent/environment，填写 concurrency/attempts/debug/notes，通过 Tasks 白名单选择要运行的 task，通过右上角 JobConfig 入口查看配置，Run Job | 表单字段少于 Harbor JobConfig；`env_file` 不展示，环境变量进入 Environment 模板；Run 只更新前端 demo state。 |
-| Datasets | 搜索、Import/Download 按钮、点击行打开 Dataset drawer、查看 task、Run single task、拉取更新/发布 | 主要为 seed 数据；按钮未接 API。 |
-| Agents | 查看 agent 列表、点击行打开 Agent drawer、Agent settings/Add custom agent 按钮 | 主要为 seed 数据；后端有 agents API 但 demo 未接。 |
-| Environment | 搜索、新建 custom 模板、复制模板、删除 custom 模板、点击行打开可编辑 Environment drawer | 主要为 seed 数据；新建/复制为二级页面，详情抽屉打开即编辑；CRUD 语义是 OrnnLab-local 模板管理，不是 Harbor 原生命令。 |
-| Leaderboard | dataset 搜索、dataset 下拉切换、排名表 | 主要为 seed 数据；后端有 `/api/leaderboard` 但 demo 未接。 |
-| System | 查看 Harbor/Docker/Storage/Local cache 状态、系统级清理动作 | 主要为 seed 数据；后端有 system API 但 demo 未接。 |
+| Jobs | 搜索、新建 Job、点击行打开 Job drawer、取消/重试/恢复、查看 events/trials/artifacts、计入排行榜开关 | 全部通过 `WebUiClient` 与 mock Operation；真实 Harbor 执行待 Stage 3。 |
+| New Job | 选择 Dataset/Agent/Environment，填写并发/重复/debug/备注，通过 Tasks 白名单选择任务，通过右上角 JobConfig 复制配置，运行 Job | 表单写操作经 `createJob` Operation；`env_file` 不展示，环境变量进入 Environment 模板。 |
+| Datasets | 搜索、本地导入、下载/取消/删除、点击行打开 Dataset drawer、查看 task、运行单 Task、拉取更新 | 全部通过 WebUI client 与 mock Operation；发布未展示。 |
+| Agents | 搜索、新建、点击行打开 Agent drawer、配置、删除 custom Agent | 全部通过 WebUI client 与 mock Operation；真实 Agent profile 持久化待 Stage 3。 |
+| Environment | 搜索、新建 custom 模板、复制模板、删除 custom 模板、点击行打开可编辑 Environment drawer | 全部通过 WebUI client 与 mock Operation；CRUD 语义是 OrnnLab-local 模板管理，不是 Harbor 原生命令。 |
+| Leaderboard | dataset 搜索、dataset 下拉切换、排名表、打开 Job 抽屉、移除 Job | 全部通过 WebUI client 与 mock Operation；真实排名/提交待 Stage 3。 |
+| System | 查看 OrnnLab/Harbor/Docker/Storage/资源监控状态，检查更新、重启、缓存清理 | 全部通过 WebUI client 与 mock Operation；真实系统探针与执行待 Stage 3。 |
 
 ## 9. 建议的实现优先级
 

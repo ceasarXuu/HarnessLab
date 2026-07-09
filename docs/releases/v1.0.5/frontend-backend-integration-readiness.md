@@ -1,6 +1,6 @@
 # v1.0.5 前后端联调准备设计基线
 
-- Status: Ready for implementation planning
+- Status: Stage 2 complete
 - Created: 2026-07-09
 - Updated: 2026-07-10
 - Owner / requester: OrnnLab
@@ -10,12 +10,12 @@
 
 ## 1. 设计结论
 
-当前前端已经具备 Harbor WebUI 的主要页面和交互形态，但还不能直接进入联调。联调前必须先修复四个设计边界：
+本文件定义的 Stage 2 四个设计边界已经实现并经过自动化门禁验证；真实联调仍需先完成 Stage 3 的后端破坏性升级：
 
-1. 前端页面不能继续直接依赖 `frontend/src/mocks/` 的类型和 seed data。
-2. 前端看到的 API 必须是稳定 WebUI 契约，而不是散落的旧 `/api/experiments`、`/api/runs`、`/api/benchmarks` 路由；旧 API 需要被破坏性升级，不维护新旧两套。
-3. Storybook 必须从页面展示工具升级为接口状态评审面，覆盖 loading、empty、error、permission、operation-running 等状态。
-4. e2e、unit、Storybook play 的断言口径必须一致，不能一个测试期待旧 UI，另一个测试期待新 UI。
+1. 生产页面已不直接依赖 `frontend/src/mocks/` 的类型和 seed data。
+2. 前端已只面向稳定 WebUI 契约；后端下一步必须直接升级旧 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等路由，不维护新旧两套。
+3. Storybook 已成为接口状态评审面，覆盖 loading、empty、error、operation-running 与破坏性确认等通用状态。
+4. Vitest、Storybook smoke 与 e2e 已更新到同一 UI 与异步 Operation 语义。
 
 ## 2. API 边界
 
@@ -76,13 +76,11 @@ v1.0.5 不做后端 facade 过渡，也不做前端 legacy adapter。现有旧 A
 以下动作不得以同步按钮状态硬编码完成：
 
 - 创建并运行 Job
-- 取消 Job / Trial
+- 取消 Job
 - 下载 Dataset
 - 取消 Dataset 下载
 - 删除本地 Dataset
-- 上传 Job 到 Hub
 - 移除 Leaderboard
-- 检查更新
 - 重启 OrnnLab 服务
 - 清理 Docker / Harbor 本地缓存
 
@@ -172,7 +170,7 @@ Storybook 进入联调前至少覆盖以下状态。
 5. `npm run storybook:test`
 6. `npm run e2e`
 
-截至 2026-07-10，现有 `npm run e2e` 已通过。后续每次运行前仍须先检查 `4174` 无旧 preview 监听，避免测试复用陈旧构建。Stage 2 的剩余前端资源迁移与状态矩阵完成后，必须重新执行全量门禁。
+截至 2026-07-10，现有 `npm run e2e` 已通过。后续每次运行前仍须先检查 `4174` 无旧 preview 监听，避免测试复用陈旧构建。Stage 3 开始真实接口替换后，必须重新执行全量门禁并增加真实 contract smoke。
 
 ## 8. 联调进入条件
 
