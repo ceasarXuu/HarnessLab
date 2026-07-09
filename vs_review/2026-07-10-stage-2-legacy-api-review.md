@@ -235,6 +235,117 @@ The following remediation has landed after Round 1. This is not a closure review
 
 The report remains open. A fresh independent closure review is required only after the remaining Stage 2 read-resource migration and the Stage 3 backend route upgrade are complete.
 
+## Round 2: Residue and Migration-Completeness Re-review
+
+### Review Input
+
+#### Objective
+
+Falsify the current claim that the Stage 2 remediation removed old API bypasses for the migrated resources and accurately records the remaining migration work.
+
+#### Review Target
+
+Stage 2 frontend contract implementation and the v1.0.5 planning/contract documentation.
+
+#### Target Locations
+
+- `frontend/src/api/`
+- `frontend/src/app/App.tsx`
+- `frontend/src/mocks/`
+- `frontend/src/mocks/mswHandlers.ts`
+- `frontend/src/app/App.stories.tsx`
+- `frontend/src/screens/`
+- `docs/releases/v1.0.5/`
+- `docs/architecture/frontend-api-contract.md`
+- `docs/architecture/frontend-webui-governance.md`
+- `ornnlab/api/`
+
+#### Change Introduction
+
+Round 1 remediation added runtime API/mock modes, envelope validation, generic resource hooks, Jobs/Datasets client migration, MSW handler tests and an API-unavailable story. The implementation intentionally remains mock-first and documents un-migrated resources as pending.
+
+#### Risk Focus
+
+- Old `/api/*` route names or response shapes still used as an active frontend path.
+- Direct mock imports or mock fallback paths that bypass the WebUI client in production runtime.
+- Contract routes, WebUiClient methods, MSW handlers and stories drifting from one another.
+- Documentation claiming completed migration where code is fixture-backed, or wrongly presenting legacy backend routes as the target contract.
+- Unverified API-mode failure/loading behavior and any test evidence that could run against a stale server.
+
+#### Reviewer Instructions
+
+Use a fresh context, read targets directly, do not modify files, and return only high-signal findings with severity, concrete evidence paths/lines, and the condition required to close each finding. Explicitly distinguish Stage 2 work from the Stage 3 backend route upgrade.
+
+### Reviewer Selection
+
+- Role: `code-reviewer`
+- Rationale: cross-cutting migration completeness, contract consistency, tests and documentation need one adversarial implementation review.
+- Freshness policy: `fork_context=false`; reviewer receives only this navigation packet.
+
+### Reviewer Launch Record
+
+- Reviewer role: `code-reviewer`
+- Mechanism: `multi_agent_v1__spawn_agent`
+- Agent id: `019f4864-2e1b-7a63-ab57-18a6a5de28a3`
+- Nickname: Herschel
+- Context policy: fresh session, `fork_context=false`
+- Review result: completed
+
+### Reviewer Output
+
+Verdict: **request changes**. The reviewer verified that active HTTP traffic is confined to `/api/webui/v1`; no React path calls the old `/api/experiments`, `/api/runs`, `/api/benchmarks`, `/api/agents`, `/api/leaderboard` or `/api/system` routes. It also confirmed that the backend replacement remains Stage 3 work.
+
+Findings:
+
+1. **Blocking**: Job/Dataset details still receive `events`、`trialRows`、`taskRows` from direct `mocks/` imports in `App.tsx`, despite those subresources being part of the Stage 2 contract surface. The reviewer cited `frontend/src/app/App.tsx:8,269,325`, `frontend/src/screens/DatasetsPage.tsx:63`, `frontend/src/screens/JobsPage.tsx:53`, and `docs/architecture/frontend-api-contract.md:442,471`.
+2. **Medium**: MSW exposes unmigrated Agents、Environments、Leaderboard、System paths using raw UI fixture shapes, without matching `WebUiClient` methods or contract DTOs. The reviewer cited `frontend/src/mocks/mswHandlers.ts:39`, `frontend/.storybook/preview.ts:55`, `frontend/src/domain/harbor.ts:166,240`, and `docs/architecture/frontend-api-contract.md:104`.
+3. **Low**: Summary-level documentation still has stale wording that says pages have not migrated to resource hooks, even though Jobs/Datasets lists have. The reviewer cited `docs/architecture/frontend-api-contract.md:6`, `docs/releases/v1.0.5/engineering-plan.md:19`, and `frontend/src/app/App.tsx:79-80`.
+
+### Main Agent Response
+
+| Finding | Decision | Rationale | Required follow-up |
+|---|---|---|---|
+| Blocking detail-flow fixture bypass | accept | The list-level migration does not satisfy Stage 2 while Job events/trials and Dataset tasks bypass the same client boundary. | Add contract DTO/client methods/hooks for these subresources; wire live App detail paths through them; remove direct fixture imports; then run a fresh re-review. |
+| Medium unmigrated MSW contract drift | accept | A `/api/webui/v1` handler that returns a raw UI fixture misrepresents contract coverage. | Either remove those handlers until their resources migrate, or add matching contract DTO/client/hook ownership. The next Stage 2 implementation batch should choose one path explicitly. |
+| Low stale summary wording | accept | The current wording understates completed Jobs/Datasets work and obscures the actual remaining scope. | Update summary docs as part of the remediation batch. |
+
+Because a blocking finding was accepted, Round 3 is required as a fresh independent scope validation before implementation begins.
+
+## Round 3: Closure-Scope Validation
+
+### Reviewer Launch Record
+
+- Reviewer role: `code-reviewer`
+- Mechanism: `multi_agent_v1__spawn_agent`
+- Agent id: `019f4869-87b4-72d0-b46c-55a2be3a0429`
+- Nickname: Fermat
+- Context policy: fresh session, `fork_context=false`
+- Review result: completed
+
+### Reviewer Output
+
+Verdict: **request changes**. The reviewer confirmed the old backend route replacement remains Stage 3 and found no active React consumers of `/api/experiments`、`/api/runs` or `/api/benchmarks`.
+
+It independently confirmed the previously accepted Job event/trial and Dataset task fixture bypass. It also found that `mswHandlers.ts` advertises details plus Agents、Environments、Leaderboard and System HTTP routes without a corresponding contract DTO/client/hook boundary. Finally, it found mock write flows in the live App: New Job creation, leaderboard mutations, Dataset local actions, Agent/Environment mutations and System toast-only actions.
+
+### Main Agent Response
+
+| Finding | Decision | Rationale | Required follow-up |
+|---|---|---|---|
+| Detail subresource fixture bypass | accept | This independently confirms the Round 2 blocking finding. Jobs/Datasets cannot be called migrated while their detail data bypasses the contract. | Stage 2: add DTOs, client methods and hooks for events, trials and Dataset tasks; remove their direct fixture imports from the live App. |
+| Unmigrated MSW HTTP surface | accept | HTTP mocks must prove a contract boundary, not expose raw UI fixture types under the future product URL. | Stage 2: remove unowned resource routes from MSW, or implement matching DTO/client/hook boundaries before retaining them. |
+| Mock write flows active in the runtime App | defer to Stage 2 write-boundary design and Stage 5 implementation | The user has explicitly kept the frontend in mock mode, so local interaction simulation remains permitted for design work. However, it must not silently remain available as a fake success path in `api` mode. | Stage 2: introduce an explicit write-action boundary that distinguishes mock simulation from API mode. Stage 5: implement operation-backed writes. |
+| Top-level progress wording drift | accept | The summary is internally inconsistent with the completed Jobs/Datasets list migration. | Stage 2 documentation remediation. |
+
+### Closure Status
+
+- Blocking findings found: yes.
+- Blocking findings accepted: yes.
+- Fresh scope-validation re-review completed: yes, Round 3.
+- Blocking findings fixed: no.
+- Stage 2 closure: **not eligible**. The report remains open until the accepted read-resource and MSW-boundary remediation lands and passes another fresh implementation re-review.
+- Stage 3 dependency: backend `/api/webui/v1` implementation remains open and is not a reason to represent Stage 2 as completed.
+
 ## Final Conclusion
 
 Round 1 completed with a fresh Codex internal reviewer. The review requests changes. The work may proceed, but Stage 2 cannot be closed and `/api/webui/v1` cannot be presented as the active product path until F1, F2, and F3 are resolved and independently re-reviewed.
