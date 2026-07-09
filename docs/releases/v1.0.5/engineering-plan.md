@@ -16,7 +16,7 @@
 
 ## 2. 当前进度
 
-截至 2026-07-09，v1.0.5 已完成 Stage 1“前端 mock 产品化”收尾，下一阶段进入 Stage 2“前端契约层建设”。当前前端仍保持 mock 模式，但组件治理、Storybook 基线、i18n 基线和测试门禁已经达到进入契约层改造的要求。
+截至 2026-07-10，v1.0.5 已完成 Stage 1“前端 mock 产品化”，Stage 2“前端契约层建设”已启动。当前前端仍保持 mock 模式；`frontend/src/api/` 已建立契约类型、HTTP client 与 mock client，但页面尚未迁移到资源 hooks。
 
 | 工作项 | 状态 | 当前证据 | 下一步 |
 |---|---|---|---|
@@ -28,7 +28,7 @@
 | Storybook 基线 | Done | App、Screens、Controls、RunBuilder 等 story 已覆盖 theme/locale、路由、empty、downloading、operation-running、confirm、task bulk、verifier skip 等 Stage 1 状态 | Stage 2 接入 API hook 后继续补真实 loading/error/permission 状态 |
 | i18n 基线 | Done | `i18n.zh.ts`、`i18n.en.ts`、`i18n.ts` 已覆盖新增通用组件文案；生产 UI 硬编码扫描未命中中英文残留 | 新增文案继续先入 locale 文件 |
 | 领域类型治理 | Partial | 已有 `frontend/src/domain/harbor.ts` | 继续把生产 UI 类型从 `frontend/src/mocks/` 剥离 |
-| API 契约规范 | Draft | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation` | 建立 `frontend/src/api/` typed client 和 mock client，不做 legacy adapter |
+| API 契约规范 | In progress | [前后端接口规范](../../architecture/frontend-api-contract.md) 已定义 `/api/webui/v1`、`ApiResponse<T>`、`Operation`；已新增 `frontend/src/api/contract.ts`、`webUiClient.ts`、`mockClient.ts` | 建立 resource hooks，并把页面从 seed data 迁移到 client |
 | 后端 API 破坏性升级 | Not started | 现有后端仍是 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等旧语义路由 | 直接升级旧 API 到 `/api/webui/v1` 产品契约，不维护新旧两套 |
 | 联调门禁 | Stage 1 passed | `typecheck`、unit、lint、build、Storybook smoke、e2e 已通过；但 contract client 和真实 API smoke 未完成 | Stage 2/3 补齐前端 client 和后端破坏性升级后再跑联调门禁 |
 
@@ -78,7 +78,7 @@
 
 ### Stage 2: 前端契约层建设
 
-状态：Not started
+状态：In progress
 
 目标：
 
@@ -87,6 +87,13 @@
 - 定义 `ApiResponse<T>`、`Operation`、DTO。
 - 建立 mock client；不建立 legacy adapter。
 - 页面通过 data hook 消费 domain model，不直接读取 mock seed data。
+
+已完成：
+
+- 新增 `frontend/src/api/contract.ts`，提供通用 `ApiResponse<T>`、分页模型与 Jobs/Datasets 首批结构化 DTO。
+- 新增 `frontend/src/api/webUiClient.ts`，提供 `/api/webui/v1` HTTP client 读取接口。
+- 新增 `frontend/src/api/mockClient.ts`，以现有 fixture 适配首批 Jobs/Datasets 契约，供离线开发、测试和后续 Storybook 使用。
+- 新增 mock client 契约测试，覆盖 Job 搜索、Task split 筛选和 not-found 错误包络。
 
 验收：
 
@@ -196,10 +203,8 @@ npm run e2e
 
 建议下一轮先做 Stage 2：
 
-1. 新增 `frontend/src/api/contract.ts`，定义 `ApiResponse<T>`、`ApiError`、`Operation` 和 DTO。
-2. 新增 `frontend/src/api/webuiClient.ts`，封装读取和写操作。
-3. 新增 `frontend/src/api/mockClient.ts`，把当前 fixture 转成 contract response；mock client 只服务 Storybook、测试和离线开发。
-4. 新增 `frontend/src/api/hooks.ts` 或等价资源 hook，让 screens 不直接读 mock。
-5. 迁移 Jobs 和 Datasets 作为第一批样板，再迁移 Agents、Environment、Leaderboard、System。
+1. 新增 `frontend/src/api/hooks.ts` 或等价资源 hook，让 screens 不直接读 mock。
+2. 迁移 Jobs 和 Datasets 作为第一批样板，再迁移 Agents、Environment、Leaderboard、System。
+3. 为 API 读取状态补齐 Storybook 的 loading、error、permission 状态矩阵。
 
 完成 Stage 2 后，进入 Stage 3：把现有后端 API 直接破坏性升级到 `/api/webui/v1`，再做只读联调。
