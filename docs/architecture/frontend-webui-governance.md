@@ -10,7 +10,7 @@
 
 `frontend/src/app/` 放应用装配、路由状态和跨页面状态流。
 
-`frontend/src/domain/` 放 WebUI 领域模型、资源状态枚举和 ViewModel 类型。联调前新增；生产 UI 类型不得继续从 `mocks/` 导出。
+`frontend/src/domain/` 放 WebUI 领域模型、资源状态枚举和 ViewModel 类型。该边界已建立；生产 UI 类型不得从 `mocks/` 导出。
 
 `frontend/src/api/` 放 WebUI contract client、DTO、`ApiResponse`、`Operation` 和 data hook。v1.0.5 不建设 legacy adapter；页面不得直接 `fetch`、直接读取 mock seed 或直接适配旧后端路由。
 

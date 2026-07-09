@@ -1,6 +1,6 @@
 import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
-import type { DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
+import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
@@ -10,6 +10,7 @@ import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
 interface RunBuilderProps {
   canLaunch?: boolean
+  agents: AgentRow[]
   datasets: DatasetRow[]
   draft: RunDraft
   environments: EnvironmentRow[]
@@ -17,23 +18,25 @@ interface RunBuilderProps {
   t: Translate
   onDraft: (draft: RunDraft) => void
   onCancel: () => void
+  onCopyJobConfig: () => void
   onLaunch: () => void
+  onReset: () => void
 }
 
 type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
-const agentOptions = [
-  { label: 'claude-code', value: 'claude-code', model: 'anthropic/claude-haiku-4-5' },
-  { label: 'codex-cli', value: 'codex-cli', model: 'gpt-5.1' },
-  { label: 'oracle', value: 'oracle', model: 'local-sim' },
-]
 type VerifierMode = 'dataset-default' | 'custom' | 'skip'
 
-export function RunBuilder({ canLaunch = true, datasets, draft, environments, taskRows, t, onDraft, onCancel, onLaunch }: RunBuilderProps) {
+export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
+  const agentOptions = agents.map((agent) => ({
+    label: agent.agentName,
+    model: agent.models.split(',')[0]?.trim() || draft.model,
+    value: agent.agentName,
+  }))
   const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
   const availableSplits = selectedDataset?.splits ?? []
@@ -55,7 +58,7 @@ export function RunBuilder({ canLaunch = true, datasets, draft, environments, ta
     } else if (mode === 'skip') {
       onDraft({ ...draft, verifierMode: mode, disableVerifier: true, includeInLeaderboard: false })
     } else {
-      onDraft({ ...draft, verifierMode: mode, disableVerifier: false })
+      onDraft({ ...draft, verifierMode: mode, disableVerifier: false, verifierImportPath: '' })
     }
   }
   const toggleTask = (taskName: string, enabled: boolean) => {
@@ -97,7 +100,7 @@ export function RunBuilder({ canLaunch = true, datasets, draft, environments, ta
             <X aria-hidden="true" />
             {t('cancel')}
           </button>
-          <button className="secondary-button">
+          <button className="secondary-button" onClick={onReset}>
             <RotateCcw aria-hidden="true" />
             {t('reset')}
           </button>
@@ -105,7 +108,7 @@ export function RunBuilder({ canLaunch = true, datasets, draft, environments, ta
             <Play aria-hidden="true" />
             {t('runJob')}
           </button>
-          <button className="secondary-button">
+          <button className="secondary-button" onClick={onCopyJobConfig}>
             <Copy aria-hidden="true" />
             {t('jobConfig')}
           </button>

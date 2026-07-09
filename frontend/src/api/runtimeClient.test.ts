@@ -8,7 +8,7 @@ describe('createRuntimeWebUiClient', () => {
 
     const response = await client.listJobs()
 
-    expect(request).toHaveBeenCalledWith('/api/webui/v1/jobs')
+    expect(request).toHaveBeenCalledWith('/api/webui/v1/jobs', undefined)
     expect(response.data).toBeNull()
     expect(response.error?.code).toBe('NETWORK_REQUEST_FAILED')
   })

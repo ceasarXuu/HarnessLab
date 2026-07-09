@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useOperation } from '../api/hooks'
+import type { WebUiClient } from '../api/webUiClient'
 import type { SystemRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
+import { OperationStatus } from '../ui/components/OperationStatus'
 import { Toast } from '../ui/components/Toast'
 
 interface SystemPageProps {
-  allowMockWrites?: boolean
+  writesEnabled?: boolean
+  client: WebUiClient
   rows: SystemRow[]
   t: Translate
+  onRefresh: () => Promise<void>
 }
 
 type ConfirmAction = 'docker-cache' | 'local-cache' | 'service-restart' | 'service-update'
@@ -17,14 +22,11 @@ interface ToastState {
   remaining: number
 }
 
-const ornnlabVersion = {
-  current: '0.1.3',
-  latest: '0.1.3',
-}
-
-export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps) {
+export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }: SystemPageProps) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
+  const systemOperation = useOperation(client)
   const confirmContent = confirmAction === 'docker-cache'
     ? {
         title: t('dockerCacheCleanupTitle'),
@@ -49,9 +51,20 @@ export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps)
         confirm: t('confirmCleanup'),
       }
 
-  const handleCheckUpdate = () => {
-    if (!allowMockWrites) return
-    if (ornnlabVersion.current !== ornnlabVersion.latest) {
+  useEffect(() => {
+    if (systemOperation.operation?.status !== 'completed') return
+    void onRefresh()
+  }, [onRefresh, systemOperation.operation?.id, systemOperation.operation?.status])
+
+  const handleCheckUpdate = async () => {
+    if (!writesEnabled) return
+    const response = await client.checkForSystemUpdate()
+    if (response.error) {
+      setUpdateCheckError(response.error.message)
+      return
+    }
+    setUpdateCheckError(null)
+    if (response.data?.updateAvailable) {
       setConfirmAction('service-update')
       return
     }
@@ -76,15 +89,19 @@ export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps)
   }
 
   const closeConfirm = () => setConfirmAction(null)
-  const confirmAndClose = () => {
-    if (!allowMockWrites) return
+  const confirmAndClose = async () => {
+    if (!writesEnabled) return
+    const action = confirmAction
+    if (!action) return
+    const mutation = action === 'docker-cache'
+      ? () => client.cleanDockerCache()
+      : action === 'local-cache'
+        ? () => client.cleanStorageCache()
+        : action === 'service-restart'
+          ? () => client.restartSystemService()
+          : () => client.installSystemUpdate()
+    await systemOperation.submit(mutation, ({ operation }) => operation)
     setConfirmAction(null)
-    if (confirmAction === 'service-restart') {
-      showToast(t('restartRequestQueued'))
-    }
-    if (confirmAction === 'service-update') {
-      showToast(t('updateRequestQueued'))
-    }
   }
 
   return (
@@ -125,21 +142,21 @@ export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps)
                     <div className="row-actions">
                       {row.kind === 'ornnlab-service' && (
                         <>
-                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={handleCheckUpdate}>
+                          <button className="secondary-button compact-action" disabled={!writesEnabled || isOperationRunning(systemOperation.operation?.status)} onClick={handleCheckUpdate}>
                             {t('checkUpdate')}
                           </button>
-                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('service-restart')}>
+                          <button className="secondary-button compact-action" disabled={!writesEnabled || isOperationRunning(systemOperation.operation?.status)} onClick={() => setConfirmAction('service-restart')}>
                             {t('restart')}
                           </button>
                         </>
                       )}
                       {row.kind === 'docker' && (
-                        <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('docker-cache')}>
+                        <button className="secondary-button compact-action" disabled={!writesEnabled || isOperationRunning(systemOperation.operation?.status)} onClick={() => setConfirmAction('docker-cache')}>
                           {t('cleanCache')}
                         </button>
                       )}
                       {row.kind === 'storage' && (
-                        <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={() => setConfirmAction('local-cache')}>
+                        <button className="secondary-button compact-action" disabled={!writesEnabled || isOperationRunning(systemOperation.operation?.status)} onClick={() => setConfirmAction('local-cache')}>
                           {t('cleanCache')}
                         </button>
                       )}
@@ -147,6 +164,11 @@ export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps)
                   </td>
                 </tr>
               ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td className="empty-row" colSpan={5}>{t('noSystemComponents')}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -164,6 +186,11 @@ export function SystemPage({ allowMockWrites = true, rows, t }: SystemPageProps)
           onConfirm={confirmAndClose}
         />
       )}
+      <OperationStatus error={updateCheckError ?? systemOperation.error?.message} operation={systemOperation.operation} t={t} />
     </main>
   )
+}
+
+function isOperationRunning(status: string | undefined) {
+  return status === 'queued' || status === 'running'
 }

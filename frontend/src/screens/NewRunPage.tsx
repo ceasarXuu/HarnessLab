@@ -2,11 +2,12 @@ import { useDatasetTasks } from '../api/hooks'
 import { datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { RunBuilder } from '../ui/components/RunBuilder'
-import type { DatasetRow, EnvironmentRow, RunDraft } from '../domain/harbor'
+import type { AgentRow, DatasetRow, EnvironmentRow, RunDraft } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface NewRunPageProps {
-  canSimulateWrites: boolean
+  canLaunch: boolean
+  agents: AgentRow[]
   client: WebUiClient
   datasets: DatasetRow[]
   draft: RunDraft
@@ -14,10 +15,12 @@ interface NewRunPageProps {
   t: Translate
   onDraft: (draft: RunDraft) => void
   onJobs: () => void
+  onCopyJobConfig: () => void
   onLaunch: () => void
+  onReset: () => void
 }
 
-export function NewRunPage({ canSimulateWrites, client, datasets, draft, environments, t, onDraft, onJobs, onLaunch }: NewRunPageProps) {
+export function NewRunPage({ canLaunch, agents, client, datasets, draft, environments, t, onDraft, onJobs, onCopyJobConfig, onLaunch, onReset }: NewRunPageProps) {
   const tasksResource = useDatasetTasks(client, draft.source)
   const taskRows = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
   return (
@@ -30,7 +33,8 @@ export function NewRunPage({ canSimulateWrites, client, datasets, draft, environ
           <span aria-current="page">{t('newJob')}</span>
         </nav>
         <RunBuilder
-          canLaunch={canSimulateWrites}
+          canLaunch={canLaunch}
+          agents={agents}
           datasets={datasets}
           draft={draft}
           environments={environments}
@@ -38,7 +42,9 @@ export function NewRunPage({ canSimulateWrites, client, datasets, draft, environ
           t={t}
           onDraft={onDraft}
           onCancel={onJobs}
+          onCopyJobConfig={onCopyJobConfig}
           onLaunch={onLaunch}
+          onReset={onReset}
         />
       </div>
     </main>

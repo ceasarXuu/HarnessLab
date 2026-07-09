@@ -2,13 +2,6 @@ import { Search } from 'lucide-react'
 import type { HarborJob, JobStatus } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 
-const statusLabels: Record<JobStatus, string> = {
-  running: 'Running',
-  queued: 'Queued',
-  completed: 'Completed',
-  failed: 'Failed',
-}
-
 interface JobsTableProps {
   jobs: HarborJob[]
   selectedId?: string
@@ -20,6 +13,12 @@ interface JobsTableProps {
 }
 
 export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
+  const statusLabels: Record<JobStatus, string> = {
+    completed: t('statusCompleted'),
+    failed: t('statusFailed'),
+    queued: t('statusQueued'),
+    running: t('statusRunning'),
+  }
   return (
     <section className="surface jobs-surface" id="jobs">
       <div className="section-header">
@@ -67,7 +66,7 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
               >
                 <td>
                   <span className="job-identity">
-                    <button className="row-button">{job.name}</button>
+                    <button className="row-button" onClick={() => onSelect(job)}>{job.name}</button>
                     <small>{job.id}</small>
                   </span>
                 </td>
@@ -85,6 +84,11 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
                 <td>{job.createdAt}</td>
               </tr>
             ))}
+            {jobs.length === 0 && (
+              <tr>
+                <td className="empty-row" colSpan={11}>{t('noJobsAvailable')}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

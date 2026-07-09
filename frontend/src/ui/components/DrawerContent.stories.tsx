@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>
 export const BuiltInAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows[0]} t={t} />
+      <AgentDetail agent={agentRows[0]} t={t} onSave={() => undefined} />
     </main>
   ),
 }
@@ -27,7 +27,7 @@ export const BuiltInAgent: Story = {
 export const CustomAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} />
+      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} onSave={() => undefined} />
     </main>
   ),
 }
@@ -51,8 +51,10 @@ export const Dataset: Story = {
           onDelete={() => undefined}
           onExpandedTaskName={() => undefined}
           onStartDownload={() => undefined}
+          onSync={() => undefined}
           onTaskSearch={() => undefined}
           onTaskSplit={() => undefined}
+          onRunTask={() => undefined}
         />
       </main>
     )

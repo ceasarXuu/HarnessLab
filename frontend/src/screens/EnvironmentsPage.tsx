@@ -1,29 +1,54 @@
 import { Box, Copy, Plus, Save, Search, Trash2, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useEnvironment, useOperation } from '../api/hooks'
+import { environmentRowToDto } from '../api/requestMappers'
+import { environmentDtoToRow } from '../api/viewModels'
+import type { WebUiClient } from '../api/webUiClient'
+import { defaultEnvironmentDraft } from '../domain/defaults'
 import type { EnvironmentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEditor'
+import { OperationStatus } from '../ui/components/OperationStatus'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
 
 interface EnvironmentsPageProps {
-  allowMockWrites?: boolean
+  writesEnabled?: boolean
+  client: WebUiClient
   environmentId?: string
   rows: EnvironmentRow[]
   t: Translate
   view: EnvironmentView
-  onRowsChange: (rows: EnvironmentRow[]) => void
+  onRefresh: () => Promise<void>
   onView: (view: EnvironmentView, environmentId?: string) => void
 }
 
-export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, t, view, onRowsChange, onView }: EnvironmentsPageProps) {
+export function EnvironmentsPage({ writesEnabled = true, client, environmentId, rows, t, view, onRefresh, onView }: EnvironmentsPageProps) {
   const [selected, setSelected] = useState<EnvironmentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<EnvironmentRow | null>(null)
   const [editingDraft, setEditingDraft] = useState<EnvironmentRow | null>(null)
   const [search, setSearch] = useState('')
+  const detailResource = useEnvironment(client, selected?.id)
+  const environmentOperation = useOperation(client)
+  const detailEnvironment = detailResource.data ? environmentDtoToRow(detailResource.data) : selected
+
+  useEffect(() => {
+    if (!detailResource.data) return
+    const next = environmentDtoToRow(detailResource.data)
+    setSelected(next)
+    setEditingDraft((current) => (current?.id === next.id ? next : current))
+  }, [detailResource.data])
+
+  useEffect(() => {
+    if (environmentOperation.operation?.status !== 'completed') return
+    void onRefresh()
+    void detailResource.refresh()
+    if (environmentOperation.operation.type === 'create-environment') onView('list')
+  }, [detailResource.refresh, environmentOperation.operation?.id, environmentOperation.operation?.status, onRefresh, onView])
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return rows
@@ -40,36 +65,34 @@ export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, 
     setEditingDraft({ ...row })
   }
 
-  const saveNewTemplate = (draft: EnvironmentRow) => {
-    if (!allowMockWrites) return
+  const saveNewTemplate = async (draft: EnvironmentRow) => {
+    if (!writesEnabled) return
     const saved = { ...draft, id: buildEnvironmentId(rows, draft.name), profileType: 'custom' as const }
-    onRowsChange([...rows, saved])
-    setSelected(saved)
-    setEditingDraft(saved)
-    setDrawerOpen(true)
-    onView('list')
+    await environmentOperation.submit(() => client.createEnvironment(environmentRowToDto(saved)), ({ operation }) => operation)
   }
 
-  const saveDrawerEdit = () => {
-    if (!allowMockWrites) return
+  const saveDrawerEdit = async () => {
+    if (!writesEnabled) return
     if (!editingDraft) return
     const saved = { ...editingDraft, name: editingDraft.name.trim() || 'Custom Environment' }
-    onRowsChange(rows.map((row) => (row.id === saved.id ? saved : row)))
-    setSelected(saved)
-    setEditingDraft(saved)
+    await environmentOperation.submit(() => client.updateEnvironment(saved.id, environmentRowToDto(saved)), ({ operation }) => operation)
   }
 
-  const confirmDelete = () => {
-    if (!allowMockWrites) return
+  const confirmDelete = async () => {
+    if (!writesEnabled) return
     if (!deleteTarget) return
-    const nextRows = rows.filter((row) => row.id !== deleteTarget.id)
-    onRowsChange(nextRows)
+    await environmentOperation.submit(() => client.deleteEnvironment(deleteTarget.id), ({ operation }) => operation)
     if (selected?.id === deleteTarget.id) {
       setSelected(null)
       setDrawerOpen(false)
       setEditingDraft(null)
     }
     setDeleteTarget(null)
+  }
+
+  const copyEnvironment = async (row: EnvironmentRow) => {
+    if (!writesEnabled) return
+    await environmentOperation.submit(() => client.copyEnvironment(row.id), ({ operation }) => operation)
   }
 
   if (view !== 'list') {
@@ -79,15 +102,18 @@ export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, 
         ? { ...source, id: buildEnvironmentId(rows, source.name), name: `${source.name} copy`, profileType: 'custom' as const }
         : buildNewEnvironment(rows)
     return (
-      <EnvironmentFormPage
-        key={`${view}-${environmentId ?? 'new'}`}
-        initialValue={initialValue}
-        canSave={allowMockWrites}
-        title={view === 'copy' ? t('copyEnvironment') : t('newEnvironment')}
-        t={t}
-        onCancel={() => onView('list')}
-        onSave={saveNewTemplate}
-      />
+      <>
+        <EnvironmentFormPage
+          key={`${view}-${environmentId ?? 'new'}`}
+          initialValue={initialValue}
+          canSave={writesEnabled && !isOperationRunning(environmentOperation.operation?.status)}
+          title={view === 'copy' ? t('copyEnvironment') : t('newEnvironment')}
+          t={t}
+          onCancel={() => onView('list')}
+          onSave={saveNewTemplate}
+        />
+        <OperationStatus error={environmentOperation.error?.message} operation={environmentOperation.operation} t={t} />
+      </>
     )
   }
 
@@ -108,7 +134,7 @@ export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, 
                 placeholder={t('searchEnvironmentsPlaceholder')}
               />
             </label>
-            <button className="primary-button" disabled={!allowMockWrites} onClick={() => onView('new')}>
+            <button className="primary-button" disabled={!writesEnabled} onClick={() => onView('new')}>
               <Plus aria-hidden="true" />
               {t('newEnvironment')}
             </button>
@@ -144,44 +170,56 @@ export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, 
                   <td>
                     <EnvironmentActions
                       row={row}
-                      disabled={!allowMockWrites}
+                      disabled={!writesEnabled || isOperationRunning(environmentOperation.operation?.status)}
                       t={t}
-                      onCopy={(target) => onView('copy', target.id)}
+                      onCopy={copyEnvironment}
                       onDelete={setDeleteTarget}
                     />
                   </td>
                 </tr>
               ))}
+              {filteredRows.length === 0 && (
+                <tr>
+                  <td className="empty-row" colSpan={5}>{t('noEnvironmentsAvailable')}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </section>
-      {selected && (
+      {detailEnvironment && (
         <DetailDrawer label={t('selectedEnvironment')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <aside className="detail-rail">
-            <section className="surface rail-card">
-              <div className="rail-heading">
-                <div>
-                  <h2>{selected.name}</h2>
-                  <p>{selected.environmentType}</p>
+          <>
+            <aside className="detail-rail">
+              <section className="surface rail-card">
+                <div className="rail-heading">
+                  <div>
+                    <h2>{detailEnvironment.name}</h2>
+                    <p>{detailEnvironment.environmentType}</p>
+                  </div>
+                  <div className="row-actions">
+                    <button className="primary-button compact-action" disabled={!writesEnabled || isOperationRunning(environmentOperation.operation?.status)} onClick={saveDrawerEdit}>
+                      <Save aria-hidden="true" />
+                      {t('save')}
+                    </button>
+                    <EnvironmentActions
+                      row={detailEnvironment}
+                      disabled={!writesEnabled || isOperationRunning(environmentOperation.operation?.status)}
+                      t={t}
+                      onCopy={copyEnvironment}
+                      onDelete={setDeleteTarget}
+                    />
+                  </div>
                 </div>
-                <div className="row-actions">
-                  <button className="primary-button compact-action" disabled={!allowMockWrites} onClick={saveDrawerEdit}>
-                    <Save aria-hidden="true" />
-                    {t('save')}
-                  </button>
-                  <EnvironmentActions
-                    row={selected}
-                    disabled={!allowMockWrites}
-                    t={t}
-                    onCopy={(target) => onView('copy', target.id)}
-                    onDelete={setDeleteTarget}
-                  />
-                </div>
-              </div>
-              {editingDraft && <EnvironmentProfileEditor value={editingDraft} t={t} onChange={setEditingDraft} />}
-            </section>
-          </aside>
+                {editingDraft && <EnvironmentProfileEditor value={editingDraft} t={t} onChange={setEditingDraft} />}
+              </section>
+            </aside>
+            <ResourceStatus
+              error={detailResource.error?.message ?? null}
+              loading={detailResource.loading}
+              loadingLabel={t('loadingEnvironments')}
+            />
+          </>
         </DetailDrawer>
       )}
       {deleteTarget && (
@@ -194,6 +232,7 @@ export function EnvironmentsPage({ allowMockWrites = true, environmentId, rows, 
           onConfirm={confirmDelete}
         />
       )}
+      <OperationStatus error={environmentOperation.error?.message} operation={environmentOperation.operation} t={t} />
     </main>
   )
 }
@@ -275,9 +314,13 @@ function EnvironmentActions({
   )
 }
 
+function isOperationRunning(status: string | undefined) {
+  return status === 'queued' || status === 'running'
+}
+
 function buildNewEnvironment(rows: EnvironmentRow[]): EnvironmentRow {
   return {
-    ...rows[0],
+    ...defaultEnvironmentDraft,
     id: buildEnvironmentId(rows, 'Custom Environment'),
     name: 'Custom Environment',
     profileType: 'custom',

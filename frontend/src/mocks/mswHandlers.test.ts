@@ -58,4 +58,45 @@ describe('WebUI MSW handlers', () => {
     }))
     expect(trialsBody.data[0]).not.toHaveProperty('task')
   })
+
+  it('serves every remaining Stage 2 read resource through contract routes', async () => {
+    const [agentsResponse, environmentsResponse, hubConnectionResponse, leaderboardDatasetsResponse, leaderboardResponse, systemResponse] = await Promise.all([
+      fetch('http://localhost/api/webui/v1/agents'),
+      fetch('http://localhost/api/webui/v1/environments'),
+      fetch('http://localhost/api/webui/v1/system/hub-connection'),
+      fetch('http://localhost/api/webui/v1/leaderboard/datasets'),
+      fetch('http://localhost/api/webui/v1/leaderboard?dataset=terminal-bench%402.0'),
+      fetch('http://localhost/api/webui/v1/system/health'),
+    ])
+    const [agents, environments, hubConnection, leaderboardDatasets, leaderboard, system] = await Promise.all([
+      agentsResponse.json(),
+      environmentsResponse.json(),
+      hubConnectionResponse.json(),
+      leaderboardDatasetsResponse.json(),
+      leaderboardResponse.json(),
+      systemResponse.json(),
+    ])
+
+    expect(agents.data.items[0]).toMatchObject({ agentName: 'Claude Code default', id: 'claude-code-default' })
+    expect(environments.data.items[0]).toMatchObject({ id: 'docker-default', name: 'Docker default' })
+    expect(hubConnection.data).toMatchObject({ status: 'connected' })
+    expect(leaderboardDatasets.data.items.map((item: { ref: string }) => item.ref)).toContain('terminal-bench@2.0')
+    expect(leaderboard.data.items[0]).toMatchObject({ datasetRef: 'terminal-bench@2.0', jobId: 'job_91a7' })
+    expect(system.data.items[0]).toMatchObject({ component: 'OrnnLab Service', kind: 'ornnlab-service' })
+  })
+
+  it('routes writes through contract-shaped Operations and supports polling', async () => {
+    const response = await fetch('http://localhost/api/webui/v1/system/cache/storage/clean', { method: 'POST' })
+    const body = await response.json()
+
+    expect(response.ok).toBe(true)
+    expect(body.error).toBeNull()
+    expect(body.data.operation).toMatchObject({ resourceType: 'system', status: 'queued', type: 'clean-storage-cache' })
+
+    const operationUrl = `http://localhost/api/webui/v1/operations/${body.data.operation.id}`
+    expect((await (await fetch(operationUrl)).json()).data.status).toBe('running')
+    const cancelled = await (await fetch(`${operationUrl}/cancel`, { method: 'POST' })).json()
+    expect(cancelled.data.operation.status).toBe('cancelled')
+    expect((await (await fetch(operationUrl)).json()).data.status).toBe('cancelled')
+  })
 })

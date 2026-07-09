@@ -25,6 +25,8 @@ interface DatasetDetailProps {
   onDelete: (row: DatasetRow) => void
   onExpandedTaskName: Dispatch<SetStateAction<string | null>>
   onStartDownload: (row: DatasetRow) => void
+  onSync: (row: DatasetRow) => void
+  onRunTask: (row: DatasetRow, taskName: string) => void
   onTaskSearch: (value: string) => void
   onTaskSplit: (value: string) => void
 }
@@ -37,8 +39,10 @@ export function DatasetDetail({
   onDelete,
   onExpandedTaskName,
   onStartDownload,
+  onSync,
   onTaskSearch,
   onTaskSplit,
+  onRunTask,
   selected,
   splitOptions,
   taskSearch,
@@ -83,7 +87,7 @@ export function DatasetDetail({
             </>
           )}
           {downloadState.status === 'downloaded' && isRegistryDataset && (
-            <button className="secondary-button" disabled={writeDisabled}>{t('pullUpdates')}</button>
+            <button className="secondary-button" disabled={writeDisabled} onClick={() => onSync(selected)}>{t('pullUpdates')}</button>
           )}
           {downloadState.status === 'downloaded' && (
             <button className="secondary-button" disabled={writeDisabled} onClick={() => onDelete(selected)}>
@@ -126,7 +130,14 @@ export function DatasetDetail({
               >
                 <span>{row.name}</span>
                 <div className="row-actions">
-                  <button className="row-action" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    className="row-action"
+                    disabled={writeDisabled}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRunTask(selected, row.name)
+                    }}
+                  >
                     {t('runSingleTask')}
                   </button>
                 </div>

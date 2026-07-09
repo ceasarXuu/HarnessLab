@@ -1,19 +1,36 @@
 import { Save, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useOperation } from '../api/hooks'
+import { agentRowToDto } from '../api/requestMappers'
+import type { WebUiClient } from '../api/webUiClient'
 import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { AgentIdentityEditor, AgentProfileEditor } from '../ui/components/AgentProfileEditor'
+import { OperationStatus } from '../ui/components/OperationStatus'
 
 interface NewAgentPageProps {
   canSave?: boolean
+  client: WebUiClient
   rows: AgentRow[]
   t: Translate
   onAgents: () => void
-  onSave: (agent: AgentRow) => void
+  onRefresh: () => Promise<void>
 }
 
-export function NewAgentPage({ canSave = true, rows, t, onAgents, onSave }: NewAgentPageProps) {
+export function NewAgentPage({ canSave = true, client, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
   const [draft, setDraft] = useState(() => buildNewAgent(rows))
+  const agentOperation = useOperation(client)
+
+  useEffect(() => {
+    if (agentOperation.operation?.status !== 'completed') return
+    void onRefresh().then(onAgents)
+  }, [agentOperation.operation?.id, agentOperation.operation?.status, onAgents, onRefresh])
+
+  const save = async () => {
+    if (!canSave) return
+    const agent = normalizeNewAgent(rows, draft)
+    await agentOperation.submit(() => client.createAgent(agentRowToDto(agent)), ({ operation }) => operation)
+  }
 
   return (
     <main className="workspace single-page">
@@ -34,7 +51,7 @@ export function NewAgentPage({ canSave = true, rows, t, onAgents, onSave }: NewA
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" disabled={!canSave} onClick={() => onSave(normalizeNewAgent(rows, draft))}>
+              <button className="primary-button" disabled={!canSave || isOperationRunning(agentOperation.operation?.status)} onClick={save}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>
@@ -46,12 +63,18 @@ export function NewAgentPage({ canSave = true, rows, t, onAgents, onSave }: NewA
           <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
         </section>
       </div>
+      <OperationStatus error={agentOperation.error?.message} operation={agentOperation.operation} t={t} />
     </main>
   )
 }
 
+function isOperationRunning(status: string | undefined) {
+  return status === 'queued' || status === 'running'
+}
+
 function buildNewAgent(rows: AgentRow[]): AgentRow {
   return {
+    id: buildAgentId(rows, 'Custom Agent'),
     agentName: buildUniqueAgentName(rows, 'Custom Agent'),
     harness: 'custom-harness',
     type: 'custom',
@@ -80,11 +103,25 @@ function normalizeNewAgent(rows: AgentRow[], draft: AgentRow): AgentRow {
   const agentName = draft.agentName.trim() || buildUniqueAgentName(rows, 'Custom Agent')
   return {
     ...draft,
+    id: buildAgentId(rows, agentName),
     agentName,
     type: 'custom',
     source: buildAgentSource(agentName),
     updated: 'just now',
   }
+}
+
+function buildAgentId(rows: AgentRow[], agentName: string) {
+  const base = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'custom-agent'
+  const existing = new Set(rows.map((row) => row.id))
+  if (!existing.has(base)) return base
+  let index = 2
+  let candidate = `${base}-${index}`
+  while (existing.has(candidate)) {
+    index += 1
+    candidate = `${base}-${index}`
+  }
+  return candidate
 }
 
 function buildUniqueAgentName(rows: AgentRow[], baseName: string) {

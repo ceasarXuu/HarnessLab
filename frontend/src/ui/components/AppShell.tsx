@@ -4,6 +4,7 @@ import { localeNames, type Locale, type Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 
 export type PageKey = 'jobs' | 'datasets' | 'agents' | 'environments' | 'leaderboard' | 'system'
+export type HubConnectionState = 'connected' | 'disconnected' | 'expired' | 'loading' | 'unavailable'
 
 const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
   { key: 'jobs', label: 'jobs' },
@@ -17,6 +18,7 @@ const navItems: Array<{ key: PageKey; label: Parameters<Translate>[0] }> = [
 interface AppShellProps {
   activePage: PageKey
   children: ReactNode
+  hubConnection: HubConnectionState
   language: Locale
   theme: 'light' | 'dark'
   t: Translate
@@ -28,6 +30,7 @@ interface AppShellProps {
 export function AppShell({
   activePage,
   children,
+  hubConnection,
   language,
   theme,
   t,
@@ -67,10 +70,10 @@ export function AppShell({
           ))}
         </nav>
         <div className="topbar-actions">
-          <button className="secondary-button auth-chip">
+          <span className={`secondary-button auth-chip auth-chip-${hubConnection}`} role="status">
             <Github aria-hidden="true" />
-            {t('harborAuthReady')}
-          </button>
+            {hubConnectionLabel(t, hubConnection)}
+          </span>
           <CustomSelect
             ariaLabel={t('language')}
             className="header-select"
@@ -90,4 +93,12 @@ export function AppShell({
       {children}
     </div>
   )
+}
+
+function hubConnectionLabel(t: Translate, status: HubConnectionState) {
+  if (status === 'connected') return t('harborAuthReady')
+  if (status === 'disconnected') return t('harborAuthDisconnected')
+  if (status === 'expired') return t('harborAuthExpired')
+  if (status === 'loading') return t('harborAuthLoading')
+  return t('harborAuthUnavailable')
 }

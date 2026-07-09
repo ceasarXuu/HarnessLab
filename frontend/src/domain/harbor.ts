@@ -167,6 +167,7 @@ export interface DatasetRow {
 }
 
 export interface AgentRow {
+  id: string
   agentName: string
   harness: string
   type: 'built-in' | 'custom'
@@ -244,8 +245,10 @@ export interface LeaderboardRow {
   submitted: string
   reportPath: string
   comparabilityKey: string
-  uploadedUrl: string
-  submissionId: string
-  configHash: string
-  agentSnapshotHash: string
+}
+
+export interface LeaderboardDataset {
+  name: string
+  ref: string
+  version: string
 }

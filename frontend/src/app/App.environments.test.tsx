@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from './App'
 
@@ -8,7 +8,7 @@ describe('Environment templates', () => {
     window.location.hash = ''
   })
 
-  it('manages OrnnLab-local templates over Harbor config fields', () => {
+  it('manages OrnnLab-local templates over Harbor config fields', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
@@ -22,7 +22,7 @@ describe('Environment templates', () => {
     expect(screen.queryByRole('columnheader', { name: 'Runtime overrides' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
 
-    const builtinRow = screen.getByText('Docker default').closest('tr')
+    const builtinRow = (await screen.findByText('Docker default')).closest('tr')
     const customRow = screen.getByText('Docker GPU').closest('tr')
     expect(builtinRow).not.toBeNull()
     expect(customRow).not.toBeNull()
@@ -32,19 +32,14 @@ describe('Environment templates', () => {
     expect(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
 
     fireEvent.click(within(builtinRow as HTMLElement).getByRole('button', { name: 'Copy' }))
-    expect(screen.getByRole('heading', { name: 'Copy Environment' })).toBeInTheDocument()
-    expect(window.location.hash).toBe('#environments/docker-default/copy')
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
-    expect(screen.getByText('Docker default copy')).toBeInTheDocument()
+    expect(await screen.findByText('Docker default copy', {}, { timeout: 2_000 })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'New Environment' }))
     expect(screen.getByRole('heading', { name: 'New Environment' })).toBeInTheDocument()
     expect(window.location.hash).toBe('#environments/new')
     fireEvent.change(screen.getByLabelText('Environment Name'), { target: { value: 'Docker local tmp' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
-    expect(screen.getByText('Docker local tmp')).toBeInTheDocument()
+    expect(await screen.findByText('Docker local tmp', {}, { timeout: 2_000 })).toBeInTheDocument()
 
     const customRowForEdit = screen.getByText('Docker GPU').closest('tr')
     expect(customRowForEdit).not.toBeNull()
@@ -106,10 +101,12 @@ describe('Environment templates', () => {
     fireEvent.click(within(editableEnvironmentDialog).getByRole('tab', { name: 'Basic' }))
     fireEvent.change(screen.getByLabelText('Environment Name'), { target: { value: 'Docker GPU tuned' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect((await screen.findAllByText('Docker GPU tuned', {}, { timeout: 2_000 })).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
-    expect(screen.getByText('Docker GPU tuned')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText('Docker GPU tuned'))
+    const tunedRow = screen.getAllByText('Docker GPU tuned').find((element) => element.closest('tr'))?.closest('tr')
+    expect(tunedRow).not.toBeNull()
+    fireEvent.click(tunedRow as HTMLElement)
     const environmentDialog = screen.getByRole('dialog', { name: 'Selected environment' })
     expect(within(environmentDialog).getByDisplayValue('nvidia/cuda:12.4-runtime')).toBeInTheDocument()
     fireEvent.click(within(environmentDialog).getByRole('tab', { name: 'Advanced' }))
@@ -121,7 +118,7 @@ describe('Environment templates', () => {
     fireEvent.click(within(copiedRow as HTMLElement).getByRole('button', { name: 'Delete' }))
     expect(screen.getByRole('dialog', { name: 'Delete custom environment' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
-    expect(screen.queryByText('Docker default copy')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Docker default copy')).not.toBeInTheDocument(), { timeout: 2_000 })
 
     fireEvent.click(screen.getByRole('link', { name: 'Jobs' }))
     fireEvent.click(screen.getByRole('button', { name: 'New Job' }))

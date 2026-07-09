@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useDatasets, useJobs } from '../api/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAgents, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
+import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
-import { datasetDtoToRow, jobDtoToHarborJob } from '../api/viewModels'
+import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
-import type { HarborJob, LeaderboardRow } from '../domain/harbor'
+import { defaultRunDraft } from '../domain/defaults'
+import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
-import { initialDraft } from '../mocks/demo'
-import { agentRows, environmentRows } from '../mocks/demoCatalog'
-import { leaderboardRows, systemRows } from '../mocks/demoSystem'
+import { OperationStatus } from '../ui/components/OperationStatus'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { getTranslator, type Locale } from '../i18n'
 import { JobsPage } from '../screens/JobsPage'
 import { AgentsPage } from '../screens/AgentsPage'
@@ -78,28 +79,58 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const [route, setRoute] = useState<RouteState>(readRouteFromHash)
   const dataMode = injectedDataMode ?? readWebUiDataMode()
   const client = useMemo(() => injectedClient ?? createRuntimeWebUiClient(dataMode), [dataMode, injectedClient])
-  const canSimulateWrites = dataMode === 'mock'
+  const writesEnabled = true
+  const agentsResource = useAgents(client)
   const jobsResource = useJobs(client)
   const datasetsResource = useDatasets(client)
-  const [jobs, setJobs] = useState<HarborJob[]>([])
-  const [agents, setAgents] = useState(() => (canSimulateWrites ? agentRows : []))
-  const [environmentProfiles, setEnvironmentProfiles] = useState(() => (canSimulateWrites ? environmentRows : []))
-  const [leaderboardEntries, setLeaderboardEntries] = useState(() => (canSimulateWrites ? leaderboardRows : []))
+  const environmentsResource = useEnvironments(client)
+  const leaderboardDatasetsResource = useLeaderboardDatasets(client)
+  const hubConnectionResource = useHubConnection(client)
   const [datasetSearch, setDatasetSearch] = useState('')
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
+  const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
+  const systemResource = useSystemHealth(client)
+  const jobOperation = useOperation(client)
   const [selected, setSelected] = useState<HarborJob | null>(null)
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [draft, setDraft] = useState(initialDraft)
+  const [draft, setDraft] = useState(defaultRunDraft)
   const [language, setLanguage] = useState<Locale>(readLocale)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
   const t = useMemo(() => getTranslator(language), [language])
+  const agents = useMemo(() => agentsResource.data?.items.map(agentDtoToRow) ?? [], [agentsResource.data])
   const datasets = useMemo(() => datasetsResource.data?.items.map(datasetDtoToRow) ?? [], [datasetsResource.data])
+  const environmentProfiles = useMemo(
+    () => environmentsResource.data?.items.map(environmentDtoToRow) ?? [],
+    [environmentsResource.data],
+  )
+  const jobs = useMemo(() => jobsResource.data?.items.map(jobDtoToHarborJob) ?? [], [jobsResource.data])
+  const leaderboardEntries = useMemo(
+    () => leaderboardResource.data?.items.map(leaderboardEntryDtoToRow) ?? [],
+    [leaderboardResource.data],
+  )
+  const leaderboardDatasets = useMemo(
+    () => leaderboardDatasetsResource.data?.items.map(leaderboardDatasetDtoToRow) ?? [],
+    [leaderboardDatasetsResource.data],
+  )
+  const hubConnection = hubConnectionResource.loading
+    ? 'loading'
+    : hubConnectionResource.data?.status ?? 'unavailable'
 
   useEffect(() => {
-    if (jobsResource.data) setJobs(jobsResource.data.items.map(jobDtoToHarborJob))
-  }, [jobsResource.data])
+    const firstDataset = leaderboardDatasets[0]?.ref
+    if (firstDataset && !leaderboardDatasets.some((item) => item.ref === leaderboardDataset)) {
+      setLeaderboardDataset(firstDataset)
+    }
+  }, [leaderboardDataset, leaderboardDatasets])
+
+  useEffect(() => {
+    if (jobOperation.operation?.status !== 'completed') return
+    void jobsResource.refresh()
+    void leaderboardDatasetsResource.refresh()
+    void leaderboardResource.refresh()
+  }, [jobOperation.operation?.id, jobOperation.operation?.status, jobsResource.refresh, leaderboardDatasetsResource.refresh, leaderboardResource.refresh])
 
   const filteredJobs = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -141,7 +172,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     window.localStorage.setItem('ornnlab.locale', language)
   }, [language, theme])
 
-  function navigate(page: PageKey, jobView: JobView = 'list') {
+  const navigate = useCallback((page: PageKey, jobView: JobView = 'list') => {
     const nextRoute: RouteState = {
       page,
       jobView: page === 'jobs' ? jobView : 'list',
@@ -153,18 +184,18 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     if (window.location.hash !== nextHash) {
       window.history.pushState(null, '', nextHash)
     }
-  }
+  }, [])
 
-  function navigateAgent(agentView: AgentView) {
+  const navigateAgent = useCallback((agentView: AgentView) => {
     const nextRoute: RouteState = { page: 'agents', jobView: 'list', agentView, environmentView: 'list' }
     const nextHash = agentView === 'new' ? '#agents/new' : '#agents'
     setRoute(nextRoute)
     if (window.location.hash !== nextHash) {
       window.history.pushState(null, '', nextHash)
     }
-  }
+  }, [])
 
-  function navigateEnvironment(environmentView: EnvironmentView, environmentId?: string) {
+  const navigateEnvironment = useCallback((environmentView: EnvironmentView, environmentId?: string) => {
     const nextRoute: RouteState = { page: 'environments', jobView: 'list', agentView: 'list', environmentView, environmentId }
     const nextHash =
       environmentView === 'list'
@@ -176,92 +207,47 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     if (window.location.hash !== nextHash) {
       window.history.pushState(null, '', nextHash)
     }
-  }
+  }, [])
 
-  function launchDraft() {
-    if (!canSimulateWrites) return
-    const nextJobId = `job_${Math.floor(Math.random() * 9000 + 1000)}`
-    const nextJobRoot = `/Users/xuzhang/.ornnlab/HarnessLab/${draft.jobsDir}`
-    const draftDataset = datasets.find((row) => `${row.name}@${row.version}` === draft.source)
-    const draftEnvironment = environmentProfiles.find((row) => row.id === draft.environment)
-    const selectedTaskCount = draft.selectedTaskNames?.length ?? draftDataset?.tasks ?? 0
-    const newJob: HarborJob = {
-      id: nextJobId,
-      name: `${draft.source.split('@')[0]}-draft`,
-      status: 'queued',
-      dataset: draft.source,
-      agent: draft.agent,
-      model: draft.model.split('/').at(-1) ?? draft.model,
-      environment: draftEnvironment?.name ?? draft.environment,
-      trials: `0 / ${selectedTaskCount}`,
-      score: '-',
-      cost: '$0.00',
-      tokens: '0',
-      tokenUsage: '0M',
-      runtimeDuration: '00:00:00',
-      createdAt: '2026-06-29 04:30:00',
-      includeInLeaderboard: draft.includeInLeaderboard,
-      jobDir: draft.jobsDir,
-      eventLogPath: `${nextJobRoot}/job.log`,
-      artifactPaths: [
-        `${nextJobRoot}/harbor.config.json`,
-        `${nextJobRoot}/harbor.capability.json`,
-        `${nextJobRoot}/result.json`,
-        `${nextJobRoot}/job.log`,
-        nextJobRoot,
-        `/Users/xuzhang/.ornnlab/HarnessLab/trials/${nextJobId}`,
-      ],
-      split: draft.split,
-    }
-    setJobs((current) => [newJob, ...current])
-    if (draft.includeInLeaderboard) {
-      setLeaderboardEntries((current) => [...current, buildLeaderboardEntryFromJob(newJob, draft.metric)])
-    }
-    setSelected(newJob)
-    setJobDrawerOpen(true)
-    navigate('jobs', 'list')
-  }
-
-  function updateEnvironmentProfiles(nextRows: typeof environmentRows) {
-    setEnvironmentProfiles(nextRows)
-    if (!nextRows.some((row) => row.id === draft.environment)) {
-      setDraft((current) => ({ ...current, environment: nextRows[0]?.id ?? current.environment }))
-    }
-  }
-
-  function removeFromLeaderboard(jobId: string) {
-    if (!canSimulateWrites) return
-    setJobs((current) =>
-      current.map((job) => (job.id === jobId ? { ...job, includeInLeaderboard: false } : job)),
+  async function launchDraft() {
+    if (!writesEnabled) return
+    await jobOperation.submit(
+      () => client.createJob(runDraftToCreateJobRequest(draft)),
+      ({ operation }) => operation,
     )
-    setLeaderboardEntries((current) => current.filter((row) => row.jobId !== jobId))
   }
 
-  function updateJobLeaderboardInclusion(jobId: string, includeInLeaderboard: boolean) {
-    if (!canSimulateWrites) return
-    setJobs((current) =>
-      current.map((job) => (job.id === jobId ? { ...job, includeInLeaderboard } : job)),
+  function copyJobConfig() {
+    if (!navigator.clipboard) return
+    void navigator.clipboard.writeText(JSON.stringify(runDraftToCreateJobRequest(draft).config, null, 2))
+  }
+
+  async function removeFromLeaderboard(jobId: string) {
+    await updateJobLeaderboardInclusion(jobId, false)
+  }
+
+  async function updateJobLeaderboardInclusion(jobId: string, includeInLeaderboard: boolean) {
+    if (!writesEnabled) return
+    await jobOperation.submit(
+      () => client.updateJobLeaderboard(jobId, { includeInLeaderboard }),
+      ({ operation }) => operation,
     )
-    setSelected((current) => (current?.id === jobId ? { ...current, includeInLeaderboard } : current))
-    if (!includeInLeaderboard) {
-      setLeaderboardEntries((current) => current.filter((row) => row.jobId !== jobId))
-      return
-    }
-    const targetJob = jobs.find((job) => job.id === jobId)
-    if (!targetJob) {
-      return
-    }
-    setLeaderboardEntries((current) => {
-      if (current.some((row) => row.jobId === jobId)) {
-        return current
-      }
-      return [...current, buildLeaderboardEntryFromJob({ ...targetJob, includeInLeaderboard })]
-    })
+  }
+
+  async function runJobAction(jobId: string, action: 'cancel' | 'retry' | 'resume') {
+    if (!writesEnabled) return
+    const mutation = action === 'cancel'
+      ? () => client.cancelJob(jobId)
+      : action === 'retry'
+        ? () => client.retryJob(jobId)
+        : () => client.resumeJob(jobId)
+    await jobOperation.submit(mutation, ({ operation }) => operation)
   }
 
   return (
     <AppShell
       activePage={route.page}
+      hubConnection={hubConnection}
       language={language}
       theme={theme}
       t={t}
@@ -272,11 +258,12 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
       {route.page === 'datasets' && (
         <>
           <DatasetsPage
-            allowMockWrites={canSimulateWrites}
+            writesEnabled={writesEnabled}
             client={client}
             rows={filteredDatasets}
             search={datasetSearch}
             t={t}
+            onRefresh={datasetsResource.refresh}
             onSearch={setDatasetSearch}
           />
           <ResourceStatus
@@ -287,58 +274,80 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
         </>
       )}
       {route.page === 'agents' && route.agentView === 'list' && (
-        <AgentsPage
-          allowMockWrites={canSimulateWrites}
-          rows={agents}
-          t={t}
-          onNewAgent={() => navigateAgent('new')}
-          onRowsChange={setAgents}
-        />
+        <>
+          <AgentsPage
+            writesEnabled={writesEnabled}
+            client={client}
+            rows={agents}
+            t={t}
+            onNewAgent={() => navigateAgent('new')}
+            onRefresh={agentsResource.refresh}
+          />
+          <ResourceStatus
+            error={agentsResource.error ? t('unableToLoadAgents') : null}
+            loading={agentsResource.loading}
+            loadingLabel={t('loadingAgents')}
+          />
+        </>
       )}
       {route.page === 'agents' && route.agentView === 'new' && (
         <NewAgentPage
-          canSave={canSimulateWrites}
+          canSave={writesEnabled}
+          client={client}
           rows={agents}
           t={t}
           onAgents={() => navigateAgent('list')}
-          onSave={(agent) => {
-            if (!canSimulateWrites) return
-            setAgents((current) => [agent, ...current])
-            navigateAgent('list')
-          }}
+          onRefresh={agentsResource.refresh}
         />
       )}
       {route.page === 'environments' && (
-        <EnvironmentsPage
-          allowMockWrites={canSimulateWrites}
-          environmentId={route.environmentId}
-          rows={environmentProfiles}
-          t={t}
-          view={route.environmentView}
-          onRowsChange={updateEnvironmentProfiles}
-          onView={navigateEnvironment}
-        />
+        <>
+          <EnvironmentsPage
+            writesEnabled={writesEnabled}
+            client={client}
+            environmentId={route.environmentId}
+            rows={environmentProfiles}
+            t={t}
+            view={route.environmentView}
+            onRefresh={environmentsResource.refresh}
+            onView={navigateEnvironment}
+          />
+          <ResourceStatus
+            error={environmentsResource.error ? t('unableToLoadEnvironments') : null}
+            loading={environmentsResource.loading}
+            loadingLabel={t('loadingEnvironments')}
+          />
+        </>
       )}
       {route.page === 'leaderboard' && (
-        <LeaderboardPage
-          allowMockWrites={canSimulateWrites}
-          dataset={leaderboardDataset}
-          datasetSearch={leaderboardDatasetSearch}
-          datasets={datasets}
-          client={client}
-          jobs={jobs}
-          rows={filteredLeaderboard}
-          t={t}
-          onDataset={setLeaderboardDataset}
-          onDatasetSearch={setLeaderboardDatasetSearch}
-          onLeaderboardChange={updateJobLeaderboardInclusion}
-          onRemove={removeFromLeaderboard}
-        />
+        <>
+          <LeaderboardPage
+            writesEnabled={writesEnabled}
+            dataset={leaderboardDataset}
+            datasetSearch={leaderboardDatasetSearch}
+            leaderboardDatasets={leaderboardDatasets}
+            client={client}
+            jobs={jobs}
+            rows={filteredLeaderboard}
+            t={t}
+            onDataset={setLeaderboardDataset}
+            onDatasetSearch={setLeaderboardDatasetSearch}
+            onJobAction={runJobAction}
+            onLeaderboardChange={updateJobLeaderboardInclusion}
+            onRemove={removeFromLeaderboard}
+          />
+          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
+          <ResourceStatus
+            error={leaderboardDatasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
+            loading={leaderboardDatasetsResource.loading || leaderboardResource.loading}
+            loadingLabel={t('loadingLeaderboard')}
+          />
+        </>
       )}
       {route.page === 'jobs' && route.jobView === 'list' && (
         <>
           <JobsPage
-            allowMockWrites={canSimulateWrites}
+            writesEnabled={writesEnabled}
             client={client}
             jobs={filteredJobs}
             open={jobDrawerOpen}
@@ -347,6 +356,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             t={t}
             onClose={() => setJobDrawerOpen(false)}
             onLeaderboardChange={updateJobLeaderboardInclusion}
+            onJobAction={runJobAction}
             onNewJob={() => navigate('jobs', 'new')}
             onSearch={setSearch}
             onSelect={(job) => {
@@ -359,53 +369,44 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             loading={jobsResource.loading}
             loadingLabel={t('loadingJobs')}
           />
+          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
         </>
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (
-        <NewRunPage
-          canSimulateWrites={canSimulateWrites}
-          datasets={datasets}
-          client={client}
-          draft={draft}
-          environments={environmentProfiles}
-          t={t}
-          onDraft={setDraft}
-          onJobs={() => navigate('jobs', 'list')}
-          onLaunch={launchDraft}
-        />
+        <>
+          <NewRunPage
+            canLaunch={writesEnabled}
+            agents={agents}
+            datasets={datasets}
+            client={client}
+            draft={draft}
+            environments={environmentProfiles}
+            t={t}
+            onDraft={setDraft}
+            onJobs={() => navigate('jobs', 'list')}
+            onCopyJobConfig={copyJobConfig}
+            onLaunch={launchDraft}
+            onReset={() => setDraft(defaultRunDraft)}
+          />
+          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
+        </>
       )}
-      {route.page === 'system' && <SystemPage allowMockWrites={canSimulateWrites} rows={canSimulateWrites ? systemRows : []} t={t} />}
+      {route.page === 'system' && (
+        <>
+          <SystemPage
+            writesEnabled={writesEnabled}
+            client={client}
+            rows={systemResource.data?.items.map(systemComponentDtoToRow) ?? []}
+            t={t}
+            onRefresh={systemResource.refresh}
+          />
+          <ResourceStatus
+            error={systemResource.error ? t('unableToLoadSystem') : null}
+            loading={systemResource.loading}
+            loadingLabel={t('loadingSystem')}
+          />
+        </>
+      )}
     </AppShell>
   )
-}
-
-function ResourceStatus({ error, loading, loadingLabel }: { error: string | null; loading: boolean; loadingLabel: string }) {
-  if (error) return <div className="resource-state error" role="alert">{error}</div>
-  if (loading) return <div className="resource-state" role="status">{loadingLabel}</div>
-  return null
-}
-
-function buildLeaderboardEntryFromJob(job: HarborJob, metric = 'pass@1 mean'): LeaderboardRow {
-  return {
-    dataset: job.dataset,
-    rank: 0,
-    agentName: job.agent,
-    harness: job.agent,
-    model: job.model,
-    score: job.score,
-    trials: job.trials.split('/')[0]?.trim() ?? job.trials,
-    cost: job.cost,
-    tokens: job.tokenUsage,
-    duration: job.runtimeDuration,
-    jobId: job.id,
-    split: job.split || 'default',
-    metric,
-    submitted: 'local only',
-    reportPath: `reports/${job.id}.json`,
-    comparabilityKey: `${job.dataset}:${job.split || 'default'}:${metric}`,
-    uploadedUrl: '-',
-    submissionId: '-',
-    configHash: `cfg_${job.id}`,
-    agentSnapshotHash: `agent_${job.agent}`,
-  }
 }

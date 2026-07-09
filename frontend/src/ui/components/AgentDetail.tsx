@@ -1,3 +1,4 @@
+import { Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
@@ -5,10 +6,12 @@ import { AgentIdentityEditor, AgentProfileEditor, getAgentStatusLabel } from './
 
 interface AgentDetailProps {
   agent: AgentRow
+  canSave?: boolean
   t: Translate
+  onSave: (agent: AgentRow) => void
 }
 
-export function AgentDetail({ agent, t }: AgentDetailProps) {
+export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
@@ -25,7 +28,15 @@ export function AgentDetail({ agent, t }: AgentDetailProps) {
             <h2>{draft.agentName}</h2>
             <p>{draft.harness}</p>
           </div>
-          <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
+          <div className="rail-heading-actions">
+            <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
+            {draft.type === 'custom' && (
+              <button className="primary-button compact-action" disabled={!canSave} onClick={() => onSave(draft)}>
+                <Save aria-hidden="true" />
+                {t('save')}
+              </button>
+            )}
+          </div>
         </div>
         <AgentIdentityEditor value={draft} t={t} onChange={setDraft} />
       </section>

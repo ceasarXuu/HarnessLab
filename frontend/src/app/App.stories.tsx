@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { createUnavailableWebUiClient } from '../api/unavailableClient'
+import { createMockWebUiClient } from '../api/mockClient'
 import type { WebUiClient } from '../api/webUiClient'
 import type { Locale } from '../i18n'
 import { App } from './App'
@@ -31,18 +33,18 @@ function AppFixture({
   return <App client={client} />
 }
 
-const unavailableClient: WebUiClient = {
-  getDataset: async () => ({ data: null, error: null }),
-  getJob: async () => ({ data: null, error: null }),
-  listDatasetTasks: async () => ({ data: null, error: null }),
-  listDatasets: async () => ({ data: null, error: null }),
-  listJobEvents: async () => ({ data: null, error: null }),
-  listJobTrials: async () => ({ data: null, error: null }),
-  listJobs: async () => ({
-    data: null,
-    error: { code: 'NETWORK_REQUEST_FAILED', message: 'The API request could not be completed.' },
-  }),
-}
+const unavailableClient = createUnavailableWebUiClient()
+const jobsLoadingClient = createUnavailableWebUiClient({ listJobs: () => new Promise(() => undefined) })
+const datasetsLoadingClient = createUnavailableWebUiClient({ listDatasets: () => new Promise(() => undefined) })
+const agentsLoadingClient = createUnavailableWebUiClient({ listAgents: () => new Promise(() => undefined) })
+const environmentsLoadingClient = createUnavailableWebUiClient({ listEnvironments: () => new Promise(() => undefined) })
+const leaderboardLoadingClient = createUnavailableWebUiClient({
+  listLeaderboard: () => new Promise(() => undefined),
+  listLeaderboardDatasets: () => new Promise(() => undefined),
+})
+const systemLoadingClient = createUnavailableWebUiClient({ listSystemHealth: () => new Promise(() => undefined) })
+const hubDisconnectedClient = createMockWebUiClient()
+hubDisconnectedClient.getHubConnection = async () => ({ data: { status: 'disconnected' }, error: null })
 
 export const Default: Story = {
   render: () => <AppFixture />,
@@ -68,4 +70,52 @@ export const AgentsNewRoute: Story = {
 export const JobsApiUnavailable: Story = {
   name: 'Jobs / API unavailable',
   render: () => <AppFixture client={unavailableClient} />,
+}
+
+export const JobsLoading: Story = {
+  render: () => <AppFixture client={jobsLoadingClient} />,
+}
+
+export const HubDisconnected: Story = {
+  render: () => <AppFixture client={hubDisconnectedClient} />,
+}
+
+export const DatasetsApiUnavailable: Story = {
+  render: () => <AppFixture client={unavailableClient} hash="#datasets" />,
+}
+
+export const DatasetsLoading: Story = {
+  render: () => <AppFixture client={datasetsLoadingClient} hash="#datasets" />,
+}
+
+export const AgentsApiUnavailable: Story = {
+  render: () => <AppFixture client={unavailableClient} hash="#agents" />,
+}
+
+export const AgentsLoading: Story = {
+  render: () => <AppFixture client={agentsLoadingClient} hash="#agents" />,
+}
+
+export const EnvironmentsApiUnavailable: Story = {
+  render: () => <AppFixture client={unavailableClient} hash="#environments" />,
+}
+
+export const EnvironmentsLoading: Story = {
+  render: () => <AppFixture client={environmentsLoadingClient} hash="#environments" />,
+}
+
+export const LeaderboardApiUnavailable: Story = {
+  render: () => <AppFixture client={unavailableClient} hash="#leaderboard" />,
+}
+
+export const LeaderboardLoading: Story = {
+  render: () => <AppFixture client={leaderboardLoadingClient} hash="#leaderboard" />,
+}
+
+export const SystemApiUnavailable: Story = {
+  render: () => <AppFixture client={unavailableClient} hash="#system" />,
+}
+
+export const SystemLoading: Story = {
+  render: () => <AppFixture client={systemLoadingClient} hash="#system" />,
 }

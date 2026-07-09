@@ -1,20 +1,23 @@
 import { Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useDataset, useDatasetTasks } from '../api/hooks'
+import { useDataset, useDatasetTasks, useOperation } from '../api/hooks'
 import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
+import { OperationStatus } from '../ui/components/OperationStatus'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 import type { DatasetRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {
-  allowMockWrites?: boolean
+  writesEnabled?: boolean
   client: WebUiClient
   rows: DatasetRow[]
   search: string
   t: Translate
+  onRefresh: () => Promise<void>
   onSearch: (value: string) => void
 }
 
@@ -39,7 +42,7 @@ const defaultImportDraft = {
   version: 'local',
 }
 
-export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, onSearch }: DatasetsPageProps) {
+export function DatasetsPage({ writesEnabled = true, client, rows, search, t, onRefresh, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [taskSearch, setTaskSearch] = useState('')
@@ -48,22 +51,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importDraft, setImportDraft] = useState(defaultImportDraft)
-  const [importedRows, setImportedRows] = useState<DatasetRow[]>([])
-  const [downloads, setDownloads] = useState<Record<string, DatasetDownloadState>>(() =>
-    Object.fromEntries(rows.map((row) => [datasetKey(row), initialDownloadState(row)])),
-  )
-  const visibleRows = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    const visibleImportedRows = query
-      ? importedRows.filter((row) =>
-          [row.name, row.version, row.visibility, row.source, row.digest, row.path ?? ''].some((value) =>
-            (value ?? '').toLowerCase().includes(query),
-          ),
-        )
-      : importedRows
-
-    return [...visibleImportedRows, ...rows]
-  }, [importedRows, rows, search])
+  const datasetOperation = useOperation(client)
   const selectedRef = selected?.ref ?? (selected ? datasetKey(selected) : undefined)
   const detailResource = useDataset(client, selectedRef)
   const tasksResource = useDatasetTasks(client, selectedRef)
@@ -85,94 +73,58 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
   ]
 
   useEffect(() => {
-    setDownloads((current) => {
-      const next = { ...current }
-      for (const row of rows) {
-        const key = datasetKey(row)
-        if (!next[key]) next[key] = initialDownloadState(row)
-      }
-      return next
-    })
-  }, [rows])
+    if (datasetOperation.operation?.status !== 'completed') return
+    void onRefresh()
+    void detailResource.refresh()
+    void tasksResource.refresh()
+  }, [datasetOperation.operation?.id, datasetOperation.operation?.status, detailResource.refresh, onRefresh, tasksResource.refresh])
 
-  useEffect(() => {
-    const activeDownloads = Object.entries(downloads).filter(([, value]) => value.status === 'downloading')
-    if (activeDownloads.length === 0) return undefined
-
-    const timer = window.setInterval(() => {
-      setDownloads((current) => {
-        const next = { ...current }
-        for (const [key, value] of Object.entries(current)) {
-          if (value.status !== 'downloading') continue
-          const progress = Math.min(value.progress + 20, 100)
-          next[key] = progress >= 100
-            ? { path: `~/.cache/harbor/datasets/${key.replace('@', '-')}`, size: 'pending scan', status: 'downloaded' }
-            : { progress, status: 'downloading' }
-        }
-        return next
-      })
-    }, 800)
-
-    return () => window.clearInterval(timer)
-  }, [downloads])
-
-  const downloadStateFor = (row: DatasetRow) => downloads[datasetKey(row)] ?? { status: 'not-downloaded' }
-  const startDownload = (row: DatasetRow) => {
-    if (!allowMockWrites) return
-    setDownloads((current) => ({ ...current, [datasetKey(row)]: { progress: 0, status: 'downloading' } }))
+  const downloadStateFor = (row: DatasetRow): DatasetDownloadState => {
+    const operation = datasetOperation.operation
+    if (operation && operation.resourceId === row.ref && operation.type === 'download-dataset' && (operation.status === 'queued' || operation.status === 'running')) {
+      return { progress: operation.progress ?? 0, status: 'downloading' }
+    }
+    return initialDownloadState(row)
   }
-  const cancelDownload = (row: DatasetRow) => {
-    if (!allowMockWrites) return
-    setDownloads((current) => ({ ...current, [datasetKey(row)]: { status: 'not-downloaded' } }))
+  const startDownload = async (row: DatasetRow) => {
+    if (!writesEnabled) return
+    await datasetOperation.submit(() => client.downloadDataset(datasetKey(row)), ({ operation }) => operation)
   }
-  const confirmDelete = () => {
-    if (!allowMockWrites) return
+  const cancelDownload = async (row: DatasetRow) => {
+    if (!writesEnabled) return
+    await datasetOperation.submit(() => client.cancelDatasetDownload(datasetKey(row)), ({ operation }) => operation)
+  }
+  const syncDataset = async (row: DatasetRow) => {
+    if (!writesEnabled) return
+    await datasetOperation.submit(() => client.syncDataset(datasetKey(row)), ({ operation }) => operation)
+  }
+  const runTask = async (row: DatasetRow, taskName: string) => {
+    if (!writesEnabled) return
+    await datasetOperation.submit(() => client.runDatasetTask(datasetKey(row), taskName), ({ operation }) => operation)
+  }
+  const confirmDelete = async () => {
+    if (!writesEnabled) return
     if (!deleteTarget) return
-    setDownloads((current) => ({ ...current, [datasetKey(deleteTarget)]: { status: 'not-downloaded' } }))
+    await datasetOperation.submit(() => client.deleteLocalDataset(datasetKey(deleteTarget)), ({ operation }) => operation)
     setDeleteTarget(null)
   }
-  const confirmImportDataset = () => {
-    if (!allowMockWrites) return
+  const confirmImportDataset = async () => {
+    if (!writesEnabled) return
     const taskCount = Number.parseInt(importDraft.tasks, 10)
-    const nextRow: DatasetRow = {
-      name: importDraft.name.trim() || defaultImportDraft.name,
-      version: importDraft.version.trim() || defaultImportDraft.version,
-      visibility: 'private',
-      tasks: Number.isFinite(taskCount) && taskCount > 0 ? taskCount : 0,
-      source: t('localImport'),
-      digest: t('localOnly'),
-      updated: t('justNow'),
-      downloadStatus: 'downloaded',
-      downloadPath: importDraft.path.trim() || defaultImportDraft.path,
-      size: t('localDataset'),
-      registryUrl: 'local',
-      registryPath: importDraft.path.trim() || defaultImportDraft.path,
-      downloadDir: importDraft.path.trim() || defaultImportDraft.path,
-      manifestPath: 'dataset.toml',
-      ref: `${importDraft.name.trim() || defaultImportDraft.name}@${importDraft.version.trim() || defaultImportDraft.version}`,
-      path: importDraft.path.trim() || defaultImportDraft.path,
-      overwrite: false,
-      splits: ['local'],
-    }
-    setImportedRows((current) => [nextRow, ...current])
-    setDownloads((current) => ({
-      ...current,
-      [datasetKey(nextRow)]: {
-        path: nextRow.path ?? defaultImportDraft.path,
-        size: nextRow.size ?? t('localDataset'),
-        status: 'downloaded',
-      },
-    }))
-    setSelected(nextRow)
-    setExpandedTaskName(null)
-    setTaskSearch('')
-    setTaskSplit('all')
-    setDrawerOpen(true)
+    await datasetOperation.submit(
+      () => client.importDataset({
+        name: importDraft.name.trim() || defaultImportDraft.name,
+        path: importDraft.path.trim() || defaultImportDraft.path,
+        taskCount: Number.isFinite(taskCount) && taskCount > 0 ? taskCount : 0,
+        version: importDraft.version.trim() || defaultImportDraft.version,
+      }),
+      ({ operation }) => operation,
+    )
     setImportDialogOpen(false)
     setImportDraft(defaultImportDraft)
   }
-  const selectedDownloadState = selected ? downloadStateFor(selected) : { status: 'not-downloaded' as const }
-  const selectedIsRegistryDataset = selected?.registryUrl !== 'local'
+  const selectedDownloadState = detailRow ? downloadStateFor(detailRow) : { status: 'not-downloaded' as const }
+  const selectedIsRegistryDataset = detailRow?.registryUrl !== 'local'
 
   return (
     <main className="workspace single-page">
@@ -191,7 +143,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
                 placeholder={t('searchDatasetsPlaceholder')}
               />
             </label>
-            <button className="secondary-button" disabled={!allowMockWrites} onClick={() => setImportDialogOpen(true)}>
+            <button className="secondary-button" disabled={!writesEnabled} onClick={() => setImportDialogOpen(true)}>
               <Plus aria-hidden="true" />
               {t('importLocalDataset')}
             </button>
@@ -212,7 +164,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => {
+              {rows.map((row) => {
                 const downloadState = downloadStateFor(row)
                 return (
                   <tr
@@ -245,7 +197,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
                     <td>
                       <div className="row-actions">
                         {downloadState.status === 'not-downloaded' && (
-                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
+                          <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
                             event.stopPropagation()
                             startDownload(row)
                           }}>
@@ -256,7 +208,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
                         {downloadState.status === 'downloading' && (
                           <>
                             <span className="progress-label">{downloadState.progress}%</span>
-                            <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
+                            <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
                               event.stopPropagation()
                               cancelDownload(row)
                             }}>
@@ -266,7 +218,7 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
                           </>
                         )}
                         {downloadState.status === 'downloaded' && (
-                          <button className="secondary-button compact-action" disabled={!allowMockWrites} onClick={(event) => {
+                          <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
                             event.stopPropagation()
                             setDeleteTarget(row)
                           }}>
@@ -279,30 +231,44 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
                   </tr>
                 )
               })}
+              {rows.length === 0 && (
+                <tr>
+                  <td className="empty-row" colSpan={8}>{t('noDatasetsAvailable')}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </section>
       {detailRow && selected && (
         <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <DatasetDetail
-            downloadState={selectedDownloadState}
-            expandedTaskName={expandedTaskName}
-            isRegistryDataset={selectedIsRegistryDataset}
-            selected={detailRow}
-            splitOptions={splitOptions}
-            taskSearch={taskSearch}
-            taskSplit={taskSplit}
-            tasks={visibleSelectedTasks}
-            t={t}
-            writeDisabled={!allowMockWrites}
-            onCancelDownload={cancelDownload}
-            onDelete={setDeleteTarget}
-            onExpandedTaskName={setExpandedTaskName}
-            onStartDownload={startDownload}
-            onTaskSearch={setTaskSearch}
-            onTaskSplit={setTaskSplit}
-          />
+          <>
+            <DatasetDetail
+              downloadState={selectedDownloadState}
+              expandedTaskName={expandedTaskName}
+              isRegistryDataset={selectedIsRegistryDataset}
+              selected={detailRow}
+              splitOptions={splitOptions}
+              taskSearch={taskSearch}
+              taskSplit={taskSplit}
+              tasks={visibleSelectedTasks}
+              t={t}
+              writeDisabled={!writesEnabled || isOperationRunning(datasetOperation.operation?.status)}
+              onCancelDownload={cancelDownload}
+              onDelete={setDeleteTarget}
+              onExpandedTaskName={setExpandedTaskName}
+              onStartDownload={startDownload}
+              onSync={syncDataset}
+              onTaskSearch={setTaskSearch}
+              onTaskSplit={setTaskSplit}
+              onRunTask={runTask}
+            />
+            <ResourceStatus
+              error={detailResource.error?.message ?? tasksResource.error?.message ?? null}
+              loading={detailResource.loading || tasksResource.loading}
+              loadingLabel={t('loadingDatasets')}
+            />
+          </>
         </DetailDrawer>
       )}
       {deleteTarget && (
@@ -358,6 +324,11 @@ export function DatasetsPage({ allowMockWrites = true, client, rows, search, t, 
             </div>
         </ConfirmDialog>
       )}
+      <OperationStatus error={datasetOperation.error?.message} operation={datasetOperation.operation} t={t} />
     </main>
   )
+}
+
+function isOperationRunning(status: string | undefined) {
+  return status === 'queued' || status === 'running'
 }

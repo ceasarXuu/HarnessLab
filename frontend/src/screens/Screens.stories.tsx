@@ -16,6 +16,10 @@ import { SystemPage } from './SystemPage'
 
 const t = getTranslator('en')
 const client = createMockWebUiClient()
+const leaderboardDatasets = [...new Map(leaderboardRows.map((row) => {
+  const [name, version = ''] = row.dataset.split('@')
+  return [row.dataset, { name, ref: row.dataset, version }]
+})).values()]
 
 const meta = {
   title: 'Screens/Harbor WebUI',
@@ -27,7 +31,7 @@ type Story = StoryObj<typeof meta>
 
 function DatasetsFixture() {
   const [search, setSearch] = useState('')
-  return <DatasetsPage client={client} rows={datasetRows} search={search} t={t} onSearch={setSearch} />
+  return <DatasetsPage client={client} rows={datasetRows} search={search} t={t} onRefresh={async () => undefined} onSearch={setSearch} />
 }
 
 function LeaderboardFixture() {
@@ -37,13 +41,14 @@ function LeaderboardFixture() {
     <LeaderboardPage
       dataset={dataset}
       datasetSearch=""
-      datasets={datasetRows}
+      leaderboardDatasets={leaderboardDatasets}
       client={client}
       jobs={jobs}
       rows={rows}
       t={t}
       onDataset={setDataset}
       onDatasetSearch={() => undefined}
+      onJobAction={() => undefined}
       onLeaderboardChange={() => undefined}
       onRemove={() => undefined}
     />
@@ -60,6 +65,7 @@ export const Jobs: Story = {
       selected={jobs[0]}
       t={t}
       onClose={() => undefined}
+      onJobAction={() => undefined}
       onLeaderboardChange={() => undefined}
       onNewJob={() => undefined}
       onSearch={() => undefined}
@@ -78,6 +84,7 @@ export const JobsEmpty: Story = {
       selected={null}
       t={t}
       onClose={() => undefined}
+      onJobAction={() => undefined}
       onLeaderboardChange={() => undefined}
       onNewJob={() => undefined}
       onSearch={() => undefined}
@@ -96,6 +103,7 @@ export const JobOperationRunning: Story = {
       selected={jobs[0]}
       t={t}
       onClose={() => undefined}
+      onJobAction={() => undefined}
       onLeaderboardChange={() => undefined}
       onNewJob={() => undefined}
       onSearch={() => undefined}
@@ -106,6 +114,10 @@ export const JobOperationRunning: Story = {
 
 export const Datasets: Story = {
   render: () => <DatasetsFixture />,
+}
+
+export const DatasetsEmpty: Story = {
+  render: () => <DatasetsPage client={client} rows={[]} search="" t={t} onRefresh={async () => undefined} onSearch={() => undefined} />,
 }
 
 export const DatasetDownloading: Story = {
@@ -137,12 +149,16 @@ export const DatasetSplitEmpty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByText('swe-bench-lite'))
-    await expect(canvas.getByText('No tasks available for this dataset in mock data.')).toBeVisible()
+    await expect(canvas.getByText('No Tasks are available for this Dataset.')).toBeVisible()
   },
 }
 
 export const Agents: Story = {
   render: () => <AgentsFixture />,
+}
+
+export const AgentsEmpty: Story = {
+  render: () => <AgentsPage client={client} rows={[]} t={t} onNewAgent={() => undefined} onRefresh={async () => undefined} />,
 }
 
 export const AgentDeleteConfirm: Story = {
@@ -206,26 +222,23 @@ export const AgentDrawer: Story = {
 }
 
 function AgentsFixture() {
-  const [rows, setRows] = useState(agentRows)
   const [view, setView] = useState<'list' | 'new'>('list')
   if (view === 'new') {
     return (
       <NewAgentPage
-        rows={rows}
+        client={client}
+        rows={agentRows}
         t={t}
         onAgents={() => setView('list')}
-        onSave={(agent) => {
-          setRows((current) => [agent, ...current])
-          setView('list')
-        }}
+        onRefresh={async () => undefined}
       />
     )
   }
-  return <AgentsPage rows={rows} t={t} onNewAgent={() => setView('new')} onRowsChange={setRows} />
+  return <AgentsPage client={client} rows={agentRows} t={t} onNewAgent={() => setView('new')} onRefresh={async () => undefined} />
 }
 
 export const NewAgent: Story = {
-  render: () => <NewAgentPage rows={agentRows} t={t} onAgents={() => undefined} onSave={() => undefined} />,
+  render: () => <NewAgentPage client={client} rows={agentRows} t={t} onAgents={() => undefined} onRefresh={async () => undefined} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'New Agent' })).toBeVisible()
@@ -242,7 +255,6 @@ export const NewAgent: Story = {
 }
 
 function EnvironmentsFixture() {
-  const [rows, setRows] = useState(environmentRows)
   const [view, setView] = useState<'list' | 'new' | 'copy'>('list')
   const [environmentId, setEnvironmentId] = useState<string | undefined>()
   const onView = (nextView: 'list' | 'new' | 'copy', nextEnvironmentId?: string) => {
@@ -251,11 +263,12 @@ function EnvironmentsFixture() {
   }
   return (
     <EnvironmentsPage
+      client={client}
       environmentId={environmentId}
-      rows={rows}
+      rows={environmentRows}
       t={t}
       view={view}
-      onRowsChange={setRows}
+      onRefresh={async () => undefined}
       onView={onView}
     />
   )
@@ -263,6 +276,19 @@ function EnvironmentsFixture() {
 
 export const Environments: Story = {
   render: () => <EnvironmentsFixture />,
+}
+
+export const EnvironmentsEmpty: Story = {
+  render: () => (
+    <EnvironmentsPage
+      client={client}
+      rows={[]}
+      t={t}
+      view="list"
+      onRefresh={async () => undefined}
+      onView={() => undefined}
+    />
+  ),
 }
 
 export const EnvironmentDrawer: Story = {
@@ -304,12 +330,35 @@ export const Leaderboard: Story = {
   render: () => <LeaderboardFixture />,
 }
 
+export const LeaderboardEmpty: Story = {
+  render: () => (
+    <LeaderboardPage
+      client={client}
+      dataset="terminal-bench@2.0"
+      datasetSearch=""
+      leaderboardDatasets={leaderboardDatasets}
+      jobs={jobs}
+      rows={[]}
+      t={t}
+      onDataset={() => undefined}
+      onDatasetSearch={() => undefined}
+      onJobAction={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onRemove={() => undefined}
+    />
+  ),
+}
+
 export const System: Story = {
-  render: () => <SystemPage rows={systemRows} t={t} />,
+  render: () => <SystemPage client={client} rows={systemRows} t={t} onRefresh={async () => undefined} />,
+}
+
+export const SystemEmpty: Story = {
+  render: () => <SystemPage client={client} rows={[]} t={t} onRefresh={async () => undefined} />,
 }
 
 export const SystemDestructiveConfirm: Story = {
-  render: () => <SystemPage rows={systemRows} t={t} />,
+  render: () => <SystemPage client={client} rows={systemRows} t={t} onRefresh={async () => undefined} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getAllByRole('button', { name: 'Clean cache' })[0])

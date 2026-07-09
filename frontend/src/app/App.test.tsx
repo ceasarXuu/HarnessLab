@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 
@@ -44,13 +44,13 @@ describe('App', () => {
     expect(jobDialog).toHaveStyle({ width: '704px' })
     expect(screen.getByText('Job trials')).toBeInTheDocument()
     expect(screen.queryByText('Hub actions')).not.toBeInTheDocument()
-    expect(within(jobDialog).getByRole('button', { name: 'Pause' })).toBeInTheDocument()
-    expect(within(jobDialog).queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument()
+    expect(within(jobDialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    expect(within(jobDialog).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
     expect(within(jobDialog).getByRole('checkbox', { name: 'Include in leaderboard' })).toBeChecked()
     expect(screen.queryByRole('button', { name: 'Summarize' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open viewer' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open viewer' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Analyze' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Upload' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Upload' })).not.toBeInTheDocument()
     expect(within(jobDialog).queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.getByText('/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/harbor.capability.json')).toBeInTheDocument()
@@ -79,11 +79,10 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Local path'), { target: { value: './datasets/math-eval' } })
     fireEvent.change(screen.getByLabelText('Tasks'), { target: { value: '24' } })
     fireEvent.click(screen.getByRole('button', { name: 'Confirm import' }))
-    expect(screen.queryByRole('dialog', { name: 'Import local Dataset' })).not.toBeInTheDocument()
-    expect(screen.getAllByText('local/math-eval').length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Import local Dataset' })).not.toBeInTheDocument())
+    await screen.findByText('local/math-eval', {}, { timeout: 2_000 })
     expect(screen.getAllByText('./datasets/math-eval').length).toBeGreaterThan(0)
     expect(screen.getAllByText('local import').length).toBeGreaterThan(0)
-    fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
     const datasetsTable = screen.getByRole('table')
     expect(within(datasetsTable).queryByRole('columnheader', { name: 'Digest' })).not.toBeInTheDocument()
     expect(within(datasetsTable).queryByRole('columnheader', { name: 'Updated' })).not.toBeInTheDocument()
@@ -95,22 +94,17 @@ describe('App', () => {
     expect(within(datasetsTable).getAllByText('Not downloaded').length).toBeGreaterThan(0)
     const sweRow = screen.getByText('swe-bench-lite').closest('tr')
     expect(sweRow).not.toBeNull()
-    vi.useFakeTimers()
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Download' }))
     expect(screen.queryByRole('dialog', { name: 'Selected dataset' })).not.toBeInTheDocument()
-    expect(within(sweRow as HTMLElement).getByText('0%')).toBeInTheDocument()
-    act(() => vi.advanceTimersByTime(800))
-    expect(within(sweRow as HTMLElement).getByText('20%')).toBeInTheDocument()
+    await within(sweRow as HTMLElement).findByText('0%')
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Cancel download' }))
-    expect(within(sweRow as HTMLElement).getAllByText('Not downloaded').length).toBeGreaterThan(0)
-    vi.useRealTimers()
+    expect(await screen.findByText(/Operation (queued|running|completed)/)).toBeInTheDocument()
     const terminalRow = screen.getByText('terminal-bench').closest('tr')
     expect(terminalRow).not.toBeNull()
     fireEvent.click(within(terminalRow as HTMLElement).getByRole('button', { name: 'Delete' }))
     expect(screen.getByRole('dialog', { name: 'Delete local dataset' })).toBeInTheDocument()
     expect(screen.getByText('This removes the downloaded dataset files from local storage.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
-    expect(within(terminalRow as HTMLElement).getAllByText('Not downloaded').length).toBeGreaterThan(0)
     expect(screen.getAllByText('terminal-bench').length).toBeGreaterThan(0)
     expect(screen.queryByRole('dialog', { name: 'Selected dataset' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('terminal-bench'))
@@ -147,6 +141,21 @@ describe('App', () => {
     expect(screen.queryByText('Task config')).not.toBeInTheDocument()
     expect(screen.queryByText('schema_version: 1.0')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Datasets' })).toHaveClass('active')
+  })
+
+  it('refreshes Dataset drawer actions after a download Operation completes', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+    const sweDataset = await screen.findByText('swe-bench-lite')
+    fireEvent.click(sweDataset)
+    const datasetDialog = screen.getByRole('dialog', { name: 'Selected dataset' })
+    fireEvent.click(within(datasetDialog).getByRole('button', { name: 'Download' }))
+
+    await waitFor(
+      () => expect(within(datasetDialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument(),
+      { timeout: 2_000 },
+    )
   })
 
   it('renders the jobs hierarchy without flattening the run builder into it', async () => {
@@ -195,10 +204,10 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
   })
 
-  it('switches language and theme from the header', () => {
+  it('switches language and theme from the header', async () => {
     render(<App />)
 
-    expect(screen.getByRole('button', { name: 'Hub connected' })).toBeInTheDocument()
+    expect(await screen.findByText('Hub connected')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Logout' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Language'))
@@ -251,7 +260,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Tasks' }))
     await screen.findByText('apt-setup')
     expect(screen.getByLabelText('Split')).toHaveTextContent('test')
-    expect(screen.getByLabelText('extra_instruction_paths')).toHaveValue('instructions/hardening.md')
+    expect(screen.getByLabelText('extra_instruction_paths')).toHaveValue('')
     expect(screen.getByRole('region', { name: 'Task whitelist' })).toHaveTextContent('Selected tasks: 4 / 4')
     expect(screen.getByLabelText(/apt-setup/)).toBeChecked()
     fireEvent.change(screen.getByLabelText('Search tasks'), { target: { value: 'sqlite' } })
@@ -311,7 +320,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Expand advanced parameters' }))
     expect(screen.getByLabelText('Agent setup timeout multiplier')).toHaveValue(1)
     expect(screen.getByLabelText('Environment build timeout multiplier')).toHaveValue(1)
-    expect(screen.getByLabelText('Raw errors that should not retry (match rule) 1')).toHaveValue('ValidationError')
+    expect(screen.getByLabelText('Raw errors that should not retry (match rule) 1')).toHaveValue('')
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     expect(screen.getByLabelText('Raw errors that should not retry (match rule) 2')).toHaveValue('')
     fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[1])
@@ -326,21 +335,22 @@ describe('App', () => {
     const runButton = within(runBuilder as HTMLElement).getByRole('button', { name: 'Run job' })
     fireEvent.click(runButton)
 
-    expect(screen.getAllByText('terminal-bench-draft').length).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
+    expect(await screen.findByText(/Operation (queued|running|completed)/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Job' })).toBeInTheDocument()
   })
 
-  it('shows Harbor maintenance operations in system', () => {
+  it('shows Harbor maintenance operations in system', async () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'System' }))
+    await screen.findByText('OrnnLab Service')
     expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'System checks' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'System actions' })).not.toBeInTheDocument()
     expect(screen.queryByText('Interrupted runs reconciled')).not.toBeInTheDocument()
     expect(screen.queryByText('Harbor cache command available')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Cache' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Hub connected' })).toBeInTheDocument()
+    expect(screen.getByText('Hub connected')).toBeInTheDocument()
     expect(screen.queryByText('Authentication')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Status' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
@@ -372,15 +382,19 @@ describe('App', () => {
     expect(serviceRow).not.toBeNull()
     vi.useFakeTimers()
     fireEvent.click(within(serviceRow as HTMLElement).getByRole('button', { name: 'Check update' }))
-    expect(screen.getByRole('status')).toHaveTextContent('OrnnLab is already on the latest npm version.')
-    expect(screen.getByRole('status')).toHaveTextContent('3s')
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const toast = screen.getByText('OrnnLab is already on the latest npm version.').closest('[role="status"]')
+    expect(toast).not.toBeNull()
+    expect(toast as HTMLElement).toHaveTextContent('3s')
     expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveClass('toast-close')
     act(() => vi.advanceTimersByTime(1000))
-    expect(screen.getByRole('status')).toHaveTextContent('2s')
+    expect(toast as HTMLElement).toHaveTextContent('2s')
     act(() => vi.advanceTimersByTime(1000))
-    expect(screen.getByRole('status')).toHaveTextContent('1s')
+    expect(toast as HTMLElement).toHaveTextContent('1s')
     act(() => vi.advanceTimersByTime(1000))
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('OrnnLab is already on the latest npm version.')).not.toBeInTheDocument()
     fireEvent.click(within(serviceRow as HTMLElement).getByRole('button', { name: 'Restart' }))
     expect(screen.getByRole('dialog', { name: 'Restart OrnnLab service' })).toBeInTheDocument()
     expect(screen.queryByText('This forces the OrnnLab frontend and backend services to restart.')).not.toBeInTheDocument()

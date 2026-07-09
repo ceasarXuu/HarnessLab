@@ -3,7 +3,7 @@
 - 状态：草案
 - 适用版本：v1.0.5
 - 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
-- 当前实现：Jobs/Datasets 列表、详情、events、trials 与 tasks 已通过 `frontend/src/api/` 的 client/hook 读取；Agents、Environments、Leaderboard、System 尚未迁移。`api` 模式不回退 fixture 或模拟写入，联调前仍需完成其余资源迁移，并将后端旧 API 破坏性升级为本契约。
+- 当前实现：Jobs、Datasets、Agents、Environments、Leaderboard、System 及 Header Hub 连接状态均已通过 `frontend/src/api/` 的 DTO、client、hook 与 ViewModel 读取。所有可见写操作经 `Operation` 提交与轮询；`api` 模式不回退 fixture 或模拟成功。后端尚未实现本契约，Stage 3 将直接升级旧 API。
 
 > v1.0.5 引用关系：本文是 WebUI API 契约源文件。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
 
@@ -67,7 +67,7 @@ interface ApiMeta {
 
 ### 异步操作
 
-下载 dataset、清理缓存、重启服务、检查更新、运行 Job 等可能耗时操作统一返回 Operation：
+下载 dataset、清理缓存、重启服务、运行 Job 等可能耗时操作统一返回 Operation：
 
 ```ts
 type OperationStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
@@ -76,7 +76,7 @@ interface Operation {
   id: string
   type: string
   status: OperationStatus
-  resourceType: 'job' | 'dataset' | 'agent' | 'system'
+  resourceType: 'job' | 'dataset' | 'agent' | 'environment' | 'system'
   resourceId?: string
   progress?: number
   message?: string
@@ -97,9 +97,9 @@ interface Operation {
 
 首期也可以用轮询 `GET /operations/{operationId}`。
 
-### 当前 mock 字段迁移
+### mock 字段边界
 
-`frontend/src/mocks/` 是当前离线演示和 Storybook 的夹具来源，但后端接口以本规范为准。接入 API 前需要完成以下字段收敛：
+`frontend/src/mocks/` 是离线演示、Storybook 与测试的夹具来源，但后端接口以本规范为准。以下字段收敛已经在 Stage 2 落地，后续新增字段必须继续遵守：
 
 - Job 与 Leaderboard 统一使用 `agentName` 和 `harness`；旧 `agent` 字段只允许作为 mock fixture 内部迁移字段，不进入正式 API。
 - Dataset 列表不再向页面暴露 `digest` 和 `updated`，如后端需要保留，应只放在详情或调试信息中。
@@ -107,7 +107,7 @@ interface Operation {
 - Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
 - Environment 页面提供 OrnnLab-local 模板 CRUD。模板不是 Harbor 原生资源，但每个模板必须完整映射到 Harbor `EnvironmentConfig` / task `[environment]` 支持字段，并由 New Job 下拉引用。
 
-联调前应新增 `frontend/src/domain/`，把生产 UI 类型从 mock fixture 中迁出。mock 可以继续导出 fixture，但不再作为 screen/component 的类型来源。
+`frontend/src/domain/` 已承载生产 UI 类型；mock 可以继续导出 fixture，但不作为 app/screen/component 的类型来源。
 
 后端 DTO 与 UI ViewModel 必须分离：
 
@@ -154,62 +154,37 @@ interface Job {
 
 ### JobConfig
 
-`JobConfig` 对应新建 Job 页面当前所有可配置项。字段按 UI 子 tab 分组传输，但后端可以存为一个配置文件。
+`JobConfig` 是当前 New Job 请求 DTO。前半部分对应用户在基础、Tasks、验证器和运行策略中做出的决策；Agent profile 中已有的模型、凭证与参数由前端/后端在选定 Agent 后派生，不作为 Job 级交互重新暴露。
 
 ```ts
 interface JobConfig {
+  agentEnv: Array<{ key: string; value: string }>
+  agentImportPath?: string
+  agentKwargs: string
+  agentName: string
+  attempts: number
+  concurrency: number
+  datasetRef: string
+  debug: boolean
+  environmentPresetId: string
+  includeInLeaderboard: boolean
   jobName: string
   jobsDir: string
-  source: string
-  split: string
-  taskFilter: string
-  excludeFilter: string
-  taskLimit: number
-  extraInstructions: string
-  debug: boolean
-
-  agentName: string
-  harness: string
   model: string
-  agentImportPath: string
-  agentEnv: string
-  agentKwargs: string
-  allowAgentHosts: string
-  skills: string
-  mcpConfig: string
-
-  environmentPresetId: string
-
-  verifierMode: 'dataset-default' | 'custom' | 'skip'
-  verifierImportPath: string
-  verifierEnv: string
-  verifierKwargs: string
-  disableVerifier: boolean
-  verifierMaxTimeoutSec: string
-
-  concurrency: number
-  attempts: number
-  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
-  timeoutMultiplier: number
-  agentTimeoutMultiplier: string
-  verifierTimeoutMultiplier: string
-  agentSetupTimeoutMultiplier: string
-  environmentBuildTimeoutMultiplier: string
   maxRetries: number
-  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
-  retryInclude: string
-  retryExclude: string
-  retryWaitMultiplier: string
-  retryMinWaitSec: string
-  retryMaxWaitSec: string
-
-  artifacts: string
   metric: string
-  plugins: string
-  upload: boolean
-  visibility: 'private' | 'public'
-  includeInLeaderboard: boolean
-  shareTargets: string
+  notes: string
+  retryExclude: string
+  retryInclude: string
+  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
+  retryMaxWaitSeconds: number
+  retryMinWaitSeconds: number
+  retryWaitMultiplier: number
+  selectedTaskNames: string[] | null
+  split: string
+  timeoutMultiplier: number
+  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
+  verifierMode: 'dataset-default' | 'custom' | 'skip'
 }
 ```
 
@@ -236,7 +211,6 @@ interface EnvironmentPreset {
   gpus: string
   gpuTypes: string
   tpu: string
-  skillsDir: string // Harbor task environment field; v1.0.5 UI does not expose it in Environment, it is reserved for Agents management.
   healthcheck: string
   workdir: string
   mounts: string
@@ -435,14 +409,11 @@ type SystemAction =
 | `GET` | `/jobs?q=&status=&dataset=&agent=&cursor=&limit=` | Job 列表、搜索、筛选 |
 | `POST` | `/jobs` | 创建 JobConfig 并启动/排队 Harbor run |
 | `GET` | `/jobs/{jobId}` | Job 详情抽屉 |
-| `PATCH` | `/jobs/{jobId}` | 更新可变属性，例如 `includeInLeaderboard` |
 | `POST` | `/jobs/{jobId}/cancel` | 取消运行中 Job |
 | `POST` | `/jobs/{jobId}/retry` | 重试失败 Job |
 | `POST` | `/jobs/{jobId}/resume` | 恢复可恢复 Job |
 | `GET` | `/jobs/{jobId}/trials` | Trial 列表 |
 | `GET` | `/jobs/{jobId}/events?cursor=&limit=` | 事件日志 |
-| `GET` | `/jobs/{jobId}/artifacts` | 产物路径列表 |
-| `GET` | `/jobs/{jobId}/artifacts/file?path=` | 读取或下载具体产物 |
 
 `POST /jobs` 请求体：
 
@@ -469,18 +440,12 @@ interface CreateJobResponse {
 | `GET` | `/datasets?q=&source=&downloadStatus=&cursor=&limit=` | Dataset 列表、搜索 |
 | `GET` | `/datasets/{datasetRef}` | Dataset 详情抽屉 |
 | `GET` | `/datasets/{datasetRef}/tasks?q=&split=&cursor=&limit=` | Dataset 下的 Task 列表 |
-| `GET` | `/datasets/{datasetRef}/tasks/{taskName}` | Task 详情 |
 | `POST` | `/datasets/{datasetRef}/download` | 下载 dataset |
-| `GET` | `/datasets/{datasetRef}/download` | 查询下载状态 |
 | `POST` | `/datasets/{datasetRef}/download/cancel` | 取消下载并删除已下载部分 |
 | `DELETE` | `/datasets/{datasetRef}/local` | 删除本地 dataset |
 | `POST` | `/datasets/{datasetRef}/sync` | 同步 manifest/registry 元数据 |
-| `POST` | `/datasets/init` | 初始化本地 dataset manifest |
+| `POST` | `/datasets/import` | 导入本地自定义 dataset，创建 OrnnLab-local registry 条目 |
 | `POST` | `/datasets/{datasetRef}/tasks/{taskName}/run` | 从 task 创建单 task Job |
-| `POST` | `/datasets/{datasetRef}/tasks/{taskName}/environment` | 启动或准备 task 环境 |
-| `POST` | `/datasets/{datasetRef}/tasks/{taskName}/check` | 运行 task 检查 |
-| `POST` | `/datasets/{datasetRef}/tasks/{taskName}/debug` | 进入 task debug 流程 |
-| `GET` | `/datasets/{datasetRef}/tasks/{taskName}/download` | 下载 task 相关文件 |
 
 `datasetRef` 建议使用 URL 编码后的 `name@version`，例如 `terminal-bench%402.0`。
 
@@ -516,7 +481,6 @@ interface CreateJobResponse {
 | `GET` | `/leaderboard/datasets?q=&cursor=&limit=` | 可排名 dataset 下拉搜索 |
 | `GET` | `/leaderboard?dataset=&q=&metric=&split=&cursor=&limit=` | 单 dataset 排名列表 |
 | `PATCH` | `/jobs/{jobId}/leaderboard` | 设置某个 Job 是否进入排名 |
-| `POST` | `/leaderboard/submissions` | 提交或重新提交排名结果 |
 
 `PATCH /jobs/{jobId}/leaderboard` 请求体：
 
@@ -540,7 +504,9 @@ interface UpdateJobLeaderboardResponse {
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
 | `GET` | `/system/health` | 系统健康列表 |
+| `GET` | `/system/hub-connection` | Header Hub 连接状态（connected/disconnected/expired） |
 | `POST` | `/system/service/update/check` | 检查 OrnnLab npm 新版本 |
+| `POST` | `/system/service/update` | 安装已确认的 OrnnLab npm 新版本 |
 | `POST` | `/system/service/restart` | 重启 OrnnLab 前后端服务 |
 | `POST` | `/system/cache/docker/clean` | 清理 Harbor Docker 缓存 |
 | `POST` | `/system/cache/storage/clean` | 清理 `~/.cache/harbor` |
@@ -573,12 +539,13 @@ interface CacheCleanResult {
 | --- | --- | --- |
 | Jobs 列表 | 搜索、点击行打开详情 | `GET /jobs`、`GET /jobs/{jobId}` |
 | 新建 Job | 保存配置并运行 | `POST /jobs` |
-| Job 详情抽屉 | 事件、trials、产物、取消、重试 | `/jobs/{jobId}/events`、`/trials`、`/artifacts`、`/cancel`、`/retry` |
-| Datasets 列表 | 搜索、下载、取消下载、删除本地 | `GET /datasets`、`POST /download`、`POST /download/cancel`、`DELETE /local` |
-| Dataset 详情 | task 列表、task 操作、新建 Job | `/datasets/{datasetRef}/tasks`、task 子接口、`POST /jobs` |
+| Job 详情抽屉 | 事件、trials、产物路径、取消、重试 | `GET /jobs/{jobId}`、`/events`、`/trials`、`/cancel`、`/retry` |
+| Datasets 列表 | 搜索、导入本地、下载、取消下载、删除本地 | `GET /datasets`、`POST /datasets/import`、`POST /download`、`POST /download/cancel`、`DELETE /local` |
+| Dataset 详情 | task 列表、运行单 Task、拉取更新 | `/datasets/{datasetRef}/tasks`、`POST /tasks/{taskName}/run`、`POST /sync` |
 | Agents 列表 | 搜索、新建、删除 custom | `GET /agents`、`POST /agents`、`DELETE /agents/{agentId}` |
 | Agent 详情 | 查看 harness、运行配置 | `GET /agents/{agentId}` |
 | Leaderboard | dataset 搜索/切换、移除 Job、打开 Job 详情 | `/leaderboard/datasets`、`GET /leaderboard`、`PATCH /jobs/{jobId}/leaderboard`、`GET /jobs/{jobId}` |
+| Header | 展示 Hub 连接状态 | `GET /system/hub-connection` |
 | System | 健康检查、检查更新、重启、清理缓存 | `/system/health`、`/service/update/check`、`/service/restart`、cache clean 接口 |
 
 ## 前端接入顺序
@@ -593,8 +560,7 @@ interface CacheCleanResult {
 
 ## 待确认问题
 
-- Harbor Hub 登录态是否只由 header 的 Hub 状态管理，后端需要明确 token 存储与失效状态。
-- `plugins` 当前是 JobConfig 字段，后端需要确认 Harbor 插件发现、启用、版本锁定的真实命令边界。
+- Header 只读取 Hub 连接状态；登录、登出和 token 管理不属于 v1.0.5 WebUI 操作面。后端仍需明确状态来源和过期判定。
 - Leaderboard 的 `metric`、`split` 应从 JobConfig 与 Dataset manifest 返回，不应由前端自由编造。
 - Docker 缓存清理的 Harbor 匹配规则需要后端固定白名单，避免误删用户其他镜像。
 - CPU/GPU/Storage 采样频率、单位、macOS/Linux 差异需要在系统探针实现时补充。

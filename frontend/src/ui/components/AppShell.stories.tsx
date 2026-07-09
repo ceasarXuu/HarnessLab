@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { getTranslator, type Locale } from '../../i18n'
-import { AppShell, type PageKey } from './AppShell'
+import { AppShell, type HubConnectionState, type PageKey } from './AppShell'
 
-function AppShellFixture() {
+function AppShellFixture({ hubConnection = 'connected' }: { hubConnection?: HubConnectionState }) {
   const [activePage, setActivePage] = useState<PageKey>('datasets')
   const [language, setLanguage] = useState<Locale>('en')
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
@@ -12,6 +12,7 @@ function AppShellFixture() {
   return (
     <AppShell
       activePage={activePage}
+      hubConnection={hubConnection}
       language={language}
       theme={theme}
       t={t}
@@ -38,3 +39,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const HeaderNavigation: Story = {}
+
+export const HubDisconnected: Story = {
+  args: { hubConnection: 'disconnected' },
+}

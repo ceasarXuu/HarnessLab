@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { App } from './App'
 
@@ -13,7 +13,7 @@ describe('App agents and leaderboard', () => {
     await screen.findByText('terminal-bench-smoke')
 
     fireEvent.click(screen.getByRole('link', { name: 'Agents' }))
-    expect(screen.getByRole('heading', { name: 'Agent catalog' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Agent catalog' })).toBeInTheDocument()
     expect(screen.getByLabelText('Search agents')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New Agent' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Agent Name' })).toBeInTheDocument()
@@ -39,7 +39,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }))
     expect(screen.getByText('Advanced agent params')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('heading', { name: 'Agent catalog' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Agent catalog' }, { timeout: 2_000 })).toBeInTheDocument()
     expect(screen.getByText('Regression custom agent')).toBeInTheDocument()
 
     const builtinRow = screen.getByText('Claude Code default').closest('tr')
@@ -114,16 +114,16 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close detail drawer' }))
     fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
-    expect(screen.queryByText('Local repair agent')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Local repair agent')).not.toBeInTheDocument(), { timeout: 2_000 })
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
-    expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
     expect(screen.queryByText('Submission')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Agent filter')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Agent filter')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Select dataset')).toHaveTextContent('terminal-bench@2.0')
     expect(screen.getByRole('columnheader', { name: 'Agent Name' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Harness' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Tokens (M)' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Token usage (M)' })).toBeInTheDocument()
     expect(screen.getByText('0.0184M')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'job_91a7' }))
@@ -134,7 +134,7 @@ describe('App agents and leaderboard', () => {
     const firstRankRow = screen.getByText('job_91a7').closest('tr')
     expect(firstRankRow).not.toBeNull()
     fireEvent.click(within(firstRankRow as HTMLElement).getByRole('button', { name: 'Remove' }))
-    expect(screen.queryByText('job_91a7')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('job_91a7')).not.toBeInTheDocument(), { timeout: 2_000 })
     const nextRankRow = screen.getByText('job_64f2').closest('tr')
     expect(nextRankRow).not.toBeNull()
     expect(within(nextRankRow as HTMLElement).getByText('#1')).toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.click(screen.getByLabelText('Select dataset'))
     fireEvent.click(screen.getByRole('option', { name: 'swe-bench-lite@2026.06' }))
-    expect(screen.getByText('job_74c1')).toBeInTheDocument()
+    expect(await screen.findByText('job_74c1')).toBeInTheDocument()
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
 })

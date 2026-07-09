@@ -1,19 +1,20 @@
 import { useState } from 'react'
-import { FileJson, FlaskConical, Pause, Play, Terminal, Upload } from 'lucide-react'
+import { FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { Metric } from './Metric'
 
 interface DetailRailProps {
-  allowMockWrites?: boolean
+  writesEnabled?: boolean
   job: HarborJob
   events: EventLog[]
   trials: TrialRow[]
   t: Translate
+  onJobAction: (jobId: string, action: 'cancel' | 'retry' | 'resume') => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ allowMockWrites = true, job, events, trials, t, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job.status, t)
@@ -28,10 +29,16 @@ export function DetailRail({ allowMockWrites = true, job, events, trials, t, onL
           </div>
           <div className="rail-heading-actions">
             <span className={`status-dot ${job.status}`}>{job.status}</span>
-            <button className="secondary-button compact-button" disabled={!allowMockWrites}>
-              {primaryJobAction.kind === 'pause' ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-              {primaryJobAction.label}
-            </button>
+            {primaryJobAction && (
+              <button
+                className="secondary-button compact-button"
+                disabled={!writesEnabled}
+                onClick={() => onJobAction(job.id, primaryJobAction.kind)}
+              >
+                {primaryJobAction.kind === 'cancel' ? <Square aria-hidden="true" /> : <RotateCcw aria-hidden="true" />}
+                {primaryJobAction.label}
+              </button>
+            )}
           </div>
         </div>
         <div className="metric-grid">
@@ -48,16 +55,11 @@ export function DetailRail({ allowMockWrites = true, job, events, trials, t, onL
             <span>{t('includeInLeaderboard')}</span>
             <input
               type="checkbox"
-              disabled={!allowMockWrites}
+              disabled={!writesEnabled}
               checked={job.includeInLeaderboard}
               onChange={(event) => onLeaderboardChange(job.id, event.target.checked)}
             />
           </label>
-          <button className="secondary-button" disabled={!allowMockWrites}>{t('openViewer')}</button>
-          <button className="secondary-button" disabled={!allowMockWrites}>
-            <Upload aria-hidden="true" />
-            {t('upload')}
-          </button>
         </div>
       </section>
 
@@ -133,10 +135,10 @@ export function DetailRail({ allowMockWrites = true, job, events, trials, t, onL
 
 function getPrimaryJobAction(status: HarborJob['status'], t: Translate) {
   if (status === 'running' || status === 'queued') {
-    return { kind: 'pause' as const, label: t('pause') }
+    return { kind: 'cancel' as const, label: t('cancel') }
   }
-
-  return { kind: 'resume' as const, label: t('resume') }
+  if (status === 'failed') return { kind: 'retry' as const, label: t('retryJob') }
+  return null
 }
 
 function buildArtifactPaths(job: HarborJob) {

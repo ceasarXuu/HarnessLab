@@ -191,6 +191,7 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
 
 export const agentRows: AgentRow[] = [
   {
+    id: 'claude-code-default',
     agentName: 'Claude Code default',
     harness: 'claude-code',
     type: 'built-in',
@@ -213,6 +214,7 @@ export const agentRows: AgentRow[] = [
     baseUrlEnv: 'ANTHROPIC_BASE_URL',
   },
   {
+    id: 'codex-cli-default',
     agentName: 'Codex CLI default',
     harness: 'codex-cli',
     type: 'built-in',
@@ -236,6 +238,7 @@ export const agentRows: AgentRow[] = [
     baseUrlEnv: 'OPENAI_BASE_URL',
   },
   {
+    id: 'oracle-baseline',
     agentName: 'Oracle baseline',
     harness: 'oracle',
     type: 'built-in',
@@ -255,6 +258,7 @@ export const agentRows: AgentRow[] = [
     compatibleModels: 'local-sim',
   },
   {
+    id: 'local-repair-agent',
     agentName: 'Local repair agent',
     harness: 'custom-harness',
     type: 'custom',

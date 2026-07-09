@@ -4,11 +4,12 @@ import type { WebUiClient } from '../api/webUiClient'
 import { DetailRail } from '../ui/components/DetailRail'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { JobsTable } from '../ui/components/JobsTable'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 import type { HarborJob } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface JobsPageProps {
-  allowMockWrites?: boolean
+  writesEnabled?: boolean
   client: WebUiClient
   jobs: HarborJob[]
   open: boolean
@@ -16,6 +17,7 @@ interface JobsPageProps {
   selected: HarborJob | null
   t: Translate
   onClose: () => void
+  onJobAction: (jobId: string, action: 'cancel' | 'retry' | 'resume') => void
   onNewJob: () => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onSearch: (value: string) => void
@@ -23,7 +25,7 @@ interface JobsPageProps {
 }
 
 export function JobsPage({
-  allowMockWrites = true,
+  writesEnabled = true,
   client,
   jobs,
   open,
@@ -31,6 +33,7 @@ export function JobsPage({
   selected,
   t,
   onClose,
+  onJobAction,
   onNewJob,
   onLeaderboardChange,
   onSearch,
@@ -58,14 +61,22 @@ export function JobsPage({
       </div>
       {detailJob && (
         <DetailDrawer label={t('selectedJob')} open={open} onClose={onClose}>
-          <DetailRail
-            job={detailJob}
-            events={events}
-            trials={trials}
-            t={t}
-            allowMockWrites={allowMockWrites}
-            onLeaderboardChange={onLeaderboardChange}
-          />
+          <>
+            <DetailRail
+              job={detailJob}
+              events={events}
+              trials={trials}
+              t={t}
+              writesEnabled={writesEnabled}
+              onJobAction={onJobAction}
+              onLeaderboardChange={onLeaderboardChange}
+            />
+            <ResourceStatus
+              error={detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
+              loading={detailResource.loading || eventsResource.loading || trialsResource.loading}
+              loadingLabel={t('loadingJobs')}
+            />
+          </>
         </DetailDrawer>
       )}
     </main>

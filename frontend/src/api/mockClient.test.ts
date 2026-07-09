@@ -22,13 +22,15 @@ describe('MockWebUiClient', () => {
     expect(response.error).toBeNull()
     expect(response.data).not.toBeNull()
     if (!response.data) throw new Error('Expected Job page data')
-    expect(response.data.items).toHaveLength(2)
-    expect(response.data.items[0]).toMatchObject({
+    expect(response.data.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
       id: 'job_91a7',
       datasetRef: 'terminal-bench@2.0',
       trial: { completed: 18, total: 64 },
       tokenUsageM: 0.0184,
-    })
+      }),
+      expect.objectContaining({ id: 'job_64f2', datasetRef: 'terminal-bench@2.0' }),
+    ]))
   })
 
   it('returns Dataset tasks filtered by split through the contract', async () => {

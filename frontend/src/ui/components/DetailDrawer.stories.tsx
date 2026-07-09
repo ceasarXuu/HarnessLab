@@ -27,6 +27,7 @@ function DetailDrawerFixture() {
           events={events}
           trials={trialRows.filter((row) => row.jobId === job.id)}
           t={t}
+          onJobAction={() => undefined}
           onLeaderboardChange={() => undefined}
         />
       </DetailDrawer>
