@@ -67,7 +67,7 @@ v1.0.5 的技术目标不是继续扩展 mock demo，而是把当前前端收敛
 | `frontend/src/ui/components/` | 可复用组件、pattern 组件、受 Storybook 约束的交互单元 | 不知道后端路由 |
 | `frontend/src/styles/` | token、base、layout、controls、tables、surfaces、screen 专属样式 | 不恢复单个巨型样式文件 |
 
-当前已存在 `frontend/src/domain/harbor.ts`，但还缺 `frontend/src/api/`。联调前必须先补 API 层，再让页面从 data hook 获取数据。
+当前已存在 `frontend/src/domain/harbor.ts` 与 `frontend/src/api/`。Stage 2 尚未完成：所有资源都必须通过统一 client/data hook 获取，且所有页面写操作必须经过 `Operation` 边界；在这些条件满足前不得进入真实后端联调。
 
 ## 5. API 契约
 

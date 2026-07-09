@@ -172,7 +172,7 @@ Storybook 进入联调前至少覆盖以下状态。
 5. `npm run storybook:test`
 6. `npm run e2e`
 
-当前已知 e2e 红灯必须先修复：Agent drawer 场景仍在寻找已移除的 `Capability config` 文案。该问题是测试口径漂移，不是功能设计问题。
+截至 2026-07-10，现有 `npm run e2e` 已通过。后续每次运行前仍须先检查 `4174` 无旧 preview 监听，避免测试复用陈旧构建。Stage 2 的剩余前端资源迁移与状态矩阵完成后，必须重新执行全量门禁。
 
 ## 8. 联调进入条件
 

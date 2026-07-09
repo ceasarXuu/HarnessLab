@@ -78,7 +78,7 @@
 
 ### Stage 2: 前端契约层建设
 
-状态：In progress（首批资源已迁移，未达到收口条件）
+状态：In progress（以下全部验收项通过前不得标记完成）
 
 目标：
 
@@ -87,6 +87,21 @@
 - 定义 `ApiResponse<T>`、`Operation`、DTO。
 - 建立 mock client；不建立 legacy adapter。
 - 页面通过 data hook 消费 domain model，不直接读取 mock seed data。
+
+#### 完成验收矩阵
+
+Stage 2 仅覆盖前端契约层和离线 mock 行为；后端真实 `/api/webui/v1` 实现、Operation 轮询/SSE 和真实联调属于 Stage 3 及后续阶段。以下每项均需要代码、自动化验证和 Storybook 证据，缺任一项即为未完成。
+
+| ID | 验收项 | 完成定义 |
+|---|---|---|
+| S2-0 | Jobs / Datasets 基线 | 列表、详情及 events、trials、tasks 全部经 DTO、client、hook、ViewModel 读取；API 模式请求失败不回退 fixture。 |
+| S2-1 | 类型与 fixture 隔离 | `app`、`screens`、`ui/components` 不导入 `mocks`；生产类型来自 `domain` 或 `api`；mock 只作为离线 client、MSW、Storybook 与测试夹具。 |
+| S2-2 | 六类资源读取 | Jobs、Datasets、Agents、Environments、Leaderboard、System 的列表、详情和页面附属只读资源都有 DTO、client、hook、ViewModel、mock client、MSW handler 和 loading/empty/error 页面状态。 |
+| S2-3 | 契约边界 | `frontend/src/api/` 完整承载 `ApiResponse`、`ApiError`、`ApiMeta`、`Operation`、DTO、HTTP/mock client、hook；不含 React 组件、旧路由兼容或旧字段泄漏。 |
+| S2-4 | 写操作 Operation 边界 | 所有可见写操作经 client 返回 `Operation`；页面不直接伪造完成。mock 模式可显式模拟 Operation，API 模式不得伪造成功。 |
+| S2-5 | MSW / Storybook 状态矩阵 | 每个已接入资源都有 contract-accurate MSW；所有 Screen 覆盖 loaded、loading、empty、error、operation-running、destructive-confirm、dark/light、zh/en，并具备技术设计中规定的资源专项状态。 |
+| S2-6 | 质量门禁 | `typecheck`、unit、lint、build、Storybook smoke、e2e 均通过；e2e 运行前确认 `4174` 无旧监听；同一交互的 Storybook、Vitest、e2e 断言一致。 |
+| S2-7 | 文档与治理 | PRD、技术设计、契约、工程计划和功能清单的资源名称、可见操作与阶段状态一致；新增文案、组件和样式分别按 i18n、Storybook 和样式分层规则登记。 |
 
 已完成：
 
