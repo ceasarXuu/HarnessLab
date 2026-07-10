@@ -27,8 +27,9 @@ if [ -f frontend/package.json ]; then
   npm --prefix frontend run typecheck
   npm --prefix frontend run lint
   npm --prefix frontend run test
+  npm --prefix frontend run build
   npm --prefix frontend run storybook:test
-  npm --prefix frontend run e2e
+  npm --prefix frontend run storybook:build
 else
   echo "frontend/package.json absent: legacy Vue frontend removed; v1.0.5 rebuild pending."
 fi

@@ -4,7 +4,9 @@ import asyncio
 import json
 import os
 import shlex
+import shutil
 import signal
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -54,9 +56,7 @@ class ManagedSubprocessHarborRunner:
             await _ignore_cancelled(output_task)
             raise
         if return_code != 0:
-            raise RuntimeError(
-                f"harbor subprocess exited with {return_code}: {output[-400:]}"
-            )
+            raise RuntimeError(f"harbor subprocess exited with {return_code}: {output[-400:]}")
         result_path = job_dir / "result.json"
         result = _read_or_write_result(result_path, return_code)
         return {
@@ -74,6 +74,14 @@ def _command_from_env() -> list[str]:
     if not command:
         raise ValueError("ORNNLAB_HARBOR_SUBPROCESS_COMMAND cannot be empty")
     return command
+
+
+def harbor_cli_executable() -> str:
+    return (
+        os.environ.get("ORNNLAB_HARBOR_CLI")
+        or shutil.which("harbor")
+        or str(Path(sys.executable).parent / "harbor")
+    )
 
 
 async def _mirror_stdout(

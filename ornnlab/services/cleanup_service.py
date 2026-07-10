@@ -67,9 +67,7 @@ class CleanupService:
     def _orphan_experiment_artifacts(self) -> list[dict[str, Any]]:
         self.settings.experiments_dir.mkdir(parents=True, exist_ok=True)
         with sqlite.connect(self.settings) as conn:
-            referenced = {
-                row["id"] for row in sqlite.rows(conn, "SELECT id FROM experiments")
-            }
+            referenced = {row["id"] for row in sqlite.rows(conn, "SELECT id FROM experiments")}
             referenced.update(row["id"] for row in sqlite.rows(conn, "SELECT id FROM runs"))
         candidates: list[dict[str, Any]] = []
         for path in sorted(self.settings.experiments_dir.iterdir()):

@@ -44,7 +44,7 @@ export interface HubConnectionDto {
   status: HubConnectionStatus
 }
 
-export type JobStatus = 'running' | 'queued' | 'completed' | 'failed'
+export type JobStatus = 'draft' | 'running' | 'queued' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface TrialProgressDto {
   completed: number
@@ -66,15 +66,14 @@ export interface JobDto {
   environmentName: string
   trial: TrialProgressDto
   score: ScoreDto | null
-  costUsd: number
-  tokenUsageM: number
-  runtimeSeconds: number
+  costUsd: number | null
+  tokenUsageM: number | null
+  runtimeSeconds: number | null
   createdAt: string
   includeInLeaderboard: boolean
   jobDir?: string
   eventLogPath?: string
   artifactPaths?: string[]
-  split?: string
   failureCode?: string
 }
 
@@ -94,14 +93,12 @@ export interface DatasetDto {
     sizeBytes?: number
   }
   registryUrl?: string
-  splits: string[]
 }
 
 export interface DatasetTaskDto {
   datasetRef: string
   description: string
   name: string
-  splits: string[]
 }
 
 export type EventLevel = 'info' | 'success' | 'warning' | 'error'
@@ -112,19 +109,19 @@ export interface JobEventDto {
   occurredAt: string
 }
 
-export type TrialStatus = 'passed' | 'running' | 'failed'
+export type TrialStatus = 'passed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface TrialDto {
-  costUsd: number
+  costUsd: number | null
   id: string
   jobId: string
-  logPath: string
-  retryCount: number
-  runtimeSeconds: number
+  logPath: string | null
+  retryCount: number | null
+  runtimeSeconds: number | null
   score: ScoreDto | null
   status: TrialStatus
   taskName: string
-  tokenUsageM: number
+  tokenUsageM: number | null
 }
 
 export interface ListQuery {
@@ -133,9 +130,7 @@ export interface ListQuery {
   q?: string
 }
 
-export interface DatasetTaskQuery extends ListQuery {
-  split?: string
-}
+export type DatasetTaskQuery = ListQuery
 
 export type AgentProfileType = 'built-in' | 'custom'
 export type AgentAvailability = 'available' | 'configured' | 'needs-token'
@@ -148,24 +143,13 @@ export interface KeyValueDto {
 export interface McpServerDto {
   args?: string[]
   command?: string
-  composeYaml?: string
-  deployment: 'compose-sidecar' | 'stdio' | 'external-service'
-  enabled: boolean
-  endpointPath?: string
-  env?: KeyValueDto[]
   name: string
-  port?: number
-  serviceName?: string
   transport: 'stdio' | 'sse' | 'streamable-http'
   url?: string
 }
 
 export interface AgentDto {
   agentName: string
-  allowedHosts: string[]
-  apiKeyEnv?: string
-  baseUrlEnv?: string
-  contextLength?: number
   env: KeyValueDto[]
   harness: string
   id: string
@@ -173,16 +157,11 @@ export interface AgentDto {
   kwargs: string
   mcpServers: McpServerDto[]
   models: string[]
-  reasoningEfforts: string[]
-  reasoningSummary?: string
-  runtime?: string
   setupTimeoutSeconds?: number
+  timeoutSeconds?: number
   skillSources: string[]
   status: AgentAvailability
-  supportedModels: string[]
-  temperature?: number
   type: AgentProfileType
-  updatedAt?: string
   maxTimeoutSeconds?: number
 }
 
@@ -196,35 +175,23 @@ export type EnvironmentProfileType = 'built-in' | 'custom'
 export interface EnvironmentDto {
   allowedHosts: string[]
   cpuPolicy: string
-  cpus: string
   deleteAfterRun: boolean
   dockerComposePaths: string[]
-  dockerImage: string
   env: KeyValueDto[]
   environmentType: string
-  extraAllowedHosts: string[]
   forceBuild: boolean
-  gpus: string
-  gpuTypes: string
-  healthcheck: string
   id: string
   importPath?: string
   kwargs: string
-  memoryMb: string
   memoryPolicy: string
   mounts: string
   name: string
-  networkMode: string
-  os: string
   overrideCpus: string
   overrideGpus: string
   overrideMemoryMb: string
   overrideStorageMb: string
   overrideTpu: string
   profileType: EnvironmentProfileType
-  storageMb: string
-  tpu: string
-  workdir: string
 }
 
 export interface EnvironmentQuery extends ListQuery {
@@ -240,7 +207,7 @@ export interface LeaderboardDatasetDto {
 export interface LeaderboardEntryDto {
   agentName: string
   comparabilityKey: string
-  costUsd: number
+  costUsd: number | null
   datasetRef: string
   harness: string
   jobId: string
@@ -248,18 +215,16 @@ export interface LeaderboardEntryDto {
   model: string
   rank: number
   reportPath?: string
-  runtimeSeconds: number
+  runtimeSeconds: number | null
   score: ScoreDto | null
-  split: string
   submittedAt: string
-  tokenUsageM: number
+  tokenUsageM: number | null
   trial: TrialProgressDto
 }
 
 export interface LeaderboardQuery extends ListQuery {
   dataset: string
   metric?: string
-  split?: string
 }
 
 export type SystemComponentKind =
@@ -271,7 +236,7 @@ export type SystemComponentKind =
   | 'resource-gpu'
   | 'resource-storage'
 
-export type SystemComponentStatus = JobStatus | 'healthy'
+export type SystemComponentStatus = JobStatus | 'healthy' | 'unavailable'
 
 export type SystemAction = 'check-update' | 'restart-service' | 'clean-docker-cache' | 'clean-storage-cache'
 
@@ -299,33 +264,31 @@ export interface CreateJobResponseDto {
 }
 
 export interface JobConfigDto {
-  agentEnv: KeyValueDto[]
-  agentImportPath?: string
-  agentKwargs: string
+  agentSetupTimeoutMultiplier: number
   agentName: string
+  agentTimeoutMultiplier: number
   attempts: number
   concurrency: number
   datasetRef: string
   debug: boolean
   environmentPresetId: string
+  environmentBuildTimeoutMultiplier: number
+  extraInstructionPaths: string[]
   includeInLeaderboard: boolean
   jobName: string
   jobsDir: string
   maxRetries: number
-  metric: string
-  model: string
+  metric: 'sum' | 'min' | 'max' | 'mean' | 'uv-script'
   notes: string
   retryExclude: string
   retryInclude: string
-  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
   retryMaxWaitSeconds: number
   retryMinWaitSeconds: number
   retryWaitMultiplier: number
   selectedTaskNames: string[] | null
-  split: string
   timeoutMultiplier: number
-  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
-  verifierMode: 'dataset-default' | 'custom' | 'skip'
+  verifierTimeoutMultiplier: number
+  verifierMode: 'dataset-default' | 'skip'
 }
 
 export interface DatasetImportRequestDto {

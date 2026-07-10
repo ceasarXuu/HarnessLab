@@ -1,4 +1,4 @@
-export type JobStatus = 'running' | 'queued' | 'completed' | 'failed'
+export type JobStatus = 'draft' | 'running' | 'queued' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface HarborJob {
   id: string
@@ -19,7 +19,6 @@ export interface HarborJob {
   jobDir?: string
   eventLogPath?: string
   artifactPaths?: string[]
-  split?: string
   failureCode?: string
 }
 
@@ -33,48 +32,19 @@ export interface DatasetTask {
   datasetRef: string
   description: string
   name: string
-  splits: string[]
 }
 
 export interface RunDraft {
   jobName: string
   jobsDir: string
   source: string
-  split: string
   selectedTaskNames: string[] | null
   extraInstructions: string
   debug: boolean
   notes: string
   agent: string
-  model: string
-  agentImportPath: string
-  agentEnv: string
-  agentKwargs: string
-  allowAgentHosts: string
-  skills: string
-  mcpConfig: string
   environment: string
-  environmentImportPath: string
-  environmentEnv: string
-  environmentKwargs: string
-  allowEnvironmentHosts: string
-  forceBuild: boolean
-  deleteEnvironment: boolean
-  suppressOverrideWarnings: boolean
-  cpus: string
-  cpuOverride: string
-  memoryMb: string
-  storageMb: string
-  gpus: string
-  tpu: string
-  mounts: string
-  dockerCompose: string
-  verifierMode: 'dataset-default' | 'custom' | 'skip'
-  verifierImportPath: string
-  verifierEnv: string
-  verifierKwargs: string
-  disableVerifier: boolean
-  verifierMaxTimeoutSec: string
+  verifierMode: 'dataset-default' | 'skip'
   concurrency: number
   attempts: number
   timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
@@ -90,7 +60,7 @@ export interface RunDraft {
   retryWaitMultiplier: string
   retryMinWaitSec: string
   retryMaxWaitSec: string
-  metric: string
+  metric: 'sum' | 'min' | 'max' | 'mean' | 'uv-script'
   includeInLeaderboard: boolean
 }
 
@@ -99,7 +69,6 @@ export interface TaskRow {
   dataset: string
   description: string
   jobId: string
-  splits?: string[]
   os: string
   state: string
   duration: string
@@ -138,7 +107,7 @@ export interface TrialRow {
 export interface SystemRow {
   kind: 'ornnlab-service' | 'resource-cpu' | 'resource-gpu' | 'resource-storage' | 'harbor-cli' | 'docker' | 'storage'
   component: string
-  status: JobStatus | 'healthy'
+  status: JobStatus | 'healthy' | 'unavailable'
   value: string
   path: string
 }
@@ -163,7 +132,6 @@ export interface DatasetRow {
   ref?: string
   path?: string
   overwrite?: boolean
-  splits?: string[]
 }
 
 export interface AgentRow {
@@ -182,15 +150,8 @@ export interface AgentRow {
   mcp?: string
   runtime?: string
   setupTimeout?: string
+  timeout?: string
   maxTimeout?: string
-  allowedHosts?: string
-  compatibleModels?: string
-  reasoningEffort?: string
-  reasoningSummary?: string
-  temperature?: string
-  contextLength?: string
-  apiKeyEnv?: string
-  baseUrlEnv?: string
 }
 
 export interface EnvironmentRow {
@@ -199,23 +160,10 @@ export interface EnvironmentRow {
   profileType: 'built-in' | 'custom'
   environmentType: string
   importPath: string
-  networkMode: string
-  dockerImage: string
-  os: string
-  cpus: string
-  memoryMb: string
-  storageMb: string
-  gpus: string
-  gpuTypes: string
-  tpu: string
-  skillsDir: string
-  healthcheck: string
-  workdir: string
   mounts: string
   env: string
   kwargs: string
   allowedHosts: string
-  extraAllowedHosts: string
   forceBuild: boolean
   deleteAfterRun: boolean
   cpuPolicy: string
@@ -240,7 +188,6 @@ export interface LeaderboardRow {
   tokens: string
   duration: string
   jobId: string
-  split: string
   metric: string
   submitted: string
   reportPath: string

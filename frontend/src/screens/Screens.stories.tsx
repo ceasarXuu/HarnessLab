@@ -211,14 +211,14 @@ export const DatasetDrawer: Story = {
     await userEvent.click(canvas.getByText('terminal-bench'))
     await expect(canvas.getByText('Dataset tasks')).toBeVisible()
     await expect(canvas.queryByText('Manifest tools')).not.toBeInTheDocument()
-    await expect(canvas.getByLabelText('Split')).toHaveTextContent('All splits')
+    await expect(canvas.queryByLabelText('Split')).not.toBeInTheDocument()
     await userEvent.type(canvas.getByLabelText('Search tasks'), 'sqlite')
     await expect(canvas.getByText('sqlite-log-repair')).toBeVisible()
     await expect(canvas.queryByText('apt-setup')).not.toBeInTheDocument()
   },
 }
 
-export const DatasetSplitEmpty: Story = {
+export const DatasetEmptyState: Story = {
   render: () => <DatasetsFixture />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -256,21 +256,10 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByLabelText('Harness')).toHaveValue('claude-code')
     await expect(canvas.getByLabelText('Type')).toHaveValue('built-in')
     await expect(canvas.queryByLabelText('Custom import path')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('model-name')).not.toBeInTheDocument()
-    await expect(canvas.getAllByLabelText('Model name')[0]).toHaveValue('claude-haiku-4-5')
-    await expect(canvas.getAllByLabelText('Model name')[1]).toHaveValue('claude-sonnet-4-5')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add' }))
-    await expect(canvas.getAllByLabelText('Model name')).toHaveLength(3)
-    await expect(canvas.getByRole('button', { name: 'high' })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(canvas.getByRole('button', { name: 'medium' }))
-    await expect(canvas.getByRole('button', { name: 'medium' })).toHaveAttribute('aria-pressed', 'true')
-    await expect(canvas.getByLabelText('API key env')).toHaveValue('ANTHROPIC_API_KEY')
-    await expect(canvas.queryByText('Key')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Value')).not.toBeInTheDocument()
-    await expect(canvas.getAllByLabelText('Env key')[0]).toHaveValue('ANTHROPIC_API_KEY')
-    await expect(canvas.getAllByLabelText('Env value')[0]).toHaveValue('${ANTHROPIC_API_KEY}')
-    await userEvent.click(canvas.getAllByRole('button', { name: 'Add' })[1])
-    await expect(canvas.getAllByLabelText('Env key')).toHaveLength(2)
+    await expect(canvas.getByLabelText('Agent Name')).toHaveAttribute('readonly')
+    await expect(canvas.getByLabelText('Harness')).toBeDisabled()
+    await expect(canvas.queryByText('Model settings')).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Credentials and parameters')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Permission mode')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
@@ -278,20 +267,9 @@ export const AgentDrawer: Story = {
     await expect(canvas.queryByRole('checkbox', { name: 'Enable network access' })).not.toBeInTheDocument()
     await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
     await expect(canvas.queryByText('Advanced agent params')).not.toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
-    await expect(canvas.getByText('Skills sources')).toBeVisible()
-    await expect(canvas.getByText('Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Choose folder' })).toBeVisible()
-    await expect(canvas.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/terminal-bench')
-    await userEvent.click(canvas.getByRole('tab', { name: 'MCPs' }))
-    await expect(canvas.getByText('MCP Servers')).toBeVisible()
-    await expect(canvas.getByText('Manage MCP templates on the Agent. OrnnLab expands compose sidecars into Harbor task environment and registers the generated connection in task.toml.')).toBeVisible()
-    await expect(canvas.getByLabelText('Name')).toHaveValue('terminal-bench-mcp')
-    await expect(canvas.getByLabelText('Deployment')).toHaveValue('compose-sidecar')
-    await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
-    await expect(canvas.getByLabelText('Generated URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
-    await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
-    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
+    await expect(canvas.queryByRole('tab', { name: 'Skills' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('tab', { name: 'MCPs' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('tab', { name: 'Advanced' })).not.toBeInTheDocument()
   },
 }
 

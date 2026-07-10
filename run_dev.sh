@@ -56,8 +56,8 @@ BACKEND_PID=$!
 
 # 等后端进入可用状态（最多 30s）
 for i in {1..60}; do
-  if curl -sf "${BACKEND_URL}/api/system/status" >/dev/null 2>&1; then
-    echo "[run_dev] ✓ 后端 ${BACKEND_URL}/api/system/status 已就绪"
+  if curl -sf "${BACKEND_URL}/api/webui/v1/system/health" >/dev/null 2>&1; then
+    echo "[run_dev] ✓ 后端 ${BACKEND_URL}/api/webui/v1/system/health 已就绪"
     break
   fi
   if ! kill -0 "$BACKEND_PID" 2>/dev/null; then

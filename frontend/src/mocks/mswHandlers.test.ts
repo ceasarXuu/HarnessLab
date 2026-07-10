@@ -25,11 +25,16 @@ describe('WebUI MSW handlers', () => {
   })
 
   it('uses the nested Dataset Task contract route', async () => {
-    const response = await fetch('http://localhost/api/webui/v1/datasets/terminal-bench%402.0/tasks?split=test')
+    const response = await fetch('http://localhost/api/webui/v1/datasets/terminal-bench%402.0/tasks')
     const body = await response.json()
 
     expect(response.ok).toBe(true)
-    expect(body.data.items.map((task: { name: string }) => task.name)).toEqual(['apt-setup', 'git-rebase-conflict'])
+    expect(body.data.items.map((task: { name: string }) => task.name)).toEqual([
+      'apt-setup',
+      'git-rebase-conflict',
+      'sqlite-log-repair',
+      'python-env-pin',
+    ])
     expect(body.error).toBeNull()
   })
 

@@ -15,7 +15,10 @@ interface JobsTableProps {
 export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
   const statusLabels: Record<JobStatus, string> = {
     completed: t('statusCompleted'),
+    cancelled: t('statusCancelled'),
+    draft: t('statusDraft'),
     failed: t('statusFailed'),
+    interrupted: t('statusInterrupted'),
     queued: t('statusQueued'),
     running: t('statusRunning'),
   }

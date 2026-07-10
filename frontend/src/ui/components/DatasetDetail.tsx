@@ -2,7 +2,6 @@ import { Box, Download, Search, Trash2, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
-import { CustomSelect } from './CustomSelect'
 import { Metric } from './Metric'
 
 type DatasetDownloadState =
@@ -15,9 +14,7 @@ interface DatasetDetailProps {
   expandedTaskName: string | null
   isRegistryDataset: boolean
   selected: DatasetRow
-  splitOptions: Array<{ label: string; value: string }>
   taskSearch: string
-  taskSplit: string
   tasks: DatasetTask[]
   t: Translate
   writeDisabled?: boolean
@@ -28,7 +25,6 @@ interface DatasetDetailProps {
   onSync: (row: DatasetRow) => void
   onRunTask: (row: DatasetRow, taskName: string) => void
   onTaskSearch: (value: string) => void
-  onTaskSplit: (value: string) => void
 }
 
 export function DatasetDetail({
@@ -41,12 +37,9 @@ export function DatasetDetail({
   onStartDownload,
   onSync,
   onTaskSearch,
-  onTaskSplit,
   onRunTask,
   selected,
-  splitOptions,
   taskSearch,
-  taskSplit,
   tasks,
   t,
   writeDisabled = false,
@@ -107,7 +100,6 @@ export function DatasetDetail({
             <Search aria-hidden="true" />
             <input aria-label={t('searchTasks')} value={taskSearch} onChange={(event) => onTaskSearch(event.target.value)} placeholder={t('searchTasks')} />
           </label>
-          <CustomSelect ariaLabel={t('split')} className="toolbar-select" value={taskSplit} options={splitOptions} onChange={onTaskSplit} />
         </div>
         <div className="mini-table">
           <div className="mini-row task-row mini-header" role="row">

@@ -24,7 +24,7 @@ export function jobDtoToHarborJob(job: JobDto): HarborJob {
     environment: job.environmentName,
     trials: `${job.trial.completed} / ${job.trial.total}`,
     score: formatScore(job.score),
-    cost: `$${job.costUsd.toFixed(2)}`,
+    cost: formatCost(job.costUsd),
     tokens: formatTokenUsage(job.tokenUsageM),
     tokenUsage: formatTokenUsage(job.tokenUsageM),
     runtimeDuration: formatDuration(job.runtimeSeconds),
@@ -33,7 +33,6 @@ export function jobDtoToHarborJob(job: JobDto): HarborJob {
     jobDir: job.jobDir,
     eventLogPath: job.eventLogPath,
     artifactPaths: job.artifactPaths,
-    split: job.split,
     failureCode: job.failureCode,
   }
 }
@@ -51,12 +50,11 @@ export function datasetDtoToRow(dataset: DatasetDto): DatasetRow {
     registryUrl: dataset.registryUrl,
     path: dataset.download.path,
     ref: dataset.ref,
-    splits: dataset.splits,
   }
 }
 
 export function datasetTaskDtoToDatasetTask(task: DatasetTaskDto): DatasetTask {
-  return { datasetRef: task.datasetRef, description: task.description, name: task.name, splits: task.splits }
+  return { datasetRef: task.datasetRef, description: task.description, name: task.name }
 }
 
 export function agentDtoToRow(agent: AgentDto): AgentRow {
@@ -64,28 +62,20 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
   return {
     adapter: importPath,
     agentName: agent.agentName,
-    allowedHosts: formatList(agent.allowedHosts),
-    apiKeyEnv: agent.apiKeyEnv,
-    baseUrlEnv: agent.baseUrlEnv,
-    compatibleModels: formatList(agent.supportedModels),
-    contextLength: agent.contextLength === undefined ? undefined : String(agent.contextLength),
     env: formatKeyValues(agent.env),
     harness: agent.harness,
     id: agent.id,
     kwargs: agent.kwargs,
     maxTimeout: agent.maxTimeoutSeconds === undefined ? undefined : `${agent.maxTimeoutSeconds}s`,
     mcp: agent.mcpServers.length ? JSON.stringify(agent.mcpServers) : 'none',
-    models: formatList(agent.models),
-    reasoningEffort: formatList(agent.reasoningEfforts),
-    reasoningSummary: agent.reasoningSummary,
-    runtime: agent.runtime,
+    models: agent.models.length ? agent.models.join(', ') : '-',
     setupTimeout: agent.setupTimeoutSeconds === undefined ? undefined : `${agent.setupTimeoutSeconds}s`,
+    timeout: agent.timeoutSeconds === undefined ? undefined : `${agent.timeoutSeconds}s`,
     skills: agent.skillSources.length ? agent.skillSources.join('\n') : 'none',
     source: agent.type === 'built-in' ? 'Harbor built-in' : importPath,
     status: agent.status,
-    temperature: agent.temperature === undefined ? undefined : String(agent.temperature),
     type: agent.type,
-    updated: agent.updatedAt ?? '',
+    updated: '',
   }
 }
 
@@ -93,36 +83,23 @@ export function environmentDtoToRow(environment: EnvironmentDto): EnvironmentRow
   return {
     allowedHosts: formatList(environment.allowedHosts),
     cpuPolicy: environment.cpuPolicy,
-    cpus: environment.cpus,
     deleteAfterRun: environment.deleteAfterRun,
     dockerCompose: environment.dockerComposePaths.length ? environment.dockerComposePaths.join('\n') : 'none',
-    dockerImage: environment.dockerImage,
     env: formatKeyValues(environment.env),
     environmentType: environment.environmentType,
-    extraAllowedHosts: formatList(environment.extraAllowedHosts),
     forceBuild: environment.forceBuild,
-    gpus: environment.gpus,
-    gpuTypes: environment.gpuTypes,
-    healthcheck: environment.healthcheck,
     id: environment.id,
     importPath: environment.importPath ?? 'none',
     kwargs: environment.kwargs,
-    memoryMb: environment.memoryMb,
     memoryPolicy: environment.memoryPolicy,
     mounts: environment.mounts,
     name: environment.name,
-    networkMode: environment.networkMode,
-    os: environment.os,
     overrideCpus: environment.overrideCpus,
     overrideGpus: environment.overrideGpus,
     overrideMemoryMb: environment.overrideMemoryMb,
     overrideStorageMb: environment.overrideStorageMb,
     overrideTpu: environment.overrideTpu,
     profileType: environment.profileType,
-    skillsDir: 'none',
-    storageMb: environment.storageMb,
-    tpu: environment.tpu,
-    workdir: environment.workdir,
   }
 }
 
@@ -130,7 +107,7 @@ export function leaderboardEntryDtoToRow(entry: LeaderboardEntryDto): Leaderboar
   return {
     agentName: entry.agentName,
     comparabilityKey: entry.comparabilityKey,
-    cost: `$${entry.costUsd.toFixed(2)}`,
+    cost: formatCost(entry.costUsd),
     dataset: entry.datasetRef,
     duration: formatDuration(entry.runtimeSeconds),
     harness: entry.harness,
@@ -140,7 +117,6 @@ export function leaderboardEntryDtoToRow(entry: LeaderboardEntryDto): Leaderboar
     rank: entry.rank,
     reportPath: entry.reportPath ?? '',
     score: formatScore(entry.score),
-    split: entry.split,
     submitted: formatDateTime(entry.submittedAt),
     tokens: formatTokenUsage(entry.tokenUsageM),
     trials: `${entry.trial.completed} / ${entry.trial.total}`,
@@ -169,14 +145,14 @@ export function trialDtoToTrialRow(trial: TrialDto): TrialRow {
   return {
     analysisPath: '',
     artifactPath: '',
-    cost: `$${trial.costUsd.toFixed(2)}`,
+    cost: formatCost(trial.costUsd),
     duration: formatDuration(trial.runtimeSeconds),
     id: trial.id,
     jobId: trial.jobId,
-    logPath: trial.logPath,
+    logPath: trial.logPath ?? '',
     progress: trial.status,
     result: trial.status,
-    retries: trial.retryCount,
+    retries: trial.retryCount ?? 0,
     score: formatScore(trial.score),
     task: trial.taskName,
     tokens: formatTokenUsage(trial.tokenUsageM),
@@ -189,15 +165,21 @@ function formatScore(score: ScoreDto | null): string {
   return score.kind === 'percentage' ? `${score.value}%` : `${score.value}/${score.maximum}`
 }
 
-function formatTokenUsage(value: number): string {
+function formatTokenUsage(value: number | null): string {
+  if (value === null) return '-'
   return `${Number(value.toFixed(4))}M`
 }
 
-function formatDuration(totalSeconds: number): string {
+function formatDuration(totalSeconds: number | null): string {
+  if (totalSeconds === null) return '-'
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
   return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
+}
+
+function formatCost(value: number | null): string {
+  return value === null ? '-' : `$${value.toFixed(2)}`
 }
 
 function formatDateTime(value: string): string {

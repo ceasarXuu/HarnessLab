@@ -42,9 +42,7 @@ export const Dataset: Story = {
           expandedTaskName={null}
           isRegistryDataset
           selected={dataset}
-          splitOptions={[{ label: 'All splits', value: 'all' }, { label: 'test', value: 'test' }]}
           taskSearch=""
-          taskSplit="all"
           tasks={datasetTaskRows.filter((row) => row.datasetRef === dataset.ref)}
           t={t}
           onCancelDownload={() => undefined}
@@ -53,7 +51,6 @@ export const Dataset: Story = {
           onStartDownload={() => undefined}
           onSync={() => undefined}
           onTaskSearch={() => undefined}
-          onTaskSplit={() => undefined}
           onRunTask={() => undefined}
         />
       </main>

@@ -1,55 +1,53 @@
+from ornnlab.models.experiment import ExperimentCreate
+from ornnlab.services.agent_service import AgentService
+from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.queue_service import QueueService
 
 
-def _oracle_payload():
+def _oracle_payload(name: str = "Oracle") -> dict:
     return {
         "schema_version": 2,
         "id": "oracle",
-        "name": "Oracle",
+        "name": name,
         "kind": "oracle",
         "harbor": {"agent": "oracle"},
     }
 
 
-def test_agent_create_and_compile(client):
-    create = client.post("/api/agents", json=_oracle_payload())
-    assert create.status_code == 200
-    assert create.json()["id"] == "oracle"
+def test_agent_create_and_compile(settings):
+    service = AgentService(settings)
 
-    compile_response = client.post("/api/agents/oracle/compile")
-    assert compile_response.status_code == 200
-    assert compile_response.json()["agent_config"]["name"] == "oracle"
+    created = service.create(_oracle_payload())
+    compiled = service.compile("oracle")
 
-    agents = client.get("/api/agents").json()
-    assert agents[0]["status"] == "compiled"
+    assert created["id"] == "oracle"
+    assert compiled["agent_config"]["name"] == "oracle"
+    assert service.list()[0]["status"] == "compiled"
 
 
-def test_agent_update_and_soft_delete(client):
-    create = client.post("/api/agents", json=_oracle_payload())
-    assert create.status_code == 200
+def test_agent_update_and_soft_delete(settings):
+    service = AgentService(settings)
+    service.create(_oracle_payload())
 
-    updated_payload = _oracle_payload() | {"name": "Oracle Updated"}
-    updated = client.put("/api/agents/oracle", json=updated_payload)
-    assert updated.status_code == 200
-    assert updated.json()["name"] == "Oracle Updated"
+    updated = service.update("oracle", _oracle_payload("Oracle Updated"))
+    deleted = service.soft_delete("oracle")
 
-    deleted = client.delete("/api/agents/oracle")
-    assert deleted.status_code == 200
-    assert client.get("/api/agents").json() == []
+    assert updated["name"] == "Oracle Updated"
+    assert deleted["id"] == "oracle"
+    assert service.list() == []
 
 
-def test_agent_delete_blocks_queued_run(client, settings):
-    client.post("/api/agents", json=_oracle_payload())
-    created = client.post(
-        "/api/experiments",
-        json={
-            "name": "Queued",
-            "agent_ids": ["oracle"],
-            "benchmark_names": ["terminal-bench"],
-        },
+def test_agent_delete_blocks_queued_run(settings):
+    agents = AgentService(settings)
+    agents.create(_oracle_payload())
+    experiment = ExperimentService(settings).create(
+        ExperimentCreate(name="Queued", agent_ids=["oracle"], benchmark_names=["terminal-bench"])
     )
-    experiment_id = created.json()["experiment"]["id"]
-    QueueService(settings).enqueue_experiment(experiment_id)
+    QueueService(settings).enqueue_experiment(experiment["experiment"]["id"])
 
-    blocked = client.delete("/api/agents/oracle")
-    assert blocked.status_code == 409
+    try:
+        agents.soft_delete("oracle")
+    except RuntimeError as exc:
+        assert str(exc) == "agent has queued or running runs"
+    else:
+        raise AssertionError("queued Agent must not be deleted")

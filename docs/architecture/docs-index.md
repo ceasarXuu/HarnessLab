@@ -2,16 +2,13 @@
 
 Start here for the active OrnnLab version documentation.
 
-- Current version docs index: `../releases/v0.1.3/ornnlab-0.1.3-docs.md`
-- Version PRD: `../releases/v0.1.3/prd.md`
-- Version technical design: `../releases/v0.1.3/technical-design.md`
-- Version engineering plan: `../releases/v0.1.3/engineering-plan.md`
-- Version release ledger: `../releases/v0.1.3/ornnlab-0.1.3.md`
+- Current version docs index: `../releases/v1.0.5/README.md`
+- Version PRD: `../releases/v1.0.5/prd.md`
+- Version technical design: `../releases/v1.0.5/technical-design.md`
+- Version engineering plan: `../releases/v1.0.5/engineering-plan.md`
 - Install quickstart: `../playbooks/install-quickstart.md`
 - Release and rollback checklist: `../releases/v0.1.3/checklist.md`
-- Version and documentation governance: `../releases/v0.1.3/version-governance.md`
 - Harbor upgrade procedure: `../playbooks/harbor-upgrade-procedure.md`
-- Next product PRD: `../releases/v1.0.5/README.md`
 - Rust legacy workspace decision: `../archive/stubs/rust-legacy-fate.md`
 - Harbor lifecycle spike: `../spikes/2026-06-15-harbor-lifecycle-spike.md`
 - Harbor WebUI frontend governance: `frontend-webui-governance.md`
@@ -47,4 +44,4 @@ guidance from being read as current direction.
 - Frontend package: `../../frontend/`
 - Web gate: `../../scripts/test-after-change-web.sh`
 - Web test registry: `../../tests/WEB_TEST_REGISTRY.toml`
-- Release gate: `../releases/v0.1.3/checklist.md`
+- Release gate: `../releases/v1.0.5/engineering-plan.md`

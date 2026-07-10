@@ -69,9 +69,7 @@ def test_docker_orphan_scan_reports_cli_failure(tmp_path):
 
 
 def test_docker_orphan_scan_reports_missing_cli():
-    result = DockerOrphanService(
-        command=["/definitely/missing/docker"]
-    ).scan_ornnlab_containers()
+    result = DockerOrphanService(command=["/definitely/missing/docker"]).scan_ornnlab_containers()
 
     assert result["ok"] is False
     assert result["available"] is False

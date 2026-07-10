@@ -100,6 +100,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
   const t = useMemo(() => getTranslator(language), [language])
   const agents = useMemo(() => agentsResource.data?.items.map(agentDtoToRow) ?? [], [agentsResource.data])
+  const configuredAgents = useMemo(() => agents.filter((agent) => agent.type === 'custom'), [agents])
   const datasets = useMemo(() => datasetsResource.data?.items.map(datasetDtoToRow) ?? [], [datasetsResource.data])
   const environmentProfiles = useMemo(
     () => environmentsResource.data?.items.map(environmentDtoToRow) ?? [],
@@ -124,6 +125,14 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
       setLeaderboardDataset(firstDataset)
     }
   }, [leaderboardDataset, leaderboardDatasets])
+
+  useEffect(() => {
+    setDraft((current) => {
+      if (configuredAgents.some((agent) => agent.agentName === current.agent)) return current
+      const agentName = configuredAgents[0]?.agentName ?? ''
+      return current.agent === agentName ? current : { ...current, agent: agentName }
+    })
+  }, [configuredAgents])
 
   useEffect(() => {
     if (jobOperation.operation?.status !== 'completed') return
@@ -264,6 +273,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             search={datasetSearch}
             t={t}
             onRefresh={datasetsResource.refresh}
+            onPrepareTaskRun={(datasetRef, taskName) => {
+              setDraft((current) => ({ ...current, source: datasetRef, selectedTaskNames: [taskName] }))
+              navigate('jobs', 'new')
+            }}
             onSearch={setDatasetSearch}
           />
           <ResourceStatus
@@ -375,8 +388,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
       {route.page === 'jobs' && route.jobView === 'new' && (
         <>
           <NewRunPage
-            canLaunch={writesEnabled}
-            agents={agents}
+            canLaunch={writesEnabled && configuredAgents.some((agent) => agent.agentName === draft.agent)}
+            agents={configuredAgents}
             datasets={datasets}
             client={client}
             draft={draft}

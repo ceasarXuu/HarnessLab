@@ -1,0 +1,406 @@
+from __future__ import annotations
+
+import json
+from uuid import uuid4
+
+from harbor.models.environment_type import EnvironmentType
+from harbor.models.trial.config import AgentConfig, EnvironmentConfig, ResourceMode
+
+from ornnlab.models.agent import (
+    AgentProfile,
+    AuthProfile,
+    HarborProfile,
+    McpProfile,
+    RuntimeProfile,
+    SkillsProfile,
+)
+from ornnlab.models.webui import AgentInput, EnvironmentInput
+from ornnlab.services.agent_service import AgentService
+from ornnlab.services.clock import now_iso
+from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
+
+
+class WebUiProfileService:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.agents = AgentService(settings)
+
+    def list_agents(
+        self, query: str | None = None, profile_type: str | None = None, status: str | None = None
+    ) -> list[dict]:
+        records = self._built_in_agents() + self._custom_agents()
+        filtered = [record for record in records if _matches(record, query)]
+        if profile_type:
+            filtered = [record for record in filtered if record["type"] == profile_type]
+        if status:
+            filtered = [record for record in filtered if record["status"] == status]
+        return sorted(
+            filtered, key=lambda item: (item["type"] != "built-in", item["agentName"].lower())
+        )
+
+    def get_agent(self, agent_id: str) -> dict:
+        for agent in self._built_in_agents():
+            if agent["id"] == agent_id:
+                return agent
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT config_json FROM webui_agent_configs WHERE agent_id = ?",
+                (agent_id,),
+            )
+        if not rows:
+            raise KeyError(agent_id)
+        return json.loads(rows[0]["config_json"])
+
+    def resolve_agent(self, value: str) -> dict:
+        for agent in self.list_agents():
+            if value in {agent["id"], agent["agentName"], agent["harness"]}:
+                return agent
+        raise KeyError(value)
+
+    def create_agent(self, payload: AgentInput) -> dict:
+        if payload.type != "custom":
+            raise PermissionError("built-in agents are provided by Harbor and cannot be created")
+        self._assert_custom_agent_id(payload.id)
+        agent = _agent_dto(payload)
+        self._validate_agent(agent)
+        self._write_agent_profile(agent, create=True)
+        return agent
+
+    def update_agent(self, agent_id: str, payload: AgentInput) -> dict:
+        self._assert_mutable_agent(agent_id)
+        if payload.id != agent_id:
+            raise ValueError("agent id cannot be changed")
+        agent = _agent_dto(payload)
+        self._validate_agent(agent)
+        self._write_agent_profile(agent, create=False)
+        return agent
+
+    def delete_agent(self, agent_id: str) -> None:
+        self._assert_mutable_agent(agent_id)
+        self.agents.soft_delete(agent_id)
+        with sqlite.connect(self.settings) as conn:
+            conn.execute("DELETE FROM webui_agent_configs WHERE agent_id = ?", (agent_id,))
+
+    def agent_harbor_config(self, agent: dict, model_name: str | None = None) -> dict:
+        config: dict = {
+            "model_name": model_name or _first(agent["models"]),
+            "skills": agent["skillSources"],
+            "env": _key_values(agent["env"]),
+            "kwargs": _parse_kwargs(agent["kwargs"]),
+        }
+        if agent.get("setupTimeoutSeconds") is not None:
+            config["override_setup_timeout_sec"] = agent["setupTimeoutSeconds"]
+        if agent.get("timeoutSeconds") is not None:
+            config["override_timeout_sec"] = agent["timeoutSeconds"]
+        if agent.get("maxTimeoutSeconds") is not None:
+            config["max_timeout_sec"] = agent["maxTimeoutSeconds"]
+        if agent.get("importPath"):
+            config["import_path"] = agent["importPath"]
+        else:
+            config["name"] = agent["harness"]
+        mcp_servers = []
+        for server in agent["mcpServers"]:
+            mcp = {
+                key: server[key]
+                for key in ("name", "transport", "url", "command", "args")
+                if server.get(key) not in (None, [])
+            }
+            if mcp["transport"] == "stdio" and not mcp.get("command"):
+                raise ValueError(f"MCP server '{mcp['name']}' requires command for stdio")
+            if mcp["transport"] != "stdio" and not mcp.get("url"):
+                raise ValueError(f"MCP server '{mcp['name']}' requires URL for remote transport")
+            mcp_servers.append(mcp)
+        if mcp_servers:
+            config["mcp_servers"] = mcp_servers
+        return {key: value for key, value in config.items() if value not in (None, "", [], {})}
+
+    def list_environments(
+        self, query: str | None = None, profile_type: str | None = None
+    ) -> list[dict]:
+        records = self._built_in_environments() + self._custom_environments()
+        filtered = [record for record in records if _matches(record, query)]
+        if profile_type:
+            filtered = [record for record in filtered if record["profileType"] == profile_type]
+        return sorted(
+            filtered, key=lambda item: (item["profileType"] != "built-in", item["name"].lower())
+        )
+
+    def get_environment(self, environment_id: str) -> dict:
+        for environment in self._built_in_environments():
+            if environment["id"] == environment_id:
+                return environment
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT config_json FROM webui_environment_profiles "
+                "WHERE id = ? AND deleted_at IS NULL",
+                (environment_id,),
+            )
+        if not rows:
+            raise KeyError(environment_id)
+        return json.loads(rows[0]["config_json"])
+
+    def create_environment(self, payload: EnvironmentInput) -> dict:
+        if payload.profile_type != "custom":
+            raise PermissionError("built-in environments cannot be created")
+        environment = _environment_dto(payload)
+        self._validate_environment(environment)
+        now = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "INSERT INTO webui_environment_profiles("
+                "id, name, profile_type, config_json, created_at, updated_at"
+                ") "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    environment["id"],
+                    environment["name"],
+                    "custom",
+                    json.dumps(environment),
+                    now,
+                    now,
+                ),
+            )
+        return environment
+
+    def update_environment(self, environment_id: str, payload: EnvironmentInput) -> dict:
+        self._assert_mutable_environment(environment_id)
+        if payload.id != environment_id:
+            raise ValueError("environment id cannot be changed")
+        environment = _environment_dto(payload)
+        self._validate_environment(environment)
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE webui_environment_profiles SET name = ?, config_json = ?, updated_at = ? "
+                "WHERE id = ? AND deleted_at IS NULL",
+                (environment["name"], json.dumps(environment), now_iso(), environment_id),
+            )
+        return environment
+
+    def copy_environment(self, environment_id: str) -> dict:
+        source = self.get_environment(environment_id)
+        copied = {
+            **source,
+            "id": f"env-{uuid4().hex[:8]}",
+            "name": f"{source['name']} copy",
+            "profileType": "custom",
+        }
+        return self.create_environment(EnvironmentInput.model_validate(copied))
+
+    def delete_environment(self, environment_id: str) -> None:
+        self._assert_mutable_environment(environment_id)
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "UPDATE webui_environment_profiles SET deleted_at = ?, updated_at = ? WHERE id = ?",
+                (now_iso(), now_iso(), environment_id),
+            )
+
+    def environment_harbor_config(self, environment: dict) -> dict:
+        config: dict = {
+            "force_build": environment["forceBuild"],
+            "delete": environment["deleteAfterRun"],
+            "cpu_enforcement_policy": environment["cpuPolicy"],
+            "memory_enforcement_policy": environment["memoryPolicy"],
+            "override_cpus": _int_or_none(environment["overrideCpus"]),
+            "override_memory_mb": _int_or_none(environment["overrideMemoryMb"]),
+            "override_storage_mb": _int_or_none(environment["overrideStorageMb"]),
+            "override_gpus": _int_or_none(environment["overrideGpus"]),
+            "override_tpu": _tpu_or_none(environment["overrideTpu"]),
+            "mounts": _json_or_none(environment["mounts"]),
+            "extra_docker_compose": environment["dockerComposePaths"],
+            "env": _key_values(environment["env"]),
+            "kwargs": _parse_kwargs(environment["kwargs"]),
+            "extra_allowed_hosts": environment["allowedHosts"],
+        }
+        if environment.get("importPath"):
+            config["import_path"] = environment["importPath"]
+        else:
+            config["type"] = environment["environmentType"]
+        return {key: value for key, value in config.items() if value not in (None, "", [], {})}
+
+    def _write_agent_profile(self, agent: dict, create: bool) -> None:
+        profile = AgentProfile(
+            schema_version=2,
+            id=agent["id"],
+            name=agent["agentName"],
+            kind=agent["harness"],
+            harbor=HarborProfile(
+                agent=agent["harness"],
+                model=_first(agent["models"]),
+                kwargs=_parse_kwargs(agent["kwargs"]),
+            ),
+            auth=AuthProfile(inherit_env=[entry["key"] for entry in agent["env"]]),
+            skills=SkillsProfile(paths=agent["skillSources"]),
+            mcp=McpProfile(config_paths=[]),
+            runtime=RuntimeProfile(
+                agent_timeout_sec=agent.get("timeoutSeconds") or 3600,
+                setup_timeout_sec=agent.get("setupTimeoutSeconds") or 600,
+            ),
+        )
+        if create:
+            self.agents.create(profile.model_dump())
+        else:
+            self.agents.update(agent["id"], profile.model_dump())
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO webui_agent_configs(agent_id, config_json) VALUES (?, ?)",
+                (agent["id"], json.dumps(agent)),
+            )
+
+    def _assert_custom_agent_id(self, agent_id: str) -> None:
+        if agent_id.startswith("built-in:"):
+            raise ValueError("agent id uses reserved built-in prefix")
+        try:
+            self.get_agent(agent_id)
+        except KeyError:
+            return
+        raise ValueError("agent id already exists")
+
+    def _assert_mutable_agent(self, agent_id: str) -> None:
+        if agent_id.startswith("built-in:"):
+            raise PermissionError("built-in Harbor agents are immutable")
+        self.get_agent(agent_id)
+
+    def _assert_mutable_environment(self, environment_id: str) -> None:
+        if environment_id.startswith("built-in:"):
+            raise PermissionError("built-in Harbor environments are immutable")
+        self.get_environment(environment_id)
+
+    def _built_in_agents(self) -> list[dict]:
+        from harbor.models.agent.name import AgentName
+
+        return [_built_in_agent(name) for name in AgentName.values()]
+
+    def _custom_agents(self) -> list[dict]:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT config_json FROM webui_agent_configs JOIN agents ON agents.id = agent_id "
+                "WHERE agents.status != 'deleted'",
+            )
+        return [json.loads(row["config_json"]) for row in rows]
+
+    def _built_in_environments(self) -> list[dict]:
+        return [_built_in_environment(item.value) for item in EnvironmentType]
+
+    def _custom_environments(self) -> list[dict]:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT config_json FROM webui_environment_profiles WHERE deleted_at IS NULL",
+            )
+        return [json.loads(row["config_json"]) for row in rows]
+
+    def _validate_agent(self, agent: dict) -> None:
+        from harbor.models.agent.name import AgentName
+
+        if not agent.get("importPath") and agent["harness"] not in AgentName.values():
+            raise ValueError("harness must be a built-in Harbor AgentName or use importPath")
+        AgentConfig.model_validate(self.agent_harbor_config(agent))
+
+    def _validate_environment(self, environment: dict) -> None:
+        if not environment.get("importPath") and environment["environmentType"] not in {
+            item.value for item in EnvironmentType
+        }:
+            raise ValueError(
+                "environmentType must be a Harbor EnvironmentType or importPath must be set"
+            )
+        valid_policies = {item.value for item in ResourceMode}
+        for field in ("cpuPolicy", "memoryPolicy"):
+            if environment[field] not in valid_policies:
+                raise ValueError(f"{field} must be one of {sorted(valid_policies)}")
+        EnvironmentConfig.model_validate(self.environment_harbor_config(environment))
+
+
+def _agent_dto(payload: AgentInput) -> dict:
+    return payload.model_dump(by_alias=True, exclude_none=True)
+
+
+def _environment_dto(payload: EnvironmentInput) -> dict:
+    return payload.model_dump(by_alias=True, exclude_none=True)
+
+
+def _built_in_agent(harness: str) -> dict:
+    return {
+        "id": f"built-in:{harness}",
+        "agentName": harness,
+        "env": [],
+        "harness": harness,
+        "kwargs": "",
+        "mcpServers": [],
+        "models": [],
+        "skillSources": [],
+        "status": "available",
+        "type": "built-in",
+    }
+
+
+def _built_in_environment(environment_type: str) -> dict:
+    return {
+        "id": f"built-in:{environment_type}",
+        "name": environment_type,
+        "profileType": "built-in",
+        "environmentType": environment_type,
+        "allowedHosts": [],
+        "mounts": "",
+        "env": [],
+        "kwargs": "",
+        "forceBuild": False,
+        "deleteAfterRun": True,
+        "cpuPolicy": "auto",
+        "memoryPolicy": "auto",
+        "overrideCpus": "",
+        "overrideMemoryMb": "",
+        "overrideStorageMb": "",
+        "overrideGpus": "",
+        "overrideTpu": "",
+        "dockerComposePaths": [],
+    }
+
+
+def _matches(record: dict, query: str | None) -> bool:
+    if not query:
+        return True
+    haystack = " ".join(str(value) for value in record.values()).lower()
+    return query.lower() in haystack
+
+
+def _key_values(values: list[dict]) -> dict[str, str]:
+    return {entry["key"]: entry["value"] for entry in values}
+
+
+def _first(values: list[str]) -> str | None:
+    return values[0] if values else None
+
+
+def _parse_kwargs(value: str) -> dict:
+    if not value.strip():
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return dict(entry.split("=", 1) for entry in value.splitlines() if "=" in entry)
+    if not isinstance(parsed, dict):
+        raise ValueError("kwargs must be a JSON object or key=value lines")
+    return parsed
+
+
+def _int_or_none(value: str) -> int | None:
+    return int(value) if value.strip() and value.strip().lower() != "none" else None
+
+
+def _tpu_or_none(value: str) -> dict | None:
+    if not value.strip() or value.strip().lower() == "none":
+        return None
+    accelerator, separator, topology = value.partition("=")
+    if not separator or not accelerator or not topology:
+        raise ValueError("overrideTpu must use type=topology")
+    return {"type": accelerator, "topology": topology}
+
+
+def _json_or_none(value: str) -> object | None:
+    if not value.strip() or value.strip().lower() == "none":
+        return None
+    return json.loads(value)

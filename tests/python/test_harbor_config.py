@@ -34,6 +34,13 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
         n_concurrent=1,
         jobs_dir="/tmp/jobs",
         job_name="run-test",
+        overrides={
+            "agent_timeout_multiplier": 1.2,
+            "verifier_timeout_multiplier": 1.3,
+            "agent_setup_timeout_multiplier": 1.4,
+            "environment_build_timeout_multiplier": 1.5,
+            "extra_instruction_paths": ["instructions/review.md"],
+        },
     )
 
     payload = HarborConfigBuilder(settings).to_job_config_payload(config)
@@ -46,6 +53,11 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
         "version": "2.0",
         "n_tasks": 1,
     }
+    assert payload["agent_timeout_multiplier"] == 1.2
+    assert payload["verifier_timeout_multiplier"] == 1.3
+    assert payload["agent_setup_timeout_multiplier"] == 1.4
+    assert payload["environment_build_timeout_multiplier"] == 1.5
+    assert payload["extra_instruction_paths"] == ["instructions/review.md"]
     assert job_config.job_name == "run-test"
 
 

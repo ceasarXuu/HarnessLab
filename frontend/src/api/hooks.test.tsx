@@ -32,12 +32,30 @@ describe('useWebUiResource', () => {
     expect(result.current.error?.code).toBe('NETWORK_REQUEST_FAILED')
   })
 
+  it('keeps the last successful resource while a refresh is pending', async () => {
+    let resolveRefresh: ((response: ApiResponse<string | null>) => void) | undefined
+    const load = vi.fn<() => Promise<ApiResponse<string | null>>>()
+      .mockResolvedValueOnce({ data: 'loaded', error: null })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve }))
+    const { result } = renderHook(() => useWebUiResource(load, []))
+
+    await waitFor(() => expect(result.current.data).toBe('loaded'))
+    let refresh: Promise<void>
+    act(() => { refresh = result.current.refresh() })
+
+    await waitFor(() => expect(result.current.loading).toBe(true))
+    expect(result.current.data).toBe('loaded')
+    await act(async () => resolveRefresh?.({ data: 'updated', error: null }))
+    await refresh!
+    expect(result.current.data).toBe('updated')
+  })
+
   it('tracks an Operation through queued, running, and completed states', async () => {
     const client = createMockWebUiClient()
     const { result } = renderHook(() => useOperation(client))
 
     await act(async () => {
-      await result.current.submit(() => client.restartSystemService(), (data) => data.operation)
+      await result.current.submit(() => client.cleanStorageCache(), (data) => data.operation)
     })
     await waitFor(() => expect(result.current.operation?.status).toBe('queued'))
 
@@ -66,7 +84,7 @@ describe('useWebUiResource', () => {
       const { result } = renderHook(() => useOperation(client))
 
       await act(async () => {
-        await result.current.submit(() => client.restartSystemService(), (data) => data.operation)
+        await result.current.submit(() => client.cleanStorageCache(), (data) => data.operation)
       })
       await act(async () => {
         await vi.advanceTimersByTimeAsync(500)

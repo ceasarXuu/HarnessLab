@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from ornnlab.app import create_app
 from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
 
 
 @pytest.fixture(autouse=True)
@@ -19,9 +20,7 @@ def default_harbor_subprocess_simulator() -> Iterator[None]:
     if os.environ.get("ORNNLAB_REAL_HARBOR") != "1":
         simulator = Path(__file__).with_name("harbor_cli_simulator.py")
         os.environ["ORNNLAB_HARBOR_ENGINE"] = "subprocess"
-        os.environ["ORNNLAB_HARBOR_SUBPROCESS_COMMAND"] = (
-            f"{sys.executable} {simulator} run"
-        )
+        os.environ["ORNNLAB_HARBOR_SUBPROCESS_COMMAND"] = f"{sys.executable} {simulator} run"
     yield
     _restore_env("ORNNLAB_HARBOR_ENGINE", old_engine)
     _restore_env("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", old_command)
@@ -31,7 +30,9 @@ def default_harbor_subprocess_simulator() -> Iterator[None]:
 def settings(tmp_path) -> Iterator[Settings]:
     old_home = os.environ.get("ORNNLAB_HOME")
     os.environ["ORNNLAB_HOME"] = str(tmp_path)
-    yield Settings(home=tmp_path)
+    configured = Settings(home=tmp_path)
+    sqlite.initialize(configured)
+    yield configured
     if old_home is None:
         os.environ.pop("ORNNLAB_HOME", None)
     else:

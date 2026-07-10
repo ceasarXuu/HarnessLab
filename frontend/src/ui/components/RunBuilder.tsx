@@ -4,7 +4,6 @@ import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput } from './FolderPathInput'
-import { KeyValueControl } from './KeyValueControl'
 import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
@@ -26,20 +25,17 @@ interface RunBuilderProps {
 type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
-type VerifierMode = 'dataset-default' | 'custom' | 'skip'
+type VerifierMode = 'dataset-default' | 'skip'
 
 export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
-  const agentOptions = agents.map((agent) => ({
-    label: agent.agentName,
-    model: agent.models.split(',')[0]?.trim() || draft.model,
-    value: agent.agentName,
-  }))
+  const agentOptions = agents
+    .filter((agent) => agent.type === 'custom')
+    .map((agent) => ({ label: agent.agentName, value: agent.agentName }))
   const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
-  const availableSplits = selectedDataset?.splits ?? []
   const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
   const selectedDatasetTasks = taskRows.filter((row) => row.datasetRef === selectedDatasetKey)
   const searchedTasks = selectedDatasetTasks.filter((row) => {
@@ -54,11 +50,9 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
   const leaderboardLockedByVerifier = verifierMode === 'skip'
   const setVerifierMode = (mode: VerifierMode) => {
     if (mode === 'dataset-default') {
-      onDraft({ ...draft, verifierMode: mode, disableVerifier: false, verifierImportPath: '' })
+      onDraft({ ...draft, verifierMode: mode })
     } else if (mode === 'skip') {
-      onDraft({ ...draft, verifierMode: mode, disableVerifier: true, includeInLeaderboard: false })
-    } else {
-      onDraft({ ...draft, verifierMode: mode, disableVerifier: false, verifierImportPath: '' })
+      onDraft({ ...draft, verifierMode: mode, includeInLeaderboard: false })
     }
   }
   const toggleTask = (taskName: string, enabled: boolean) => {
@@ -93,7 +87,6 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
       <div className="section-header compact">
         <div>
           <h1>{t('newJob')}</h1>
-          <p>{t('newJobDesc')}</p>
         </div>
         <div className="run-builder-actions">
           <button className="secondary-button" onClick={onCancel}>
@@ -148,8 +141,7 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
               value={draft.source}
               options={datasetOptions}
               onChange={(value) => {
-                const nextDataset = datasets.find((row) => datasetValue(row) === value)
-                onDraft({ ...draft, selectedTaskNames: null, source: value, split: nextDataset?.splits?.[0] ?? '' })
+                onDraft({ ...draft, selectedTaskNames: null, source: value })
               }}
             />
           </label>
@@ -158,10 +150,9 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
             <CustomSelect
               ariaLabel={t('agent')}
               value={draft.agent}
-              options={agentOptions.map((option) => ({ label: option.label, value: option.value }))}
+              options={agentOptions}
               onChange={(value) => {
-                const nextAgent = agentOptions.find((option) => option.value === value)
-                onDraft({ ...draft, agent: value, model: nextAgent?.model ?? draft.model })
+                onDraft({ ...draft, agent: value })
               }}
             />
           </label>
@@ -226,17 +217,6 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
       </TabPanel>
       <TabPanel active={activeTab === 'tasks'} title={t('runTabTasks')}>
         <div className="run-grid">
-          {availableSplits.length > 0 && (
-            <label>
-              {t('split')}
-              <CustomSelect
-                ariaLabel={t('split')}
-                value={draft.split}
-                options={availableSplits.map((split) => ({ label: split, value: split }))}
-                onChange={(value) => onDraft({ ...draft, split: value })}
-              />
-            </label>
-          )}
           <Field label={t('searchTaskList')}>
             <input
               aria-label={t('searchTaskList')}
@@ -308,42 +288,11 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
               value={verifierMode}
               options={[
                 { label: t('datasetDefaultVerifier'), value: 'dataset-default' },
-                { label: t('customVerifier'), value: 'custom' },
                 { label: t('skipVerifier'), value: 'skip' },
               ]}
               onChange={(value) => setVerifierMode(value as VerifierMode)}
             />
           </label>
-          {verifierMode === 'custom' && (
-            <>
-              <Field label={t('verifierImportPath')}>
-                <input
-                  value={draft.verifierImportPath}
-                  onChange={(event) => onDraft({ ...draft, verifierImportPath: event.target.value })}
-                />
-              </Field>
-              <Field label={t('verifierMaxTimeoutSec')}>
-                <input
-                  type="number"
-                  min="1"
-                  value={draft.verifierMaxTimeoutSec}
-                  onChange={(event) => onDraft({ ...draft, verifierMaxTimeoutSec: event.target.value })}
-                />
-              </Field>
-              <KeyValueControl
-                label={t('verifierEnv')}
-                labels={{ add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }}
-                value={draft.verifierEnv}
-                onChange={(value) => onDraft({ ...draft, verifierEnv: value })}
-              />
-              <KeyValueControl
-                label={t('verifierKwargs')}
-                labels={{ add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }}
-                value={draft.verifierKwargs}
-                onChange={(value) => onDraft({ ...draft, verifierKwargs: value })}
-              />
-            </>
-          )}
         </div>
       </TabPanel>
       <TabPanel active={activeTab === 'runtime'} title={t('runTabRuntime')}>

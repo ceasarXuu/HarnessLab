@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from pathlib import Path
 from uuid import uuid4
 
 from ornnlab.models.experiment import ExperimentCreate
@@ -17,6 +19,7 @@ from ornnlab.services.failure_classifier import classify_exception
 from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.report_service import ReportService
+from ornnlab.services.run_cancellation_service import RunCancellationService
 from ornnlab.services.template_service import TemplateService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -31,6 +34,7 @@ class ExperimentService:
         self.agent_configs = AgentConfigService(settings)
         self.queue = QueueService(settings)
         self.reports = ReportService(settings)
+        self.cancellations = RunCancellationService(settings, self.events, self.reports)
         self.templates = TemplateService(settings)
 
     def create(self, request: ExperimentCreate) -> dict:
@@ -161,34 +165,7 @@ class ExperimentService:
 
     def cancel_run(self, run_id: str) -> dict:
         run = self.get_run(run_id)
-        if run["status"] in {"completed", "failed", "cancelled", "interrupted"}:
-            return run
-        now = now_iso()
-        report_path = None
-        if run["status"] == "running":
-            job_dir = run["job_dir"] or str(self.settings.experiments_dir / run_id / "harbor-job")
-            report_path = self.reports.write_summary(run_id, "cancelled", job_dir, None)
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, "
-                "report_path = COALESCE(?, report_path), updated_at = ? WHERE id = ?",
-                ("cancelled", now, report_path, now, run_id),
-            )
-            conn.execute(
-                "UPDATE queue_items SET state = ?, finished_at = ? WHERE run_id = ?",
-                ("cancelled", now, run_id),
-            )
-        event_type = (
-            "experiment.cancel_requested"
-            if run["status"] == "running"
-            else "experiment.cancelled"
-        )
-        self.events.append(
-            "run",
-            run_id,
-            event_type,
-            {"previous_status": run["status"]},
-        )
+        self.cancellations.cancel(run)
         self.finalize_experiment_if_terminal(run["experiment_id"])
         return self.get_run(run_id)
 
@@ -286,17 +263,24 @@ class ExperimentService:
 
     async def _run_one(self, run: dict) -> None:
         now = now_iso()
-        job_dir = str(self.settings.experiments_dir / run["id"] / "harbor-job")
+        webui_config = self._webui_run_config(run["id"])
+        job_dir = _resolve_job_dir(
+            webui_config.get("jobs_dir"), self.settings.experiments_dir / run["id"] / "harbor-job"
+        )
         try:
+            agent_config = self.agent_configs.config(run["agent_id"])
+            if agent_config.get("import_path"):
+                agent_config.pop("name", None)
             config = self.builder.build(
-                self.agent_configs.config(run["agent_id"]),
+                agent_config,
                 run["benchmark_name"],
                 run["benchmark_version"],
                 run["n_tasks"],
                 run["n_attempts"],
                 run["n_concurrent"],
                 job_dir,
-                job_name=run["id"],
+                job_name=webui_config.get("job_name", run["id"]),
+                overrides=webui_config.get("harbor_overrides"),
             )
             snapshot = self.engine.capability_snapshot()
             artifact_paths = self.builder.write_run_artifacts(config, snapshot)
@@ -497,3 +481,18 @@ class ExperimentService:
 
     def _is_run_cancelled(self, run_id: str) -> bool:
         return self.get_run(run_id)["status"] == "cancelled"
+
+    def _webui_run_config(self, run_id: str) -> dict:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT config_json FROM webui_job_configs WHERE run_id = ?",
+                (run_id,),
+            )
+        return json.loads(rows[0]["config_json"]) if rows else {}
+
+
+def _resolve_job_dir(configured_path: str | None, default_path) -> str:
+    if not configured_path:
+        return str(default_path)
+    return str(Path(configured_path).expanduser().resolve())

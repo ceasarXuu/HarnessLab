@@ -7,6 +7,7 @@ from typing import Any
 from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_utils import derive_experiment_status
+from ornnlab.services.harbor_score import pass_at_one
 from ornnlab.services.report_service import ReportService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -39,6 +40,15 @@ class RunRecoveryService:
         with sqlite.connect(self.settings) as conn:
             row = conn.execute("SELECT COUNT(*) AS count FROM runs WHERE status = 'running'")
             return int(row.fetchone()["count"])
+
+    def reconcile_run(self, run_id: str) -> str:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(conn, "SELECT * FROM runs WHERE id = ?", (run_id,))
+        if not rows:
+            raise KeyError(run_id)
+        decision = self._reconcile_run(rows[0])
+        self._update_experiment_status(rows[0]["experiment_id"])
+        return decision
 
     def _running_runs(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
@@ -219,11 +229,7 @@ def _score_from_result_payload(result: dict[str, Any]) -> float | None:
     for dataset_stats in evals.values():
         if not isinstance(dataset_stats, dict):
             continue
-        pass_at_k = dataset_stats.get("pass_at_k")
-        if isinstance(pass_at_k, dict):
-            score = pass_at_k.get("1", pass_at_k.get(1))
-            if isinstance(score, int | float):
-                return float(score)
+        score = pass_at_one(dataset_stats.get("pass_at_k"))
+        if score is not None:
+            return score
     return None
-
-

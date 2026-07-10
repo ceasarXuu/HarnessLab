@@ -48,7 +48,6 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
           <Metric label="tokens" value={job.tokens} />
           <Metric label={t('environment')} value={job.environment} />
           <Metric label="job_dir" value={job.jobDir ?? 'jobs/current'} />
-          <Metric label="split" value={job.split ?? 'default'} />
         </div>
         <div className="button-row tight job-action-row">
           <label className="switch-control">

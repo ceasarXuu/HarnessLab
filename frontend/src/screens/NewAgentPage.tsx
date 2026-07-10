@@ -87,15 +87,9 @@ function buildNewAgent(rows: AgentRow[]): AgentRow {
     kwargs: 'none',
     skills: 'none',
     mcp: 'none',
-    runtime: 'docker / 1800s',
     setupTimeout: '300s',
+    timeout: '1800s',
     maxTimeout: '3600s',
-    allowedHosts: '*',
-    compatibleModels: 'custom-model',
-    temperature: '0.2',
-    contextLength: '131072',
-    apiKeyEnv: 'CUSTOM_API_KEY',
-    baseUrlEnv: 'CUSTOM_BASE_URL',
   }
 }
 

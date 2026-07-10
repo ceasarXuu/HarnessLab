@@ -7,11 +7,12 @@
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined Python/Web-first test strategy for the Harbor WebUI rewrite. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked test strategy to document version governance. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue frontend gates with the Harbor Viewer-aligned React/Vite demo gates. |
+| 1.3 | `ornnlab` npm `0.1.3`; Python app `0.3.0` | 2026-07-10 | Replaced retired product API references with the v1.0.5 WebUI contract and Operation tests. |
 
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
 - Archived copy: `../archive/2026-06-15-pre-harbor-webui-redesign/test-engineering.md`
-- Current test strategy: `plans/2026-06-15-harbor-webui-redesign-engineering-plan.md#8-testing-strategy`
+- Current test strategy: `../releases/v1.0.5/engineering-plan.md`
 
 Current rewrite gates are Python/Web first:
 
@@ -31,8 +32,8 @@ Current rewrite gates are Python/Web first:
 - Docker orphan doctor tests that use a fake Docker CLI to verify
   `ornnlab.run_id` label scans, scan failure diagnostics, and dry-run
   cleanup plans;
-- doctor logs tests that verify `ornnlab doctor --logs` and
-  `/api/system/doctor?logs=true` expose failed-run paths and remediation;
+- system diagnostics tests that verify `WebUiSystemService` reports health and
+  that `/api/webui/v1/system/health` returns a contract envelope;
 - backup tests that verify exports exclude nested backups, imports restore into
   an empty home, non-empty targets are rejected, and unsafe tar members are
   blocked;
@@ -42,8 +43,8 @@ Current rewrite gates are Python/Web first:
   `tests/python/test_real_harbor_cancel_recovery.py`, gated by
   `ORNNLAB_REAL_HARBOR=1` and Docker availability;
 - ruff and pyright for Python static gates;
-- React typecheck, lint, unit tests, Storybook smoke tests, and Playwright
-  smoke tests for the frontend;
+- React typecheck, lint, unit tests, Storybook smoke/static-build tests, and
+  Codex Web Preview visual acceptance for the frontend;
 - GitHub Actions default jobs `python-web` and `frontend-web`, plus an opt-in
   `real-harbor-docker-smoke` workflow dispatch job;
 - a line-count gate that fails when production source files exceed 500 lines.
@@ -57,10 +58,10 @@ then mutate only the persisted crash boundary under test. Do not trust in-memory
 worker state after restart; SQLite run status plus Harbor artifacts are the
 authoritative recovery inputs.
 
-Operational note: API tests that need deterministic terminal results should call
-`POST /api/experiments/{id}/run?wait=true`. Product-style tests should use the
-default `wait=false` path and then observe state through queue, run, event, or
-SSE APIs.
+Operational note: API tests that need deterministic terminal results should create
+a Job with `runImmediately=false`, or test the underlying queue service directly.
+Product-style tests submit a WebUI write, poll `GET /api/webui/v1/operations/{id}`
+until terminal, then read the affected Job, Dataset, event or trial resource.
 
 Operational note: TestClient-based tests must use the context-manager fixture so
 FastAPI lifespan and app-level worker tasks share a stable event loop. Creating a

@@ -66,9 +66,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-        working-directory: frontend
       - name: Typecheck
         run: npm run typecheck
         working-directory: frontend
@@ -81,8 +78,8 @@ jobs:
       - name: Storybook smoke
         run: npm run storybook:test
         working-directory: frontend
-      - name: Playwright e2e
-        run: npm run e2e
+      - name: Storybook static build
+        run: npm run storybook:build
         working-directory: frontend
 
   real-harbor-docker-smoke:

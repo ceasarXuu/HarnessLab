@@ -53,7 +53,6 @@ export function useWebUiResource<T>(
   const refresh = useCallback(async () => {
     const request = ++sequence.current
     setLoading(true)
-    setData(null)
     setError(null)
     const response = await load()
     if (request !== sequence.current) return
@@ -115,8 +114,8 @@ export function useDatasetTasks(
   ref?: string,
   query: DatasetTaskQuery = {},
 ): WebUiResource<Page<DatasetTaskDto>> {
-  const load = useCallback(() => client.listDatasetTasks(ref ?? '', query), [client, query.cursor, query.limit, query.q, query.split, ref])
-  return useWebUiResource(load, [client, query.cursor, query.limit, query.q, query.split, ref], Boolean(ref))
+  const load = useCallback(() => client.listDatasetTasks(ref ?? '', query), [client, query.cursor, query.limit, query.q, ref])
+  return useWebUiResource(load, [client, query.cursor, query.limit, query.q, ref], Boolean(ref))
 }
 
 export function useJob(client: WebUiClient, id?: string): WebUiResource<JobDto> {
@@ -138,9 +137,9 @@ export function useLeaderboard(client: WebUiClient, query?: LeaderboardQuery): W
   const enabled = Boolean(query?.dataset)
   const load = useCallback(
     () => client.listLeaderboard(query ?? { dataset: '' }),
-    [client, query?.cursor, query?.dataset, query?.limit, query?.metric, query?.q, query?.split],
+    [client, query?.cursor, query?.dataset, query?.limit, query?.metric, query?.q],
   )
-  return useWebUiResource(load, [client, query?.cursor, query?.dataset, query?.limit, query?.metric, query?.q, query?.split], enabled)
+  return useWebUiResource(load, [client, query?.cursor, query?.dataset, query?.limit, query?.metric, query?.q], enabled)
 }
 
 export function useLeaderboardDatasets(client: WebUiClient, query: ListQuery = {}): WebUiResource<Page<LeaderboardDatasetDto>> {

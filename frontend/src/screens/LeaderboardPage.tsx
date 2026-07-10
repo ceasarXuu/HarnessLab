@@ -99,7 +99,6 @@ export function LeaderboardPage({
                 <th>{t('cost')}</th>
                 <th>{t('tokenUsage')}</th>
                 <th>{t('duration')}</th>
-                <th>{t('split')}</th>
                 <th>{t('job')}</th>
                 <th>{t('actions')}</th>
               </tr>
@@ -122,7 +121,6 @@ export function LeaderboardPage({
                   <td>{row.cost}</td>
                   <td>{row.tokens}</td>
                   <td>{row.duration}</td>
-                  <td>{row.split}</td>
                   <td>
                     <button className="row-button" onClick={() => {
                       const job = jobs.find((item) => item.id === row.jobId)

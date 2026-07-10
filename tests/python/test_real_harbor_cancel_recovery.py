@@ -12,10 +12,7 @@ pytestmark = pytest.mark.docker
 
 
 def _real_harbor_enabled() -> bool:
-    return (
-        os.environ.get("ORNNLAB_REAL_HARBOR") == "1"
-        and shutil.which("docker") is not None
-    )
+    return os.environ.get("ORNNLAB_REAL_HARBOR") == "1" and shutil.which("docker") is not None
 
 
 def _real_config(tmp_path, job_name: str):
@@ -61,9 +58,7 @@ def test_real_harbor_subprocess_cancel_writes_cleanup_evidence(tmp_path):
 
     async def run_and_cancel() -> None:
         task = asyncio.create_task(HarborEngine(mode="subprocess").run(config))
-        await asyncio.sleep(
-            float(os.environ.get("ORNNLAB_REAL_HARBOR_CANCEL_DELAY", "1.0"))
-        )
+        await asyncio.sleep(float(os.environ.get("ORNNLAB_REAL_HARBOR_CANCEL_DELAY", "1.0")))
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

@@ -111,7 +111,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                   </td>
                   <td>{row.harness}</td>
                   <td>{row.type}</td>
-                  <td>{row.models}</td>
+                  <td>{row.models || '-'}</td>
                   <td>
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
                       {row.status}

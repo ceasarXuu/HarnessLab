@@ -1,46 +1,31 @@
 # Harbor WebUI 前后端接口规范
 
-- 状态：草案
+- 状态：Active
 - 适用版本：v1.0.5
-- 范围：当前 Harbor WebUI 前端功能与后续后端对接契约
-- 当前实现：Jobs、Datasets、Agents、Environments、Leaderboard、System 及 Header Hub 连接状态均已通过 `frontend/src/api/` 的 DTO、client、hook 与 ViewModel 读取。所有可见写操作经 `Operation` 提交与轮询；`api` 模式不回退 fixture 或模拟成功。后端尚未实现本契约，Stage 3 将直接升级旧 API。
+- 更新：2026-07-10
+- 实现入口：`ornnlab/api/webui.py`、`frontend/src/api/contract.ts`
 
-> v1.0.5 引用关系：本文是 WebUI API 契约源文件。v1.0.5 的技术收敛入口见 [v1.0.5 技术设计](../releases/v1.0.5/technical-design.md)，实施进度见 [v1.0.5 工程计划与进度](../releases/v1.0.5/engineering-plan.md)。
+本文是 OrnnLab WebUI 的唯一对外 API 契约。产品语义见 [v1.0.5 PRD](../releases/v1.0.5/prd.md)，技术结构见 [技术设计](../releases/v1.0.5/technical-design.md)，实施状态见 [工程计划](../releases/v1.0.5/engineering-plan.md)。
 
-## 目标
+## 1. 基础约定
 
-这份规范用于把当前 WebUI 可见功能固化为前后端接口边界。后续接入后端时，前端页面、Storybook mock、后端 API、Harbor CLI/Hub 能力映射都应以这里的资源模型和接口分组为基准。
+### 根路径与弃用路由
 
-规范遵循两个约束：
-
-- Harbor 有的能力，WebUI 应有对应入口或状态展示。
-- WebUI 有的按钮、字段、状态，后端必须能落到真实 Harbor、OrnnLab 服务或本机系统能力，不能保留 fake-only 功能。
-
-本规范不是后端已实现声明。凡是列入“待确认问题”的能力，在后端实现前只能作为 UI 需求和接口预留，不能在产品文案中表述为已可用。
-
-## 通用约定
-
-### API 根路径
-
-联调统一使用版本化 WebUI 根路径：
+所有端点位于：
 
 ```text
 /api/webui/v1
 ```
 
-后端可以内部再分 Harbor CLI、Harbor Hub、OrnnLab Service、本机系统探针，但对前端暴露统一 WebUI API。
-
-当前后端已有 `/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents` 等旧路由。v1.0.5 不维护新旧两套产品 API，也不建设 legacy adapter。后续应直接对这些旧 API 做破坏性升级：实现代码和 service 可以复用，但对外路由、资源命名、响应包络、错误模型和异步 Operation 都必须按本规范收敛到 `/api/webui/v1`。
+`/api/experiments`、`/api/runs`、`/api/benchmarks`、`/api/leaderboard`、`/api/system`、`/api/agents`、`/api/templates` 已移除并返回 404。不得新建 legacy adapter、兼容别名或 API-to-mock 成功 fallback。
 
 ### 响应包络
 
-所有 JSON 接口返回统一包络：
-
 ```ts
 interface ApiResponse<T> {
-  data: T
+  data: T | null
   error: ApiError | null
-  meta?: ApiMeta
+  meta: { requestId: string; total?: number; nextCursor?: string }
 }
 
 interface ApiError {
@@ -48,26 +33,33 @@ interface ApiError {
   message: string
   details?: Record<string, unknown>
 }
+```
 
-interface ApiMeta {
-  cursor?: string
+每个响应带 `meta.requestId`，HTTP 响应同时带 `X-Request-Id`。列表数据为：
+
+```ts
+interface Page<T> {
+  items: T[]
+  total: number
   nextCursor?: string
-  total?: number
-  requestId: string
 }
 ```
 
-列表接口统一支持：
+列表端点可用 `q`、`cursor`、`limit`；Agents 额外支持 `type`、`status`，Environment 额外支持 `type`，Leaderboard 需要 `dataset` 并可选 `metric`。除契约明确列出的参数外，所有 query 参数一律返回 `422 INVALID_REQUEST`。
 
-- `q`：搜索关键字。
-- `cursor`：分页游标。
-- `limit`：页大小，默认 50。
+### 错误模型
 
-写操作建议支持 `Idempotency-Key` 请求头，避免用户重复点击导致重复 Job、重复下载或重复清理。
+| HTTP | code | 含义 |
+|---|---|---|
+| 404 | `ROUTE_NOT_FOUND` | 路由不存在 |
+| 404 | `RESOURCE_NOT_FOUND` | 资源不存在 |
+| 403 | `RESOURCE_IMMUTABLE` | built-in 资源不可变更 |
+| 409 | `OPERATION_CONFLICT` | 操作已终态或与当前状态冲突 |
+| 422 | `VALIDATION_ERROR` | Pydantic 请求字段校验失败，包括额外字段 |
+| 422 | `INVALID_REQUEST` | 资源状态、Harbor 配置或 query 参数无效 |
+| 500 | `INTERNAL_ERROR` | 未预期服务端错误 |
 
-### 异步操作
-
-下载 dataset、清理缓存、重启服务、运行 Job 等可能耗时操作统一返回 Operation：
+## 2. 异步 Operation
 
 ```ts
 type OperationStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
@@ -86,136 +78,174 @@ interface Operation {
 }
 ```
 
-查询与取消：
+- `GET /operations/{operationId}` 返回 Operation。
+- `POST /operations/{operationId}/cancel` 取消 queued/running Operation。
+- 运行时间较长的 Dataset 导入、下载、同步和 Job resume 走后台 task；其他写操作也返回 completed Operation，保持前端统一状态流。
+- 前端使用轮询，不实现 SSE：Operation 进行中时轮询；Job 日志通过 Jobs events 端点拉取。
 
-- `GET /operations/{operationId}`
-- `POST /operations/{operationId}/cancel`
+## 3. 端点目录
 
-前端需要实时进度时，后端优先提供 SSE：
+| 资源 | 方法与路径 | 返回 |
+|---|---|---|
+| Operation | `GET /operations/{id}` | `Operation` |
+| Operation | `POST /operations/{id}/cancel` | `{ operation }` |
+| Agent | `GET /agents`、`GET /agents/{id}` | `Page<Agent>`、`Agent` |
+| Agent | `POST /agents`、`PATCH /agents/{id}`、`DELETE /agents/{id}` | `{ operation }` |
+| Environment | `GET /environments`、`GET /environments/{id}` | `Page<Environment>`、`Environment` |
+| Environment | `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`、`POST /environments/{id}/copy` | `{ operation }` |
+| Job | `GET /jobs`、`GET /jobs/{id}` | `Page<Job>`、`Job` |
+| Job | `POST /jobs` | `{ job, operation }` |
+| Job | `POST /jobs/{id}/cancel`、`retry`、`resume` | `{ operation }` |
+| Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
+| Job | `PATCH /jobs/{id}/leaderboard` | `{ job, leaderboard, operation }` |
+| Dataset | `GET /datasets`、`GET /datasets/{ref}`、`GET /datasets/{ref}/tasks` | `Page<Dataset>`、`Dataset`、`Page<DatasetTask>` |
+| Dataset | `POST /datasets/import`、`POST /datasets/{ref}/download`、`POST /datasets/{ref}/download/cancel`、`POST /datasets/{ref}/sync`、`DELETE /datasets/{ref}/local` | `{ operation }` |
+| Leaderboard | `GET /leaderboard/datasets`、`GET /leaderboard` | `Page<LeaderboardDataset>`、`Page<LeaderboardEntry>` |
+| System | `GET /system/health`、`GET /system/hub-connection` | `Page<SystemComponent>`、`HubConnection` |
+| System | `POST /system/service/update/check` | `UpdateCheckResult` |
+| System | `POST /system/service/update`、`restart`、`POST /system/cache/docker/clean`、`POST /system/cache/storage/clean` | `{ operation }` |
 
-- `GET /events?cursor={cursor}`
+路径中的 Dataset ref 采用 URL encoding，例如 `terminal-bench%402.0`。
 
-首期也可以用轮询 `GET /operations/{operationId}`。
+## 4. 资源 DTO
 
-### mock 字段边界
-
-`frontend/src/mocks/` 是离线演示、Storybook 与测试的夹具来源，但后端接口以本规范为准。以下字段收敛已经在 Stage 2 落地，后续新增字段必须继续遵守：
-
-- Job 与 Leaderboard 统一使用 `agentName` 和 `harness`；旧 `agent` 字段只允许作为 mock fixture 内部迁移字段，不进入正式 API。
-- Dataset 列表不再向页面暴露 `digest` 和 `updated`，如后端需要保留，应只放在详情或调试信息中。
-- Agent 列表不再暴露 `adapter`、`source`、`updated` 三列；harness/adapter 的技术检查只进入详情或 review 操作。
-- Leaderboard 不再暴露 `submissionId`、`uploadedUrl`、可复现性和 Actions 列；提交与上传只通过明确操作触发。
-- Environment 页面提供 OrnnLab-local 模板 CRUD。模板不是 Harbor 原生资源，但每个模板必须完整映射到 Harbor `EnvironmentConfig` / task `[environment]` 支持字段，并由 New Job 下拉引用。
-
-`frontend/src/domain/` 已承载生产 UI 类型；mock 可以继续导出 fixture，但不作为 app/screen/component 的类型来源。
-
-后端 DTO 与 UI ViewModel 必须分离：
-
-- token、cost、duration、score 等由数字/结构化字段进入前端 contract client，再由 UI 格式化。
-- artifact、event、operation 等由后端返回结构化类型，UI 负责分组和展示。
-- 页面不得把已经格式化的字符串再提交给后端。
-
-## 数据模型
-
-### Job
+### Job 与 Trial
 
 ```ts
-type JobStatus = 'running' | 'queued' | 'completed' | 'failed'
-
 interface Job {
   id: string
   name: string
-  status: JobStatus
-  dataset: string
+  status: 'draft' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
+  datasetRef: string
   agentName: string
   harness: string
   model: string
-  environment: string
-  trials: string
-  score: string
-  cost: string
-  tokens: string
-  runtimeDuration: string
+  environmentName: string
+  trial: { completed: number; total: number }
+  score: { kind: 'percentage'; value: number } | { kind: 'points'; value: number; maximum: number } | null
+  costUsd: number | null
+  tokenUsageM: number | null
+  runtimeSeconds: number | null
   createdAt: string
   includeInLeaderboard: boolean
   jobDir?: string
   eventLogPath?: string
   artifactPaths?: string[]
-  split?: string
-  metric?: string
   failureCode?: string
 }
-```
 
-`score` 允许两种展示格式：
-
-- 百分比：`72.5%`
-- 分数：`87/100`
-
-### JobConfig
-
-`JobConfig` 是当前 New Job 请求 DTO。前半部分对应用户在基础、Tasks、验证器和运行策略中做出的决策；Agent profile 中已有的模型、凭证与参数由前端/后端在选定 Agent 后派生，不作为 Job 级交互重新暴露。
-
-```ts
-interface JobConfig {
-  agentEnv: Array<{ key: string; value: string }>
-  agentImportPath?: string
-  agentKwargs: string
-  agentName: string
-  attempts: number
-  concurrency: number
-  datasetRef: string
-  debug: boolean
-  environmentPresetId: string
-  includeInLeaderboard: boolean
-  jobName: string
-  jobsDir: string
-  model: string
-  maxRetries: number
-  metric: string
-  notes: string
-  retryExclude: string
-  retryInclude: string
-  retryIntervalPolicy: 'standard' | 'fast' | 'slow' | 'custom'
-  retryMaxWaitSeconds: number
-  retryMinWaitSeconds: number
-  retryWaitMultiplier: number
-  selectedTaskNames: string[] | null
-  split: string
-  timeoutMultiplier: number
-  timeoutPolicy: 'standard' | 'strict' | 'relaxed' | 'custom'
-  verifierMode: 'dataset-default' | 'custom' | 'skip'
+interface Trial {
+  id: string
+  jobId: string
+  taskName: string
+  status: 'passed' | 'failed' | 'cancelled' | 'interrupted'
+  score: Job['score']
+  costUsd: number | null
+  tokenUsageM: number | null
+  runtimeSeconds: number | null
+  retryCount: number | null
+  logPath: string | null
 }
 ```
 
-`environmentPresetId` 指向 Environment 页面管理的 OrnnLab-local 环境模板。后端创建 JobConfig 时负责把模板展开为 Harbor 真实字段，例如 `type` / `import_path`、`force_build`、`delete`、`cpu_enforcement_policy`、`memory_enforcement_policy`、`override_*`、`mounts`、`extra_docker_compose`、`env`、`kwargs`、`extra_allowed_hosts`。`environmentType` 只能取 Harbor 官方 `EnvironmentType` 枚举值；如果模板填写了 `importPath`，后端应生成 Harbor `import_path` 并省略 `type`，不得把 `custom` 作为 Harbor type 下发。CLI `--yes` 不是 WebUI 用户配置项，由后端执行层在非交互运行时处理。
+Trial 不包含模拟的 progress 百分比、analysis path 或 verifier 内部状态。只有 Harbor 明确提供的 `pass` 二元 reward 或 Job `pass@1` 才转换为百分比 score；任意 reward 聚合没有最大分值时不伪造为百分制或分数制。Harbor 不提供的 retry/log 字段返回 `null`。
 
-### EnvironmentPreset
-
-Environment 模板是 OrnnLab-local 管理层，不是 Harbor 顶层 CRUD 资源。built-in 模板不可直接编辑或删除，只能复制为 custom 模板；custom 模板允许新建、编辑、复制、删除，并可被 New Job 引用。
+### Job 创建
 
 ```ts
-interface EnvironmentPreset {
+interface CreateJobRequest {
+  runImmediately: boolean
+  config: {
+    jobName: string
+    jobsDir: string
+    datasetRef: string
+    selectedTaskNames: string[] | null
+    extraInstructionPaths: string[]
+    agentName: string
+    environmentPresetId: string
+    concurrency: number
+    attempts: number
+    debug: boolean
+    includeInLeaderboard: boolean
+    verifierMode: 'dataset-default' | 'skip'
+    timeoutMultiplier: number
+    agentTimeoutMultiplier: number
+    verifierTimeoutMultiplier: number
+    agentSetupTimeoutMultiplier: number
+    environmentBuildTimeoutMultiplier: number
+    maxRetries: number
+    retryInclude: string
+    retryExclude: string
+    retryWaitMultiplier: number
+    retryMinWaitSeconds: number
+    retryMaxWaitSeconds: number
+    metric: 'sum' | 'min' | 'max' | 'mean' | 'uv-script'
+    notes: string
+  }
+}
+```
+
+后端只接受已配置的 custom Agent profile。它把 Agent 展开为 `AgentConfig`，把 Environment 预设展开为 `EnvironmentConfig`，再写入 Harbor `JobConfig` override。`split`、`model`、`agentEnv`、`agentImportPath`、`agentKwargs`、custom verifier、`env_file`、输出/Hub/plugin 参数均不属于 Job 请求。
+
+如果 `verifierMode` 为 `skip`，后端会禁用 verifier，并要求 `includeInLeaderboard` 为 false；后续尝试把该 Job 加回排行榜返回 `422`。
+
+### Dataset
+
+```ts
+interface Dataset {
+  ref: string
+  name: string
+  version: string
+  visibility: 'public' | 'private'
+  taskCount: number
+  source: string
+  registryUrl?: string
+  download: { status: 'downloaded' | 'not-downloaded'; path?: string; sizeBytes?: number }
+}
+
+interface DatasetTask { datasetRef: string; name: string; description: string }
+```
+
+`POST /datasets/import` 接受 `{ name, version, path, taskCount }`，登记本地 Dataset，不伪造文件上传。Dataset/Task 不接受通用 `split` 字段或 query。
+
+### Agent 与 MCP
+
+```ts
+interface Agent {
+  id: string
+  agentName: string
+  harness: string
+  type: 'built-in' | 'custom'
+  status: 'available' | 'configured' | 'needs-token'
+  models: string[]
+  importPath?: string
+  env: Array<{ key: string; value: string }>
+  kwargs: string
+  skillSources: string[]
+  mcpServers: Array<{
+    name: string
+    transport: 'stdio' | 'sse' | 'streamable-http'
+    command?: string
+    args?: string[]
+    url?: string
+  }>
+  setupTimeoutSeconds?: number
+  timeoutSeconds?: number
+  maxTimeoutSeconds?: number
+}
+```
+
+built-in Agent 从 Harbor `AgentName` 生成，只读且通常没有 custom profile 配置。custom Agent 必须使用 Harbor AgentName，或在 `importPath` 存在时使用 custom harness。`stdio` MCP 必须提供 `command`；`sse`/`streamable-http` 必须提供 `url`。协议不包含启用开关、部署配置或 compose sidecar。
+
+### Environment
+
+```ts
+interface Environment {
   id: string
   name: string
   profileType: 'built-in' | 'custom'
   environmentType: string
-  importPath: string
-  networkMode: string
-  allowedHosts: string
-  dockerImage: string // Harbor [environment].docker_image, Docker image reference, not a local image file path.
-  os: string
-  cpus: string
-  memoryMb: string
-  storageMb: string
-  gpus: string
-  gpuTypes: string
-  tpu: string
-  healthcheck: string
-  workdir: string
-  mounts: string
-  env: string
-  kwargs: string
+  importPath?: string
   forceBuild: boolean
   deleteAfterRun: boolean
   cpuPolicy: string
@@ -225,342 +255,25 @@ interface EnvironmentPreset {
   overrideStorageMb: string
   overrideGpus: string
   overrideTpu: string
-  dockerCompose: string[] // Harbor extra_docker_compose, 支持多个 overlay path.
+  mounts: string
+  dockerComposePaths: string[]
+  env: Array<{ key: string; value: string }>
+  kwargs: string
+  allowedHosts: string[]
 }
 ```
 
-### Trial
+保存时 `environmentType` 必须是 Harbor `EnvironmentType`，除非存在 `importPath`；CPU/Memory policy 必须是 Harbor `ResourceMode`。`overrideTpu` 为空或 `type=topology`，其中 type 不由 Harbor 枚举。协议不包含 Docker image、network mode、os、workdir、healthcheck、gpuTypes 或无效的 `suppressOverrideWarnings`。
 
-```ts
-interface Trial {
-  id: string
-  jobId: string
-  task: string
-  result: string
-  score: string
-  retries: number
-  duration: string
-  cost: string
-  tokens: string
-  progress: string
-  logPath: string
-  analysisPath: string
-  verifierEvidence: string
-  artifactPath: string
-}
-```
+### Leaderboard 与 System
 
-### EventLog
+Leaderboard 请求为 `GET /leaderboard?dataset=<ref>&metric=<optional>`。`LeaderboardEntry` 包含 `rank`、`datasetRef`、`agentName`、`harness`、`model`、`score`、`trial`、`costUsd`、`tokenUsageM`、`runtimeSeconds`、`jobId`、`submittedAt`、`comparabilityKey`、可选 `reportPath`。
 
-`EventLog` 表示前端日志窗口中的滚动条目；日志文件的绝对路径由 `Job.eventLogPath` 提供，避免每条日志重复携带路径。
-Job 详情中的产物路径列表由 `Job.artifactPaths` 提供，所有条目必须是绝对路径，避免 WebUI 混用相对路径和裸文件名。
+`SystemComponent` 包含 `component`、`kind`、`status`、`value`、`path`、`actions`；kind 只为 OrnnLab service、Harbor CLI、Docker、Storage、CPU、GPU、可用存储。Hub 返回 `connected`、`disconnected` 或 `expired`。检查更新返回当前/最新版本、是否可升级、可选 release notes URL；安装更新/重启若本机不可执行，返回 failed Operation，而不是模拟成功。
 
-```ts
-interface EventLog {
-  time: string
-  level: 'info' | 'success' | 'warning' | 'error'
-  message: string
-}
-```
+## 5. 联调规则
 
-### Dataset
-
-```ts
-interface Dataset {
-  name: string
-  version: string
-  visibility: 'public' | 'private'
-  tasks: number
-  source: string
-  downloadStatus: 'downloaded' | 'not-downloaded' | 'downloading'
-  downloadProgress?: number
-  downloadPath?: string
-  size?: string
-  registryUrl?: string
-  registryPath?: string
-  downloadDir?: string
-  manifestPath?: string
-  taskInclude?: string
-  taskExclude?: string
-  ref?: string
-  path?: string
-  overwrite?: boolean
-  splits?: string[]
-}
-```
-
-未下载 dataset 的 `downloadPath` 与 `size` 可以为空，前端展示为“未下载”。如果 Harbor 官方列表不能稳定返回远端体积，后端不应伪造远端大小。
-
-### Task
-
-```ts
-interface Task {
-  name: string
-  dataset: string
-  description: string
-  os: string
-  state: string
-  duration: string
-  owner: string
-  verifier: string
-  path: string
-  gitUrl: string
-  gitCommitId: string
-  ref: string
-  source: string
-  schemaVersion: string
-  packageInfo: string
-  environment: string
-  solution: string
-  steps: string
-  artifacts: string
-}
-```
-
-Task 是 Dataset 的子资源，不作为一级页面接口暴露给导航。
-
-### Agent
-
-```ts
-interface Agent {
-  id: string
-  agentName: string
-  harness: string
-  type: 'built-in' | 'custom'
-  models: string
-  status: 'available' | 'configured' | 'needs-token'
-  env?: string
-  kwargs?: string
-  skills?: string
-  mcp?: string
-  runtime?: string
-  setupTimeout?: string
-  maxTimeout?: string
-  allowedHosts?: string
-  compatibleModels?: string
-}
-```
-
-`agentName` 是用户自定义名称；`harness` 是 Harbor/OrnnLab 执行适配层，例如 `claude-code`、`codex-cli`、`custom-harness`。只有 `type = custom` 的 Agent 可以删除。`allowedHosts` 在 WebUI 中按网络访问开关展示：`none` 表示关闭网络访问，`*` 表示允许所有域名，其他值表示逗号分隔的域名白名单。`skills` 是 Harbor skill source 列表，每个 source 可以是包含 `SKILL.md` 的单个 skill 目录，也可以是包含多个 skill 子目录的集合目录。`mcp` 在 WebUI 中按 Agent 关联的 MCP 模板列表编辑：`deployment = compose-sidecar` 对应 Harbor task environment 的 Docker Compose sidecar，并生成 `[[environment.mcp_servers]]` 连接声明；`deployment = stdio` 对应 Harbor MCPServerConfig 的 `stdio` command/args；`deployment = external-service` 只登记已部署服务的连接 URL，不负责安装服务。
-
-### LeaderboardEntry
-
-```ts
-interface LeaderboardEntry {
-  dataset: string
-  rank: number
-  agentName: string
-  harness: string
-  model: string
-  score: string
-  trials: string
-  cost: string
-  tokens: string
-  duration: string
-  jobId: string
-  split: string
-  metric: string
-  submitted: string
-  reportPath: string
-  comparabilityKey: string
-  configHash: string
-  agentSnapshotHash: string
-}
-```
-
-Leaderboard 不展示 `submissionId`、`uploadedUrl`、可复现性、Actions。点击 `jobId` 打开同一套 Job 详情抽屉。
-
-### SystemComponent
-
-```ts
-type SystemComponentKind =
-  | 'ornnlab-service'
-  | 'harbor-cli'
-  | 'docker'
-  | 'storage'
-  | 'resource-cpu'
-  | 'resource-gpu'
-  | 'resource-storage'
-
-interface SystemComponent {
-  kind: SystemComponentKind
-  component: string
-  status: JobStatus | 'healthy'
-  value: string
-  path: string
-  actions: SystemAction[]
-}
-
-type SystemAction =
-  | 'check-update'
-  | 'restart-service'
-  | 'clean-docker-cache'
-  | 'clean-storage-cache'
-```
-
-`storage` 的清理缓存对应 `~/.cache/harbor`。Docker 缓存清理只清理 Harbor 匹配规则下的 Docker 镜像/缓存，不应清理用户其他 Docker 资源。
-
-## 接口分组
-
-### Jobs
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/jobs?q=&status=&dataset=&agent=&cursor=&limit=` | Job 列表、搜索、筛选 |
-| `POST` | `/jobs` | 创建 JobConfig 并启动/排队 Harbor run |
-| `GET` | `/jobs/{jobId}` | Job 详情抽屉 |
-| `POST` | `/jobs/{jobId}/cancel` | 取消运行中 Job |
-| `POST` | `/jobs/{jobId}/retry` | 重试失败 Job |
-| `POST` | `/jobs/{jobId}/resume` | 恢复可恢复 Job |
-| `GET` | `/jobs/{jobId}/trials` | Trial 列表 |
-| `GET` | `/jobs/{jobId}/events?cursor=&limit=` | 事件日志 |
-
-`POST /jobs` 请求体：
-
-```ts
-interface CreateJobRequest {
-  config: JobConfig
-  runImmediately: boolean
-}
-```
-
-响应：
-
-```ts
-interface CreateJobResponse {
-  job: Job
-  operation: Operation
-}
-```
-
-### Datasets 与 Tasks
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/datasets?q=&source=&downloadStatus=&cursor=&limit=` | Dataset 列表、搜索 |
-| `GET` | `/datasets/{datasetRef}` | Dataset 详情抽屉 |
-| `GET` | `/datasets/{datasetRef}/tasks?q=&split=&cursor=&limit=` | Dataset 下的 Task 列表 |
-| `POST` | `/datasets/{datasetRef}/download` | 下载 dataset |
-| `POST` | `/datasets/{datasetRef}/download/cancel` | 取消下载并删除已下载部分 |
-| `DELETE` | `/datasets/{datasetRef}/local` | 删除本地 dataset |
-| `POST` | `/datasets/{datasetRef}/sync` | 同步 manifest/registry 元数据 |
-| `POST` | `/datasets/import` | 导入本地自定义 dataset，创建 OrnnLab-local registry 条目 |
-| `POST` | `/datasets/{datasetRef}/tasks/{taskName}/run` | 从 task 创建单 task Job |
-
-`datasetRef` 建议使用 URL 编码后的 `name@version`，例如 `terminal-bench%402.0`。
-
-### Agents
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/agents?q=&type=&status=&cursor=&limit=` | Agent 列表、搜索 |
-| `POST` | `/agents` | 新建 custom Agent |
-| `GET` | `/agents/{agentId}` | Agent 详情抽屉 |
-| `PATCH` | `/agents/{agentId}` | 更新 custom Agent 配置 |
-| `DELETE` | `/agents/{agentId}` | 删除 custom Agent |
-
-`DELETE /agents/{agentId}` 对 built-in Agent 必须返回 `403` 或业务错误 `AGENT_BUILT_IN_IMMUTABLE`。
-
-### Environment
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/environments?q=&type=&cursor=&limit=` | OrnnLab-local Environment 模板列表、搜索 |
-| `GET` | `/environments/{environmentPresetId}` | Environment 模板详情抽屉 |
-| `POST` | `/environments` | 新建 OrnnLab-local custom Environment 模板 |
-| `POST` | `/environments/{environmentPresetId}/copy` | 复制 built-in 或 custom 模板为 custom 模板 |
-| `PATCH` | `/environments/{environmentPresetId}` | 编辑 custom Environment 模板 |
-| `DELETE` | `/environments/{environmentPresetId}` | 删除 custom Environment 模板 |
-
-`PATCH` 和 `DELETE` 对 built-in 模板必须返回 `403` 或业务错误 `ENVIRONMENT_BUILT_IN_IMMUTABLE`。所有模板写操作只影响 OrnnLab 本地模板，不修改 Harbor 内置 backend 类型。
-
-### Leaderboard
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/leaderboard/datasets?q=&cursor=&limit=` | 可排名 dataset 下拉搜索 |
-| `GET` | `/leaderboard?dataset=&q=&metric=&split=&cursor=&limit=` | 单 dataset 排名列表 |
-| `PATCH` | `/jobs/{jobId}/leaderboard` | 设置某个 Job 是否进入排名 |
-
-`PATCH /jobs/{jobId}/leaderboard` 请求体：
-
-```ts
-interface UpdateJobLeaderboardRequest {
-  includeInLeaderboard: boolean
-}
-```
-
-后端返回更新后的 Job 与当前 dataset 的新排名：
-
-```ts
-interface UpdateJobLeaderboardResponse {
-  job: Job
-  leaderboard: LeaderboardEntry[]
-}
-```
-
-### System
-
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| `GET` | `/system/health` | 系统健康列表 |
-| `GET` | `/system/hub-connection` | Header Hub 连接状态（connected/disconnected/expired） |
-| `POST` | `/system/service/update/check` | 检查 OrnnLab npm 新版本 |
-| `POST` | `/system/service/update` | 安装已确认的 OrnnLab npm 新版本 |
-| `POST` | `/system/service/restart` | 重启 OrnnLab 前后端服务 |
-| `POST` | `/system/cache/docker/clean` | 清理 Harbor Docker 缓存 |
-| `POST` | `/system/cache/storage/clean` | 清理 `~/.cache/harbor` |
-
-更新检查响应：
-
-```ts
-interface UpdateCheckResult {
-  currentVersion: string
-  latestVersion: string
-  updateAvailable: boolean
-  releaseNotesUrl?: string
-}
-```
-
-缓存清理响应：
-
-```ts
-interface CacheCleanResult {
-  target: 'docker' | 'storage'
-  removedBytes?: number
-  removedItems?: number
-  operation: Operation
-}
-```
-
-## 当前 UI 到接口映射
-
-| UI 区域 | 当前交互 | 后端接口 |
-| --- | --- | --- |
-| Jobs 列表 | 搜索、点击行打开详情 | `GET /jobs`、`GET /jobs/{jobId}` |
-| 新建 Job | 保存配置并运行 | `POST /jobs` |
-| Job 详情抽屉 | 事件、trials、产物路径、取消、重试 | `GET /jobs/{jobId}`、`/events`、`/trials`、`/cancel`、`/retry` |
-| Datasets 列表 | 搜索、导入本地、下载、取消下载、删除本地 | `GET /datasets`、`POST /datasets/import`、`POST /download`、`POST /download/cancel`、`DELETE /local` |
-| Dataset 详情 | task 列表、运行单 Task、拉取更新 | `/datasets/{datasetRef}/tasks`、`POST /tasks/{taskName}/run`、`POST /sync` |
-| Agents 列表 | 搜索、新建、删除 custom | `GET /agents`、`POST /agents`、`DELETE /agents/{agentId}` |
-| Agent 详情 | 查看 harness、运行配置 | `GET /agents/{agentId}` |
-| Leaderboard | dataset 搜索/切换、移除 Job、打开 Job 详情 | `/leaderboard/datasets`、`GET /leaderboard`、`PATCH /jobs/{jobId}/leaderboard`、`GET /jobs/{jobId}` |
-| Header | 展示 Hub 连接状态 | `GET /system/hub-connection` |
-| System | 健康检查、检查更新、重启、清理缓存 | `/system/health`、`/service/update/check`、`/service/restart`、cache clean 接口 |
-
-## 前端接入顺序
-
-1. 修复当前 e2e 断言漂移，恢复 `npm run e2e` 全绿。
-2. 保留 `frontend/src/mocks/` 作为 Storybook 与离线演示夹具。
-3. 新增 `frontend/src/domain/`，迁出生产 UI 类型。
-4. 新增 `frontend/src/api/`，放 typed client、ApiResponse、Operation、mock client 与 data hook；不实现 legacy adapter。
-5. 每个 screen 通过明确的 data hook 或 service 接入 API，避免组件直接 `fetch` 或直接读取 mock seed。
-6. 接入一个接口就同步补充 MSW mock 或等价测试夹具，保证 Storybook 不依赖真实后端。
-7. 接入完成后，mock 字段不得再比接口模型多出 demo-only 能力；新增字段必须先改本规范。
-
-## 待确认问题
-
-- Header 只读取 Hub 连接状态；登录、登出和 token 管理不属于 v1.0.5 WebUI 操作面。后端仍需明确状态来源和过期判定。
-- Leaderboard 的 `metric`、`split` 应从 JobConfig 与 Dataset manifest 返回，不应由前端自由编造。
-- Docker 缓存清理的 Harbor 匹配规则需要后端固定白名单，避免误删用户其他镜像。
-- CPU/GPU/Storage 采样频率、单位、macOS/Linux 差异需要在系统探针实现时补充。
+- `frontend/src/api/webUiClient.ts` 的方法集与本目录一一对应；新增端点必须同时补充 DTO、HTTP client、mock client、MSW、API 集成测试和 Storybook/页面状态。
+- 字段新增先修改本文和 `contract.ts`，后端与 mock 同时实现；不允许仅给 mock 增加字段。
+- 前端 API 模式失败必须呈现错误，不可回退 fixture。mock 模式只用于离线开发、Storybook 与测试。
+- Stage 3 采用轮询；如未来添加 SSE，必须先以新版本契约定义事件顺序、断线恢复与 Operation 去重。

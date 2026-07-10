@@ -26,6 +26,14 @@ class HarborJobConfigView(BaseModel):
     n_attempts: int
     n_concurrent: int
     jobs_dir: str
-    environment: dict[str, Any] = Field(
-        default_factory=lambda: {"type": "docker", "delete": True}
-    )
+    timeout_multiplier: float = 1.0
+    agent_timeout_multiplier: float = 1.0
+    verifier_timeout_multiplier: float = 1.0
+    agent_setup_timeout_multiplier: float = 1.0
+    environment_build_timeout_multiplier: float = 1.0
+    extra_instruction_paths: list[str] = Field(default_factory=list)
+    debug: bool = False
+    retry: dict[str, Any] = Field(default_factory=dict)
+    verifier: dict[str, Any] = Field(default_factory=dict)
+    metrics: list[dict[str, Any]] = Field(default_factory=list)
+    environment: dict[str, Any] = Field(default_factory=lambda: {"type": "docker", "delete": True})

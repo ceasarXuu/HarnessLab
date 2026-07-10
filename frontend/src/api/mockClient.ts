@@ -32,18 +32,25 @@ export function createMockWebUiClient(): WebUiClient {
   const systemDtos = systemRows.map(toSystemComponentDto)
   const trialDtos = trialRows.map(toTrialDto)
   const operations = createMockOperationStore()
+  const operationEffects = new Map<string, { onCompleted?: () => void; onRunning?: () => void }>()
 
   return {
     async cancelJob(id) {
-      jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'failed' } : job))
-      return operationResult(operations.submit('cancel-job', 'job', id))
+      const job = jobDtos.find((item) => item.id === id)
+      if (!job) return failure('JOB_NOT_FOUND', 'Job not found')
+      if (isTerminalJob(job.status)) return failure('OPERATION_CONFLICT', 'Job is already terminal')
+      jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'cancelled' } : job))
+      return operationResult(operations.complete('cancel-job', 'job', id, 'Job cancelled'))
     },
     async cancelDatasetDownload(ref) {
-      datasetDtos = datasetDtos.map((dataset) => (dataset.ref === ref ? { ...dataset, download: { status: 'not-downloaded' } } : dataset))
-      return operationResult(operations.submit('cancel-dataset-download', 'dataset', ref))
+      const operation = operations.cancelActive('download-dataset', ref)
+      if (!operation) return failure('INVALID_REQUEST', 'No active dataset download')
+      operationEffects.delete(operation.id)
+      return operationResult(operation)
     },
     async cancelOperation(id) {
       const operation = operations.cancel(id)
+      operationEffects.delete(id)
       return operation ? operationResult(operation) : failure('OPERATION_NOT_CANCELLABLE', 'Operation cannot be cancelled')
     },
     async checkForSystemUpdate() {
@@ -60,20 +67,30 @@ export function createMockWebUiClient(): WebUiClient {
       if (!source) return failure('ENVIRONMENT_NOT_FOUND', 'Environment not found')
       const copy = { ...source, id: uniqueId(environmentDtos, `${id}-copy`), name: `${source.name} copy`, profileType: 'custom' as const }
       environmentDtos = [...environmentDtos, copy]
-      return operationResult(operations.submit('copy-environment', 'environment', copy.id))
+      return operationResult(operations.complete('copy-environment', 'environment', copy.id, 'Environment copied'))
     },
     async createAgent(agent) {
       agentDtos = [agent, ...agentDtos]
-      return operationResult(operations.submit('create-agent', 'agent', agent.id))
+      return operationResult(operations.complete('create-agent', 'agent', agent.id, 'Agent created'))
     },
     async createEnvironment(environment) {
       environmentDtos = [environment, ...environmentDtos]
-      return operationResult(operations.submit('create-environment', 'environment', environment.id))
+      return operationResult(operations.complete('create-environment', 'environment', environment.id, 'Environment created'))
     },
     async createJob(request) {
-      const job = buildQueuedJob(jobDtos, request)
+      const agent = agentDtos.find((item) => item.agentName === request.config.agentName)
+      if (!agent) return failure('AGENT_NOT_FOUND', 'Agent not found')
+      if (agent.type !== 'custom') {
+        return failure('AGENT_PROFILE_REQUIRED', 'Select a configured custom Agent profile before creating a Job')
+      }
+      const job = buildQueuedJob(jobDtos, request, agent)
       jobDtos = [job, ...jobDtos]
-      const operation = operations.submit('create-job', 'job', job.id)
+      const operation = operations.complete(
+        request.runImmediately ? 'run-job' : 'create-job',
+        'job',
+        job.id,
+        request.runImmediately ? 'Job queued' : 'Job created',
+      )
       return success<CreateJobResponseDto>({ job, operation })
     },
     async deleteAgent(id) {
@@ -81,27 +98,30 @@ export function createMockWebUiClient(): WebUiClient {
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
       if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be deleted')
       agentDtos = agentDtos.filter((agent) => agent.id !== id)
-      return operationResult(operations.submit('delete-agent', 'agent', id))
+      return operationResult(operations.complete('delete-agent', 'agent', id, 'Agent deleted'))
     },
     async deleteEnvironment(id) {
       const target = environmentDtos.find((environment) => environment.id === id)
       if (!target) return failure('ENVIRONMENT_NOT_FOUND', 'Environment not found')
       if (target.profileType === 'built-in') return failure('ENVIRONMENT_BUILT_IN_IMMUTABLE', 'Built-in environments cannot be deleted')
       environmentDtos = environmentDtos.filter((environment) => environment.id !== id)
-      return operationResult(operations.submit('delete-environment', 'environment', id))
+      return operationResult(operations.complete('delete-environment', 'environment', id, 'Environment deleted'))
     },
     async deleteLocalDataset(ref) {
       datasetDtos = datasetDtos.map((dataset) => (dataset.ref === ref ? { ...dataset, download: { status: 'not-downloaded' } } : dataset))
-      return operationResult(operations.submit('delete-local-dataset', 'dataset', ref))
+      return operationResult(operations.complete('delete-local-dataset', 'dataset', ref, 'Local dataset removed'))
     },
     async downloadDataset(ref) {
       const dataset = datasetDtos.find((item) => item.ref === ref)
       if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
-      datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
-        ...item,
-        download: { path: `~/.cache/harbor/datasets/${ref.replace('@', '-')}`, sizeBytes: item.download.sizeBytes, status: 'downloaded' },
-      } : item)
-      return operationResult(operations.submit('download-dataset', 'dataset', ref))
+      return operationResult(submitOperation('download-dataset', 'dataset', ref, {
+        onCompleted: () => {
+          datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
+            ...item,
+            download: { path: `~/.cache/harbor/datasets/${ref.replace('@', '-')}`, sizeBytes: item.download.sizeBytes, status: 'downloaded' },
+          } : item)
+        },
+      }))
     },
     async getAgent(id) {
       return findById(agentDtos, id, 'AGENT_NOT_FOUND', 'Agent not found', 'id')
@@ -120,6 +140,7 @@ export function createMockWebUiClient(): WebUiClient {
     },
     async getOperation(id) {
       const operation = operations.get(id)
+      if (operation) applyOperationEffects(operation)
       return operation ? success(operation) : failure('OPERATION_NOT_FOUND', 'Operation not found')
     },
     async importDataset(request) {
@@ -129,13 +150,13 @@ export function createMockWebUiClient(): WebUiClient {
         name: request.name,
         ref,
         source: 'local import',
-        splits: ['local'],
         taskCount: request.taskCount,
         version: request.version,
         visibility: 'private',
       }
-      datasetDtos = [dataset, ...datasetDtos]
-      return operationResult(operations.submit('import-dataset', 'dataset', ref))
+      return operationResult(submitOperation('import-dataset', 'dataset', ref, {
+        onCompleted: () => { datasetDtos = [dataset, ...datasetDtos] },
+      }))
     },
     async installSystemUpdate() {
       return operationResult(operations.submit('install-system-update', 'system', 'ornnlab-service'))
@@ -163,7 +184,7 @@ export function createMockWebUiClient(): WebUiClient {
     },
     async listLeaderboard(query) {
       const byDataset = leaderboardDtos.filter((entry) => entry.datasetRef === query.dataset)
-      return success(page(filterByQuery(byDataset, query, (entry) => [entry.agentName, entry.harness, entry.model, entry.metric, entry.split])))
+      return success(page(filterByQuery(byDataset, query, (entry) => [entry.agentName, entry.harness, entry.model, entry.metric])))
     },
     async listLeaderboardDatasets(query) {
       const leaderboardDatasets = buildLeaderboardDatasets(leaderboardDtos)
@@ -173,35 +194,39 @@ export function createMockWebUiClient(): WebUiClient {
       return success(page(systemDtos))
     },
     async restartSystemService() {
-      return operationResult(operations.submit('restart-service', 'system', 'ornnlab-service'))
+      return operationResult(operations.fail(
+        'restart-system-service',
+        'system',
+        'ornnlab-service',
+        'SERVICE_RESTART_UNAVAILABLE',
+        'ORNNLAB_RESTART_COMMAND is not configured by the service supervisor',
+      ))
     },
     async retryJob(id) {
       jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'queued' } : job))
-      return operationResult(operations.submit('retry-job', 'job', id))
+      return operationResult(operations.complete('retry-job', 'job', id, 'Job retry queued'))
     },
     async resumeJob(id) {
-      jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'running' } : job))
-      return operationResult(operations.submit('resume-job', 'job', id))
-    },
-    async runDatasetTask(ref, taskName) {
-      return operationResult(operations.submit('run-dataset-task', 'job', `${ref}:${taskName}`))
+      return operationResult(submitOperation('resume-job', 'job', id, {
+        onRunning: () => { jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'running' } : job)) },
+      }))
     },
     async syncDataset(ref) {
-      return operationResult(operations.submit('sync-dataset', 'dataset', ref))
+      return operationResult(submitOperation('sync-dataset', 'dataset', ref))
     },
     async updateAgent(id, agent) {
       const target = agentDtos.find((item) => item.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
       if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be updated')
       agentDtos = agentDtos.map((item) => item.id === id ? { ...agent, id } : item)
-      return operationResult(operations.submit('update-agent', 'agent', id))
+      return operationResult(operations.complete('update-agent', 'agent', id, 'Agent updated'))
     },
     async updateEnvironment(id, environment) {
       const target = environmentDtos.find((item) => item.id === id)
       if (!target) return failure('ENVIRONMENT_NOT_FOUND', 'Environment not found')
       if (target.profileType === 'built-in') return failure('ENVIRONMENT_BUILT_IN_IMMUTABLE', 'Built-in environments cannot be updated')
       environmentDtos = environmentDtos.map((item) => item.id === id ? { ...environment, id } : item)
-      return operationResult(operations.submit('update-environment', 'environment', id))
+      return operationResult(operations.complete('update-environment', 'environment', id, 'Environment updated'))
     },
     async updateJobLeaderboard(id, request) {
       const target = jobDtos.find((job) => job.id === id)
@@ -212,9 +237,30 @@ export function createMockWebUiClient(): WebUiClient {
       return success<UpdateJobLeaderboardResponseDto>({
         job,
         leaderboard: leaderboardDtos.filter((entry) => entry.datasetRef === job.datasetRef),
-        operation: operations.submit('update-job-leaderboard', 'job', id),
+        operation: operations.complete('update-job-leaderboard', 'job', id, 'Leaderboard inclusion updated'),
       })
     },
+  }
+
+  function submitOperation(
+    type: string,
+    resourceType: OperationResultDto['operation']['resourceType'],
+    resourceId?: string,
+    effects?: { onCompleted?: () => void; onRunning?: () => void },
+  ) {
+    const operation = operations.submit(type, resourceType, resourceId)
+    if (effects) operationEffects.set(operation.id, effects)
+    return operation
+  }
+
+  function applyOperationEffects(operation: OperationResultDto['operation']) {
+    const effects = operationEffects.get(operation.id)
+    if (!effects) return
+    if (operation.status === 'running') effects.onRunning?.()
+    if (operation.status === 'completed') {
+      effects.onCompleted?.()
+      operationEffects.delete(operation.id)
+    }
   }
 }
 
@@ -247,7 +293,7 @@ function uniqueId(items: Array<{ id: string }>, base: string): string {
   return candidate
 }
 
-function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto): JobDto {
+function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent: import('./contract').AgentDto): JobDto {
   const id = uniqueId(existing, request.config.jobName.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
   const root = `/Users/xuzhang/.ornnlab/HarnessLab/${request.config.jobsDir}`
   const selectedTaskCount = request.config.selectedTaskNames?.length ?? 0
@@ -259,15 +305,14 @@ function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto): JobDt
     datasetRef: request.config.datasetRef,
     environmentName: request.config.environmentPresetId,
     eventLogPath: `${root}/job.log`,
-    harness: request.config.agentName,
+    harness: agent.harness,
     id,
     includeInLeaderboard: request.config.includeInLeaderboard,
     jobDir: request.config.jobsDir,
-    model: request.config.model,
+    model: agent.models[0] ?? '',
     name: request.config.jobName,
     runtimeSeconds: 0,
     score: null,
-    split: request.config.split,
     status: 'queued',
     tokenUsageM: 0,
     trial: { completed: 0, total: selectedTaskCount },
@@ -305,6 +350,9 @@ function filterEnvironments(items: import('./contract').EnvironmentDto[], query:
 
 function filterDatasetTasks(tasks: DatasetTaskDto[], ref: string, query: DatasetTaskQuery | undefined): DatasetTaskDto[] {
   const byDataset = tasks.filter((task) => task.datasetRef === ref)
-  const bySplit = query?.split ? byDataset.filter((task) => task.splits.includes(query.split ?? '')) : byDataset
-  return filterByQuery(bySplit, query, (task) => [task.name, task.description])
+  return filterByQuery(byDataset, query, (task) => [task.name, task.description])
+}
+
+function isTerminalJob(status: JobDto['status']) {
+  return status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'interrupted'
 }

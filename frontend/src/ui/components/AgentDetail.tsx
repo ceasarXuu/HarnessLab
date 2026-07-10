@@ -38,9 +38,9 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
             )}
           </div>
         </div>
-        <AgentIdentityEditor value={draft} t={t} onChange={setDraft} />
+        <AgentIdentityEditor readOnly={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
       </section>
-      <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
+      {draft.type === 'custom' && <AgentProfileEditor value={draft} t={t} onChange={setDraft} />}
     </aside>
   )
 }

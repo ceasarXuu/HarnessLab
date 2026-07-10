@@ -13,8 +13,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --pool vmThreads --maxWorkers=1",
-    "e2e": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4174 --strictPort\" http://127.0.0.1:4174 \"playwright test\"",
     "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
     "storybook:test": "storybook dev --ci --smoke-test -p 6006"
   },
   "dependencies": {
@@ -25,7 +25,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.60.0",
     "@storybook/addon-a11y": "^10.4.6",
     "@storybook/react-vite": "^10.4.6",
     "@tailwindcss/vite": "^4.1.18",
@@ -39,8 +38,6 @@
     "jsdom": "^29.1.1",
     "msw": "^2.15.0",
     "msw-storybook-addon": "^2.0.7",
-    "playwright": "^1.60.0",
-    "start-server-and-test": "^3.0.11",
     "storybook": "^10.4.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.3",

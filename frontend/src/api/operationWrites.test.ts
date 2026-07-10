@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createMockWebUiClient } from './mockClient'
 import type { AgentDto, EnvironmentDto } from './contract'
 
-describe('Stage 2 Operation write boundary', () => {
-  it('returns queued Operations for representative writes instead of mutating page state directly', async () => {
+describe('Stage 3 Operation write boundary', () => {
+  it('matches the backend lifecycle for synchronous and asynchronous writes', async () => {
     const client = createMockWebUiClient()
     const agents = await client.listAgents()
     const environments = await client.listEnvironments()
@@ -13,31 +13,30 @@ describe('Stage 2 Operation write boundary', () => {
     const [job, dataset, agentUpdate, environmentUpdate, leaderboard, system, update] = await Promise.all([
       client.createJob({
         config: {
-          agentEnv: [],
-          agentKwargs: '',
-          agentName: 'claude-code',
+          agentSetupTimeoutMultiplier: 1,
+          agentName: agent.agentName,
+          agentTimeoutMultiplier: 1,
           attempts: 1,
           concurrency: 1,
           datasetRef: 'terminal-bench@2.0',
           debug: false,
           environmentPresetId: 'docker-default',
+          environmentBuildTimeoutMultiplier: 1,
+          extraInstructionPaths: [],
           includeInLeaderboard: true,
           jobName: 'operation-test',
           jobsDir: 'jobs/operation-test',
           maxRetries: 0,
-          metric: 'pass@1 mean',
-          model: 'claude-haiku-4-5',
+          metric: 'mean',
           notes: '',
           retryExclude: '',
           retryInclude: '',
-          retryIntervalPolicy: 'standard',
           retryMaxWaitSeconds: 30,
           retryMinWaitSeconds: 2,
           retryWaitMultiplier: 1.5,
           selectedTaskNames: null,
-          split: 'test',
           timeoutMultiplier: 1,
-          timeoutPolicy: 'standard',
+          verifierTimeoutMultiplier: 1,
           verifierMode: 'dataset-default',
         },
         runImmediately: true,
@@ -50,18 +49,18 @@ describe('Stage 2 Operation write boundary', () => {
       client.installSystemUpdate(),
     ])
 
-    expect(job.data?.operation.status).toBe('queued')
+    expect(job.data?.operation).toMatchObject({ status: 'completed', type: 'run-job' })
     expect(dataset.data?.operation.status).toBe('queued')
-    expect(agentUpdate.data?.operation.status).toBe('queued')
-    expect(environmentUpdate.data?.operation.status).toBe('queued')
-    expect(leaderboard.data?.operation.status).toBe('queued')
+    expect(agentUpdate.data?.operation.status).toBe('completed')
+    expect(environmentUpdate.data?.operation.status).toBe('completed')
+    expect(leaderboard.data?.operation.status).toBe('completed')
     expect(system.data?.operation.status).toBe('queued')
     expect(update.data?.operation.status).toBe('queued')
   })
 
   it('exposes Operation polling for every submitted mock write', async () => {
     const client = createMockWebUiClient()
-    const submitted = await client.restartSystemService()
+    const submitted = await client.cleanStorageCache()
     const operationId = submitted.data?.operation.id
 
     expect(operationId).toBeTruthy()
@@ -69,9 +68,19 @@ describe('Stage 2 Operation write boundary', () => {
     expect((await client.getOperation(operationId ?? '')).data?.status).toBe('completed')
   })
 
-  it('cancels an in-flight Operation through the shared Operation contract', async () => {
+  it('reports supervisor availability instead of simulating a service restart', async () => {
     const client = createMockWebUiClient()
     const submitted = await client.restartSystemService()
+
+    expect(submitted.data?.operation).toMatchObject({
+      status: 'failed',
+      error: { code: 'SERVICE_RESTART_UNAVAILABLE' },
+    })
+  })
+
+  it('cancels an in-flight Operation through the shared Operation contract', async () => {
+    const client = createMockWebUiClient()
+    const submitted = await client.cleanDockerCache()
     const operationId = submitted.data?.operation.id
 
     const cancelled = await client.cancelOperation(operationId ?? '')

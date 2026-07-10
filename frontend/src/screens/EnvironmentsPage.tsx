@@ -53,7 +53,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
     const query = search.trim().toLowerCase()
     if (!query) return rows
     return rows.filter((row) =>
-      [row.name, row.profileType, row.environmentType, row.importPath, row.dockerImage, row.networkMode, row.allowedHosts].some((value) =>
+      [row.name, row.profileType, row.environmentType, row.importPath, row.allowedHosts].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
@@ -147,7 +147,6 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
                 <th>{t('environmentName')}</th>
                 <th>{t('environmentProfile')}</th>
                 <th>{t('agentType')}</th>
-                <th>{t('environmentDockerImage')}</th>
                 <th>{t('actions')}</th>
               </tr>
             </thead>
@@ -166,7 +165,6 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
                   </td>
                   <td>{row.profileType}</td>
                   <td>{row.environmentType}</td>
-                  <td>{row.dockerImage}</td>
                   <td>
                     <EnvironmentActions
                       row={row}
@@ -180,7 +178,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
               ))}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td className="empty-row" colSpan={5}>{t('noEnvironmentsAvailable')}</td>
+                  <td className="empty-row" colSpan={4}>{t('noEnvironmentsAvailable')}</td>
                 </tr>
               )}
             </tbody>
@@ -325,7 +323,6 @@ function buildNewEnvironment(rows: EnvironmentRow[]): EnvironmentRow {
     name: 'Custom Environment',
     profileType: 'custom',
     importPath: 'none',
-    dockerImage: 'task environment image',
   }
 }
 

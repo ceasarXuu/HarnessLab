@@ -64,10 +64,10 @@ package materials. They are legacy/reference assets. The active implementation
 path is the Python/FastAPI backend plus a React/Vite frontend aligned with
 Harbor's official Viewer architecture.
 
-Implemented rewrite foundation:
+Implemented v1.0.5 WebUI foundation:
 
 - `ornnlab web` / `python -m ornnlab web` backend entrypoint
-- `/api/system/status`, agents, experiments, events, benchmarks, leaderboard
+- `/api/webui/v1` unified envelope for Jobs, Datasets, Agents, Environments, Leaderboard, System and Operations
 - SQLite migration and local `~/.ornnlab/data` data directory initialization
 - AgentProfile v2 validation and Harbor agent config compilation
 - managed Harbor subprocess execution as the default engine path

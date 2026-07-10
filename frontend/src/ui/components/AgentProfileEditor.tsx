@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
@@ -15,34 +15,16 @@ interface AgentProfileEditorProps {
   onChange: (value: AgentRow) => void
 }
 
-interface HarnessConfig {
-  reasoning?: string[]
-  reasoningSummary?: string[]
-  temperature?: boolean
-  contextLength?: boolean
-  credentials?: 'anthropic' | 'openai' | 'custom' | 'none'
-}
-
-const harnessConfigs: Record<string, HarnessConfig> = {
-  'claude-code': { reasoning: ['low', 'medium', 'high', 'xhigh', 'max'], credentials: 'anthropic' },
-  codex: {
-    reasoning: ['minimal', 'low', 'medium', 'high'],
-    reasoningSummary: ['auto', 'concise', 'detailed', 'none'],
-    credentials: 'openai',
-  },
-  'codex-cli': {
-    reasoning: ['minimal', 'low', 'medium', 'high'],
-    reasoningSummary: ['auto', 'concise', 'detailed', 'none'],
-    credentials: 'openai',
-  },
-  'qwen-coder': { credentials: 'openai' },
-  'custom-harness': { temperature: true, contextLength: true, credentials: 'custom' },
-  oracle: { credentials: 'none' },
-}
+const harnessOptions = [
+  'acp', 'aider', 'antigravity-cli', 'claude-code', 'cline-cli', 'codex', 'copilot-cli',
+  'cursor-cli', 'devin', 'gemini-cli', 'goose', 'hermes', 'kimi-cli', 'langgraph', 'mini-swe-agent',
+  'nemo-agent', 'nop', 'openclaw', 'opencode', 'openhands', 'openhands-sdk', 'oracle', 'pi',
+  'qwen-coder', 'rovodev-cli', 'swe-agent', 'terminus', 'terminus-1', 'terminus-2', 'trae-agent',
+  'custom-harness',
+]
 
 export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorProps) {
   const [activeTab, setActiveTab] = useState<AgentTab>('base')
-  const config = useMemo(() => harnessConfigs[value.harness] ?? harnessConfigs['custom-harness'], [value.harness])
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
 
   return (
@@ -80,36 +62,12 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
                 value={value.models}
                 onChange={(nextValue) => setField('models', nextValue)}
               />
-              {config.reasoning && (
-                <TagGroupControl label={t('reasoningEffort')} options={config.reasoning} value={value.reasoningEffort ?? ''} onChange={(nextValue) => setField('reasoningEffort', nextValue)} />
-              )}
-              {config.reasoningSummary && (
-                <label>
-                  {t('reasoningSummary')}
-                  <select value={value.reasoningSummary ?? ''} onChange={(event) => setField('reasoningSummary', event.target.value)}>
-                    <option value="">-</option>
-                    {config.reasoningSummary.map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </label>
-              )}
-              {config.temperature && (
-                <label>{t('temperature')}<input inputMode="decimal" value={value.temperature ?? ''} onChange={(event) => setField('temperature', event.target.value)} /></label>
-              )}
-              {config.contextLength && (
-                <label>{t('contextLength')}<input inputMode="numeric" value={value.contextLength ?? ''} onChange={(event) => setField('contextLength', event.target.value)} /></label>
-              )}
             </div>
           </section>
 
           <section className="surface rail-card">
             <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
             <div className="agent-form-grid">
-              {config.credentials !== 'none' && (
-                <>
-                  <label>{t('apiKeyEnv')}<input value={value.apiKeyEnv ?? ''} onChange={(event) => setField('apiKeyEnv', event.target.value)} /></label>
-                  <label>{t('baseUrlEnv')}<input value={value.baseUrlEnv ?? ''} onChange={(event) => setField('baseUrlEnv', event.target.value)} /></label>
-                </>
-              )}
               <div className="field-wide">
                 <KeyValueControl
                   compact
@@ -150,17 +108,25 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
         <section className="surface rail-card">
           <SectionTitle>{t('advancedAgentParams')}</SectionTitle>
           <div className="agent-form-grid">
+            <label>
+              {t('agentExecutionTimeout')}
+              <input min="1" type="number" value={secondsInput(value.timeout)} onChange={(event) => setField('timeout', withSeconds(event.target.value))} />
+            </label>
+            <label>
+              {t('setupTimeout')}
+              <input min="1" type="number" value={secondsInput(value.setupTimeout)} onChange={(event) => setField('setupTimeout', withSeconds(event.target.value))} />
+            </label>
+            <label>
+              {t('maxTimeout')}
+              <input min="1" type="number" value={secondsInput(value.maxTimeout)} onChange={(event) => setField('maxTimeout', withSeconds(event.target.value))} />
+            </label>
             <KeyValueControl
               label={t('genericAgentKwargs')}
               labels={defaultKeyValueLabels(t)}
               value={value.kwargs ?? 'none'}
               onChange={(nextValue) => setField('kwargs', nextValue)}
             />
-            <Metric label={t('runtimeDefaults')} value={value.runtime ?? '-'} />
-            <Metric label={t('setupTimeout')} value={value.setupTimeout ?? '-'} />
-            <Metric label={t('maxTimeout')} value={value.maxTimeout ?? '-'} />
             <Metric label={t('sourceRef')} value={value.source} />
-            <Metric label={t('updated')} value={value.updated} />
           </div>
         </section>
       )}
@@ -168,7 +134,7 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
   )
 }
 
-export function AgentIdentityEditor({ value, t, onChange }: AgentProfileEditorProps) {
+export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: AgentProfileEditorProps & { readOnly?: boolean }) {
   const isCustomAgent = value.type === 'custom' || value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
 
@@ -176,12 +142,12 @@ export function AgentIdentityEditor({ value, t, onChange }: AgentProfileEditorPr
     <div className="agent-form-grid">
       <label>
         {t('agentName')}
-        <input value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
+        <input readOnly={readOnly} value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
       </label>
       <label>
         {t('harness')}
-        <select value={value.harness} onChange={(event) => setField('harness', event.target.value)}>
-          {Object.keys(harnessConfigs).map((harness) => (
+        <select disabled={readOnly} value={value.harness} onChange={(event) => setField('harness', event.target.value)}>
+          {harnessOptions.map((harness) => (
             <option key={harness} value={harness}>{harness}</option>
           ))}
         </select>
@@ -202,11 +168,9 @@ export function AgentIdentityEditor({ value, t, onChange }: AgentProfileEditorPr
 
 function mcpLabels(t: Translate) {
   return {
-    addItem: t('add'), addServer: t('addMcpServer'), args: t('mcpArgs'), composeSidecar: t('mcpComposeSidecar'),
-    composeYaml: t('mcpComposeYaml'), command: t('mcpCommand'), deleteItem: t('deleteItem'), deleteServer: t('deleteMcpServer'), deployment: t('mcpDeployment'), description: t('mcpConfigDescription'),
-    enabled: t('enabled'), endpointPath: t('mcpEndpointPath'), env: t('mcpEnv'), externalService: t('mcpExternalService'),
-    generatedUrl: t('mcpGeneratedUrl'), key: t('envKey'), name: t('mcpServerName'), port: t('mcpPort'), serviceName: t('mcpServiceName'),
-    stdio: t('mcpStdio'), transport: t('mcpTransport'), url: t('mcpUrl'), value: t('envValue'),
+    addServer: t('addMcpServer'), args: t('mcpArgs'), command: t('mcpCommand'),
+    deleteItem: t('deleteItem'), deleteServer: t('deleteMcpServer'),
+    name: t('mcpServerName'), transport: t('mcpTransport'), url: t('mcpUrl'),
   }
 }
 
@@ -306,27 +270,6 @@ function ModelListControl({
   )
 }
 
-function TagGroupControl({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (value: string) => void }) {
-  const selected = new Set(parseList(value))
-  const toggle = (option: string) => {
-    const next = new Set(selected)
-    if (next.has(option)) {
-      next.delete(option)
-    } else {
-      next.add(option)
-    }
-    onChange(options.filter((item) => next.has(item)).join(', '))
-  }
-  return (
-    <div className="tag-group-control field-wide">
-      <span>{label}</span>
-      <div className="tag-group" role="group" aria-label={label}>
-        {options.map((option) => <button aria-pressed={selected.has(option)} className="tag-option" key={option} type="button" onClick={() => toggle(option)}>{option}</button>)}
-      </div>
-    </div>
-  )
-}
-
 function parseModelNames(value: string) {
   const names = parseList(value)
   return names.length ? names : ['']
@@ -358,6 +301,14 @@ function getSelectedDirectoryPath(file: File) {
   const fullPath = (file as File & { path?: string }).path
   if (fullPath && relativePath && folderName && fullPath.endsWith(relativePath)) return `${fullPath.slice(0, -relativePath.length)}${folderName}`
   return folderName ?? fullPath ?? ''
+}
+
+function secondsInput(value: string | undefined) {
+  return value?.replace(/s$/, '') ?? ''
+}
+
+function withSeconds(value: string) {
+  return value ? `${value}s` : ''
 }
 
 export function getAgentStatusLabel(status: AgentRow['status'], t: Translate) {

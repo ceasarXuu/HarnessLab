@@ -10,10 +10,19 @@ describe('WebUI mutation request mappers', () => {
     const environment = environmentRowToDto(environmentRows[1])
 
     expect(job).toMatchObject({
-      config: { datasetRef: 'terminal-bench@2.0', environmentPresetId: 'docker-default', jobName: 'terminal-bench-smoke' },
+      config: {
+        agentSetupTimeoutMultiplier: 1,
+        agentTimeoutMultiplier: 1,
+        datasetRef: 'terminal-bench@2.0',
+        environmentBuildTimeoutMultiplier: 1,
+        environmentPresetId: 'docker-default',
+        extraInstructionPaths: [],
+        jobName: 'terminal-bench-smoke',
+        verifierTimeoutMultiplier: 1,
+      },
       runImmediately: true,
     })
-    expect(agent).toMatchObject({ id: 'claude-code-default', models: ['claude-haiku-4-5', 'claude-sonnet-4-5'] })
+    expect(agent).toMatchObject({ id: 'claude-code-default', models: [] })
     expect(environment).toMatchObject({
       allowedHosts: ['pypi.org', 'github.com', 'huggingface.co'],
       dockerComposePaths: ['compose.gpu.yml'],

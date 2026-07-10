@@ -1,176 +1,91 @@
 # v1.0.5 技术设计
 
-- Status: Active
-- Created: 2026-07-09
-- Updated: 2026-07-10
-- Scope: Harbor WebUI 前端架构、契约边界、治理规则和联调设计
+- 状态：Active
+- 更新：2026-07-10
+- 范围：Harbor WebUI、`/api/webui/v1`、mock/API 双模式与前后端联调边界
 
-## 1. 文档定位
+## 1. 权威关系
 
-本文是 v1.0.5 的技术权威入口。产品范围以 [PRD](prd.md) 为准，实施状态以 [工程计划与进度](engineering-plan.md) 为准。
+- 产品范围与用户语义见 [PRD](prd.md)。
+- 阶段状态与验收记录见 [工程计划](engineering-plan.md)。
+- 路由、DTO、包络、错误和异步操作见 [WebUI API 契约](../../architecture/frontend-api-contract.md)。
+- 本文只描述当前实现的架构与约束，不把计划中的依赖或历史专题资料当作已落地事实。
 
-支撑资料：
+## 2. 当前架构
 
-- [v1.0.5 前端重建架构决策](frontend-rebuild-architecture.md)
-- [前后端联调准备设计基线](frontend-backend-integration-readiness.md)
-- [Harbor CLI-to-UI 替代架构](harbor-cli-to-ui-architecture.md)
-- [Harbor WebUI 功能覆盖清单](harbor-webui-feature-coverage-checklist.md)
-- [前后端接口规范](../../architecture/frontend-api-contract.md)
-- [前端治理说明](../../architecture/frontend-webui-governance.md)
-
-## 2. 技术目标
-
-v1.0.5 的技术目标不是继续扩展 mock demo，而是把当前前端收敛成可进入前后端联调的正式 WebUI 基础。
-
-必须满足：
-
-- 页面和组件不直接依赖旧后端路由字段。
-- 生产 UI 类型不再从 `frontend/src/mocks/` 导出。
-- mock 数据只作为 Storybook、测试和离线预览 fixture。
-- 所有后端接入走 WebUI contract client；mock client 只用于 Storybook、测试和离线开发，不做 legacy adapter。
-- 所有耗时或破坏性动作通过统一 `Operation` 状态表达。
-- Storybook 覆盖主要页面状态，而不是只展示 happy path。
-- i18n、样式、基础控件、抽屉、弹窗、toast、表格都在统一组件和样式层治理。
-
-## 3. 当前前端基线
-
-已落地并可在 `frontend/package.json` 验证的基线：
-
-- React 19
-- Vite
-- Tailwind CSS v4
-- lucide-react
-- Storybook
-- Vitest
-- Playwright
-- MSW / msw-storybook-addon
-- TypeScript / ESLint
-
-目标基线但尚未落地为依赖的能力：
-
-- React Router 或等价路由层
-- TanStack Query 或等价 server-state 层
-- TanStack Table 或等价表格层
-- shadcn/Radix 风格的可访问基础组件库
-
-新增这些依赖前，必须先补选型说明、Storybook 示例和回归验证。文档不得把目标基线写成已落地事实。
-
-## 4. 前端分层
-
-| 层 | 责任 | 禁止事项 |
-|---|---|---|
-| `frontend/src/app/` | 应用装配、全局偏好、页面切换、资源级状态装配 | 不承载资源业务模型和后端字段转换 |
-| `frontend/src/domain/` | WebUI 领域模型、状态枚举、未格式化业务字段、ViewModel 边界 | 不导入 mock seed data |
-| `frontend/src/api/` | WebUI contract client、DTO、`ApiResponse`、`Operation`、mock client、data hook | 不导入 React 组件，不实现旧路由兼容层，不把旧后端字段泄漏到页面 |
-| `frontend/src/mocks/` | Storybook、测试、离线 demo fixture 和 MSW handlers | 不作为生产 UI 类型来源 |
-| `frontend/src/screens/` | 页面级编排、资源状态组合、路由页面 | 不直接 `fetch`，不直接适配旧路由 |
-| `frontend/src/ui/components/` | 可复用组件、pattern 组件、受 Storybook 约束的交互单元 | 不知道后端路由 |
-| `frontend/src/styles/` | token、base、layout、controls、tables、surfaces、screen 专属样式 | 不恢复单个巨型样式文件 |
-
-`frontend/src/domain/harbor.ts` 与 `frontend/src/api/` 已完成 Stage 2 所需分层：所有资源均经统一 client/data hook 获取，所有页面写操作均经过 `Operation` 边界。[OpenCode 独立审计](../../../vs_review/2026-07-10-stage-2-opencode-audit.md) 的首轮 `CONDITIONAL PASS` 缺口已经整改，并在复审中获 PASS；可进入 Stage 3 的后端破坏性升级，但不能跳过该阶段直接联调。
-
-## 5. API 契约
-
-v1.0.5 对前端暴露统一 WebUI API 语义，根路径为：
-
-```text
-/api/webui/v1
+```mermaid
+flowchart LR
+  UI[React 页面与组件] --> Client[WebUiClient]
+  Client -->|mock| Mock[Mock client / MSW / Storybook]
+  Client -->|api| API[/api/webui/v1/]
+  API --> Services[WebUI services]
+  Services --> Core[OrnnLab service / queue / storage]
+  Core --> Harbor[Harbor 0.13.x]
 ```
 
-权威接口规范见 [前后端接口规范](../../architecture/frontend-api-contract.md)。
+前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。两种模式共享 DTO、ViewModel、页面和 Operation 状态流；mock 不能放宽后端会拒绝的约束，例如 built-in Agent 不能直接创建 Job。
 
-现有后端旧路由：
+后端只注册 `ornnlab.api.webui`。旧的 experiments、runs、benchmarks、leaderboard、system、agents、templates 产品路由已删除，不提供兼容入口。
 
-- `/api/experiments`
-- `/api/runs`
-- `/api/benchmarks`
-- `/api/leaderboard`
-- `/api/system`
-- `/api/agents`
+## 3. 前端分层
 
-v1.0.5 不维护新旧两套接口，也不建设前端 legacy adapter。上述旧路由需要被破坏性升级为 `/api/webui/v1` 下的 WebUI 产品契约；实现层可以复用现有 service、worker 和事件流，但对外资源语义、响应包络、错误模型和异步 Operation 必须按新契约重塑。
-
-所有 JSON 接口统一使用：
-
-- `ApiResponse<T>`
-- `ApiError`
-- `ApiMeta`
-- `Operation`
-
-所有耗时或破坏性动作统一返回 `Operation`，包括：
-
-- 创建并运行 Job
-- 取消 Job / Trial
-- 下载 Dataset
-- 取消 Dataset 下载
-- 删除本地 Dataset
-- 从 Leaderboard 移除 Job
-- 检查更新
-- 重启 OrnnLab 服务
-- 清理 Docker 缓存
-- 清理 `~/.cache/harbor`
-
-## 6. DTO 与 ViewModel
-
-后端 DTO 不直接成为 UI 展示模型。原则如下：
-
-- token、cost、duration、score 在 DTO 中保持结构化值，UI 再格式化。
-- artifact path、event、operation 在 DTO 中保持结构化数组或对象，UI 再分组展示。
-- 页面不得把已格式化字符串提交回后端。
-- mock fixture 可以使用接近真实展示的样例，但生产类型必须来自 `domain` 或 `api`。
-
-示例：
-
-| 数据 | DTO | UI |
+| 目录 | 责任 | 约束 |
 |---|---|---|
-| tokens | `18400000` + `unit: token` | `18.4M` |
-| cost | `3.42` + `currency: USD` | `$3.42` |
-| duration | `2520` 秒 | `00:42:00` |
-| score | `{ kind: "percent", value: 0.725 }` | `72.5%` |
+| `frontend/src/app/` | 路由状态、偏好、全局资源装配 | 不读取 mock fixture，不直接 fetch |
+| `frontend/src/domain/` | UI 领域模型与草稿状态 | 不导入 API 或 mock |
+| `frontend/src/api/` | DTO、HTTP/mock client、请求映射、ViewModel、resource hook、Operation 轮询 | 不放 React 页面，不兼容旧路由 |
+| `frontend/src/mocks/` | 离线数据、MSW、Storybook 与测试夹具 | 只模拟正式 contract，不扩散产品能力 |
+| `frontend/src/screens/` | 页面级资源组合与导航 | 不适配后端旧字段 |
+| `frontend/src/ui/components/` | 共享控件、详情、表格、确认与状态组件 | 每个可复用可见组件有 Storybook 注册 |
+| `frontend/src/styles/` | token、布局、控件、表格、surface、页面专属层 | 不恢复巨型样式文件 |
 
-## 7. Storybook 治理
+当前依赖为 React 19、Vite、TypeScript、ESLint、Vitest、Storybook、MSW 和 lucide-react。React Router、TanStack Query/Table、Radix/shadcn 不在当前实现与依赖中，不应写成现有架构。
 
-Storybook 是正式组件注册和评审入口。新增组件、抽屉、表格状态、确认弹窗、toast 或页面状态时，必须同步 story。
+## 4. 数据与契约边界
 
-当前已具备：
+### 4.1 DTO 和 ViewModel
 
-- theme / locale globals
-- MSW handlers
-- a11y 参数
-- App、Controls、JobsTable、RunBuilder、Drawer、MCP 等 story
+后端返回的 Job、Dataset、Trial、Agent、Environment、Leaderboard、System DTO 均保持结构化值：金额为数字、Token 为百万数量、时长为秒、得分为结构化分数。`frontend/src/api/viewModels.ts` 是唯一的展示格式化层；页面不得把格式化字符串回传给 API。
 
-联调前的状态矩阵基线已落实为共享 `ResourceStatus` / `OperationStatus` 组件与 Screen/App story。Screen story 负责 loaded、empty、抽屉与资源专项交互；App route story 负责 contract client 产生的 loading、API unavailable 与 Hub 状态。不得在纯展示 Screen 内伪造网络状态。
+`RunDraft` 是 UI 草稿，`runDraftToCreateJobRequest` 将其映射到真实 Harbor `JobConfig` 可接受的运行级字段。模型、凭证、Skills、MCP 和 kwargs 只从 custom Agent profile 映射；环境细节从 Environment 模板映射。
 
-| 页面/组件 | 必须覆盖 |
-|---|---|
-| App Shell | dark/light、zh/en、Hub connected/disconnected/unavailable、API unavailable |
-| Jobs | Screen loaded/empty/drawer/operation；App route loading/failed |
-| New Job | default valid、dataset no tasks、verifier skip、task search bulk select、run validation failed |
-| Datasets | App route loading/failed；registry not downloaded、downloading、downloaded、local import、delete confirm、split empty、task row expanded |
-| Agents | App route loading/failed；built-in immutable、custom deletable、missing secret、skills empty/path configured、MCP variants |
-| Environment | App route loading/failed；built-in/custom、network off/allowlist、GPU/TPU、advanced collapsed/expanded、healthcheck enabled/disabled |
-| Leaderboard | App route loading/failed；可排名 Dataset 搜索/切换、空排名、Job 抽屉、移除排名 |
-| System | App route loading/failed；healthy/degraded、update available、cache operation running、destructive confirm、toast countdown |
+### 4.2 Harbor 能力映射
 
-## 8. i18n 与样式治理
+| 资源 | OrnnLab 持久化 | Harbor 真实对象/字段 |
+|---|---|---|
+| Job | `runs`、`experiments`、`webui_job_configs` | `JobConfig` overrides、队列与 Harbor job 目录 |
+| Agent | `agents`、`webui_agent_configs` | `AgentConfig`: `name`/`import_path`、model、env、kwargs、skills、MCP、超时 |
+| Environment | `webui_environment_profiles` | `EnvironmentConfig`: type/import path、资源 policy/override、mounts、compose、env、kwargs、allowed hosts |
+| Dataset | `webui_datasets` 与 Harbor registry/local path | Dataset 列表、导入、下载、同步、删除本地数据 |
+| Operation | `webui_operations` | OrnnLab 异步任务与状态，而非虚构 Harbor 资源 |
 
-i18n 规则：
+Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload、Environment `docker_image`/`network_mode`/`healthcheck`/`workdir` 字段，也没有可枚举的 GPU/TPU 型号。它们不出现在当前 contract。
 
-- 组件不得硬编码中文/英文判断。
-- 新增文案必须进入 locale 文件。
-- 组件状态不能依赖翻译后的字符串比较。
-- 中英文都必须覆盖页面标题、表头、按钮、空态、弹窗、toast 和错误文案。
+### 4.3 Agent 和 Environment 的可写边界
 
-样式规则：
+- built-in Agent 是运行时从 Harbor `AgentName` 枚举生成的只读 Harness 目录；无模型、凭证或 MCP 假配置。创建 Job 必须选择 custom Agent profile。
+- custom Agent 必须是 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。保存时由 `AgentConfig.model_validate` 校验。
+- built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
+- `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。
 
-- `frontend/src/styles/index.css` 只做入口。
-- token、base、layout、controls、tables、surfaces、run-builder、screens 分层维护。
-- 下拉、按钮、输入、switch、tag、key-value、抽屉表格等相似组件必须复用统一组件和样式。
-- 抽屉默认宽度是最小可用宽度，并允许用户拖拽调整；拖拽热区应覆盖抽屉左边界全高。
+## 5. API 与异步操作
 
-## 9. 测试门禁
+所有 API 都使用 `/api/webui/v1`、`ApiResponse<T>` 和 request id。错误通过 FastAPI 统一转为 `VALIDATION_ERROR`、`INVALID_REQUEST`、`RESOURCE_NOT_FOUND`、`RESOURCE_IMMUTABLE`、`OPERATION_CONFLICT` 或 `INTERNAL_ERROR`。
 
-进入联调前至少通过：
+耗时操作使用持久化 `Operation`：创建后为 `queued`，后台执行为 `running`，终态为 `completed`、`failed` 或 `cancelled`。前端 `useOperation` 按状态轮询 `GET /operations/{id}`；Job 事件通过 `GET /jobs/{jobId}/events` 拉取。SSE 不属于 v1.0.5 Stage 3 的实现范围。
+
+同步完成的 CRUD 仍返回 completed Operation，以保持所有写操作的统一状态模型。Operation 取消会取消已登记的 asyncio task，并把持久化状态写为 `cancelled`。
+
+## 6. Storybook、i18n 与样式治理
+
+- `.storybook/preview.ts` 提供 theme、locale、MSW 与 a11y 配置；a11y 违规按 error 处理。
+- 共享控件包括 `CustomSelect`、`EditableStringList`、`KeyValueControl`、`McpServersControl`、`TpuSpecControl`、`DetailDrawer`、确认框和状态组件。任何同类控件必须复用或先抽象再实现。
+- 新增用户文案进入 `i18n.zh.ts` 与 `i18n.en.ts`，组件不根据翻译文本分支状态。
+- 默认抽屉宽度为最小可用宽度，左侧 resize handle 贯穿视口高度；抽屉内部表格与表单允许纵向滚动，不允许无界横向撑开。
+
+## 7. 测试与运行门禁
+
+前端：
 
 ```bash
 cd frontend
@@ -179,19 +94,16 @@ npm test
 npm run lint
 npm run build
 npm run storybook:test
-npm run e2e
+npm run storybook:build
 ```
 
-测试口径必须一致：Storybook play、Vitest、Playwright 不能分别断言不同 UI 版本。
+后端：
 
-## 10. 联调进入条件
+```bash
+.venv/bin/python -m pytest tests/python -q
+.venv/bin/python -m ruff check ornnlab tests/python
+```
 
-满足以下条件后，才进入真实后端逐接口接入：
+API 集成测试必须覆盖统一包络、旧路由 404、资源 CRUD、真实 Harbor schema 校验、Job 映射、Operation 轮询/取消、Dataset 导入、系统操作失败语义和被移除字段拒绝。操作服务会输出提交、完成、失败与取消日志，便于联调定位。
 
-- `frontend/src/api/` 已建立 WebUI contract client。
-- `frontend/src/domain/` 不再依赖 mock seed data。
-- `frontend/src/mocks/` 只提供 fixture、MSW handler 和测试数据。
-- 主要页面 Storybook 状态矩阵补齐。
-- API 契约和页面可见操作一一对应。
-- 进入真实联调前，后端必须将旧 API 破坏性升级为 `/api/webui/v1` WebUI 契约；不保留新旧并行入口，不依赖前端 legacy adapter。
-- e2e、unit、storybook smoke 至少达到当前联调最低门禁。
+视觉验收使用 Codex Web Preview，不使用独立 Playwright 流程；默认 UI 预览保持 mock 模式，真实 API 联调显式设置 `VITE_ORNNLAB_DATA_MODE=api`。

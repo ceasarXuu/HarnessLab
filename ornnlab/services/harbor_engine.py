@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ornnlab.models.harbor import HarborCapabilitySnapshot, HarborJobConfigView
+from ornnlab.services.harbor_score import pass_at_one
 from ornnlab.services.harbor_subprocess import ManagedSubprocessHarborRunner
 from ornnlab.settings import Settings
 from ornnlab.storage.paths import atomic_write_text
@@ -29,22 +30,41 @@ class HarborConfigBuilder:
         n_concurrent: int,
         jobs_dir: str,
         job_name: str | None = None,
+        overrides: dict[str, Any] | None = None,
     ) -> HarborJobConfigView:
+        overrides = overrides or {}
         dataset_name = (
             f"{benchmark_name}@{benchmark_version}" if benchmark_version else benchmark_name
         )
+        dataset = {
+            "name": dataset_name,
+            "benchmark_name": benchmark_name,
+            "benchmark_version": benchmark_version,
+            "task_names": overrides.get("task_names"),
+        }
         return HarborJobConfigView(
             job_name=job_name or f"ornnlab-{_slug(dataset_name)}",
             agent=_normalize_agent_view(agent_config),
-            dataset={
-                "name": dataset_name,
-                "benchmark_name": benchmark_name,
-                "benchmark_version": benchmark_version,
-            },
-            n_tasks=n_tasks,
+            dataset=_without_empty_values(dataset),
+            n_tasks=overrides.get("n_tasks", n_tasks),
             n_attempts=n_attempts,
             n_concurrent=n_concurrent,
             jobs_dir=jobs_dir,
+            timeout_multiplier=float(overrides.get("timeout_multiplier", 1.0)),
+            agent_timeout_multiplier=float(overrides.get("agent_timeout_multiplier", 1.0)),
+            verifier_timeout_multiplier=float(overrides.get("verifier_timeout_multiplier", 1.0)),
+            agent_setup_timeout_multiplier=float(
+                overrides.get("agent_setup_timeout_multiplier", 1.0)
+            ),
+            environment_build_timeout_multiplier=float(
+                overrides.get("environment_build_timeout_multiplier", 1.0)
+            ),
+            extra_instruction_paths=list(overrides.get("extra_instruction_paths", [])),
+            debug=bool(overrides.get("debug", False)),
+            retry=overrides.get("retry", {}),
+            verifier=overrides.get("verifier", {}),
+            metrics=overrides.get("metrics", []),
+            environment=overrides.get("environment", {"type": "docker", "delete": True}),
         )
 
     def write_run_artifacts(
@@ -81,9 +101,19 @@ class HarborConfigBuilder:
             "job_name": config.job_name,
             "jobs_dir": config.jobs_dir,
             "n_attempts": config.n_attempts,
+            "timeout_multiplier": config.timeout_multiplier,
+            "agent_timeout_multiplier": config.agent_timeout_multiplier,
+            "verifier_timeout_multiplier": config.verifier_timeout_multiplier,
+            "agent_setup_timeout_multiplier": config.agent_setup_timeout_multiplier,
+            "environment_build_timeout_multiplier": config.environment_build_timeout_multiplier,
+            "extra_instruction_paths": config.extra_instruction_paths,
+            "debug": config.debug,
             "n_concurrent_trials": config.n_concurrent,
             "quiet": True,
             "environment": config.environment,
+            "retry": config.retry,
+            "verifier": config.verifier,
+            "metrics": config.metrics,
             "agents": [_agent_config_payload(config.agent)],
             "datasets": [_dataset_config_payload(config.dataset, config.n_tasks)],
         }
@@ -175,6 +205,7 @@ def _agent_config_payload(agent: dict[str, Any]) -> dict[str, Any]:
         "extra_allowed_hosts",
         "kwargs",
         "env",
+        "mcp_servers",
     }
     payload = {key: value for key, value in agent.items() if key in allowed}
     if "env" in payload:
@@ -189,6 +220,8 @@ def _dataset_config_payload(dataset: dict[str, Any], n_tasks: int | None) -> dic
     if benchmark_name is None:
         benchmark_name, version = _split_dataset_ref(name)
     payload: dict[str, Any] = {"name": benchmark_name, "version": version}
+    if dataset.get("task_names"):
+        payload["task_names"] = dataset["task_names"]
     if n_tasks is not None:
         payload["n_tasks"] = n_tasks
     return _without_empty_values(payload)
@@ -237,8 +270,7 @@ def _score_from_result(result: Any) -> float | None:
     stats = getattr(result, "stats", None)
     evals = getattr(stats, "evals", {}) if stats is not None else {}
     for dataset_stats in evals.values():
-        pass_at_k = getattr(dataset_stats, "pass_at_k", {}) or {}
-        score = pass_at_k.get(1, pass_at_k.get("1"))
+        score = pass_at_one(getattr(dataset_stats, "pass_at_k", {}) or {})
         if score is not None:
             return float(score)
         for metric in getattr(dataset_stats, "metrics", []) or []:

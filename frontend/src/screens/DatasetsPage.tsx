@@ -18,6 +18,7 @@ interface DatasetsPageProps {
   search: string
   t: Translate
   onRefresh: () => Promise<void>
+  onPrepareTaskRun?: (datasetRef: string, taskName: string) => void
   onSearch: (value: string) => void
 }
 
@@ -42,11 +43,10 @@ const defaultImportDraft = {
   version: 'local',
 }
 
-export function DatasetsPage({ writesEnabled = true, client, rows, search, t, onRefresh, onSearch }: DatasetsPageProps) {
+export function DatasetsPage({ writesEnabled = true, client, rows, search, t, onRefresh, onPrepareTaskRun, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
   const [taskSearch, setTaskSearch] = useState('')
-  const [taskSplit, setTaskSplit] = useState('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -59,18 +59,11 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const selectedTasks = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
   const visibleSelectedTasks = useMemo(() => {
     const query = taskSearch.trim().toLowerCase()
-    const splitFilteredTasks = taskSplit === 'all'
-      ? selectedTasks
-      : selectedTasks.filter((row) => row.splits.includes(taskSplit))
-    if (!query) return splitFilteredTasks
-    return splitFilteredTasks.filter((row) =>
+    if (!query) return selectedTasks
+    return selectedTasks.filter((row) =>
       [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
     )
-  }, [selectedTasks, taskSearch, taskSplit])
-  const splitOptions = [
-    { label: t('allSplits'), value: 'all' },
-    ...(detailRow?.splits ?? []).map((split) => ({ label: split, value: split })),
-  ]
+  }, [selectedTasks, taskSearch])
 
   useEffect(() => {
     if (datasetOperation.operation?.status !== 'completed') return
@@ -100,7 +93,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   }
   const runTask = async (row: DatasetRow, taskName: string) => {
     if (!writesEnabled) return
-    await datasetOperation.submit(() => client.runDatasetTask(datasetKey(row), taskName), ({ operation }) => operation)
+    onPrepareTaskRun?.(datasetKey(row), taskName)
   }
   const confirmDelete = async () => {
     if (!writesEnabled) return
@@ -174,7 +167,6 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                       setSelected(row)
                       setExpandedTaskName(null)
                       setTaskSearch('')
-                      setTaskSplit('all')
                       setDrawerOpen(true)
                     }}
                   >
@@ -248,9 +240,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               expandedTaskName={expandedTaskName}
               isRegistryDataset={selectedIsRegistryDataset}
               selected={detailRow}
-              splitOptions={splitOptions}
               taskSearch={taskSearch}
-              taskSplit={taskSplit}
               tasks={visibleSelectedTasks}
               t={t}
               writeDisabled={!writesEnabled || isOperationRunning(datasetOperation.operation?.status)}
@@ -260,7 +250,6 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               onStartDownload={startDownload}
               onSync={syncDataset}
               onTaskSearch={setTaskSearch}
-              onTaskSplit={setTaskSplit}
               onRunTask={runTask}
             />
             <ResourceStatus

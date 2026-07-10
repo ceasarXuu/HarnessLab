@@ -33,15 +33,27 @@ describe('MockWebUiClient', () => {
     ]))
   })
 
-  it('returns Dataset tasks filtered by split through the contract', async () => {
+  it('returns Dataset tasks filtered by search through the contract', async () => {
     const client = createMockWebUiClient()
 
-    const response = await client.listDatasetTasks('terminal-bench@2.0', { split: 'test' })
+    const response = await client.listDatasetTasks('terminal-bench@2.0', { q: 'apt' })
 
     expect(response.error).toBeNull()
     expect(response.data).not.toBeNull()
     if (!response.data) throw new Error('Expected Dataset Task page data')
-    expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup', 'git-rebase-conflict'])
+    expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup'])
+  })
+
+  it('does not expose a downloaded Dataset until its asynchronous Operation completes', async () => {
+    const client = createMockWebUiClient()
+
+    const submitted = await client.downloadDataset('swe-bench-lite@2026.06')
+    const operationId = submitted.data?.operation.id ?? ''
+
+    expect((await client.getDataset('swe-bench-lite@2026.06')).data?.download.status).toBe('not-downloaded')
+    expect((await client.getOperation(operationId)).data?.status).toBe('running')
+    expect((await client.getOperation(operationId)).data?.status).toBe('completed')
+    expect((await client.getDataset('swe-bench-lite@2026.06')).data?.download.status).toBe('downloaded')
   })
 
   it('filters Agents and Environments by their structured query fields', async () => {
@@ -67,5 +79,43 @@ describe('MockWebUiClient', () => {
 
     expect(response.data).toBeNull()
     expect(response.error).toEqual({ code: 'JOB_NOT_FOUND', message: 'Job not found' })
+  })
+
+  it('rejects built-in harness entries when a Job requires a configured Agent profile', async () => {
+    const client = createMockWebUiClient()
+
+    const response = await client.createJob({
+      config: {
+        agentSetupTimeoutMultiplier: 1,
+        agentName: 'Claude Code default',
+        agentTimeoutMultiplier: 1,
+        attempts: 1,
+        concurrency: 1,
+        datasetRef: 'terminal-bench@2.0',
+        debug: false,
+        environmentPresetId: 'docker-default',
+        environmentBuildTimeoutMultiplier: 1,
+        extraInstructionPaths: [],
+        includeInLeaderboard: true,
+        jobName: 'invalid-agent-job',
+        jobsDir: 'jobs/invalid-agent-job',
+        maxRetries: 0,
+        metric: 'mean',
+        notes: '',
+        retryExclude: '',
+        retryInclude: '',
+        retryMaxWaitSeconds: 30,
+        retryMinWaitSeconds: 2,
+        retryWaitMultiplier: 1.5,
+        selectedTaskNames: null,
+        timeoutMultiplier: 1,
+        verifierTimeoutMultiplier: 1,
+        verifierMode: 'dataset-default',
+      },
+      runImmediately: true,
+    })
+
+    expect(response.data).toBeNull()
+    expect(response.error?.code).toBe('AGENT_PROFILE_REQUIRED')
   })
 })

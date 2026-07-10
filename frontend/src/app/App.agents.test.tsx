@@ -69,10 +69,6 @@ describe('App agents and leaderboard', () => {
       ['Harness', 'custom-harness'],
       ['Type', 'custom'],
       ['Custom import path', 'agents.local_repair:Agent'],
-      ['Temperature', '0.2'],
-      ['Context length', '131072'],
-      ['API key env', 'LOCAL_MODEL_API_KEY'],
-      ['Base URL env', 'LOCAL_MODEL_URL'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
@@ -99,14 +95,10 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument()
     fireEvent.click(agentForm.getByRole('tab', { name: 'MCPs' }))
     expect(agentForm.getByText('MCP Servers')).toBeInTheDocument()
-    expect(agentForm.getByText('Manage MCP templates on the Agent. OrnnLab expands compose sidecars into Harbor task environment and registers the generated connection in task.toml.')).toBeInTheDocument()
-    expect(agentForm.getByRole('checkbox', { name: 'Enabled local-repair-tools' })).toBeChecked()
     expect(agentForm.getByLabelText('Name')).toHaveValue('local-repair-tools')
-    expect(agentForm.getByLabelText('Deployment')).toHaveValue('stdio')
     expect(agentForm.getByLabelText('Transport')).toHaveValue('stdio')
     expect(agentForm.getByLabelText('Command')).toHaveValue('uvx')
     expect(agentForm.getByLabelText('Args')).toHaveValue('local-repair-mcp')
-    expect(agentForm.getAllByLabelText('Env key').map((input) => (input as HTMLInputElement).value)).toContain('LOCAL_MODEL_URL')
     fireEvent.click(agentForm.getByRole('tab', { name: 'Advanced' }))
     expect(agentForm.getByText('Advanced agent params')).toBeInTheDocument()
     expect(agentForm.getByText('agent kwargs')).toBeInTheDocument()

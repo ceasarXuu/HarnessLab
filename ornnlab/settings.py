@@ -43,6 +43,10 @@ class Settings:
         return self.home / "experiments"
 
     @property
+    def datasets_dir(self) -> Path:
+        return self.home / "datasets"
+
+    @property
     def exports_dir(self) -> Path:
         return self.home / "exports"
 
@@ -66,6 +70,7 @@ class Settings:
             self.agents_dir,
             self.generated_agents_dir,
             self.experiments_dir,
+            self.datasets_dir,
             self.exports_dir,
             self.archive_dir,
         ]:

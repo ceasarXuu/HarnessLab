@@ -7,7 +7,6 @@ import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
 import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
-import { NetworkAccessControl } from './NetworkAccessControl'
 import { Field, Toggle } from './RunBuilderChrome'
 import { Toast } from './Toast'
 import { TpuSpecControl } from './TpuSpecControl'
@@ -17,7 +16,6 @@ function ControlsFixture() {
   const [envVars, setEnvVars] = useState('HTTP_PROXY=${HTTP_PROXY:-}')
   const [folder, setFolder] = useState('jobs/terminal-bench-smoke')
   const [enabled, setEnabled] = useState(true)
-  const [networkAccess, setNetworkAccess] = useState('*')
   const [tpu, setTpu] = useState('v6e=2x4')
   const [paths, setPaths] = useState(['compose.gpu.yml'])
   const t = getTranslator('en')
@@ -54,14 +52,6 @@ function ControlsFixture() {
             value={envVars}
             onChange={setEnvVars}
           />
-          <NetworkAccessControl
-            enabledLabel={t('environmentNetworkAccess')}
-            hostsLabel={t('environmentAllowedHosts')}
-            addLabel={t('add')}
-            deleteLabel={t('delete')}
-            value={networkAccess}
-            onChange={setNetworkAccess}
-          />
           <EditableStringList
             addLabel={t('add')}
             deleteLabel={t('delete')}
@@ -79,13 +69,13 @@ function ControlsFixture() {
             <input aria-label="Search tasks" placeholder="Search tasks" />
           </label>
           <CustomSelect
-            ariaLabel="Split"
+            ariaLabel="Environment"
             className="toolbar-select"
-            value="all"
+            value="docker"
             options={[
-              { label: 'All splits', value: 'all' },
-              { label: 'test', value: 'test' },
-              { label: 'nightly', value: 'nightly' },
+              { label: 'docker', value: 'docker' },
+              { label: 'daytona', value: 'daytona' },
+              { label: 'e2b', value: 'e2b' },
             ]}
             onChange={() => undefined}
           />
@@ -127,9 +117,9 @@ type Story = StoryObj<typeof meta>
 export const FormControls: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const split = canvas.getByLabelText('Split')
-    await expect(split).toHaveTextContent('All splits')
-    const bounds = split.getBoundingClientRect()
+    const environment = canvas.getByLabelText('Environment')
+    await expect(environment).toHaveTextContent('docker')
+    const bounds = environment.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Allowed hosts 1')).toHaveValue('*')

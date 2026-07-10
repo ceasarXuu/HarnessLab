@@ -46,14 +46,12 @@ describe('WebUI view model mappers', () => {
         sizeBytes: 1288490188,
       },
       registryUrl: 'https://hub.harborframework.com',
-      splits: ['test', 'nightly'],
     }
 
     expect(datasetDtoToRow(dataset)).toMatchObject({
       name: 'terminal-bench',
       downloadStatus: 'downloaded',
       size: '1.2 GB',
-      splits: ['test', 'nightly'],
     })
   })
 })

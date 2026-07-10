@@ -7,12 +7,13 @@
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Recorded active Harbor WebUI technology decisions after Rust runtime archive. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked technology decisions to document version governance. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue demo frontend decision with the v1.0.5 Harbor official Viewer-aligned React/Vite demo. |
+| 1.3 | v1.0.5 | 2026-07-10 | Upgraded the backend directly to the WebUI contract and retired Playwright from the active gate. |
 
 The previous Rust single-binary technology decision record was archived on
 2026-06-15.
 
 - Archived copy: `../archive/2026-06-15-pre-harbor-webui-redesign/technology-decisions.md`
-- Canonical engineering plan: `docs/plans/2026-06-15-harbor-webui-redesign-engineering-plan.md`
+- Canonical engineering plan: `../releases/v1.0.5/engineering-plan.md`
 
 ## Active Decisions
 
@@ -23,11 +24,11 @@ The previous Rust single-binary technology decision record was archived on
 | Frontend | React + Vite, aligned with Harbor official Viewer |
 | Metadata | Local SQLite |
 | Artifacts | TOML/JSON/JSONL/HTML files under `~/.ornnlab/data` |
-| Live updates | Server-Sent Events for status/log streams |
+| Live updates | Operation polling and Job event reads |
 | Default local test engine | Fake Harbor engine |
 | Real execution boundary | Harbor Python API or managed Harbor subprocess |
 | Hard cancellation boundary | Managed Harbor subprocess process group |
-| Frontend component workflow | Storybook plus React/Vitest/Playwright gates |
+| Frontend component workflow | Storybook static build plus React/Vitest gates; visual acceptance in Codex Web Preview |
 | Packaging | Python package first; Rust binary is not the MVP path |
 
 ## Rationale
@@ -43,8 +44,8 @@ must be inspectable, recoverable, and linkable from reports.
 
 The old Vue operations-console demo has been removed. v1.0.5 frontend work now
 starts from a React/Vite demo aligned with Harbor's official Viewer architecture:
-React, Vite, Tailwind, shadcn-style primitives, Storybook, Playwright, and
-lucide-react. The public Harbor Hub remains a visual reference, but the local
+React, Vite, Tailwind, shadcn-style primitives, Storybook, and lucide-react.
+The public Harbor Hub remains a visual reference, but the local
 product architecture tracks Harbor `apps/viewer`.
 
 ## Execution Mode Policy
@@ -107,8 +108,8 @@ real Harbor smoke:
 
 - `python-web`: `uv sync --group dev`, ruff, pyright, pytest, line-count, and
   `git diff --check`;
-- `frontend-web`: Node 22, `npm ci`, Playwright Chromium install, React
-  typecheck, ESLint, Vitest, Storybook smoke, and Playwright e2e.
+- `frontend-web`: Node 22, `npm ci`, React typecheck, ESLint, Vitest, Storybook
+  smoke and Storybook static build. Visual acceptance runs in Codex Web Preview.
 
 Real Harbor Docker smoke remains opt-in through `workflow_dispatch` with
 `real_harbor_smoke=true`, because it requires Docker and real benchmark runtime

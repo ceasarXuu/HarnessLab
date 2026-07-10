@@ -77,4 +77,4 @@ Pattern 级 story 至少覆盖：
 
 任何新增文案必须进入 `i18n.ts` 或后续拆分后的 locale 文件，不允许在组件中硬编码中文/英文判断。组件不能通过比较翻译后的字符串判断当前语言。
 
-联调前 e2e 必须全绿。Storybook play、Vitest 和 Playwright e2e 对同一交互的断言必须一致，不能一个测试断言旧 UI 存在，另一个测试断言旧 UI 不存在。
+联调前，Vitest、Storybook smoke/static build 必须全绿，并在 Codex Web Preview 验收关键交互。它们对同一交互的断言必须一致，不能一个测试断言旧 UI 存在，另一个测试断言旧 UI 不存在。

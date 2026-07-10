@@ -67,11 +67,11 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
 
   const setTimeoutPolicy = (policy: TimeoutPolicy) => {
     if (policy === 'standard') {
-      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 1, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 1, agentTimeoutMultiplier: '1', verifierTimeoutMultiplier: '1' })
     } else if (policy === 'strict') {
-      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 0.5, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 0.5, agentTimeoutMultiplier: '1', verifierTimeoutMultiplier: '1' })
     } else if (policy === 'relaxed') {
-      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 2, agentTimeoutMultiplier: '', verifierTimeoutMultiplier: '' })
+      onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: 2, agentTimeoutMultiplier: '1', verifierTimeoutMultiplier: '1' })
     } else {
       onDraft({ ...draft, timeoutPolicy: policy, timeoutMultiplier: draft.timeoutMultiplier || 1 })
     }

@@ -42,65 +42,14 @@ def test_app_startup_drains_persisted_queue(settings):
     experiment_id = created["experiment"]["id"]
     service.enqueue(experiment_id)
 
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings)):
         for _ in range(20):
-            state = client.get(f"/api/experiments/{experiment_id}").json()
+            state = service.get(experiment_id)
             if state["experiment"]["status"] == "completed":
                 break
             time.sleep(0.01)
 
     assert service.get(experiment_id)["experiment"]["status"] == "completed"
-
-
-def test_api_cancel_stops_active_worker_task(client, settings):
-    client.post(
-        "/api/agents",
-        json={
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        },
-    )
-    created = client.post(
-        "/api/experiments",
-        json={
-            "name": "API cancel",
-            "agent_ids": ["oracle"],
-            "benchmark_names": ["simulated-slow-cancel"],
-            "n_tasks": 2,
-        },
-    ).json()
-    experiment_id = created["experiment"]["id"]
-    run_id = created["runs"][0]["id"]
-
-    client.post(f"/api/experiments/{experiment_id}/run")
-    run = client.get(f"/api/runs/{run_id}").json()
-    for _ in range(50):
-        run = client.get(f"/api/runs/{run_id}").json()
-        if run["status"] == "running":
-            break
-        time.sleep(0.01)
-
-    cancelled = client.post(f"/api/runs/{run_id}/cancel")
-    for _ in range(50):
-        run = client.get(f"/api/runs/{run_id}").json()
-        if run["status"] == "cancelled":
-            break
-        time.sleep(0.01)
-
-    job_result = settings.experiments_dir / run_id / "harbor-job" / "result.json"
-    events = client.get(f"/api/runs/{run_id}/events").json()
-
-    assert cancelled.status_code == 200
-    assert run["status"] == "cancelled"
-    assert not job_result.exists()
-    assert any(
-        event["event_type"] == "harbor.job.cancelled"
-        and event["payload"]["source"] == "cancelled_during_engine_task_cancel"
-        for event in events
-    )
 
 
 @pytest.mark.anyio
@@ -289,8 +238,7 @@ async def test_reconcile_startup_does_not_duplicate_running_runs(settings):
             ("running", now, experiment_id),
         )
         conn.execute(
-            "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, updated_at = ? "
-            "WHERE id = ?",
+            "UPDATE runs SET status = ?, started_at = ?, job_dir = ?, updated_at = ? WHERE id = ?",
             ("running", now, str(job_dir), now, run_id),
         )
         conn.execute(

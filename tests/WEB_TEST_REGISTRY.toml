@@ -9,17 +9,17 @@ path = "tests/python/test_profile_compiler.py"
 kind = "python-unit"
 
 [[test]]
-id = "WEB-EXP-001"
+id = "WEB-JOB-001"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
 
 [[test]]
-id = "WEB-EXP-002"
+id = "WEB-JOB-002"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
 
 [[test]]
-id = "WEB-EXP-002"
+id = "WEB-JOB-002"
 path = "tests/python/test_worker_service.py"
 kind = "python-integration"
 
@@ -34,12 +34,12 @@ path = "tests/python/test_agent_api.py"
 kind = "python-integration"
 
 [[test]]
-id = "WEB-RPT-001"
+id = "WEB-JOB-003"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
 
 [[test]]
-id = "WEB-TPL-001"
+id = "WEB-ENV-001"
 path = "tests/python/test_experiment_service.py"
 kind = "python-integration"
 

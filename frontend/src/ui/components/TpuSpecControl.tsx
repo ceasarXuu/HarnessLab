@@ -1,7 +1,3 @@
-import { CustomSelect } from './CustomSelect'
-
-const tpuTypes = ['none', 'v6e', 'trillium', 'v4', 'tpu-v6e-slice', 'tpu7x']
-
 interface TpuSpecControlProps {
   label: string
   value: string
@@ -41,17 +37,17 @@ export function TpuSpecControl({ label, className, labels, value, onChange }: Tp
       <span className="tpu-spec-label">{label}</span>
       <label>
         {controlLabels.type}
-        <CustomSelect
-          ariaLabel={controlLabels.type}
+        <input
+          aria-label={controlLabels.type}
           value={parsed.type}
-          options={tpuTypes.map((type) => ({ label: type === 'none' ? controlLabels.notConfigured : type, value: type }))}
-          onChange={(type) => update({ type })}
+          placeholder={controlLabels.notConfigured}
+          onChange={(event) => update({ type: event.target.value })}
         />
       </label>
       <label>
         {controlLabels.topologyX}
         <input
-          disabled={parsed.type === 'none'}
+          disabled={!parsed.type.trim()}
           min="1"
           type="number"
           value={parsed.x}
@@ -61,7 +57,7 @@ export function TpuSpecControl({ label, className, labels, value, onChange }: Tp
       <label>
         {controlLabels.topologyY}
         <input
-          disabled={parsed.type === 'none'}
+          disabled={!parsed.type.trim()}
           min="1"
           type="number"
           value={parsed.y}
@@ -71,7 +67,7 @@ export function TpuSpecControl({ label, className, labels, value, onChange }: Tp
       <label>
         {controlLabels.topologyZ}
         <input
-          disabled={parsed.type === 'none'}
+          disabled={!parsed.type.trim()}
           min="1"
           placeholder="optional"
           type="number"
@@ -84,15 +80,14 @@ export function TpuSpecControl({ label, className, labels, value, onChange }: Tp
 }
 
 function parseTpuSpec(value: string): ParsedTpuSpec {
-  if (!value || value === 'none') return { type: 'none', x: '', y: '', z: '' }
+  if (!value || value === 'none') return { type: '', x: '', y: '', z: '' }
   const [type, topology = ''] = value.split('=')
   const [x = '', y = '', z = ''] = topology.split('x')
-  return { type: tpuTypes.includes(type) ? type : 'v6e', x, y, z }
+  return { type, x, y, z }
 }
 
 function formatTpuSpec(spec: ParsedTpuSpec) {
-  if (spec.type === 'none') return 'none'
-  if (!spec.x || !spec.y) return 'none'
+  if (!spec.type.trim() || !spec.x || !spec.y) return ''
   const topology = [spec.x, spec.y, spec.z].filter(Boolean).join('x')
   return `${spec.type}=${topology}`
 }

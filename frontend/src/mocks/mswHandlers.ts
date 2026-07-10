@@ -89,13 +89,9 @@ export const webuiHandlers = [
   http.get(`${webui}/datasets/:datasetRef`, async ({ params }) =>
     HttpResponse.json(await client.getDataset(String(params.datasetRef))),
   ),
-  http.get(`${webui}/datasets/:datasetRef/tasks`, async ({ params, request }) => {
-    const url = new URL(request.url)
-    return HttpResponse.json(await client.listDatasetTasks(String(params.datasetRef), {
-      ...listQuery(request),
-      split: url.searchParams.get('split') ?? undefined,
-    }))
-  }),
+  http.get(`${webui}/datasets/:datasetRef/tasks`, async ({ params, request }) =>
+    HttpResponse.json(await client.listDatasetTasks(String(params.datasetRef), listQuery(request))),
+  ),
   http.post(`${webui}/datasets/import`, async ({ request }) =>
     HttpResponse.json(await client.importDataset(await jsonBody<DatasetImportRequestDto>(request))),
   ),
@@ -110,9 +106,6 @@ export const webuiHandlers = [
   ),
   http.post(`${webui}/datasets/:datasetRef/sync`, async ({ params }) =>
     HttpResponse.json(await client.syncDataset(String(params.datasetRef))),
-  ),
-  http.post(`${webui}/datasets/:datasetRef/tasks/:taskName/run`, async ({ params }) =>
-    HttpResponse.json(await client.runDatasetTask(String(params.datasetRef), String(params.taskName))),
   ),
   http.post(`${webui}/environments`, async ({ request }) =>
     HttpResponse.json(await client.createEnvironment(await jsonBody<EnvironmentDto>(request))),
@@ -139,7 +132,6 @@ export const webuiHandlers = [
       ...listQuery(request),
       dataset: url.searchParams.get('dataset') ?? '',
       metric: url.searchParams.get('metric') ?? undefined,
-      split: url.searchParams.get('split') ?? undefined,
     }))
   }),
   http.get(`${webui}/system/health`, async () => HttpResponse.json(await client.listSystemHealth())),
