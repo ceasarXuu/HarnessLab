@@ -95,7 +95,7 @@ interface Operation {
 | Environment | `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`、`POST /environments/{id}/copy` | `{ operation }` |
 | Job | `GET /jobs`、`GET /jobs/{id}` | `Page<Job>`、`Job` |
 | Job | `POST /jobs` | `{ job, operation }` |
-| Job | `POST /jobs/{id}/cancel`、`retry`、`resume` | `{ operation }` |
+| Job | `POST /jobs/{id}/cancel`、`resume` | `{ operation }` |
 | Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
 | Job | `PATCH /jobs/{id}/leaderboard` | `{ job, leaderboard, operation }` |
 | Dataset | `GET /datasets`、`GET /datasets/{ref}`、`GET /datasets/{ref}/tasks` | `Page<Dataset>`、`Dataset`、`Page<DatasetTask>` |
@@ -236,6 +236,8 @@ interface Agent {
 ```
 
 built-in Agent 从 Harbor `AgentName` 生成，只读且通常没有 custom profile 配置。custom Agent 必须使用 Harbor AgentName，或在 `importPath` 存在时使用 custom harness。`stdio` MCP 必须提供 `command`；`sse`/`streamable-http` 必须提供 `url`。协议不包含启用开关、部署配置或 compose sidecar。
+
+Agent 的 `status` 是响应字段，不属于创建或更新请求。后端仅在 custom profile 通过 Harbor `AgentConfig` 校验并保存后返回 `configured`；未实现真实凭证可用性探针时不得由前端提交或伪造 `needs-token`。
 
 ### Environment
 

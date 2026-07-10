@@ -10,7 +10,7 @@ interface DetailRailProps {
   events: EventLog[]
   trials: TrialRow[]
   t: Translate
-  onJobAction: (jobId: string, action: 'cancel' | 'retry' | 'resume') => void
+  onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
@@ -136,7 +136,7 @@ function getPrimaryJobAction(status: HarborJob['status'], t: Translate) {
   if (status === 'running' || status === 'queued') {
     return { kind: 'cancel' as const, label: t('cancel') }
   }
-  if (status === 'failed') return { kind: 'retry' as const, label: t('retryJob') }
+  if (status === 'failed' || status === 'interrupted') return { kind: 'resume' as const, label: t('resume') }
   return null
 }
 

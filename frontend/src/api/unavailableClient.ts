@@ -42,7 +42,6 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     listLeaderboardDatasets: unavailable,
     listSystemHealth: unavailable,
     restartSystemService: unavailable,
-    retryJob: unavailable,
     resumeJob: unavailable,
     syncDataset: unavailable,
     updateAgent: unavailable,

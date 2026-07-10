@@ -4,7 +4,7 @@ import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
-import { defaultRunDraft } from '../domain/defaults'
+import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
 import { OperationStatus } from '../ui/components/OperationStatus'
@@ -127,12 +127,18 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   }, [leaderboardDataset, leaderboardDatasets])
 
   useEffect(() => {
+    if (agentsResource.loading || datasetsResource.loading || environmentsResource.loading) return
     setDraft((current) => {
-      if (configuredAgents.some((agent) => agent.agentName === current.agent)) return current
-      const agentName = configuredAgents[0]?.agentName ?? ''
-      return current.agent === agentName ? current : { ...current, agent: agentName }
+      const next = reconcileRunDraftResources(current, {
+        agents: configuredAgents,
+        datasets,
+        environments: environmentProfiles,
+      })
+      return next.agent === current.agent && next.environment === current.environment && next.source === current.source
+        ? current
+        : next
     })
-  }, [configuredAgents])
+  }, [agentsResource.loading, configuredAgents, datasets, datasetsResource.loading, environmentProfiles, environmentsResource.loading])
 
   useEffect(() => {
     if (jobOperation.operation?.status !== 'completed') return
@@ -243,13 +249,11 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     )
   }
 
-  async function runJobAction(jobId: string, action: 'cancel' | 'retry' | 'resume') {
+  async function runJobAction(jobId: string, action: 'cancel' | 'resume') {
     if (!writesEnabled) return
     const mutation = action === 'cancel'
       ? () => client.cancelJob(jobId)
-      : action === 'retry'
-        ? () => client.retryJob(jobId)
-        : () => client.resumeJob(jobId)
+      : () => client.resumeJob(jobId)
     await jobOperation.submit(mutation, ({ operation }) => operation)
   }
 
@@ -388,7 +392,13 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
       {route.page === 'jobs' && route.jobView === 'new' && (
         <>
           <NewRunPage
-            canLaunch={writesEnabled && configuredAgents.some((agent) => agent.agentName === draft.agent)}
+            canLaunch={
+              writesEnabled
+              && draft.jobName.trim().length > 0
+              && draft.source.length > 0
+              && draft.environment.length > 0
+              && configuredAgents.some((agent) => agent.agentName === draft.agent)
+            }
             agents={configuredAgents}
             datasets={datasets}
             client={client}

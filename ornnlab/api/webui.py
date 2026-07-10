@@ -161,12 +161,6 @@ async def cancel_job(job_id: str, request: Request) -> dict:
     return _data(request, {"operation": _jobs(request).cancel_job(job_id)})
 
 
-@router.post("/jobs/{job_id}/retry")
-async def retry_job(job_id: str, request: Request) -> dict:
-    _require_query(request, set())
-    return _data(request, {"operation": _jobs(request).retry_job(job_id)})
-
-
 @router.post("/jobs/{job_id}/resume")
 async def resume_job(job_id: str, request: Request) -> dict:
     _require_query(request, set())

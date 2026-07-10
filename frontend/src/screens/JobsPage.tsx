@@ -19,7 +19,7 @@ interface JobsPageProps {
   selected: HarborJob | null
   t: Translate
   onClose: () => void
-  onJobAction: (jobId: string, action: 'cancel' | 'retry' | 'resume') => void
+  onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onNewJob: () => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onSearch: (value: string) => void
@@ -49,7 +49,7 @@ export function JobsPage({
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
 
-  const requestJobAction = (jobId: string, action: 'cancel' | 'retry' | 'resume') => {
+  const requestJobAction = (jobId: string, action: 'cancel' | 'resume') => {
     if (action !== 'cancel') {
       onJobAction(jobId, action)
       return

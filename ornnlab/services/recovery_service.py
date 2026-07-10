@@ -7,6 +7,7 @@ from typing import Any
 from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_utils import derive_experiment_status
+from ornnlab.services.harbor_paths import resolve_harbor_result_path
 from ornnlab.services.harbor_score import pass_at_one
 from ornnlab.services.report_service import ReportService
 from ornnlab.settings import Settings
@@ -198,7 +199,7 @@ class RunRecoveryService:
     def _result_path(self, run: dict, job_dir: Path) -> Path:
         if run["result_path"]:
             return Path(run["result_path"])
-        return job_dir / "result.json"
+        return resolve_harbor_result_path(job_dir, run.get("harbor_job_name"))
 
     @staticmethod
     def _read_result(path: Path) -> dict[str, Any]:

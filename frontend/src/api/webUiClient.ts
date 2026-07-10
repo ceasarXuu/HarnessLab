@@ -1,5 +1,6 @@
 import type {
   AgentDto,
+  AgentInputDto,
   AgentQuery,
   ApiError,
   ApiResponse,
@@ -36,7 +37,7 @@ export interface WebUiClient {
   cleanDockerCache(): Promise<ApiResponse<OperationResultDto | null>>
   cleanStorageCache(): Promise<ApiResponse<OperationResultDto | null>>
   copyEnvironment(id: string): Promise<ApiResponse<OperationResultDto | null>>
-  createAgent(agent: AgentDto): Promise<ApiResponse<OperationResultDto | null>>
+  createAgent(agent: AgentInputDto): Promise<ApiResponse<OperationResultDto | null>>
   createEnvironment(environment: EnvironmentDto): Promise<ApiResponse<OperationResultDto | null>>
   createJob(request: CreateJobRequestDto): Promise<ApiResponse<CreateJobResponseDto | null>>
   deleteAgent(id: string): Promise<ApiResponse<OperationResultDto | null>>
@@ -62,10 +63,9 @@ export interface WebUiClient {
   listLeaderboardDatasets(query?: ListQuery): Promise<ApiResponse<Page<LeaderboardDatasetDto> | null>>
   listSystemHealth(): Promise<ApiResponse<Page<SystemComponentDto> | null>>
   restartSystemService(): Promise<ApiResponse<OperationResultDto | null>>
-  retryJob(id: string): Promise<ApiResponse<OperationResultDto | null>>
   resumeJob(id: string): Promise<ApiResponse<OperationResultDto | null>>
   syncDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
-  updateAgent(id: string, agent: AgentDto): Promise<ApiResponse<OperationResultDto | null>>
+  updateAgent(id: string, agent: AgentInputDto): Promise<ApiResponse<OperationResultDto | null>>
   updateEnvironment(id: string, environment: EnvironmentDto): Promise<ApiResponse<OperationResultDto | null>>
   updateJobLeaderboard(id: string, request: UpdateJobLeaderboardRequestDto): Promise<ApiResponse<UpdateJobLeaderboardResponseDto | null>>
 }
@@ -106,7 +106,6 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     listLeaderboardDatasets: (query) => requestJson<Page<LeaderboardDatasetDto>>(request, `${baseUrl}/leaderboard/datasets${toSearch(query)}`),
     listSystemHealth: () => requestJson<Page<SystemComponentDto>>(request, `${baseUrl}/system/health`),
     restartSystemService: () => post<OperationResultDto>(request, `${baseUrl}/system/service/restart`),
-    retryJob: (id) => post<OperationResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/retry`),
     resumeJob: (id) => post<OperationResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/resume`),
     syncDataset: (ref) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/sync`),
     updateAgent: (id, agent) => send<OperationResultDto>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`, 'PATCH', agent),

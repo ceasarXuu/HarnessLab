@@ -264,7 +264,6 @@ export const zhMessages = {
     cancelJobImpact: '将向该 Job 发送取消请求。正在运行的 Trial 可能停止。',
     cancelJobTitle: '取消 Job',
     confirmCancelJob: '确认取消',
-    retryJob: '重试',
     taskName: 'Task',
     os: '系统',
     description: '描述',

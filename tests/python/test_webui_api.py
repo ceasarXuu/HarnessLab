@@ -25,6 +25,7 @@ def test_webui_envelope_and_legacy_routes_are_not_registered(client):
     assert client.get("/api/experiments").status_code == 404
     assert client.get("/api/agents").status_code == 404
     assert client.get("/api/system/status").status_code == 404
+    assert client.post(f"{API}/jobs/example/retry").status_code == 404
 
 
 def test_webui_agent_and_environment_crud(client):
@@ -34,6 +35,7 @@ def test_webui_agent_and_environment_crud(client):
     agent = client.get(f"{API}/agents/oracle-profile").json()["data"]
     assert agent["agentName"] == "Oracle profile"
     assert agent["harness"] == "oracle"
+    assert agent["status"] == "configured"
     assert agent["timeoutSeconds"] == 1200
 
     built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
@@ -197,6 +199,10 @@ def test_webui_rejects_removed_or_unsupported_contract_fields(client):
     assert invalid_mcp.status_code == 422
     assert invalid_mcp.json()["error"]["code"] == "VALIDATION_ERROR"
 
+    agent = _agent_payload()
+    agent["status"] = "needs-token"
+    assert client.post(f"{API}/agents", json=agent).status_code == 422
+
     environment = _environment_payload()
     environment["dockerImage"] = "not-a-harbor-environment-field"
     invalid_environment = client.post(f"{API}/environments", json=environment)
@@ -283,7 +289,6 @@ def _agent_payload() -> dict:
         "agentName": "Oracle profile",
         "harness": "oracle",
         "type": "custom",
-        "status": "configured",
         "env": [],
         "kwargs": "",
         "mcpServers": [],

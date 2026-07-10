@@ -52,6 +52,91 @@ def test_managed_subprocess_runner_uses_harbor_config(tmp_path):
     assert (tmp_path / "harbor-job" / "job.log").read_text() == "fake harbor completed\n"
 
 
+def test_managed_subprocess_runner_reads_harbor_native_result_layout(tmp_path):
+    script = tmp_path / "fake_harbor_native_layout.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import pathlib",
+                "import sys",
+                "config_path = pathlib.Path(sys.argv[sys.argv.index('--config') + 1])",
+                "config = json.loads(config_path.read_text())",
+                "job_dir = pathlib.Path(config['jobs_dir']) / config['job_name']",
+                "job_dir.mkdir(parents=True, exist_ok=True)",
+                "(job_dir / 'result.json').write_text(",
+                "    json.dumps({'status': 'completed', 'score': 0.73}),",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "hello-world",
+        "1.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        "native-layout",
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+
+    result = asyncio.run(
+        ManagedSubprocessHarborRunner(command=[sys.executable, str(script)]).run(config)
+    )
+
+    assert result["status"] == "completed"
+    assert result["score"] == 0.73
+    assert result["result_path"] == str(tmp_path / "harbor-job" / "native-layout" / "result.json")
+
+
+def test_managed_subprocess_runner_uses_native_trial_stats_for_status(tmp_path):
+    script = tmp_path / "fake_harbor_native_failure.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import pathlib",
+                "import sys",
+                "config_path = pathlib.Path(sys.argv[sys.argv.index('--config') + 1])",
+                "config = json.loads(config_path.read_text())",
+                "job_dir = pathlib.Path(config['jobs_dir']) / config['job_name']",
+                "job_dir.mkdir(parents=True, exist_ok=True)",
+                "(job_dir / 'result.json').write_text(json.dumps({",
+                "    'n_total_trials': 1,",
+                "    'stats': {",
+                "        'n_completed_trials': 1, 'n_errored_trials': 1, 'n_cancelled_trials': 0",
+                "    },",
+                "}))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "hello-world",
+        "1.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        "native-failure",
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+
+    result = asyncio.run(
+        ManagedSubprocessHarborRunner(command=[sys.executable, str(script)]).run(config)
+    )
+
+    assert result["status"] == "failed"
+
+
 def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):
     script = tmp_path / "fake_long_harbor_cli.py"
     started = tmp_path / "started.txt"

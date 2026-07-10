@@ -57,7 +57,6 @@ describe('WebUiHttpClient', () => {
       client.importDataset(dataset),
       client.installSystemUpdate(),
       client.restartSystemService(),
-      client.retryJob('job_1'),
       client.resumeJob('job_1'),
       client.syncDataset('dataset@1'),
       client.updateAgent('agent_1', agent),

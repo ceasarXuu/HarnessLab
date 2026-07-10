@@ -70,7 +70,7 @@ export function createMockWebUiClient(): WebUiClient {
       return operationResult(operations.complete('copy-environment', 'environment', copy.id, 'Environment copied'))
     },
     async createAgent(agent) {
-      agentDtos = [agent, ...agentDtos]
+      agentDtos = [{ ...agent, status: 'configured' }, ...agentDtos]
       return operationResult(operations.complete('create-agent', 'agent', agent.id, 'Agent created'))
     },
     async createEnvironment(environment) {
@@ -202,10 +202,6 @@ export function createMockWebUiClient(): WebUiClient {
         'ORNNLAB_RESTART_COMMAND is not configured by the service supervisor',
       ))
     },
-    async retryJob(id) {
-      jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'queued' } : job))
-      return operationResult(operations.complete('retry-job', 'job', id, 'Job retry queued'))
-    },
     async resumeJob(id) {
       return operationResult(submitOperation('resume-job', 'job', id, {
         onRunning: () => { jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'running' } : job)) },
@@ -218,7 +214,7 @@ export function createMockWebUiClient(): WebUiClient {
       const target = agentDtos.find((item) => item.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
       if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be updated')
-      agentDtos = agentDtos.map((item) => item.id === id ? { ...agent, id } : item)
+      agentDtos = agentDtos.map((item) => item.id === id ? { ...agent, id, status: 'configured' } : item)
       return operationResult(operations.complete('update-agent', 'agent', id, 'Agent updated'))
     },
     async updateEnvironment(id, environment) {

@@ -9,6 +9,7 @@ from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.models.webui import CreateJobInput
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
+from ornnlab.services.harbor_paths import resolve_harbor_job_path, resolve_harbor_log_path
 from ornnlab.services.harbor_score import result_pass_at_one
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.queue_service import QueueService
@@ -146,41 +147,21 @@ class WebUiJobService:
         self.worker.cancel_run(job_id)
         return self.operations.complete("cancel-job", "job", run["id"], "Job cancelled")
 
-    def retry_job(self, job_id: str) -> dict:
-        run = self.experiments.get_run(job_id)
-        if run["status"] not in {"failed", "cancelled", "interrupted"}:
-            raise ValueError("only failed, cancelled, or interrupted jobs can be retried")
-        now = _now()
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, started_at = NULL, finished_at = NULL, "
-                "result_path = NULL, report_path = NULL, failure_class = NULL, "
-                "failure_code = NULL, failure_summary = NULL, score = NULL, "
-                "updated_at = ? WHERE id = ?",
-                ("draft", now, job_id),
-            )
-            conn.execute("DELETE FROM queue_items WHERE run_id = ?", (job_id,))
-            conn.execute(
-                "UPDATE experiments SET status = ?, updated_at = ? WHERE id = ?",
-                ("draft", now, run["experiment_id"]),
-            )
-        QueueService(self.settings).enqueue_experiment(run["experiment_id"])
-        self.worker.start()
-        self.events.append("run", job_id, "harbor.job.retry_queued", {})
-        return self.operations.complete("retry-job", "job", job_id, "Job retry queued")
-
     def resume_job(self, job_id: str) -> dict:
         run = self.experiments.get_run(job_id)
         if run["status"] not in {"failed", "interrupted"}:
             raise ValueError("only failed or interrupted jobs can be resumed")
-        if not run.get("job_dir") or not Path(run["job_dir"]).is_dir():
+        if not run.get("job_dir"):
+            raise ValueError("Harbor job directory is unavailable for resume")
+        job_path = resolve_harbor_job_path(Path(run["job_dir"]), run.get("harbor_job_name"))
+        if not job_path.is_dir():
             raise ValueError("Harbor job directory is unavailable for resume")
 
         async def work(progress) -> None:
             progress(10, "Resuming Harbor job")
             self._mark_resume_running(run)
             try:
-                await self._resume_harbor_job(Path(run["job_dir"]))
+                await self._resume_harbor_job(job_path)
             except Exception as exc:
                 self._mark_resume_failed(run, exc)
                 raise
@@ -369,7 +350,7 @@ def _job_dto(row: dict) -> dict:
         "createdAt": row["created_at"],
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
         "jobDir": row.get("job_dir"),
-        "eventLogPath": str(Path(row["job_dir"]) / "job.log") if row.get("job_dir") else None,
+        "eventLogPath": _event_log_path(row, config),
         "artifactPaths": _artifacts(row),
         "failureCode": row.get("failure_code"),
     }
@@ -453,6 +434,12 @@ def _artifacts(row: dict) -> list[str]:
     if row.get("job_dir"):
         values.append(str(Path(row["job_dir"]) / "harbor.config.json"))
     return [value for value in values if value]
+
+
+def _event_log_path(row: dict, config: dict) -> str | None:
+    if not row.get("job_dir"):
+        return None
+    return str(resolve_harbor_log_path(Path(row["job_dir"]), config.get("job_name")))
 
 
 def _now() -> str:

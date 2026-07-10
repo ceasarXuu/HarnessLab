@@ -246,7 +246,7 @@ describe('App', () => {
     expect(within(runBuilder as HTMLElement).getByRole('tab', { name: 'Tasks' })).toBeInTheDocument()
     expect(within(runBuilder as HTMLElement).queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument()
     expect(within(runBuilder as HTMLElement).queryByRole('tab', { name: 'Agent' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke')
+    expect(screen.getByLabelText('job_name')).toHaveValue('new-job')
     expect(screen.getByLabelText('Environment')).toHaveTextContent('Docker default')
     expect(screen.queryByLabelText('Model')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Debug mode')).toHaveTextContent('Disabled')

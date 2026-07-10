@@ -21,7 +21,7 @@ interface LeaderboardPageProps {
   t: Translate
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
-  onJobAction: (jobId: string, action: 'cancel' | 'retry' | 'resume') => void
+  onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onRemove: (jobId: string) => void
 }

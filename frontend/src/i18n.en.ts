@@ -262,7 +262,6 @@ export const enMessages = {
     cancelJobImpact: 'Sends a cancellation request to this Job. Active Trials may stop.',
     cancelJobTitle: 'Cancel Job',
     confirmCancelJob: 'Confirm cancel',
-    retryJob: 'Retry',
     taskName: 'Task',
     os: 'OS',
     description: 'Description',

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { createMockWebUiClient } from '../api/mockClient'
-import type { AgentAvailability, AgentDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
+import type { AgentAvailability, AgentInputDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
 
 const webui = '*/api/webui/v1'
 const client = createMockWebUiClient()
@@ -47,10 +47,10 @@ export const webuiHandlers = [
     HttpResponse.json(await client.cancelOperation(String(params.operationId))),
   ),
   http.post(`${webui}/agents`, async ({ request }) =>
-    HttpResponse.json(await client.createAgent(await jsonBody<AgentDto>(request))),
+    HttpResponse.json(await client.createAgent(await jsonBody<AgentInputDto>(request))),
   ),
   http.patch(`${webui}/agents/:agentId`, async ({ params, request }) =>
-    HttpResponse.json(await client.updateAgent(String(params.agentId), await jsonBody<AgentDto>(request))),
+    HttpResponse.json(await client.updateAgent(String(params.agentId), await jsonBody<AgentInputDto>(request))),
   ),
   http.delete(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.deleteAgent(String(params.agentId))),
@@ -72,9 +72,6 @@ export const webuiHandlers = [
   ),
   http.post(`${webui}/jobs/:jobId/cancel`, async ({ params }) =>
     HttpResponse.json(await client.cancelJob(String(params.jobId))),
-  ),
-  http.post(`${webui}/jobs/:jobId/retry`, async ({ params }) =>
-    HttpResponse.json(await client.retryJob(String(params.jobId))),
   ),
   http.post(`${webui}/jobs/:jobId/resume`, async ({ params }) =>
     HttpResponse.json(await client.resumeJob(String(params.jobId))),
