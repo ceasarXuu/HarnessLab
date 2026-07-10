@@ -61,7 +61,7 @@ Stage 5 的唯一目标是证明 v1.0.5 可作为本地 WebUI 产品进入发布
 | S5-04 | 跨平台 CI | Windows 路径、命令解析、file:// URI、日志换行和 npm spawn 已修复并推送；macOS 全量门禁通过；待三平台 CI 重跑确认 | In progress |
 | S5-05 | 真实 Harbor 条件回归 | `ORNNLAB_REAL_HARBOR=1` 下 Python API smoke、subprocess smoke 和 cancel recovery 全部通过（3 passed, 414s）；缺失凭证时明确 skip | Done |
 | S5-06 | 发布包与性能检查 | npm pack 内容和启动器依赖由 `verify-npm-reservation-package.sh` 验证；生产 build 后最大 JS 不超过 400 KiB、CSS 不超过 50 KiB，Storybook 静态构建仍在全量门禁中 | Done |
-| S5-07 | 最终质量与独立审计 | 全量本地门禁已通过；待首轮 OpenCode 审计、Block 修复和第二轮无 Block 审计 | In progress |
+| S5-07 | 最终质量与独立审计 | 全量本地门禁通过（83 passed / 3 skipped）；首轮 OpenCode 审计 APPROVED 无阻断（7 项非阻断 W1-W7）；W1/W3/W4 已修复；第二轮 OpenCode 复审 APPROVED 无阻断 | Done |
 
 ## 5. 已实施内容
 
@@ -132,6 +132,12 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - 修复 Windows 下 Node `spawnAttached` 使用 `shell: true` 以便通过 PATH 找到 npm。
 - 修复 `run_dev.sh` 中 Vite ANSI 颜色码导致 URL 解析失败：Vite 输出包含 `\x1b[36m` 等转义码，grep 捕获了带转义码的 URL，使 `${FRONTEND_URL%/}` 无法去除尾部斜杠，健康检查 URL 出现双斜杠。修复方式为 sed 剥离 ANSI 码后再 grep。
 - `ORNNLAB_REAL_HARBOR=1` 真实 Harbor 回归全部通过：Python API smoke（约 3min 33s）、subprocess smoke 和 cancel recovery（共 3 passed, 414s），验证了真实 Job 运行、结果文件布局和取消清理证据。
+
+### Stage 5 独立审计
+
+- 首轮 OpenCode 只读审计（`deepseek/deepseek-v4-pro`）结论为 `APPROVED`，无阻断项。发现 7 项非阻断警告：W1 驱动字母校验、W2 嵌套引号理论风险、W3 split_command 测试覆盖、W4 _file_uri_path 测试覆盖、W5 shell injection 未来风险、W6 taskkill 错误处理、W7 ANSI 剥离仅覆盖 SGR。
+- W1（`isalpha()` 驱动字母校验）、W3（POSIX 模式和空白拒绝测试）、W4（POSIX 路径、远程 host、非字母前缀测试）已修复并提交（`55d6241`）。
+- 第二轮 OpenCode 只读复审确认 W1/W3/W4 修复正确且无回归；W2/W5/W6/W7 均为非阻断级别，不阻碍 Stage 5 完成。结论为 `APPROVED`。
 
 ## 7. 后续执行顺序
 
