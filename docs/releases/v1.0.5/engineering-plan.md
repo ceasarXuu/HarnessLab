@@ -107,6 +107,7 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - OpenCode 默认模型（`deepseek-v4-pro`）已完成两轮独立只读审计，结论均为 `NO BLOCKERS`。审计确认 API 失败不会回退 mock、旧产品路由和非 Harbor retry 语义不存在、Job/Trial 只读取 Harbor 原生结果、Operation 使用真实轮询、`run_dev.sh` 以 API 模式启动。
 - 审计记录的非阻断项已转入 Stage 5：部署时校验 `VITE_ORNNLAB_DATA_MODE` 的严格取值、为 API 模式增加自动化启动/健康检查、补充真实 Harbor 条件测试覆盖。它们不改变 Stage 4 已验收的真实联调结论。
 - 联调收尾日志发现删除 Dataset 后可能触发禁用详情资源的手动刷新；`useWebUiResource` 现统一拦截禁用资源，避免向 API 发送空资源标识。该回归已有前端测试覆盖。
+- 上述修复提交后已补充最终 OpenCode 默认模型只读复核，结论仍为 `NO BLOCKERS`；复核确认 API 模式的启用资源加载不受影响，且当前工作区无未提交文件。
 
 ## 6. 后续执行顺序
 
