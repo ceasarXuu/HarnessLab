@@ -35,3 +35,15 @@ def test_trial_log_path_requires_an_existing_file_uri_path(tmp_path: Path):
 
 def test_file_uri_path_removes_windows_drive_prefix():
     assert str(_file_uri_path("/C:/work/trial", "", windows=True)) == "C:/work/trial"
+
+
+def test_file_uri_path_preserves_posix_path():
+    assert str(_file_uri_path("/work/trial", "", windows=False)) == "/work/trial"
+
+
+def test_file_uri_path_handles_remote_host():
+    assert str(_file_uri_path("/share/path", "server", windows=False)) == "//server/share/path"
+
+
+def test_file_uri_path_does_not_strip_non_alpha_drive_prefix():
+    assert str(_file_uri_path("/1:/path", "", windows=True)) == "/1:/path"

@@ -15,3 +15,20 @@ def test_split_command_rejects_blank_commands():
         assert str(error) == "command cannot be empty"
     else:
         raise AssertionError("blank command was accepted")
+
+
+def test_split_command_rejects_whitespace_only_commands():
+    try:
+        split_command("   ")
+    except ValueError as error:
+        assert str(error) == "command cannot be empty"
+    else:
+        raise AssertionError("whitespace-only command was accepted")
+
+
+def test_split_command_posix_mode_strips_quotes():
+    assert split_command("'/usr/local/bin/my tool' --flag value", windows=False) == [
+        "/usr/local/bin/my tool",
+        "--flag",
+        "value",
+    ]

@@ -57,6 +57,12 @@ def _file_uri_path(path: str, host: str, *, windows: bool | None = None) -> Path
     if host and host != "localhost":
         decoded = f"//{host}{decoded}"
     is_windows = os.name == "nt" if windows is None else windows
-    if is_windows and len(decoded) >= 3 and decoded[0] == "/" and decoded[2] == ":":
+    if (
+        is_windows
+        and len(decoded) >= 3
+        and decoded[0] == "/"
+        and decoded[1].isalpha()
+        and decoded[2] == ":"
+    ):
         decoded = decoded[1:]
     return Path(decoded)
