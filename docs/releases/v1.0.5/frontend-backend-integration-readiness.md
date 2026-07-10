@@ -1,6 +1,6 @@
 # v1.0.5 前后端联调准备设计基线
 
-- Status: Stage 2 complete
+- Status: Stage 2 remediation required
 - Created: 2026-07-09
 - Updated: 2026-07-10
 - Owner / requester: OrnnLab
@@ -10,7 +10,7 @@
 
 ## 1. 设计结论
 
-本文件定义的 Stage 2 四个设计边界已经实现并经过自动化门禁验证；真实联调仍需先完成 Stage 3 的后端破坏性升级：
+本文件定义的 Stage 2 四个设计边界已经实现并经过自动化门禁验证；但 [OpenCode 独立审计](../../../vs_review/2026-07-10-stage-2-opencode-audit.md) 发现 mock/MSW 结构化查询过滤和 Storybook 状态矩阵缺口，Stage 2 必须先闭环后才能标记完成。真实联调随后仍需完成 Stage 3 的后端破坏性升级：
 
 1. 生产页面已不直接依赖 `frontend/src/mocks/` 的类型和 seed data。
 2. 前端已只面向稳定 WebUI 契约；后端下一步必须直接升级旧 `/api/experiments`、`/api/runs`、`/api/benchmarks` 等路由，不维护新旧两套。

@@ -67,7 +67,7 @@ v1.0.5 的技术目标不是继续扩展 mock demo，而是把当前前端收敛
 | `frontend/src/ui/components/` | 可复用组件、pattern 组件、受 Storybook 约束的交互单元 | 不知道后端路由 |
 | `frontend/src/styles/` | token、base、layout、controls、tables、surfaces、screen 专属样式 | 不恢复单个巨型样式文件 |
 
-`frontend/src/domain/harbor.ts` 与 `frontend/src/api/` 已完成 Stage 2 所需分层：所有资源均经统一 client/data hook 获取，所有页面写操作均经过 `Operation` 边界。当前等待最终独立审查；通过后可进入 Stage 3 的后端破坏性升级，不能跳过该阶段直接联调。
+`frontend/src/domain/harbor.ts` 与 `frontend/src/api/` 已完成 Stage 2 所需分层：所有资源均经统一 client/data hook 获取，所有页面写操作均经过 `Operation` 边界。最终 [OpenCode 独立审计](../../../vs_review/2026-07-10-stage-2-opencode-audit.md) 判定为 `CONDITIONAL PASS`；必须先闭环其 mock/MSW 查询过滤与 Storybook 状态矩阵缺口，再进入 Stage 3 的后端破坏性升级，不能跳过该阶段直接联调。
 
 ## 5. API 契约
 
