@@ -58,10 +58,10 @@ Stage 5 的唯一目标是证明 v1.0.5 可作为本地 WebUI 产品进入发布
 | S5-01 | API 模式配置 | 直接前端开发未设置模式时仍为 mock；`run_dev.sh`、`ornnlab dev` 和生产 build 默认为 API；显式非法值或 mock 生产 build 在启动/构建前失败 | Done |
 | S5-02 | 跨平台产品启动器 | `ornnlab dev` 先等待后端健康，再启动带 API proxy 的前端；proxy 健康通过后才输出 URL，任一进程退出或收到终止信号会收敛子进程 | Done |
 | S5-03 | 本机全栈启动回归 | `scripts/test-run-dev-api.sh` 使用独立 `ORNNLAB_HOME` 和随机端口，验证 `run_dev.sh` 的直接 API、Vite proxy、非法模式拒绝和退出清理 | Done |
-| S5-04 | 跨平台 CI | 手动 CI 在 Ubuntu、macOS、Windows 执行 Python、前端、生产 build、模式拒绝和 launcher API smoke；Docker Harbor smoke 保持 Ubuntu opt-in | In progress |
-| S5-05 | 真实 Harbor 条件回归 | 在 Docker/Harbor 可用时执行真实 Job、Job resume、Dataset 取消和已认证 Hub 状态的受控回归；缺失凭证时明确 skip，不伪造成功 | In progress |
+| S5-04 | 跨平台 CI | Windows 路径、命令解析、file:// URI、日志换行和 npm spawn 已修复并推送；macOS 全量门禁通过；待三平台 CI 重跑确认 | In progress |
+| S5-05 | 真实 Harbor 条件回归 | `ORNNLAB_REAL_HARBOR=1` 下 Python API smoke、subprocess smoke 和 cancel recovery 全部通过（3 passed, 414s）；缺失凭证时明确 skip | Done |
 | S5-06 | 发布包与性能检查 | npm pack 内容和启动器依赖由 `verify-npm-reservation-package.sh` 验证；生产 build 后最大 JS 不超过 400 KiB、CSS 不超过 50 KiB，Storybook 静态构建仍在全量门禁中 | Done |
-| S5-07 | 最终质量与独立审计 | 全量本地门禁、CI 运行证据、首轮 OpenCode 审计、Block 修复和第二轮无 Block 审计 | Pending |
+| S5-07 | 最终质量与独立审计 | 全量本地门禁已通过；待首轮 OpenCode 审计、Block 修复和第二轮无 Block 审计 | In progress |
 
 ## 5. 已实施内容
 
@@ -123,6 +123,16 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - 联调收尾日志发现删除 Dataset 后可能触发禁用详情资源的手动刷新；`useWebUiResource` 现统一拦截禁用资源，避免向 API 发送空资源标识。该回归已有前端测试覆盖。
 - 上述修复提交后已补充最终 OpenCode 默认模型只读复核，结论仍为 `NO BLOCKERS`；复核确认 API 模式的启用资源加载不受影响，且当前工作区无未提交文件。
 
+### Stage 5 跨平台与发布硬化验证
+
+- `bash scripts/test-after-change-web.sh` 全量门禁通过：Ruff、Pyright（0 error / 0 warning）、Python 测试（78 passed / 3 skipped）、前端测试（16 files / 59 tests）、lint、typecheck、build（JS 343 KiB / CSS 31.52 KiB）、Storybook smoke/static build、launcher 测试（3 passed）、`test-run-dev-api.sh` 和 `git diff --check` 均为绿色。
+- 新增 `ornnlab/services/command_line.py` 跨平台命令解析器：在 Windows 上使用非 posix shlex，避免反斜杠路径被破坏；替换了 `docker_orphan_service`、`harbor_subprocess` 和 `webui_system_service` 中的 `shlex.split`。
+- 修复 Windows `file:///C:/...` URI 路径解析：`harbor_results._file_uri_path` 剥离驱动器前的多余斜杠。
+- 修复 Harbor 子进程日志写入的换行转换：`log_path.open("a", newline="")` 防止 Windows CRLF 自动转换。
+- 修复 Windows 下 Node `spawnAttached` 使用 `shell: true` 以便通过 PATH 找到 npm。
+- 修复 `run_dev.sh` 中 Vite ANSI 颜色码导致 URL 解析失败：Vite 输出包含 `\x1b[36m` 等转义码，grep 捕获了带转义码的 URL，使 `${FRONTEND_URL%/}` 无法去除尾部斜杠，健康检查 URL 出现双斜杠。修复方式为 sed 剥离 ANSI 码后再 grep。
+- `ORNNLAB_REAL_HARBOR=1` 真实 Harbor 回归全部通过：Python API smoke（约 3min 33s）、subprocess smoke 和 cancel recovery（共 3 passed, 414s），验证了真实 Job 运行、结果文件布局和取消清理证据。
+
 ## 7. 后续执行顺序
 
 1. Stage 5 为 `run_dev.sh` 增加自动化 API 模式启动与健康检查，并在部署配置中拒绝无效的 `VITE_ORNNLAB_DATA_MODE`。
@@ -141,3 +151,6 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - 后端全量测试使用 `.venv/bin/python`，不依赖系统 Python；真实 Dataset 导入测试会触发第三方 Supabase 客户端初始化 warning。
 - `scripts/test-after-change-web.sh` 是 Stage 4 的最终质量门；它同时覆盖类型边界、版本文档清单与前后端构建，避免只运行局部测试后误判联调完成。
 - 文档目录清单由 `tests/python/test_rebrand_verification.py` 约束；新增或收敛 v1.0.5 活跃文档时必须同步更新验证脚本，防止治理文档与仓库实际文件漂移。
+- Vite dev server 输出包含 ANSI 颜色码（如 `\x1b[36m`），即使输出重定向到文件也不自动剥离；从日志解析 URL 时必须先 `sed` 剥离 ANSI 码再 grep，否则 URL 中嵌入的转义码会破坏后续的字符串处理。
+- Windows 下 `shlex.split` 使用 posix 模式会把反斜杠路径中的 `\` 当作转义符，导致路径损坏；跨平台命令解析必须根据 `os.name` 切换 posix 模式。
+- Windows 下 Node `child_process.spawn` 不支持直接执行 `npm`（它不是 `.exe`），必须设置 `shell: true` 让系统通过 PATH 解析；进程终止使用 `taskkill /t /f` 而非进程组信号。
