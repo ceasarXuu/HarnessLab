@@ -1,18 +1,18 @@
-import type { EnvironmentRow, RunDraft } from './harbor'
+import type { AgentRow, DatasetRow, EnvironmentRow, RunDraft } from './harbor'
 
 export const defaultRunDraft: RunDraft = {
-  agent: 'Local repair agent',
+  agent: '',
   agentSetupTimeoutMultiplier: '1',
   agentTimeoutMultiplier: '1',
   attempts: 1,
   concurrency: 4,
   debug: false,
-  environment: 'docker-default',
+  environment: '',
   environmentBuildTimeoutMultiplier: '1',
   extraInstructions: '',
   includeInLeaderboard: true,
-  jobsDir: 'jobs/terminal-bench-smoke',
-  jobName: 'terminal-bench-smoke',
+  jobsDir: 'jobs/new-job',
+  jobName: 'new-job',
   maxRetries: 0,
   metric: 'mean',
   notes: '',
@@ -23,11 +23,35 @@ export const defaultRunDraft: RunDraft = {
   retryMinWaitSec: '2',
   retryWaitMultiplier: '1.5',
   selectedTaskNames: null,
-  source: 'terminal-bench@2.0',
+  source: '',
   timeoutMultiplier: 1,
   timeoutPolicy: 'standard',
   verifierMode: 'dataset-default',
   verifierTimeoutMultiplier: '1',
+}
+
+/**
+ * Select only values obtained from the active data source. This keeps API mode
+ * from submitting demo identifiers while preserving any still-valid user choice.
+ */
+export function reconcileRunDraftResources(
+  draft: RunDraft,
+  resources: { agents: AgentRow[]; datasets: DatasetRow[]; environments: EnvironmentRow[] },
+): RunDraft {
+  const datasets = resources.datasets.map((dataset) => `${dataset.name}@${dataset.version}`)
+  const agents = resources.agents.filter((agent) => agent.type === 'custom').map((agent) => agent.agentName)
+  const environments = resources.environments.map((environment) => environment.id)
+
+  return {
+    ...draft,
+    agent: resolveResourceValue(draft.agent, agents),
+    environment: resolveResourceValue(draft.environment, environments),
+    source: resolveResourceValue(draft.source, datasets),
+  }
+}
+
+function resolveResourceValue(current: string, values: string[]): string {
+  return values.includes(current) ? current : (values[0] ?? '')
 }
 
 export const defaultEnvironmentDraft: EnvironmentRow = {

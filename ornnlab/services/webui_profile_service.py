@@ -51,7 +51,7 @@ class WebUiProfileService:
             )
         if not rows:
             raise KeyError(agent_id)
-        return json.loads(rows[0]["config_json"])
+        return _configured_custom_agent(json.loads(rows[0]["config_json"]))
 
     def resolve_agent(self, value: str) -> dict:
         for agent in self.list_agents():
@@ -280,7 +280,7 @@ class WebUiProfileService:
                 "SELECT config_json FROM webui_agent_configs JOIN agents ON agents.id = agent_id "
                 "WHERE agents.status != 'deleted'",
             )
-        return [json.loads(row["config_json"]) for row in rows]
+        return [_configured_custom_agent(json.loads(row["config_json"])) for row in rows]
 
     def _built_in_environments(self) -> list[dict]:
         return [_built_in_environment(item.value) for item in EnvironmentType]
@@ -315,7 +315,11 @@ class WebUiProfileService:
 
 
 def _agent_dto(payload: AgentInput) -> dict:
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    return {**payload.model_dump(by_alias=True, exclude_none=True), "status": "configured"}
+
+
+def _configured_custom_agent(agent: dict) -> dict:
+    return {**agent, "status": "configured"}
 
 
 def _environment_dto(payload: EnvironmentInput) -> dict:

@@ -3,16 +3,16 @@
 OrnnLab is being redesigned as a Harbor-powered local WebUI for agent
 registration, experiment management, reports, and leaderboard review.
 
-Current source of truth:
+Current v1.0.5 source of truth:
 
-- Version document index: `docs/releases/v0.1.3/ornnlab-0.1.3-docs.md`
-- Version PRD: `docs/releases/v0.1.3/prd.md`
-- Version technical design: `docs/releases/v0.1.3/technical-design.md`
-- Version engineering plan: `docs/releases/v0.1.3/engineering-plan.md`
+- Version document index: `docs/releases/v1.0.5/README.md`
+- Version PRD: `docs/releases/v1.0.5/prd.md`
+- Version technical design: `docs/releases/v1.0.5/technical-design.md`
+- Version engineering plan: `docs/releases/v1.0.5/engineering-plan.md`
+- WebUI API contract: `docs/architecture/frontend-api-contract.md`
 - Install quickstart: `docs/playbooks/install-quickstart.md`
 - Release and rollback checklist: `docs/releases/v0.1.3/checklist.md`
 - Harbor upgrade procedure: `docs/playbooks/harbor-upgrade-procedure.md`
-- Next product PRD: `docs/releases/v1.0.5/README.md`
 - Rust legacy workspace decision: `docs/archive/stubs/rust-legacy-fate.md`
 - Documentation archive: `docs/archive/2026-06-15-pre-harbor-webui-redesign/README.md`
 
@@ -87,7 +87,7 @@ The intended MVP stack is:
 - SQLite metadata index
 - File-based artifacts under `~/.ornnlab/data`
 - Harbor `0.13.x` as the execution engine
-- Server-Sent Events for status and log streams
+- HTTP Operation polling for asynchronous status and Job event retrieval
 
 Development launch command:
 

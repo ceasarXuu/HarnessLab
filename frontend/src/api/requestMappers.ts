@@ -1,5 +1,5 @@
 import type { AgentRow, EnvironmentRow, RunDraft } from '../domain/harbor'
-import type { AgentDto, CreateJobRequestDto, EnvironmentDto } from './contract'
+import type { AgentInputDto, CreateJobRequestDto, EnvironmentDto } from './contract'
 import { optional, parseKeyValues, parseMcpServers, seconds, splitList } from './formValueParsers'
 
 export function runDraftToCreateJobRequest(draft: RunDraft): CreateJobRequestDto {
@@ -35,13 +35,13 @@ export function runDraftToCreateJobRequest(draft: RunDraft): CreateJobRequestDto
   }
 }
 
-export function agentRowToDto(agent: AgentRow): AgentDto {
+export function agentRowToDto(agent: AgentRow): AgentInputDto {
   return {
     agentName: agent.agentName,
     env: parseKeyValues(agent.env),
     harness: agent.harness,
     id: agent.id,
-    importPath: optional(agent.adapter),
+    importPath: agent.harness === 'custom-harness' ? optional(agent.adapter) : undefined,
     kwargs: agent.kwargs ?? '',
     maxTimeoutSeconds: seconds(agent.maxTimeout),
     mcpServers: parseMcpServers(agent.mcp),
@@ -49,7 +49,6 @@ export function agentRowToDto(agent: AgentRow): AgentDto {
     setupTimeoutSeconds: seconds(agent.setupTimeout),
     timeoutSeconds: seconds(agent.timeout),
     skillSources: splitList(agent.skills),
-    status: agent.status,
     type: agent.type,
   }
 }

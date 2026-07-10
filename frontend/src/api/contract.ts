@@ -148,7 +148,7 @@ export interface McpServerDto {
   url?: string
 }
 
-export interface AgentDto {
+export interface AgentInputDto {
   agentName: string
   env: KeyValueDto[]
   harness: string
@@ -160,9 +160,12 @@ export interface AgentDto {
   setupTimeoutSeconds?: number
   timeoutSeconds?: number
   skillSources: string[]
-  status: AgentAvailability
   type: AgentProfileType
   maxTimeoutSeconds?: number
+}
+
+export interface AgentDto extends AgentInputDto {
+  status: AgentAvailability
 }
 
 export interface AgentQuery extends ListQuery {

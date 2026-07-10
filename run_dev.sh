@@ -5,8 +5,9 @@
 # 前端打印的真实 Local URL 并高亮显示。Ctrl-C 一次性停掉两个子进程。
 #
 # 用法：
-#   bash run_dev.sh                       # 后端 8765，前端默认 4173
+#   bash run_dev.sh                       # 后端 8765，前端 API 模式 5173
 #   ORNNLAB_PORT=9000 bash run_dev.sh     # 自定义后端端口（同时透传给 Vite proxy）
+#   VITE_ORNNLAB_DATA_MODE=mock bash run_dev.sh  # 显式启动 mock 前端
 #
 # 依赖：uv、npm、Node.js 22+（详见 docs/playbooks/install-quickstart.md）
 
@@ -18,6 +19,7 @@ cd "$REPO_ROOT"
 BACKEND_HOST="${ORNNLAB_HOST:-127.0.0.1}"
 BACKEND_PORT="${ORNNLAB_PORT:-8765}"
 BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}"
+WEBUI_DATA_MODE="${VITE_ORNNLAB_DATA_MODE:-api}"
 
 LOG_DIR="${TMPDIR:-/tmp}/ornnlab-dev"
 mkdir -p "$LOG_DIR"
@@ -74,11 +76,12 @@ for i in {1..60}; do
 done
 
 # ---- 启动前端 ----
-# 通过 ORNNLAB_API_TARGET 让 Vite proxy 指向当前后端（默认即 8765）。
+# 通过 ORNNLAB_API_TARGET 让 Vite proxy 指向当前后端；全栈联调默认 API 模式。
 echo "[run_dev] 启动前端 Vite dev server ..."
 (
   cd "$REPO_ROOT/frontend"
-  ORNNLAB_API_TARGET="$BACKEND_URL" exec npm run dev -- --host "$BACKEND_HOST" \
+  VITE_ORNNLAB_DATA_MODE="$WEBUI_DATA_MODE" ORNNLAB_API_TARGET="$BACKEND_URL" \
+    exec npm run dev -- --host "$BACKEND_HOST" \
     >>"$FRONTEND_LOG" 2>&1
 ) &
 FRONTEND_PID=$!
@@ -116,6 +119,7 @@ cat <<EOF
 ║  OrnnLab dev 已启动                                          ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  前端主页 : ${FRONTEND_URL}
+║  前端模式 : ${WEBUI_DATA_MODE}
 ║  后端 API : ${BACKEND_URL}/api
 ║  后端日志 : ${BACKEND_LOG}
 ║  前端日志 : ${FRONTEND_LOG}

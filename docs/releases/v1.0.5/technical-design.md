@@ -1,7 +1,7 @@
 # v1.0.5 技术设计
 
 - 状态：Active
-- 更新：2026-07-10
+- 更新：2026-07-11
 - 范围：Harbor WebUI、`/api/webui/v1`、mock/API 双模式与前后端联调边界
 
 ## 1. 权威关系
@@ -23,7 +23,7 @@ flowchart LR
   Core --> Harbor[Harbor 0.13.x]
 ```
 
-前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。两种模式共享 DTO、ViewModel、页面和 Operation 状态流；mock 不能放宽后端会拒绝的约束，例如 built-in Agent 不能直接创建 Job。
+前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：直接运行 `npm run dev` 时默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。`run_dev.sh` 是全栈联调入口，默认以 `api` 启动并通过 `ORNNLAB_API_TARGET` 配置 Vite proxy；两种模式共享 DTO、ViewModel、页面和 Operation 状态流，API 模式不得回退到 mock。mock 不能放宽后端会拒绝的约束，例如 built-in Agent 不能直接创建 Job。
 
 后端只注册 `ornnlab.api.webui`。旧的 experiments、runs、benchmarks、leaderboard、system、agents、templates 产品路由已删除，不提供兼容入口。
 
@@ -106,4 +106,4 @@ npm run storybook:build
 
 API 集成测试必须覆盖统一包络、旧路由 404、资源 CRUD、真实 Harbor schema 校验、Job 映射、Operation 轮询/取消、Dataset 导入、系统操作失败语义和被移除字段拒绝。操作服务会输出提交、完成、失败与取消日志，便于联调定位。
 
-视觉验收使用 Codex Web Preview，不使用独立 Playwright 流程；默认 UI 预览保持 mock 模式，真实 API 联调显式设置 `VITE_ORNNLAB_DATA_MODE=api`。
+视觉验收使用 Codex Web Preview，不使用独立 Playwright 流程；直接 UI 预览保持 mock 模式，真实 API 联调使用 `run_dev.sh` 或显式设置 `VITE_ORNNLAB_DATA_MODE=api`。

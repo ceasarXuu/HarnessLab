@@ -135,8 +135,13 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
 }
 
 export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: AgentProfileEditorProps & { readOnly?: boolean }) {
-  const isCustomAgent = value.type === 'custom' || value.harness === 'custom-harness'
+  const usesCustomHarness = value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
+  const setHarness = (harness: string) => onChange({
+    ...value,
+    adapter: harness === 'custom-harness' ? value.adapter || 'agents.custom:Agent' : 'none',
+    harness,
+  })
 
   return (
     <div className="agent-form-grid">
@@ -146,7 +151,7 @@ export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: Ag
       </label>
       <label>
         {t('harness')}
-        <select disabled={readOnly} value={value.harness} onChange={(event) => setField('harness', event.target.value)}>
+        <select disabled={readOnly} value={value.harness} onChange={(event) => setHarness(event.target.value)}>
           {harnessOptions.map((harness) => (
             <option key={harness} value={harness}>{harness}</option>
           ))}
@@ -156,7 +161,7 @@ export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: Ag
         {t('agentType')}
         <input readOnly value={value.type} />
       </label>
-      {isCustomAgent && (
+      {usesCustomHarness && (
         <label>
           {t('customImportPath')}
           <input value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />

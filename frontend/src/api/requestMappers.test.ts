@@ -13,20 +13,32 @@ describe('WebUI mutation request mappers', () => {
       config: {
         agentSetupTimeoutMultiplier: 1,
         agentTimeoutMultiplier: 1,
-        datasetRef: 'terminal-bench@2.0',
+        datasetRef: '',
         environmentBuildTimeoutMultiplier: 1,
-        environmentPresetId: 'docker-default',
+        environmentPresetId: '',
         extraInstructionPaths: [],
-        jobName: 'terminal-bench-smoke',
+        jobName: 'new-job',
         verifierTimeoutMultiplier: 1,
       },
       runImmediately: true,
     })
     expect(agent).toMatchObject({ id: 'claude-code-default', models: [] })
+    expect(agent).not.toHaveProperty('status')
     expect(environment).toMatchObject({
       allowedHosts: ['pypi.org', 'github.com', 'huggingface.co'],
       dockerComposePaths: ['compose.gpu.yml'],
       id: 'docker-gpu',
     })
+  })
+
+  it('omits importPath for a configured built-in Harness', () => {
+    const agent = agentRowToDto({
+      ...agentRows[0],
+      adapter: 'agents.custom:Agent',
+      harness: 'nop',
+      type: 'custom',
+    })
+
+    expect(agent.importPath).toBeUndefined()
   })
 })

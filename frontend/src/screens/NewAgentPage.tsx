@@ -80,7 +80,7 @@ function buildNewAgent(rows: AgentRow[]): AgentRow {
     type: 'custom',
     adapter: 'agents.custom:Agent',
     models: 'custom-model',
-    status: 'needs-token',
+    status: 'configured',
     source: '~/.ornnlab/agents/custom-agent.toml',
     updated: 'just now',
     env: 'CUSTOM_API_KEY=${CUSTOM_API_KEY}',
