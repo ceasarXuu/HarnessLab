@@ -151,7 +151,12 @@ def main() -> int:
 
     ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
     ARTIFACT.write_text(
-        json.dumps({"status": "passed" if ok else "failed", "checks": checks}, indent=2, sort_keys=True) + "\n",
+        json.dumps(
+            {"status": "passed" if ok else "failed", "checks": checks},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
         encoding="utf-8",
     )
 

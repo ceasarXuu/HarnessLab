@@ -96,9 +96,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 
 def _error_response(
-    request, status: int, code: str, message: str, details: dict | None = None
+    request, status: int, code: str, message: str, details: dict[str, object] | None = None
 ) -> JSONResponse:
-    error = {"code": code, "message": message}
+    error: dict[str, object] = {"code": code, "message": message}
     if details:
         error["details"] = details
     return JSONResponse(

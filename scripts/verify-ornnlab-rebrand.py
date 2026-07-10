@@ -13,6 +13,8 @@ ARTIFACT = ROOT / "artifacts/rebrand/ornnlab-rebrand-verification.json"
 DOC_INVENTORY = {
     "docs/architecture/docs-index.md": "rename-now",
     "docs/architecture/benchmark-compatibility-strategy.md": "historical-stub",
+    "docs/architecture/frontend-api-contract.md": "rename-now",
+    "docs/architecture/frontend-webui-governance.md": "rename-now",
     "docs/architecture/harnesslab-vs-harbor.md": "historical-stub",
     "docs/playbooks/development-operations.md": "rename-now",
     "docs/playbooks/harbor-upgrade-procedure.md": "rename-now",
@@ -30,7 +32,9 @@ DOC_INVENTORY = {
     "docs/releases/v0.1.4/bugfix/02-crash-recovery-blind-spot-dequeue-to-running.md": "rename-now",
     "docs/releases/v0.1.4/bugfix/03-wait-true-blocks-unrelated-experiments.md": "rename-now",
     "docs/releases/v0.1.4/bugfix/04-sse-stream-not-realtime.md": "rename-now",
-    "docs/releases/v0.1.4/bugfix/05-subprocess-synthesizes-completed-without-result.md": "rename-now",
+    "docs/releases/v0.1.4/bugfix/05-subprocess-synthesizes-completed-without-result.md": (
+        "rename-now"
+    ),
     "docs/releases/v0.1.4/bugfix/06-duplicated-inconsistent-status-derivation.md": "rename-now",
     "docs/releases/v0.1.4/bugfix/07-event-mirror-quadratic-read-write.md": "rename-now",
     "docs/releases/v0.1.4/bugfix/08-db-connect-repeated-ensure-dirs-pragma.md": "rename-now",
@@ -45,9 +49,9 @@ DOC_INVENTORY = {
     "docs/releases/v0.1.4/web-connectivity/05-integration-test-gap.md": "rename-now",
     "docs/releases/v0.1.4/web-connectivity/06-web-design-best-practices.md": "rename-now",
     "docs/releases/v1.0.5/README.md": "rename-now",
-    "docs/releases/v1.0.5/harbor-cli-to-ui-architecture.md": "rename-now",
-    "docs/releases/v1.0.5/frontend-rebuild-architecture.md": "rename-now",
-    "docs/releases/v1.0.5/harbor-webui-feature-coverage-checklist.md": "rename-now",
+    "docs/releases/v1.0.5/engineering-plan.md": "rename-now",
+    "docs/releases/v1.0.5/prd.md": "rename-now",
+    "docs/releases/v1.0.5/technical-design.md": "rename-now",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",
@@ -225,7 +229,9 @@ def _check_product_metadata() -> dict[str, Any]:
         {
             "npm_name": root_package.get("name"),
             "frontend_name": frontend_name,
-            "frontend_status": "present" if frontend_package_path.exists() else "pending-v1.0.5-rebuild",
+            "frontend_status": (
+                "present" if frontend_package_path.exists() else "pending-v1.0.5-rebuild"
+            ),
             "python_project": "ornnlab" if 'name = "ornnlab"' in pyproject else None,
         },
     )

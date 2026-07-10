@@ -246,13 +246,12 @@ def _remote_dto(name: str, version: str | None, task_count: int) -> dict:
 
 
 def _stored_dto(row: dict) -> dict:
-    path = row.get("local_path")
-    downloaded = path is not None and Path(path).exists()
-    download = (
-        {"status": "downloaded", "path": path, "sizeBytes": _directory_size(Path(path))}
-        if downloaded
-        else {"status": "not-downloaded"}
-    )
+    local_path = row.get("local_path")
+    path = Path(local_path) if isinstance(local_path, str) else None
+    if path and path.exists():
+        download = {"status": "downloaded", "path": local_path, "sizeBytes": _directory_size(path)}
+    else:
+        download = {"status": "not-downloaded"}
     return {
         "ref": row["ref"],
         "name": row["name"],

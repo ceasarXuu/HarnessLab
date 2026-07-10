@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
+from ornnlab.services.webui_dataset_service import _stored_dto
 from ornnlab.services.webui_job_service import _job_score, _trial_dto
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.storage import sqlite
@@ -26,6 +27,23 @@ def test_webui_envelope_and_legacy_routes_are_not_registered(client):
     assert client.get("/api/agents").status_code == 404
     assert client.get("/api/system/status").status_code == 404
     assert client.post(f"{API}/jobs/example/retry").status_code == 404
+
+
+def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
+    dataset = _stored_dto(
+        {
+            "ref": "example@1.0",
+            "name": "example",
+            "version": "1.0",
+            "visibility": "public",
+            "task_count": 1,
+            "source": "harbor registry",
+            "registry_url": "https://hub.harborframework.com",
+            "local_path": None,
+        }
+    )
+
+    assert dataset["download"] == {"status": "not-downloaded"}
 
 
 def test_webui_agent_and_environment_crud(client):

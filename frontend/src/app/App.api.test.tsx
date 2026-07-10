@@ -24,6 +24,21 @@ describe('App API mode', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Unable to load Jobs.')
   })
 
+  it('does not fall back to mock Datasets when the API catalog fails', async () => {
+    const client = createMockWebUiClient()
+    vi.spyOn(client, 'listDatasets').mockResolvedValue({
+      data: null,
+      error: { code: 'NETWORK_REQUEST_FAILED', message: 'The API request could not be completed.' },
+    })
+    render(<App client={client} dataMode="api" />)
+
+    await screen.findByText('terminal-bench-smoke')
+    fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Unable to load Datasets.'))
+    expect(screen.queryByText('terminal-bench')).not.toBeInTheDocument()
+  })
+
   it('submits Job creation through the injected API client in API mode', async () => {
     const client = createMockWebUiClient()
     const createJob = vi.spyOn(client, 'createJob')
