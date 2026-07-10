@@ -148,7 +148,7 @@ interface Trial {
 }
 ```
 
-Trial 不包含模拟的 progress 百分比、analysis path 或 verifier 内部状态。只有 Harbor 明确提供的 `pass` 二元 reward 或 Job `pass@1` 才转换为百分比 score；任意 reward 聚合没有最大分值时不伪造为百分制或分数制。Harbor 不提供的 retry/log 字段返回 `null`。
+Trial 不包含模拟的 progress 百分比、analysis path 或 verifier 内部状态。Harbor CLI 的原生 Job `result.json` 会省略 `trial_results`，后端从 `<job_dir>/<job_name>/*/result.json` 读取每个 Trial 的真实结果；对应目录存在 `trial.log` 时返回绝对日志路径。只有 Harbor 明确提供的 `pass` 二元 reward 或 Job `pass@1` 才转换为百分比 score；任意 reward 聚合没有最大分值时不伪造为百分制或分数制。Harbor 不提供的 retry 字段返回 `null`。
 
 ### Job 创建
 

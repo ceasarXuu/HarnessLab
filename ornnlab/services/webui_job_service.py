@@ -9,7 +9,15 @@ from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.models.webui import CreateJobInput
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
-from ornnlab.services.harbor_paths import resolve_harbor_job_path, resolve_harbor_log_path
+from ornnlab.services.harbor_paths import (
+    resolve_harbor_job_path,
+    resolve_harbor_log_path,
+)
+from ornnlab.services.harbor_results import (
+    load_result_payload,
+    trial_log_path,
+    trial_result_payloads,
+)
 from ornnlab.services.harbor_score import result_pass_at_one
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.queue_service import QueueService
@@ -199,13 +207,17 @@ class WebUiJobService:
 
     def trials_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
-        if not run.get("result_path") or not Path(run["result_path"]).is_file():
+        if not run.get("job_dir"):
             return []
-        result = json.loads(Path(run["result_path"]).read_text(encoding="utf-8"))
+        config = self._job_config(job_id)
+        results = trial_result_payloads(
+            Path(run["job_dir"]),
+            run.get("harbor_job_name") or config.get("job_name"),
+            run.get("result_path"),
+        )
         return [
             _trial_dto(job_id, item)
-            for item in result.get("trial_results", [])
-            if isinstance(item, dict)
+            for item in results
         ]
 
     def leaderboard(
@@ -369,7 +381,7 @@ def _trial_dto(job_id: str, item: dict) -> dict:
         "runtimeSeconds": _duration_seconds(item.get("started_at"), item.get("finished_at")),
         "costUsd": _number_or_none(token_usage.get("cost_usd")),
         "tokenUsageM": _token_usage_m(token_usage),
-        "logPath": None,
+        "logPath": trial_log_path(item),
     }
 
 
@@ -449,11 +461,7 @@ def _now() -> str:
 def _result_payload(result_path: str | None) -> dict:
     if not result_path:
         return {}
-    try:
-        payload = json.loads(Path(result_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return load_result_payload(Path(result_path))
 
 
 def _number_or_none(value: object) -> float | None:

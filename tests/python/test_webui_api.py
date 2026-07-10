@@ -162,6 +162,53 @@ def test_trial_dto_uses_real_harbor_result_fields_only():
     assert trial["logPath"] is None
 
 
+def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: Path):
+    job_dir = tmp_path / "native-job"
+    trial_dir = job_dir / "native-job" / "trial-a"
+    trial_dir.mkdir(parents=True)
+    (job_dir / "native-job" / "config.json").write_text("{}", encoding="utf-8")
+    (trial_dir / "trial.log").write_text("trial log\n", encoding="utf-8")
+    (trial_dir / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-a",
+                "task_name": "hello",
+                "trial_uri": trial_dir.as_uri(),
+                "started_at": "2026-07-11T00:00:00+00:00",
+                "finished_at": "2026-07-11T00:00:02+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    _create_profile_prerequisites(client)
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+    job_id = created["id"]
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute(
+            "UPDATE runs SET job_dir = ?, harbor_job_name = ? WHERE id = ?",
+            (str(job_dir), "native-job", job_id),
+        )
+
+    trials = client.get(f"{API}/jobs/{job_id}/trials").json()["data"]
+
+    assert trials == [
+        {
+            "id": "trial-a",
+            "jobId": job_id,
+            "taskName": "hello",
+            "status": "passed",
+            "score": None,
+            "retryCount": None,
+            "runtimeSeconds": 2,
+            "costUsd": None,
+            "tokenUsageM": None,
+            "logPath": str(trial_dir / "trial.log"),
+        }
+    ]
+
+
 def test_scores_require_an_explicit_harbor_scale():
     assert _job_score({"stats": {"evals": {"test": {"pass_at_k": {"1": 0.72}}}}}) == {
         "kind": "percentage",
