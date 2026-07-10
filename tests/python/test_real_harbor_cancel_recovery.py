@@ -6,6 +6,7 @@ import shutil
 import pytest
 
 from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from ornnlab.services.harbor_paths import resolve_harbor_result_path
 from ornnlab.settings import Settings
 
 pytestmark = pytest.mark.docker
@@ -46,7 +47,7 @@ def test_real_harbor_subprocess_smoke(tmp_path):
     assert result["status"] in {"completed", "failed", "cancelled", "interrupted"}
     assert (job_dir / "harbor.config.json").exists()
     assert (job_dir / "job.log").exists()
-    assert (job_dir / "result.json").exists()
+    assert resolve_harbor_result_path(job_dir, config.job_name).is_file()
 
 
 @pytest.mark.skipif(
