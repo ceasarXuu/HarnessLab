@@ -223,8 +223,11 @@ def _format_bytes(value: int) -> str:
 
 
 def _cpu_usage() -> str:
+    get_load_average = getattr(os, "getloadavg", None)
+    if get_load_average is None:
+        return "unavailable"
     try:
-        return f"load {os.getloadavg()[0]:.2f}"
+        return f"load {get_load_average()[0]:.2f}"
     except OSError:
         return "unavailable"
 

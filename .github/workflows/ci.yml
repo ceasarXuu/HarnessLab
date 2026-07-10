@@ -55,6 +55,9 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -63,6 +66,8 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
+      - name: Install backend dependencies for launcher smoke
+        run: uv sync --group dev
       - name: Typecheck
         run: npm run typecheck
         working-directory: frontend

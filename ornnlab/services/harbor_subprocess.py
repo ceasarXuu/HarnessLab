@@ -111,27 +111,29 @@ async def _terminate_process_group(
 ) -> dict[str, Any]:
     pid = process.pid
     cleanup: dict[str, Any] = {"pid": pid, "terminated": False, "killed": False}
+    kill_process_group = getattr(os, "killpg", None)
     try:
-        os.killpg(pid, signal.SIGTERM)
+        if kill_process_group is None:
+            process.terminate()
+        else:
+            kill_process_group(pid, signal.SIGTERM)
         cleanup["terminated"] = True
     except ProcessLookupError:
         cleanup["missing"] = True
         cleanup["returncode"] = process.returncode
         return cleanup
-    except AttributeError:
-        process.terminate()
-        cleanup["terminated"] = True
     try:
         await asyncio.wait_for(process.wait(), timeout=grace_sec)
     except TimeoutError:
         try:
-            os.killpg(pid, signal.SIGKILL)
+            force_kill = getattr(signal, "SIGKILL", None)
+            if kill_process_group is None or force_kill is None:
+                process.kill()
+            else:
+                kill_process_group(pid, force_kill)
             cleanup["killed"] = True
         except ProcessLookupError:
             cleanup["missing_after_term"] = True
-        except AttributeError:
-            process.kill()
-            cleanup["killed"] = True
         await process.wait()
     cleanup["returncode"] = process.returncode
     return cleanup

@@ -6,6 +6,7 @@ const result = spawnSync(npm, ["run", "build"], {
   cwd: path.resolve(__dirname, "../frontend"),
   encoding: "utf-8",
   env: { ...process.env, VITE_ORNNLAB_DATA_MODE: "mock" },
+  shell: process.platform === "win32",
 });
 const output = `${result.stdout || ""}${result.stderr || ""}`;
 
