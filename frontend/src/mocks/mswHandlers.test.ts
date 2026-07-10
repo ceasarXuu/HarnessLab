@@ -85,6 +85,24 @@ describe('WebUI MSW handlers', () => {
     expect(system.data.items[0]).toMatchObject({ component: 'OrnnLab Service', kind: 'ornnlab-service' })
   })
 
+  it('preserves structured Agent and Environment query filters through HTTP', async () => {
+    const [agentsResponse, environmentsResponse] = await Promise.all([
+      fetch('http://localhost/api/webui/v1/agents?status=needs-token&type=custom'),
+      fetch('http://localhost/api/webui/v1/environments?type=built-in'),
+    ])
+    const [agents, environments] = await Promise.all([
+      agentsResponse.json(),
+      environmentsResponse.json(),
+    ])
+
+    expect(agents.data.items).toEqual([
+      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token', type: 'custom' }),
+    ])
+    expect(environments.data.items).toEqual([
+      expect.objectContaining({ id: 'docker-default', profileType: 'built-in' }),
+    ])
+  })
+
   it('routes writes through contract-shaped Operations and supports polling', async () => {
     const response = await fetch('http://localhost/api/webui/v1/system/cache/storage/clean', { method: 'POST' })
     const body = await response.json()

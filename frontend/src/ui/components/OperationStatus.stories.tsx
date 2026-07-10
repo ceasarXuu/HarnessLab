@@ -25,6 +25,14 @@ export const Completed: Story = {
   args: { operation: { id: 'operation_1', progress: 100, resourceType: 'environment', status: 'completed', type: 'create-environment' }, t },
 }
 
+export const Cancelled: Story = {
+  args: { operation: { id: 'operation_1', resourceType: 'job', status: 'cancelled', type: 'cancel-job' }, t },
+}
+
+export const SystemRunning: Story = {
+  args: { operation: { id: 'operation_1', progress: 50, resourceType: 'system', status: 'running', type: 'clean-storage-cache' }, t },
+}
+
 export const Failed: Story = {
   args: { error: 'The requested operation could not be completed.', t },
 }

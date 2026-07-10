@@ -44,6 +44,22 @@ describe('MockWebUiClient', () => {
     expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup', 'git-rebase-conflict'])
   })
 
+  it('filters Agents and Environments by their structured query fields', async () => {
+    const client = createMockWebUiClient()
+
+    const [agentsResponse, environmentsResponse] = await Promise.all([
+      client.listAgents({ status: 'needs-token', type: 'custom' }),
+      client.listEnvironments({ type: 'built-in' }),
+    ])
+
+    expect(agentsResponse.data?.items).toEqual([
+      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token', type: 'custom' }),
+    ])
+    expect(environmentsResponse.data?.items).toEqual([
+      expect.objectContaining({ id: 'docker-default', profileType: 'built-in' }),
+    ])
+  })
+
   it('returns a not-found contract error for an unknown Job', async () => {
     const client = createMockWebUiClient()
 

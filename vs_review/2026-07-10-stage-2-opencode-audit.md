@@ -5,11 +5,13 @@
 - 会话：`ses_0b456f634ffeyU6Y0hURldHYM9`
 - 审计约束：只读；禁止修改、创建、提交或推送文件
 - 审计范围：[工程计划](../docs/releases/v1.0.5/engineering-plan.md) 的 S2-0 至 S2-7
-- 结论：`CONDITIONAL PASS`
+- 首轮结论：`CONDITIONAL PASS`
+- 复审结论：`PASS`
+- 状态：Closed
 
 ## 结论
 
-Stage 2 的核心契约实现、六类资源读取、Operation 写操作边界、API 不可用处理、生产 UI 与 fixture 隔离，以及所有既有质量门禁均通过。它不满足“100% 完成”的关闭要求：审计发现一个 Medium 和四个 Low 缺口，均应先闭环再把 Stage 2 标记为 Done。
+Stage 2 的核心契约实现、六类资源读取、Operation 写操作边界、API 不可用处理、生产 UI 与 fixture 隔离，以及所有既有质量门禁均通过。首轮审计发现的一个 Medium 和四个 Low 已全部闭环；OpenCode 复审确认无新发现，Stage 2 满足“100% 完成”的关闭要求。
 
 ## Findings
 
@@ -35,6 +37,18 @@ Critical 与 High：无。
 
 以下不是本次 Stage 2 缺口：真实 `/api/webui/v1` 后端、Operation 持久化/SSE/子进程执行、真实 Harbor Job/Dataset/Agent 行为和旧后端路由的破坏性升级。这些属于 Stage 3 及后续真实联调阶段。
 
-## 关闭标准
+## 整改复审
 
-修复 F-M1 至 F-L4，重新执行全部 Stage 2 门禁，并进行一次独立复审。复审无 Medium/Low 遗留时，Stage 2 才能标记为 Done。
+复审范围：F-M1 至 F-L4，以及契约/i18n 回归。
+
+| ID | 整改 | 复审证据 |
+|---|---|---|
+| F-M1 | mock client 对 Agent/Environment 的 `status`/`type` 与全文 `q` 使用 AND 过滤；MSW 从 URL 传递结构化参数 | `mockClient.test.ts` 与 `mswHandlers.test.ts` 双层覆盖 |
+| F-L1 | 增加 `OperationStatus` 的 `Cancelled` 与 `SystemRunning` story | `OperationStatus.stories.tsx` |
+| F-L2 | 增加 `JobsLight` 与 `JobsChinese` screen story | `Screens.stories.tsx` |
+| F-L3 | 增加 Job 取消、Dataset 删除、Environment 删除确认 story；Job 取消实际改为确认后才触发 action | `JobsPage.test.tsx`、`Screens.stories.tsx` |
+| F-L4 | 增加 `JobsTable` loading/error story | `JobsTable.stories.tsx` |
+
+复审结果：`PASS`。无 Critical、High、Medium 或 Low 遗留。
+
+复审门禁：`typecheck`、48 个 unit、lint、build、Storybook smoke、10 个 desktop/mobile e2e 均通过；`4174` 无旧监听。

@@ -15,6 +15,7 @@ import { NewAgentPage } from './NewAgentPage'
 import { SystemPage } from './SystemPage'
 
 const t = getTranslator('en')
+const tZh = getTranslator('zh')
 const client = createMockWebUiClient()
 const leaderboardDatasets = [...new Map(leaderboardRows.map((row) => {
   const [name, version = ''] = row.dataset.split('@')
@@ -93,6 +94,70 @@ export const JobsEmpty: Story = {
   ),
 }
 
+export const JobsLight: Story = {
+  globals: { theme: 'light' },
+  render: () => (
+    <JobsPage
+      client={createMockWebUiClient()}
+      jobs={jobs}
+      open={false}
+      search=""
+      selected={jobs[0]}
+      t={t}
+      onClose={() => undefined}
+      onJobAction={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+}
+
+export const JobsChinese: Story = {
+  globals: { locale: 'zh' },
+  render: () => (
+    <JobsPage
+      client={createMockWebUiClient()}
+      jobs={jobs}
+      open={false}
+      search=""
+      selected={jobs[0]}
+      t={tZh}
+      onClose={() => undefined}
+      onJobAction={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+}
+
+export const JobCancelConfirm: Story = {
+  render: () => (
+    <JobsPage
+      client={createMockWebUiClient()}
+      jobs={jobs}
+      open
+      search=""
+      selected={jobs[0]}
+      t={t}
+      onClose={() => undefined}
+      onJobAction={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
+    await expect(canvas.getByRole('dialog', { name: 'Cancel Job' })).toBeVisible()
+  },
+}
+
 export const JobOperationRunning: Story = {
   render: () => (
     <JobsPage
@@ -127,6 +192,15 @@ export const DatasetDownloading: Story = {
     await userEvent.click(canvas.getAllByRole('button', { name: 'Download' })[0])
     await expect(canvas.getByText('0%')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Cancel download' })).toBeVisible()
+  },
+}
+
+export const DatasetDeleteConfirm: Story = {
+  render: () => <DatasetsPage client={createMockWebUiClient()} rows={datasetRows} search="" t={t} onRefresh={async () => undefined} onSearch={() => undefined} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Delete' })[0])
+    await expect(canvas.getByRole('dialog', { name: 'Delete local dataset' })).toBeVisible()
   },
 }
 
@@ -323,6 +397,26 @@ export const EnvironmentDrawer: Story = {
     await expect(canvas.getByLabelText('Retries')).toHaveValue(3)
     await expect(canvas.getByLabelText('Working directory')).toHaveValue('/workspace')
     await expect(canvas.getByText('Backend params')).toBeVisible()
+  },
+}
+
+export const EnvironmentDeleteConfirm: Story = {
+  render: () => (
+    <EnvironmentsPage
+      client={createMockWebUiClient()}
+      rows={environmentRows}
+      t={t}
+      view="list"
+      onRefresh={async () => undefined}
+      onView={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const customRow = canvas.getByText('Docker GPU').closest('tr')
+    if (!customRow) throw new Error('Custom environment row not found')
+    await userEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
+    await expect(canvas.getByRole('dialog', { name: 'Delete custom environment' })).toBeVisible()
   },
 }
 

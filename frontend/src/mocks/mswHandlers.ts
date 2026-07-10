@@ -1,17 +1,38 @@
 import { http, HttpResponse } from 'msw'
 import { createMockWebUiClient } from '../api/mockClient'
-import type { AgentDto, CreateJobRequestDto, DatasetImportRequestDto, EnvironmentDto, UpdateJobLeaderboardRequestDto } from '../api/contract'
+import type { AgentAvailability, AgentDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
 
 const webui = '*/api/webui/v1'
 const client = createMockWebUiClient()
 
-function listQuery(request: Request) {
+function listQuery(request: Request): ListQuery {
   const url = new URL(request.url)
   return {
     cursor: url.searchParams.get('cursor') ?? undefined,
     limit: Number(url.searchParams.get('limit')) || undefined,
     q: url.searchParams.get('q') ?? undefined,
   }
+}
+
+function agentQuery(request: Request): AgentQuery {
+  const url = new URL(request.url)
+  return {
+    ...listQuery(request),
+    status: optionalQueryValue<AgentAvailability>(url, 'status'),
+    type: optionalQueryValue<AgentProfileType>(url, 'type'),
+  }
+}
+
+function environmentQuery(request: Request): EnvironmentQuery {
+  const url = new URL(request.url)
+  return {
+    ...listQuery(request),
+    type: optionalQueryValue<EnvironmentProfileType>(url, 'type'),
+  }
+}
+
+function optionalQueryValue<T extends string>(url: URL, key: string): T | undefined {
+  return (url.searchParams.get(key) ?? undefined) as T | undefined
 }
 
 async function jsonBody<T>(request: Request): Promise<T> {
@@ -34,7 +55,7 @@ export const webuiHandlers = [
   http.delete(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.deleteAgent(String(params.agentId))),
   ),
-  http.get(`${webui}/agents`, async ({ request }) => HttpResponse.json(await client.listAgents(listQuery(request)))),
+  http.get(`${webui}/agents`, async ({ request }) => HttpResponse.json(await client.listAgents(agentQuery(request)))),
   http.get(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.getAgent(String(params.agentId))),
   ),
@@ -105,7 +126,7 @@ export const webuiHandlers = [
   http.post(`${webui}/environments/:environmentId/copy`, async ({ params }) =>
     HttpResponse.json(await client.copyEnvironment(String(params.environmentId))),
   ),
-  http.get(`${webui}/environments`, async ({ request }) => HttpResponse.json(await client.listEnvironments(listQuery(request)))),
+  http.get(`${webui}/environments`, async ({ request }) => HttpResponse.json(await client.listEnvironments(environmentQuery(request)))),
   http.get(`${webui}/environments/:environmentId`, async ({ params }) =>
     HttpResponse.json(await client.getEnvironment(String(params.environmentId))),
   ),

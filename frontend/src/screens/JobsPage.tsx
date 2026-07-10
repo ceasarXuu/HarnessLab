@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useJob, useJobEvents, useJobTrials } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { DetailRail } from '../ui/components/DetailRail'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
+import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { JobsTable } from '../ui/components/JobsTable'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import type { HarborJob } from '../domain/harbor'
@@ -39,12 +41,28 @@ export function JobsPage({
   onSearch,
   onSelect,
 }: JobsPageProps) {
+  const [cancelTarget, setCancelTarget] = useState<HarborJob | null>(null)
   const detailResource = useJob(client, selected?.id)
   const eventsResource = useJobEvents(client, selected?.id)
   const trialsResource = useJobTrials(client, selected?.id)
   const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
+
+  const requestJobAction = (jobId: string, action: 'cancel' | 'retry' | 'resume') => {
+    if (action !== 'cancel') {
+      onJobAction(jobId, action)
+      return
+    }
+    const target = detailJob?.id === jobId ? detailJob : jobs.find((job) => job.id === jobId)
+    if (target) setCancelTarget(target)
+  }
+
+  const confirmCancellation = () => {
+    if (!cancelTarget) return
+    onJobAction(cancelTarget.id, 'cancel')
+    setCancelTarget(null)
+  }
 
   return (
     <main className="workspace single-page">
@@ -68,7 +86,7 @@ export function JobsPage({
               trials={trials}
               t={t}
               writesEnabled={writesEnabled}
-              onJobAction={onJobAction}
+              onJobAction={requestJobAction}
               onLeaderboardChange={onLeaderboardChange}
             />
             <ResourceStatus
@@ -78,6 +96,16 @@ export function JobsPage({
             />
           </>
         </DetailDrawer>
+      )}
+      {cancelTarget && (
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmCancelJob')}
+          impacts={[t('cancelJobImpact'), cancelTarget.name]}
+          title={t('cancelJobTitle')}
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={confirmCancellation}
+        />
       )}
     </main>
   )

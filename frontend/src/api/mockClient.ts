@@ -14,7 +14,7 @@ import type {
   UpdateCheckResultDto,
   UpdateJobLeaderboardResponseDto,
 } from './contract'
-import type { DatasetTaskQuery, ListQuery } from './contract'
+import type { AgentQuery, DatasetTaskQuery, EnvironmentQuery, ListQuery } from './contract'
 import { buildLeaderboardDatasets, toAgentDto, toDatasetDto, toDatasetTaskDto, toEnvironmentDto, toJobDto, toJobEventDto, toLeaderboardEntryDto, toSystemComponentDto, toTrialDto } from './mockMappers'
 import { createMockOperationStore } from './mockOperations'
 import type { WebUiClient } from './webUiClient'
@@ -141,7 +141,7 @@ export function createMockWebUiClient(): WebUiClient {
       return operationResult(operations.submit('install-system-update', 'system', 'ornnlab-service'))
     },
     async listAgents(query) {
-      return success(page(filterByQuery(agentDtos, query, (agent) => [agent.agentName, agent.harness, agent.status, agent.type])))
+      return success(page(filterAgents(agentDtos, query)))
     },
     async listDatasetTasks(ref, query) {
       return success(page(filterDatasetTasks(taskDtos, ref, query)))
@@ -150,7 +150,7 @@ export function createMockWebUiClient(): WebUiClient {
       return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source])))
     },
     async listEnvironments(query) {
-      return success(page(filterByQuery(environmentDtos, query, (environment) => [environment.name, environment.environmentType, environment.profileType])))
+      return success(page(filterEnvironments(environmentDtos, query)))
     },
     async listJobEvents(id) {
       return success(eventDtos.filter((entry) => entry.jobId === id).map((entry) => entry.event))
@@ -289,6 +289,18 @@ function filterByQuery<T>(items: T[], query: ListQuery | undefined, fields: (ite
   const needle = query?.q?.trim().toLowerCase()
   if (!needle) return items
   return items.filter((item) => fields(item).some((field) => field.toLowerCase().includes(needle)))
+}
+
+function filterAgents(items: import('./contract').AgentDto[], query: AgentQuery | undefined) {
+  const textMatched = filterByQuery(items, query, (agent) => [agent.agentName, agent.harness, agent.status, agent.type])
+  return textMatched.filter((agent) =>
+    (!query?.status || agent.status === query.status) && (!query?.type || agent.type === query.type),
+  )
+}
+
+function filterEnvironments(items: import('./contract').EnvironmentDto[], query: EnvironmentQuery | undefined) {
+  const textMatched = filterByQuery(items, query, (environment) => [environment.name, environment.environmentType, environment.profileType])
+  return textMatched.filter((environment) => !query?.type || environment.profileType === query.type)
 }
 
 function filterDatasetTasks(tasks: DatasetTaskDto[], ref: string, query: DatasetTaskQuery | undefined): DatasetTaskDto[] {

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { getTranslator } from '../../i18n'
 import { jobs } from '../../mocks/demo'
+import { ResourceStatus } from './ResourceStatus'
 import { JobsTable } from './JobsTable'
 
 const t = getTranslator('en')
@@ -30,4 +31,24 @@ export const FilteredEmpty: Story = {
     jobs: [],
     search: 'no-match',
   },
+}
+
+export const Loading: Story = {
+  args: { jobs: [] },
+  render: (args) => (
+    <>
+      <JobsTable {...args} />
+      <ResourceStatus error={null} loading loadingLabel={t('loadingJobs')} />
+    </>
+  ),
+}
+
+export const Error: Story = {
+  args: { jobs: [] },
+  render: (args) => (
+    <>
+      <JobsTable {...args} />
+      <ResourceStatus error={t('unableToLoadJobs')} loading={false} loadingLabel={t('loadingJobs')} />
+    </>
+  ),
 }
