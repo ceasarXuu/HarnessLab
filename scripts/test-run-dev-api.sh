@@ -80,5 +80,14 @@ done
 
 curl -sf "$BACKEND_HEALTH" | uv run python -c 'import json, sys; assert json.load(sys.stdin)["data"]["items"]'
 curl -sf "$FRONTEND_HEALTH" | uv run python -c 'import json, sys; assert json.load(sys.stdin)["data"]["items"]'
+
+# run_dev.sh prints its summary box after its own proxy health check;
+# wait for the patterns to appear rather than racing the log write.
+for _ in {1..40}; do
+  if rg -q '前端模式 : api' "$TEST_ROOT/run-dev.log" 2>/dev/null; then
+    break
+  fi
+  sleep 0.25
+done
 rg -q '前端模式 : api' "$TEST_ROOT/run-dev.log"
 rg -q '前端 proxy' "$TEST_ROOT/run-dev.log"

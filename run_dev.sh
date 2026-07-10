@@ -107,11 +107,14 @@ echo "[run_dev] 启动前端 Vite dev server ..."
 FRONTEND_PID=$!
 
 # 从 Vite stdout 解析真实 Local URL（避免端口被换时硬编码错）。最多等 30s。
+# Vite 输出包含 ANSI 颜色码，需要先剥离再 grep，否则 URL 中嵌入转义码导致解析失败。
 FRONTEND_URL=""
+ANSI_RE=$'\x1b\\[[0-9;]*m'
 for i in {1..60}; do
   if [[ -s "$FRONTEND_LOG" ]]; then
     # Vite 输出形如 "  ➜  Local:   http://127.0.0.1:4173/"
-    FRONTEND_URL="$(grep -Eo 'http://[^[:space:]]+' "$FRONTEND_LOG" \
+    FRONTEND_URL="$(sed "s/${ANSI_RE}//g" "$FRONTEND_LOG" \
+      | grep -Eo 'http://[^[:space:]]+' \
       | grep -v "$BACKEND_URL" \
       | head -n 1 || true)"
     if [[ -n "$FRONTEND_URL" ]]; then
