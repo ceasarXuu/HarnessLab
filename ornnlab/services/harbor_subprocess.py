@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shlex
 import shutil
 import signal
 import sys
@@ -11,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from ornnlab.models.harbor import HarborJobConfigView
+from ornnlab.services.command_line import split_command
 from ornnlab.services.harbor_paths import resolve_harbor_result_path
 from ornnlab.storage.paths import atomic_write_text, ensure_parent
 
@@ -71,10 +71,12 @@ class ManagedSubprocessHarborRunner:
 
 def _command_from_env() -> list[str]:
     raw = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", "harbor run")
-    command = shlex.split(raw)
-    if not command:
-        raise ValueError("ORNNLAB_HARBOR_SUBPROCESS_COMMAND cannot be empty")
-    return command
+    try:
+        return split_command(raw)
+    except ValueError as error:
+        if str(error) != "command cannot be empty":
+            raise
+        raise ValueError("ORNNLAB_HARBOR_SUBPROCESS_COMMAND cannot be empty") from None
 
 
 def harbor_cli_executable() -> str:
@@ -100,7 +102,7 @@ async def _mirror_stdout(
             break
         text = chunk.decode("utf-8", errors="replace")
         chunks.append(text)
-        with log_path.open("a", encoding="utf-8") as handle:
+        with log_path.open("a", encoding="utf-8", newline="") as handle:
             handle.write(text)
     return "".join(chunks)
 

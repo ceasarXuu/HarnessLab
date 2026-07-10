@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from ornnlab.services.harbor_results import trial_log_path, trial_result_payloads
+from ornnlab.services.harbor_results import _file_uri_path, trial_log_path, trial_result_payloads
 
 
 def test_trial_result_payloads_reads_harbor_native_trial_directories(tmp_path: Path):
@@ -31,3 +31,7 @@ def test_trial_log_path_requires_an_existing_file_uri_path(tmp_path: Path):
 
     assert trial_log_path({"trial_uri": trial_path.as_uri()}) == str(log_path)
     assert trial_log_path({"trial_uri": "https://example.com/trial"}) is None
+
+
+def test_file_uri_path_removes_windows_drive_prefix():
+    assert str(_file_uri_path("/C:/work/trial", "", windows=True)) == "C:/work/trial"

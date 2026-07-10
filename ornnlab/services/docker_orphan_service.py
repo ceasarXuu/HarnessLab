@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import shutil
 import subprocess
 from typing import Any
+
+from ornnlab.services.command_line import split_command
 
 ORNNLAB_RUN_LABEL = "ornnlab.run_id"
 
@@ -111,9 +112,12 @@ class DockerOrphanService:
 def _command_from_env() -> tuple[list[str], list[str]]:
     warnings: list[str] = []
     raw = os.environ.get("ORNNLAB_DOCKER_COMMAND", "docker")
-    command = shlex.split(raw)
-    if not command:
-        raise ValueError("ORNNLAB_DOCKER_COMMAND cannot be empty")
+    try:
+        command = split_command(raw)
+    except ValueError as error:
+        if str(error) != "command cannot be empty":
+            raise
+        raise ValueError("ORNNLAB_DOCKER_COMMAND cannot be empty") from None
     return command, warnings
 
 

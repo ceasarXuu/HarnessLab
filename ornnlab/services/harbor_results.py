@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -47,5 +48,15 @@ def trial_log_path(result: dict[str, Any]) -> str | None:
     parsed = urlparse(trial_uri)
     if parsed.scheme != "file":
         return None
-    path = Path(unquote(parsed.path)) / "trial.log"
+    path = _file_uri_path(parsed.path, parsed.netloc) / "trial.log"
     return str(path) if path.is_file() else None
+
+
+def _file_uri_path(path: str, host: str, *, windows: bool | None = None) -> Path:
+    decoded = unquote(path)
+    if host and host != "localhost":
+        decoded = f"//{host}{decoded}"
+    is_windows = os.name == "nt" if windows is None else windows
+    if is_windows and len(decoded) >= 3 and decoded[0] == "/" and decoded[2] == ":":
+        decoded = decoded[1:]
+    return Path(decoded)

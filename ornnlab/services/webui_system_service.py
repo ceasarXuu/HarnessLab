@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -11,6 +10,7 @@ from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
+from ornnlab.services.command_line import split_command
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.settings import Settings
@@ -116,7 +116,7 @@ class WebUiSystemService:
 
         async def work(progress) -> None:
             progress(10, "Requesting service restart")
-            await asyncio.to_thread(_run_checked, shlex.split(command))
+            await asyncio.to_thread(_run_checked, split_command(command))
             progress(100, "Service restart requested")
 
         return self.operations.submit("restart-system-service", "system", "ornnlab-service", work)

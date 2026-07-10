@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from ornnlab.services.cleanup_service import CleanupService
 from ornnlab.services.clock import now_iso
 from ornnlab.storage import sqlite
@@ -20,7 +22,7 @@ def test_cleanup_plan_finds_only_unreferenced_artifacts(settings):
         ("generated-agent", "no_active_agent_row"),
         ("experiment-artifact", "no_experiment_or_run_row"),
     }
-    assert {item["path"].split("/")[-1] for item in plan["candidates"]} == {
+    assert {Path(item["path"]).name for item in plan["candidates"]} == {
         "stale-agent",
         "orphan-artifact",
     }
@@ -40,7 +42,7 @@ def test_cleanup_archive_moves_candidates_to_recoverable_archive(settings):
     assert result["archived_count"] == 2
     assert not stale_agent.exists()
     assert not orphan.exists()
-    archived_names = {item["archived_path"].split("/")[-1] for item in result["archived"]}
+    archived_names = {Path(item["archived_path"]).name for item in result["archived"]}
     assert archived_names == {"stale-agent", "orphan-artifact"}
 
 

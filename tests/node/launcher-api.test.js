@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
 const os = require("node:os");
@@ -13,6 +13,7 @@ test("ornnlab dev starts an API-mode frontend proxy", { timeout: 60000 }, async 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-launcher-api-"));
   const child = spawn(process.execPath, ["bin/ornnlab.js", "dev"], {
     cwd: repoRoot,
+    detached: process.platform !== "win32",
     env: {
       ...process.env,
       ORNNLAB_BACKEND_PORT: String(backendPort),
@@ -93,6 +94,10 @@ async function waitForUnavailable(url) {
 
 function stop(child) {
   if (child.exitCode !== null) return Promise.resolve();
-  child.kill("SIGTERM");
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
+  } else {
+    process.kill(-child.pid, "SIGTERM");
+  }
   return new Promise((resolve) => child.once("exit", resolve));
 }
