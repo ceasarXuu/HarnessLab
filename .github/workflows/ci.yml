@@ -18,8 +18,12 @@ on:
 
 jobs:
   python-web:
-    name: Python Web Gate
-    runs-on: ubuntu-latest
+    name: Python Web Gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,24 +42,17 @@ jobs:
       - name: OrnnLab rebrand guard
         run: uv run python scripts/verify-ornnlab-rebrand.py
       - name: Python line-count gate
-        run: |
-          uv run python - <<'PY'
-          from pathlib import Path
-
-          violations = []
-          for path in Path("ornnlab").rglob("*.py"):
-              line_count = len(path.read_text(encoding="utf-8").splitlines())
-              if line_count > 500:
-                  violations.append(f"{path}:{line_count}")
-          if violations:
-              raise SystemExit("Files exceed 500 lines:\n" + "\n".join(violations))
-          PY
+        run: uv run python scripts/check-python-file-length.py ornnlab
       - name: Diff whitespace check
         run: git diff --check
 
   frontend-web:
-    name: Frontend Web Gate
-    runs-on: ubuntu-latest
+    name: Frontend Web Gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +72,15 @@ jobs:
       - name: Unit tests
         run: npm run test
         working-directory: frontend
+      - name: Production build
+        run: npm run build
+        working-directory: frontend
+      - name: WebUI bundle budget
+        run: npm run check:webui-bundle
+      - name: Reject mock production build
+        run: node scripts/test-webui-build-config.js
+      - name: Cross-platform launcher API smoke
+        run: npm run test:launcher
       - name: Storybook smoke
         run: npm run storybook:test
         working-directory: frontend

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { resolveWebUiDataMode } from './dataMode'
 import { createRuntimeWebUiClient } from './runtimeClient'
 
 describe('createRuntimeWebUiClient', () => {
@@ -20,5 +21,11 @@ describe('createRuntimeWebUiClient', () => {
 
     expect(response.data?.items).toHaveLength(4)
     expect(response.error).toBeNull()
+  })
+
+  it('rejects explicit unsupported data modes instead of silently selecting mock', () => {
+    expect(() => resolveWebUiDataMode('preview', 'mock')).toThrow('VITE_ORNNLAB_DATA_MODE')
+    expect(resolveWebUiDataMode(undefined, 'mock')).toBe('mock')
+    expect(resolveWebUiDataMode(undefined, 'api')).toBe('api')
   })
 })

@@ -24,6 +24,8 @@
     "node": ">=18"
   },
   "scripts": {
+    "check:webui-bundle": "node scripts/check-webui-bundle-size.js",
+    "test:launcher": "node tests/node/run-tests.js",
     "smoke:npm-bin": "scripts/verify-npm-reservation-package.sh",
     "smoke:npm-registry": "scripts/verify-npm-registry-package.sh",
     "smoke:harnesslab-transition": "bash scripts/verify-harnesslab-transition-package.sh"

@@ -119,6 +119,21 @@ path = "scripts/test-after-change-web.sh"
 kind = "local-gate-reference"
 
 [[test]]
+id = "WEB-REL-001"
+path = "tests/node/launcher-api.test.js"
+kind = "cross-platform-launcher-smoke"
+
+[[test]]
+id = "WEB-REL-001"
+path = "scripts/test-run-dev-api.sh"
+kind = "posix-api-launcher-smoke"
+
+[[test]]
+id = "WEB-REL-001"
+path = "scripts/test-webui-build-config.js"
+kind = "production-config-gate"
+
+[[test]]
 id = "WEB-RCV-001"
 path = "tests/python/test_recovery_service.py"
 kind = "python-integration"

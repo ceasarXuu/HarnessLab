@@ -1,7 +1,8 @@
 import { createMockWebUiClient } from './mockClient'
 import { createWebUiHttpClient, type WebUiClient } from './webUiClient'
+import { resolveWebUiDataMode, type WebUiDataMode } from './dataMode'
 
-export type WebUiDataMode = 'api' | 'mock'
+export type { WebUiDataMode } from './dataMode'
 
 export function createRuntimeWebUiClient(
   mode: WebUiDataMode = readWebUiDataMode(),
@@ -11,5 +12,5 @@ export function createRuntimeWebUiClient(
 }
 
 export function readWebUiDataMode(): WebUiDataMode {
-  return import.meta.env.VITE_ORNNLAB_DATA_MODE === 'api' ? 'api' : 'mock'
+  return resolveWebUiDataMode(import.meta.env.VITE_ORNNLAB_DATA_MODE, import.meta.env.PROD ? 'api' : 'mock')
 }

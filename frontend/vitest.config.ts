@@ -1,7 +1,7 @@
 import { mergeConfig } from 'vite'
-import baseConfig from './vite.config'
+import { createWebUiViteConfig } from './vite.config'
 
-export default mergeConfig(baseConfig, {
+export default mergeConfig(createWebUiViteConfig('serve'), {
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',

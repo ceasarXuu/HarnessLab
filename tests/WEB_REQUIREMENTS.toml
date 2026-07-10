@@ -105,3 +105,9 @@ id = "WEB-OPS-005"
 area = "operations"
 doc = "docs/releases/v1.0.5/technical-design.md"
 summary = "CI runs Python WebUI contract gates and v1.0.5 React/Vite quality gates."
+
+[[requirement]]
+id = "WEB-REL-001"
+area = "release"
+doc = "docs/releases/v1.0.5/technical-design.md"
+summary = "Release launcher defaults to API mode, validates proxy readiness, and rejects mock production builds."

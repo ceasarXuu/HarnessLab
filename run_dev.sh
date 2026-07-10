@@ -6,7 +6,7 @@
 #
 # 用法：
 #   bash run_dev.sh                       # 后端 8765，前端 API 模式 5173
-#   ORNNLAB_PORT=9000 bash run_dev.sh     # 自定义后端端口（同时透传给 Vite proxy）
+#   ORNNLAB_PORT=9000 ORNNLAB_FRONTEND_PORT=9001 bash run_dev.sh
 #   VITE_ORNNLAB_DATA_MODE=mock bash run_dev.sh  # 显式启动 mock 前端
 #
 # 依赖：uv、npm、Node.js 22+（详见 docs/playbooks/install-quickstart.md）
@@ -19,9 +19,18 @@ cd "$REPO_ROOT"
 BACKEND_HOST="${ORNNLAB_HOST:-127.0.0.1}"
 BACKEND_PORT="${ORNNLAB_PORT:-8765}"
 BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}"
+FRONTEND_PORT="${ORNNLAB_FRONTEND_PORT:-5173}"
 WEBUI_DATA_MODE="${VITE_ORNNLAB_DATA_MODE:-api}"
 
-LOG_DIR="${TMPDIR:-/tmp}/ornnlab-dev"
+case "$WEBUI_DATA_MODE" in
+  api|mock) ;;
+  *)
+    echo "[run_dev] ✗ VITE_ORNNLAB_DATA_MODE 必须为 api 或 mock，当前为：$WEBUI_DATA_MODE" >&2
+    exit 2
+    ;;
+esac
+
+LOG_DIR="${ORNNLAB_DEV_LOG_DIR:-${TMPDIR:-/tmp}/ornnlab-dev}"
 mkdir -p "$LOG_DIR"
 BACKEND_LOG="$LOG_DIR/backend.log"
 FRONTEND_LOG="$LOG_DIR/frontend.log"
@@ -30,9 +39,16 @@ FRONTEND_LOG="$LOG_DIR/frontend.log"
 
 BACKEND_PID=""
 FRONTEND_PID=""
+TAIL_PID=""
+CLEANUP_DONE="false"
 
 cleanup() {
   local exit_code=$?
+  if [[ "$CLEANUP_DONE" == "true" ]]; then
+    return
+  fi
+  CLEANUP_DONE="true"
+  trap - INT TERM EXIT
   echo
   echo "[run_dev] 收到退出信号，停止子进程..."
   if [[ -n "$FRONTEND_PID" ]] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
@@ -42,6 +58,10 @@ cleanup() {
   if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
     kill "$BACKEND_PID" 2>/dev/null || true
     wait "$BACKEND_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$TAIL_PID" ]] && kill -0 "$TAIL_PID" 2>/dev/null; then
+    kill "$TAIL_PID" 2>/dev/null || true
+    wait "$TAIL_PID" 2>/dev/null || true
   fi
   echo "[run_dev] 已停止。日志保留在 $LOG_DIR/"
   exit "$exit_code"
@@ -80,8 +100,8 @@ done
 echo "[run_dev] 启动前端 Vite dev server ..."
 (
   cd "$REPO_ROOT/frontend"
-  VITE_ORNNLAB_DATA_MODE="$WEBUI_DATA_MODE" ORNNLAB_API_TARGET="$BACKEND_URL" \
-    exec npm run dev -- --host "$BACKEND_HOST" \
+  VITE_ORNNLAB_DATA_MODE="$WEBUI_DATA_MODE" ORNNLAB_API_TARGET="$BACKEND_URL" ORNNLAB_FRONTEND_PORT="$FRONTEND_PORT" \
+    exec npm run dev -- --host "$BACKEND_HOST" --port "$FRONTEND_PORT" --strictPort \
     >>"$FRONTEND_LOG" 2>&1
 ) &
 FRONTEND_PID=$!
@@ -111,6 +131,25 @@ if [[ -z "$FRONTEND_URL" ]]; then
   tail -n 50 "$FRONTEND_LOG" || true
   exit 1
 fi
+
+FRONTEND_HEALTH_URL="${FRONTEND_URL%/}/api/webui/v1/system/health"
+for i in {1..60}; do
+  if curl -sf "$FRONTEND_HEALTH_URL" >/dev/null 2>&1; then
+    echo "[run_dev] ✓ 前端 proxy ${FRONTEND_HEALTH_URL} 已就绪"
+    break
+  fi
+  if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+    echo "[run_dev] ✗ 前端进程异常退出，日志："
+    tail -n 50 "$FRONTEND_LOG" || true
+    exit 1
+  fi
+  sleep 0.5
+  if [[ "$i" -eq 60 ]]; then
+    echo "[run_dev] ✗ 前端 proxy 30s 内未就绪，日志："
+    tail -n 50 "$FRONTEND_LOG" || true
+    exit 1
+  fi
+done
 
 # ---- 输出摘要 ----
 cat <<EOF
