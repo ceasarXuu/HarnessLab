@@ -103,9 +103,10 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 
 ### Stage 4 质量门与独立审计
 
-- `bash scripts/test-after-change-web.sh` 已通过：Ruff、Pyright（0 error / 0 warning）、Python 测试（75 passed / 3 skipped）、前端测试（16 files / 57 tests）、lint、typecheck、build、Storybook smoke/static build 和 `git diff --check` 均为绿色。
+- `bash scripts/test-after-change-web.sh` 已通过：Ruff、Pyright（0 error / 0 warning）、Python 测试（75 passed / 3 skipped）、前端测试（16 files / 58 tests）、lint、typecheck、build、Storybook smoke/static build 和 `git diff --check` 均为绿色。
 - OpenCode 默认模型（`deepseek-v4-pro`）已完成两轮独立只读审计，结论均为 `NO BLOCKERS`。审计确认 API 失败不会回退 mock、旧产品路由和非 Harbor retry 语义不存在、Job/Trial 只读取 Harbor 原生结果、Operation 使用真实轮询、`run_dev.sh` 以 API 模式启动。
 - 审计记录的非阻断项已转入 Stage 5：部署时校验 `VITE_ORNNLAB_DATA_MODE` 的严格取值、为 API 模式增加自动化启动/健康检查、补充真实 Harbor 条件测试覆盖。它们不改变 Stage 4 已验收的真实联调结论。
+- 联调收尾日志发现删除 Dataset 后可能触发禁用详情资源的手动刷新；`useWebUiResource` 现统一拦截禁用资源，避免向 API 发送空资源标识。该回归已有前端测试覆盖。
 
 ## 6. 后续执行顺序
 

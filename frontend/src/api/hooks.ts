@@ -52,6 +52,12 @@ export function useWebUiResource<T>(
 
   const refresh = useCallback(async () => {
     const request = ++sequence.current
+    if (!enabled) {
+      setData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     const response = await load()
@@ -59,17 +65,11 @@ export function useWebUiResource<T>(
     setData(response.data)
     setError(response.error)
     setLoading(false)
-  }, [load, ...dependencies])
+  }, [enabled, load, ...dependencies])
 
   useEffect(() => {
-    if (!enabled) {
-      setData(null)
-      setError(null)
-      setLoading(false)
-      return
-    }
     void refresh()
-  }, [enabled, refresh])
+  }, [refresh])
 
   return { data, error, loading, refresh }
 }

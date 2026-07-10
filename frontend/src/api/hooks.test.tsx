@@ -32,6 +32,20 @@ describe('useWebUiResource', () => {
     expect(result.current.error?.code).toBe('NETWORK_REQUEST_FAILED')
   })
 
+  it('does not invoke a disabled resource loader, including manual refresh', async () => {
+    const load = vi.fn<() => Promise<ApiResponse<string | null>>>().mockResolvedValue({
+      data: 'should not load',
+      error: null,
+    })
+    const { result } = renderHook(() => useWebUiResource(load, [], false))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => result.current.refresh())
+
+    expect(load).not.toHaveBeenCalled()
+    expect(result.current.data).toBeNull()
+  })
+
   it('keeps the last successful resource while a refresh is pending', async () => {
     let resolveRefresh: ((response: ApiResponse<string | null>) => void) | undefined
     const load = vi.fn<() => Promise<ApiResponse<string | null>>>()
