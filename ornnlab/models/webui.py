@@ -114,6 +114,14 @@ class DatasetImportInput(WebUiModel):
     version: str = Field(min_length=1)
 
 
+class DatasetParentPathInput(WebUiModel):
+    parent_path: str = Field(alias="parentPath", min_length=1)
+
+
+class DatasetPathInput(WebUiModel):
+    path: str = Field(min_length=1)
+
+
 class LeaderboardUpdateInput(WebUiModel):
     include_in_leaderboard: bool = Field(alias="includeInLeaderboard")
 

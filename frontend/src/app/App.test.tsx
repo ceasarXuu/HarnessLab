@@ -89,12 +89,15 @@ describe('App', () => {
     expect(within(datasetsTable).getByRole('columnheader', { name: 'Path' })).toBeInTheDocument()
     expect(within(datasetsTable).getByRole('columnheader', { name: 'Size' })).toBeInTheDocument()
     expect(within(datasetsTable).getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
-    expect(within(datasetsTable).getByText('~/.cache/harbor/datasets/terminal-bench')).toBeInTheDocument()
+    expect(within(datasetsTable).getByText('~/Datasets/terminal-bench@2.0')).toBeInTheDocument()
     expect(within(datasetsTable).getByText('1.2 GB')).toBeInTheDocument()
     expect(within(datasetsTable).getAllByText('Not downloaded').length).toBeGreaterThan(0)
     const sweRow = screen.getByText('swe-bench-lite').closest('tr')
     expect(sweRow).not.toBeNull()
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Download' }))
+    const downloadDialog = await screen.findByRole('dialog', { name: 'Download Dataset' })
+    fireEvent.change(within(downloadDialog).getByLabelText('Dataset parent directory'), { target: { value: '/tmp/datasets' } })
+    fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Start download' }))
     expect(screen.queryByRole('dialog', { name: 'Selected dataset' })).not.toBeInTheDocument()
     await within(sweRow as HTMLElement).findByText('0%')
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Cancel download' }))
@@ -151,6 +154,9 @@ describe('App', () => {
     fireEvent.click(sweDataset)
     const datasetDialog = screen.getByRole('dialog', { name: 'Selected dataset' })
     fireEvent.click(within(datasetDialog).getByRole('button', { name: 'Download' }))
+    const downloadDialog = await screen.findByRole('dialog', { name: 'Download Dataset' })
+    fireEvent.change(within(downloadDialog).getByLabelText('Dataset parent directory'), { target: { value: '/tmp/datasets' } })
+    fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Start download' }))
 
     await waitFor(
       () => expect(within(datasetDialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument(),

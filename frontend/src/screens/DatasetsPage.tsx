@@ -1,4 +1,4 @@
-import { Database, Download, Plus, Search, Trash2, X } from 'lucide-react'
+import { Database, Download, FolderInput, MapPin, Plus, Search, Trash2, Unlink, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useDataset, useDatasetTasks, useOperation } from '../api/hooks'
 import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
@@ -26,6 +26,12 @@ type DatasetDownloadState =
   | { status: 'not-downloaded' }
   | { progress: number; status: 'downloading' }
   | { path: string; size: string; status: 'downloaded' }
+  | { path: string; status: 'path-unavailable' }
+
+type LocationAction = {
+  mode: 'download' | 'move' | 'relocate'
+  row: DatasetRow
+}
 
 const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
 const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
@@ -35,6 +41,8 @@ const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
         size: row.size ?? 'unknown',
         status: 'downloaded',
       }
+    : row.downloadStatus === 'path-unavailable'
+      ? { path: row.downloadPath ?? row.path ?? '', status: 'path-unavailable' }
     : { status: 'not-downloaded' }
 const defaultImportDraft = {
   name: 'local/custom-dataset',
@@ -49,6 +57,9 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const [taskSearch, setTaskSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
+  const [locationAction, setLocationAction] = useState<LocationAction | null>(null)
+  const [locationPath, setLocationPath] = useState('')
+  const [registrationTarget, setRegistrationTarget] = useState<DatasetRow | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importDraft, setImportDraft] = useState(defaultImportDraft)
   const datasetOperation = useOperation(client)
@@ -79,9 +90,30 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
     }
     return initialDownloadState(row)
   }
-  const startDownload = async (row: DatasetRow) => {
+  const openLocationAction = async (mode: LocationAction['mode'], row: DatasetRow) => {
     if (!writesEnabled) return
-    await datasetOperation.submit(() => client.downloadDataset(datasetKey(row)), ({ operation }) => operation)
+    if (mode === 'relocate') {
+      setLocationPath(row.downloadPath ?? row.path ?? '')
+      setLocationAction({ mode, row })
+      return
+    }
+    const preference = await client.getDatasetDefaultParent()
+    setLocationPath(preference.data?.parentPath ?? '')
+    setLocationAction({ mode, row })
+  }
+  const confirmLocationAction = async () => {
+    if (!writesEnabled || !locationAction) return
+    const { mode, row } = locationAction
+    const path = locationPath.trim()
+    if (mode === 'download') {
+      await datasetOperation.submit(() => client.downloadDataset(datasetKey(row), { parentPath: path }), ({ operation }) => operation)
+    } else if (mode === 'move') {
+      await datasetOperation.submit(() => client.moveDataset(datasetKey(row), { parentPath: path }), ({ operation }) => operation)
+    } else {
+      await datasetOperation.submit(() => client.relocateDataset(datasetKey(row), { path }), ({ operation }) => operation)
+    }
+    setLocationAction(null)
+    setLocationPath('')
   }
   const cancelDownload = async (row: DatasetRow) => {
     if (!writesEnabled) return
@@ -100,6 +132,11 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
     if (!deleteTarget) return
     await datasetOperation.submit(() => client.deleteLocalDataset(datasetKey(deleteTarget)), ({ operation }) => operation)
     setDeleteTarget(null)
+  }
+  const confirmRemoveRegistration = async () => {
+    if (!writesEnabled || !registrationTarget) return
+    await datasetOperation.submit(() => client.removeDatasetRegistration(datasetKey(registrationTarget)), ({ operation }) => operation)
+    setRegistrationTarget(null)
   }
   const confirmImportDataset = async () => {
     if (!writesEnabled) return
@@ -184,14 +221,24 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                     </td>
                     <td>{row.tasks}</td>
                     <td>{row.source}</td>
-                    <td>{downloadState.status === 'downloaded' ? <code>{downloadState.path}</code> : t('notDownloaded')}</td>
-                    <td>{downloadState.status === 'downloaded' ? downloadState.size : t('notDownloaded')}</td>
+                    <td>
+                      {downloadState.status === 'downloaded' || downloadState.status === 'path-unavailable' ? (
+                        <code>{downloadState.path}</code>
+                      ) : t('notDownloaded')}
+                    </td>
+                    <td>
+                      {downloadState.status === 'downloaded'
+                        ? downloadState.size
+                        : downloadState.status === 'path-unavailable'
+                          ? t('pathUnavailable')
+                          : t('notDownloaded')}
+                    </td>
                     <td>
                       <div className="row-actions">
                         {downloadState.status === 'not-downloaded' && (
                           <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
                             event.stopPropagation()
-                            startDownload(row)
+                            void openLocationAction('download', row)
                           }}>
                             <Download aria-hidden="true" />
                             {t('download')}
@@ -210,13 +257,53 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                           </>
                         )}
                         {downloadState.status === 'downloaded' && (
-                          <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
-                            event.stopPropagation()
-                            setDeleteTarget(row)
-                          }}>
-                            <Trash2 aria-hidden="true" />
-                            {t('delete')}
-                          </button>
+                          <>
+                            {row.storageKind === 'managed' && (
+                              <>
+                                <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                                  event.stopPropagation()
+                                  void openLocationAction('move', row)
+                                }}>
+                                  <FolderInput aria-hidden="true" />
+                                  {t('moveDataset')}
+                                </button>
+                                <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                                  event.stopPropagation()
+                                  setDeleteTarget(row)
+                                }}>
+                                  <Trash2 aria-hidden="true" />
+                                  {t('delete')}
+                                </button>
+                              </>
+                            )}
+                            {row.storageKind === 'external' && (
+                              <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                                event.stopPropagation()
+                                setRegistrationTarget(row)
+                              }}>
+                                <Unlink aria-hidden="true" />
+                                {t('removeRegistration')}
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {downloadState.status === 'path-unavailable' && (
+                          <>
+                            <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                              event.stopPropagation()
+                              void openLocationAction('relocate', row)
+                            }}>
+                              <MapPin aria-hidden="true" />
+                              {t('relocateDataset')}
+                            </button>
+                            <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                              event.stopPropagation()
+                              setRegistrationTarget(row)
+                            }}>
+                              <Unlink aria-hidden="true" />
+                              {t('removeRegistration')}
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -247,7 +334,10 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               onCancelDownload={cancelDownload}
               onDelete={setDeleteTarget}
               onExpandedTaskName={setExpandedTaskName}
-              onStartDownload={startDownload}
+              onStartDownload={(row) => void openLocationAction('download', row)}
+              onMove={(row) => void openLocationAction('move', row)}
+              onRelocate={(row) => void openLocationAction('relocate', row)}
+              onRemoveRegistration={setRegistrationTarget}
               onSync={syncDataset}
               onTaskSearch={setTaskSearch}
               onRunTask={runTask}
@@ -269,6 +359,36 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
         />
+      )}
+      {registrationTarget && (
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmRemoveRegistration')}
+          impacts={[t('removeDatasetRegistrationImpact'), datasetKey(registrationTarget)]}
+          title={t('removeDatasetRegistrationTitle')}
+          onCancel={() => setRegistrationTarget(null)}
+          onConfirm={confirmRemoveRegistration}
+        />
+      )}
+      {locationAction && (
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t(locationAction.mode === 'download' ? 'confirmDownload' : locationAction.mode === 'move' ? 'confirmMoveDataset' : 'confirmRelocateDataset')}
+          impacts={[t(locationAction.mode === 'relocate' ? 'relocateDatasetImpact' : 'datasetParentPathImpact')]}
+          title={t(locationAction.mode === 'download' ? 'downloadDatasetTitle' : locationAction.mode === 'move' ? 'moveDatasetTitle' : 'relocateDatasetTitle')}
+          onCancel={() => {
+            setLocationAction(null)
+            setLocationPath('')
+          }}
+          onConfirm={confirmLocationAction}
+        >
+          <div className="dataset-location-form">
+            <label>
+              {t(locationAction.mode === 'relocate' ? 'datasetPath' : 'datasetParentPath')}
+              <input value={locationPath} onChange={(event) => setLocationPath(event.target.value)} />
+            </label>
+          </div>
+        </ConfirmDialog>
       )}
       {importDialogOpen && (
         <ConfirmDialog

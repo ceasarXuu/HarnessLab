@@ -78,7 +78,8 @@ export interface JobDto {
 }
 
 export type DatasetVisibility = 'public' | 'private'
-export type DatasetDownloadStatus = 'downloaded' | 'not-downloaded'
+export type DatasetDownloadStatus = 'downloaded' | 'not-downloaded' | 'path-unavailable'
+export type DatasetStorageKind = 'external' | 'managed'
 
 export interface DatasetDto {
   ref: string
@@ -91,6 +92,7 @@ export interface DatasetDto {
     status: DatasetDownloadStatus
     path?: string
     sizeBytes?: number
+    storageKind?: DatasetStorageKind
   }
   registryUrl?: string
 }
@@ -299,6 +301,18 @@ export interface DatasetImportRequestDto {
   path: string
   taskCount: number
   version: string
+}
+
+export interface DatasetParentPathRequestDto {
+  parentPath: string
+}
+
+export interface DatasetPathRequestDto {
+  path: string
+}
+
+export interface DatasetStoragePreferenceDto {
+  parentPath: string
 }
 
 export interface UpdateJobLeaderboardRequestDto {

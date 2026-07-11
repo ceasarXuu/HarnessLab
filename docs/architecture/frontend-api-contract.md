@@ -2,7 +2,7 @@
 
 - 状态：Active
 - 适用版本：v1.0.5
-- 更新：2026-07-10
+- 更新：2026-07-12
 - 实现入口：`ornnlab/api/webui.py`、`frontend/src/api/contract.ts`
 
 本文是 OrnnLab WebUI 的唯一对外 API 契约。产品语义见 [v1.0.5 PRD](../releases/v1.0.5/prd.md)，技术结构见 [技术设计](../releases/v1.0.5/technical-design.md)，实施状态见 [工程计划](../releases/v1.0.5/engineering-plan.md)。
@@ -99,7 +99,8 @@ interface Operation {
 | Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
 | Job | `PATCH /jobs/{id}/leaderboard` | `{ job, leaderboard, operation }` |
 | Dataset | `GET /datasets`、`GET /datasets/{ref}`、`GET /datasets/{ref}/tasks` | `Page<Dataset>`、`Dataset`、`Page<DatasetTask>` |
-| Dataset | `POST /datasets/import`、`POST /datasets/{ref}/download`、`POST /datasets/{ref}/download/cancel`、`POST /datasets/{ref}/sync`、`DELETE /datasets/{ref}/local` | `{ operation }` |
+| Dataset | `GET /datasets/storage/default-parent` | `{ parentPath }` |
+| Dataset | `POST /datasets/import`、`POST /datasets/{ref}/download`、`POST /datasets/{ref}/download/cancel`、`POST /datasets/{ref}/move`、`POST /datasets/{ref}/relocate`、`POST /datasets/{ref}/sync`、`DELETE /datasets/{ref}/local`、`DELETE /datasets/{ref}/registration` | `{ operation }` |
 | Leaderboard | `GET /leaderboard/datasets`、`GET /leaderboard` | `Page<LeaderboardDataset>`、`Page<LeaderboardEntry>` |
 | System | `GET /system/health`、`GET /system/hub-connection` | `Page<SystemComponent>`、`HubConnection` |
 | System | `POST /system/service/update/check` | `UpdateCheckResult` |
@@ -200,13 +201,22 @@ interface Dataset {
   taskCount: number
   source: string
   registryUrl?: string
-  download: { status: 'downloaded' | 'not-downloaded'; path?: string; sizeBytes?: number }
+  download: {
+    status: 'downloaded' | 'not-downloaded' | 'path-unavailable'
+    path?: string
+    sizeBytes?: number
+    storageKind?: 'managed' | 'external'
+  }
 }
 
 interface DatasetTask { datasetRef: string; name: string; description: string }
 ```
 
-`POST /datasets/import` 接受 `{ name, version, path, taskCount }`，登记本地 Dataset，不伪造文件上传。Dataset/Task 不接受通用 `split` 字段或 query。
+`POST /datasets/import` 接受 `{ name, version, path, taskCount }`，把现有本地目录登记为 `external` Dataset；不会上传、复制、移动或删除该目录。Dataset/Task 不接受通用 `split` 字段或 query。
+
+Registry Dataset 下载和移动都接受 `{ parentPath }`：该值是父目录，OrnnLab 使用不可编辑的 `Dataset name + version` 目录名在其下创建唯一子目录，并将最近一次成功选择记为 `GET /datasets/storage/default-parent` 的 `parentPath`。目标子目录已存在时返回 `INVALID_REQUEST`，不会覆盖目录。
+
+下载后的 Registry Dataset 为 `managed`，目录中有 `.ornnlab-dataset.json` 标记。只有 `managed` Dataset 可以通过 `POST /datasets/{ref}/move` 移动、通过 `DELETE /datasets/{ref}/local` 删除文件；移动失败时保留原目录。存在的 `managed` Dataset 不能直接移除登记，必须先删除其目录；若其路径已失效，则可移除失效记录。`external` Dataset 永远不能由 OrnnLab 删除，用户只能使用 `POST /datasets/{ref}/relocate` 提供当前实际目录，或 `DELETE /datasets/{ref}/registration` 移除 OrnnLab 注册。路径不再存在时读取返回 `download.status = 'path-unavailable'`，保留原路径以便重新定位。
 
 ### Agent 与 MCP
 

@@ -147,6 +147,44 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
     assert dataset_response["download"]["status"] == "downloaded"
 
 
+def test_webui_external_dataset_storage_routes_preserve_files(client, tmp_path: Path):
+    original = _dataset_directory(tmp_path / "original")
+    relocated = _dataset_directory(tmp_path / "relocated")
+    imported = client.post(
+        f"{API}/datasets/import",
+        json={"name": "local/storage", "version": "v1", "path": str(original), "taskCount": 1},
+    ).json()["data"]["operation"]
+    assert _wait_operation(client, imported["id"])["status"] == "completed"
+
+    default_parent = client.get(f"{API}/datasets/storage/default-parent").json()["data"]
+    assert default_parent["parentPath"] == str(client.app.state.settings.datasets_dir)
+
+    delete = client.delete(f"{API}/datasets/local%2Fstorage%40v1/local")
+    assert delete.status_code == 422
+    assert delete.json()["error"]["code"] == "INVALID_REQUEST"
+
+    moved = client.post(
+        f"{API}/datasets/local%2Fstorage%40v1/relocate", json={"path": str(relocated)}
+    ).json()["data"]["operation"]
+    assert moved["status"] == "completed"
+    detail = client.get(f"{API}/datasets/local%2Fstorage%40v1").json()["data"]
+    assert detail["download"] == {
+        "path": str(relocated),
+        "sizeBytes": detail["download"]["sizeBytes"],
+        "status": "downloaded",
+        "storageKind": "external",
+    }
+
+    removed = client.delete(f"{API}/datasets/local%2Fstorage%40v1/registration").json()["data"][
+        "operation"
+    ]
+    assert removed["status"] == "completed"
+    assert original.is_dir()
+    assert relocated.is_dir()
+    datasets = client.get(f"{API}/datasets?q=local/storage").json()["data"]
+    assert datasets["items"] == []
+
+
 def test_system_restart_reports_real_supervisor_requirement(client):
     response = client.post(f"{API}/system/service/restart")
 
@@ -234,14 +272,17 @@ def test_scores_require_an_explicit_harbor_scale():
     }
     raw_metric_result = {"score": 87, "stats": {"evals": {"test": {"metrics": [{"sum": 87}]}}}}
     assert _job_score(raw_metric_result) is None
-    assert _trial_dto(
-        "job-1",
-        {
-            "id": "trial-raw",
-            "task_name": "raw",
-            "verifier_result": {"rewards": {"reward": 4}},
-        },
-    )["score"] is None
+    assert (
+        _trial_dto(
+            "job-1",
+            {
+                "id": "trial-raw",
+                "task_name": "raw",
+                "verifier_result": {"rewards": {"reward": 4}},
+            },
+        )["score"]
+        is None
+    )
 
 
 def test_pass_at_one_supports_native_and_json_keys():
@@ -346,6 +387,14 @@ def _wait_operation(client, operation_id: str) -> dict:
             return operation
         time.sleep(0.05)
     raise AssertionError(f"operation {operation_id} did not reach a terminal state")
+
+
+def _dataset_directory(path: Path) -> Path:
+    task = path / "hello"
+    (task / "environment").mkdir(parents=True)
+    (task / "instruction.md").write_text("Solve this task.", encoding="utf-8")
+    (task / "task.toml").write_text('schema_version = "1.3"\n', encoding="utf-8")
+    return path
 
 
 def _agent_payload() -> dict:

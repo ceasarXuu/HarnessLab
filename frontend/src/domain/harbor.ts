@@ -120,8 +120,9 @@ export interface DatasetRow {
   source: string
   digest?: string
   updated?: string
-  downloadStatus: 'downloaded' | 'not-downloaded'
+  downloadStatus: 'downloaded' | 'not-downloaded' | 'path-unavailable'
   downloadPath?: string
+  storageKind?: 'external' | 'managed'
   size?: string
   registryUrl?: string
   registryPath?: string

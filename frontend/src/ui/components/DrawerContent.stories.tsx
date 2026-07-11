@@ -48,6 +48,76 @@ export const Dataset: Story = {
           onCancelDownload={() => undefined}
           onDelete={() => undefined}
           onExpandedTaskName={() => undefined}
+          onMove={() => undefined}
+          onRelocate={() => undefined}
+          onRemoveRegistration={() => undefined}
+          onStartDownload={() => undefined}
+          onSync={() => undefined}
+          onTaskSearch={() => undefined}
+          onRunTask={() => undefined}
+        />
+      </main>
+    )
+  },
+}
+
+export const ExternalDataset: Story = {
+  render: () => {
+    const dataset = {
+      ...datasetRows[2],
+      downloadPath: '/Users/demo/datasets/hello-world',
+      size: '18.0 MB',
+      storageKind: 'external' as const,
+    }
+    return (
+      <main className="workspace single-page">
+        <DatasetDetail
+          downloadState={{ path: dataset.downloadPath, size: dataset.size, status: 'downloaded' }}
+          expandedTaskName={null}
+          isRegistryDataset={false}
+          selected={dataset}
+          taskSearch=""
+          tasks={[]}
+          t={t}
+          onCancelDownload={() => undefined}
+          onDelete={() => undefined}
+          onExpandedTaskName={() => undefined}
+          onMove={() => undefined}
+          onRelocate={() => undefined}
+          onRemoveRegistration={() => undefined}
+          onStartDownload={() => undefined}
+          onSync={() => undefined}
+          onTaskSearch={() => undefined}
+          onRunTask={() => undefined}
+        />
+      </main>
+    )
+  },
+}
+
+export const DatasetPathUnavailable: Story = {
+  render: () => {
+    const dataset = {
+      ...datasetRows[0],
+      downloadPath: '/Volumes/archive/terminal-bench@2.0',
+      storageKind: 'managed' as const,
+    }
+    return (
+      <main className="workspace single-page">
+        <DatasetDetail
+          downloadState={{ path: dataset.downloadPath, status: 'path-unavailable' }}
+          expandedTaskName={null}
+          isRegistryDataset
+          selected={dataset}
+          taskSearch=""
+          tasks={[]}
+          t={t}
+          onCancelDownload={() => undefined}
+          onDelete={() => undefined}
+          onExpandedTaskName={() => undefined}
+          onMove={() => undefined}
+          onRelocate={() => undefined}
+          onRemoveRegistration={() => undefined}
           onStartDownload={() => undefined}
           onSync={() => undefined}
           onTaskSearch={() => undefined}

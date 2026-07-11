@@ -27,7 +27,12 @@ export function toDatasetDto(dataset: DatasetRow): DatasetDto {
   return {
     ref: `${dataset.name}@${dataset.version}`, name: dataset.name, version: dataset.version, visibility: dataset.visibility,
     taskCount: dataset.tasks, source: dataset.source,
-    download: { status: dataset.downloadStatus, path: dataset.downloadPath ?? dataset.path ?? dataset.downloadDir, sizeBytes: parseSizeBytes(dataset.size) },
+    download: {
+      status: dataset.downloadStatus,
+      path: dataset.downloadPath ?? dataset.path ?? dataset.downloadDir,
+      sizeBytes: parseSizeBytes(dataset.size),
+      storageKind: dataset.storageKind ?? (dataset.source === 'local package' ? 'external' : 'managed'),
+    },
     registryUrl: dataset.registryUrl,
   }
 }

@@ -1,4 +1,4 @@
-import { Box, Download, Search, Trash2, X } from 'lucide-react'
+import { Box, Download, FolderInput, MapPin, Search, Trash2, Unlink, X } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
@@ -8,6 +8,7 @@ type DatasetDownloadState =
   | { status: 'not-downloaded' }
   | { progress: number; status: 'downloading' }
   | { path: string; size: string; status: 'downloaded' }
+  | { path: string; status: 'path-unavailable' }
 
 interface DatasetDetailProps {
   downloadState: DatasetDownloadState
@@ -21,6 +22,9 @@ interface DatasetDetailProps {
   onCancelDownload: (row: DatasetRow) => void
   onDelete: (row: DatasetRow) => void
   onExpandedTaskName: Dispatch<SetStateAction<string | null>>
+  onMove: (row: DatasetRow) => void
+  onRelocate: (row: DatasetRow) => void
+  onRemoveRegistration: (row: DatasetRow) => void
   onStartDownload: (row: DatasetRow) => void
   onSync: (row: DatasetRow) => void
   onRunTask: (row: DatasetRow, taskName: string) => void
@@ -34,6 +38,9 @@ export function DatasetDetail({
   onCancelDownload,
   onDelete,
   onExpandedTaskName,
+  onMove,
+  onRelocate,
+  onRemoveRegistration,
   onStartDownload,
   onSync,
   onTaskSearch,
@@ -59,7 +66,7 @@ export function DatasetDetail({
         <div className="metric-grid">
           <Metric label={t('tasksCount')} value={String(selected.tasks)} />
           <Metric label={t('sourceRef')} value={selected.source} />
-          <Metric label={t('path')} value={downloadState.status === 'downloaded' ? downloadState.path : t('notDownloaded')} />
+          <Metric label={t('path')} value={downloadState.status === 'downloaded' || downloadState.status === 'path-unavailable' ? downloadState.path : t('notDownloaded')} />
           <Metric label={t('size')} value={downloadState.status === 'downloaded' ? downloadState.size : t('notDownloaded')} />
           <Metric label={t('registry')} value={selected.registryUrl ?? '-'} />
         </div>
@@ -82,11 +89,35 @@ export function DatasetDetail({
           {downloadState.status === 'downloaded' && isRegistryDataset && (
             <button className="secondary-button" disabled={writeDisabled} onClick={() => onSync(selected)}>{t('pullUpdates')}</button>
           )}
-          {downloadState.status === 'downloaded' && (
+          {downloadState.status === 'downloaded' && selected.storageKind === 'managed' && (
+            <button className="secondary-button" disabled={writeDisabled} onClick={() => onMove(selected)}>
+              <FolderInput aria-hidden="true" />
+              {t('moveDataset')}
+            </button>
+          )}
+          {downloadState.status === 'downloaded' && selected.storageKind === 'managed' && (
             <button className="secondary-button" disabled={writeDisabled} onClick={() => onDelete(selected)}>
               <Trash2 aria-hidden="true" />
               {t('delete')}
             </button>
+          )}
+          {downloadState.status === 'downloaded' && selected.storageKind === 'external' && (
+            <button className="secondary-button" disabled={writeDisabled} onClick={() => onRemoveRegistration(selected)}>
+              <Unlink aria-hidden="true" />
+              {t('removeRegistration')}
+            </button>
+          )}
+          {downloadState.status === 'path-unavailable' && (
+            <>
+              <button className="secondary-button" disabled={writeDisabled} onClick={() => onRelocate(selected)}>
+                <MapPin aria-hidden="true" />
+                {t('relocateDataset')}
+              </button>
+              <button className="secondary-button" disabled={writeDisabled} onClick={() => onRemoveRegistration(selected)}>
+                <Unlink aria-hidden="true" />
+                {t('removeRegistration')}
+              </button>
+            </>
           )}
         </div>
       </section>

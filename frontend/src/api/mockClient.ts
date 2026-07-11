@@ -26,6 +26,7 @@ export function createMockWebUiClient(): WebUiClient {
   let agentDtos = agentRows.map(toAgentDto)
   let datasetDtos = datasetRows.map(toDatasetDto)
   let environmentDtos = environmentRows.map(toEnvironmentDto)
+  let lastDatasetParent = '~/Datasets'
   const taskDtos = taskRows.map(toDatasetTaskDto)
   const eventDtos = events.map((event) => ({ event: toJobEventDto(event), jobId: event.jobId }))
   let leaderboardDtos = leaderboardRows.map(toLeaderboardEntryDto)
@@ -108,17 +109,30 @@ export function createMockWebUiClient(): WebUiClient {
       return operationResult(operations.complete('delete-environment', 'environment', id, 'Environment deleted'))
     },
     async deleteLocalDataset(ref) {
-      datasetDtos = datasetDtos.map((dataset) => (dataset.ref === ref ? { ...dataset, download: { status: 'not-downloaded' } } : dataset))
-      return operationResult(operations.complete('delete-local-dataset', 'dataset', ref, 'Local dataset removed'))
-    },
-    async downloadDataset(ref) {
       const dataset = datasetDtos.find((item) => item.ref === ref)
       if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
+      if (dataset.download.storageKind !== 'managed') {
+        return failure('DATASET_EXTERNAL_IMMUTABLE', 'External Dataset files cannot be deleted by OrnnLab')
+      }
+      datasetDtos = datasetDtos.map((item) => (item.ref === ref ? { ...item, download: { status: 'not-downloaded' } } : item))
+      return operationResult(operations.complete('delete-local-dataset', 'dataset', ref, 'Local dataset removed'))
+    },
+    async downloadDataset(ref, request) {
+      const dataset = datasetDtos.find((item) => item.ref === ref)
+      if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
+      const parentPath = request.parentPath.trim()
+      if (!parentPath) return failure('INVALID_REQUEST', 'Dataset parent directory is required')
+      lastDatasetParent = parentPath
       return operationResult(submitOperation('download-dataset', 'dataset', ref, {
         onCompleted: () => {
           datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
             ...item,
-            download: { path: `~/.cache/harbor/datasets/${ref.replace('@', '-')}`, sizeBytes: item.download.sizeBytes, status: 'downloaded' },
+            download: {
+              path: `${parentPath}/${managedDatasetDirectory(ref)}`,
+              sizeBytes: item.download.sizeBytes,
+              status: 'downloaded',
+              storageKind: 'managed',
+            },
           } : item)
         },
       }))
@@ -128,6 +142,9 @@ export function createMockWebUiClient(): WebUiClient {
     },
     async getDataset(ref) {
       return findById(datasetDtos, ref, 'DATASET_NOT_FOUND', 'Dataset not found', 'ref')
+    },
+    async getDatasetDefaultParent() {
+      return success({ parentPath: lastDatasetParent })
     },
     async getEnvironment(id) {
       return findById(environmentDtos, id, 'ENVIRONMENT_NOT_FOUND', 'Environment not found', 'id')
@@ -146,7 +163,7 @@ export function createMockWebUiClient(): WebUiClient {
     async importDataset(request) {
       const ref = `${request.name}@${request.version}`
       const dataset: DatasetDto = {
-        download: { path: request.path, status: 'downloaded' },
+        download: { path: request.path, status: 'downloaded', storageKind: 'external' },
         name: request.name,
         ref,
         source: 'local import',
@@ -160,6 +177,46 @@ export function createMockWebUiClient(): WebUiClient {
     },
     async installSystemUpdate() {
       return operationResult(operations.submit('install-system-update', 'system', 'ornnlab-service'))
+    },
+    async moveDataset(ref, request) {
+      const dataset = datasetDtos.find((item) => item.ref === ref)
+      if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
+      if (dataset.download.storageKind !== 'managed' || dataset.download.status !== 'downloaded') {
+        return failure('DATASET_NOT_MOVABLE', 'Only downloaded managed Datasets can be moved')
+      }
+      const parentPath = request.parentPath.trim()
+      if (!parentPath) return failure('INVALID_REQUEST', 'Dataset parent directory is required')
+      lastDatasetParent = parentPath
+      return operationResult(submitOperation('move-dataset', 'dataset', ref, {
+        onCompleted: () => {
+          datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
+            ...item,
+            download: { ...item.download, path: `${parentPath}/${managedDatasetDirectory(ref)}` },
+          } : item)
+        },
+      }))
+    },
+    async relocateDataset(ref, request) {
+      const dataset = datasetDtos.find((item) => item.ref === ref)
+      if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
+      const path = request.path.trim()
+      if (!path) return failure('INVALID_REQUEST', 'Dataset path is required')
+      datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
+        ...item,
+        download: { ...item.download, path, status: 'downloaded' },
+      } : item)
+      return operationResult(operations.complete('relocate-dataset', 'dataset', ref, 'Dataset path updated'))
+    },
+    async removeDatasetRegistration(ref) {
+      const dataset = datasetDtos.find((item) => item.ref === ref)
+      if (!dataset) return failure('DATASET_NOT_FOUND', 'Dataset not found')
+      if (dataset.download.storageKind === 'managed' && dataset.download.status === 'downloaded') {
+        return failure('DATASET_MANAGED_REGISTRATION_REQUIRED', 'Managed Dataset must be deleted before removing its registration')
+      }
+      datasetDtos = dataset.source === 'local import'
+        ? datasetDtos.filter((item) => item.ref !== ref)
+        : datasetDtos.map((item) => item.ref === ref ? { ...item, download: { status: 'not-downloaded' } } : item)
+      return operationResult(operations.complete('remove-dataset-registration', 'dataset', ref, 'Dataset registration removed'))
     },
     async listAgents(query) {
       return success(page(filterAgents(agentDtos, query)))
@@ -287,6 +344,10 @@ function uniqueId(items: Array<{ id: string }>, base: string): string {
     candidate = `${base}-${index}`
   }
   return candidate
+}
+
+function managedDatasetDirectory(ref: string): string {
+  return ref.replace('/', '--')
 }
 
 function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent: import('./contract').AgentDto): JobDto {

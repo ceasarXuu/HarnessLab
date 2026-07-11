@@ -467,6 +467,20 @@ code {
 .import-dataset-form input {
   min-width: 0;
 }
+.dataset-location-form {
+  margin-bottom: 14px;
+}
+.dataset-location-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+}
+.dataset-location-form input {
+  min-width: 0;
+}
 .confirm-actions {
   justify-content: flex-end;
   margin: 16px 0 0;

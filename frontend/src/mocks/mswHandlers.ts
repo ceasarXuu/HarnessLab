@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { createMockWebUiClient } from '../api/mockClient'
-import type { AgentAvailability, AgentInputDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
+import type { AgentAvailability, AgentInputDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, DatasetParentPathRequestDto, DatasetPathRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
 
 const webui = '*/api/webui/v1'
 const client = createMockWebUiClient()
@@ -92,14 +92,26 @@ export const webuiHandlers = [
   http.post(`${webui}/datasets/import`, async ({ request }) =>
     HttpResponse.json(await client.importDataset(await jsonBody<DatasetImportRequestDto>(request))),
   ),
-  http.post(`${webui}/datasets/:datasetRef/download`, async ({ params }) =>
-    HttpResponse.json(await client.downloadDataset(String(params.datasetRef))),
+  http.get(`${webui}/datasets/storage/default-parent`, async () =>
+    HttpResponse.json(await client.getDatasetDefaultParent()),
+  ),
+  http.post(`${webui}/datasets/:datasetRef/download`, async ({ params, request }) =>
+    HttpResponse.json(await client.downloadDataset(String(params.datasetRef), await jsonBody<DatasetParentPathRequestDto>(request))),
   ),
   http.post(`${webui}/datasets/:datasetRef/download/cancel`, async ({ params }) =>
     HttpResponse.json(await client.cancelDatasetDownload(String(params.datasetRef))),
   ),
   http.delete(`${webui}/datasets/:datasetRef/local`, async ({ params }) =>
     HttpResponse.json(await client.deleteLocalDataset(String(params.datasetRef))),
+  ),
+  http.delete(`${webui}/datasets/:datasetRef/registration`, async ({ params }) =>
+    HttpResponse.json(await client.removeDatasetRegistration(String(params.datasetRef))),
+  ),
+  http.post(`${webui}/datasets/:datasetRef/move`, async ({ params, request }) =>
+    HttpResponse.json(await client.moveDataset(String(params.datasetRef), await jsonBody<DatasetParentPathRequestDto>(request))),
+  ),
+  http.post(`${webui}/datasets/:datasetRef/relocate`, async ({ params, request }) =>
+    HttpResponse.json(await client.relocateDataset(String(params.datasetRef), await jsonBody<DatasetPathRequestDto>(request))),
   ),
   http.post(`${webui}/datasets/:datasetRef/sync`, async ({ params }) =>
     HttpResponse.json(await client.syncDataset(String(params.datasetRef))),

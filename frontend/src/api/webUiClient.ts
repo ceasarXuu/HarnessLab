@@ -13,6 +13,9 @@ import type {
   CreateJobRequestDto,
   CreateJobResponseDto,
   DatasetImportRequestDto,
+  DatasetParentPathRequestDto,
+  DatasetPathRequestDto,
+  DatasetStoragePreferenceDto,
   JobDto,
   JobEventDto,
   LeaderboardDatasetDto,
@@ -43,15 +46,19 @@ export interface WebUiClient {
   deleteAgent(id: string): Promise<ApiResponse<OperationResultDto | null>>
   deleteEnvironment(id: string): Promise<ApiResponse<OperationResultDto | null>>
   deleteLocalDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
-  downloadDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
+  downloadDataset(ref: string, request: DatasetParentPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   getAgent(id: string): Promise<ApiResponse<AgentDto | null>>
   getDataset(ref: string): Promise<ApiResponse<DatasetDto | null>>
+  getDatasetDefaultParent(): Promise<ApiResponse<DatasetStoragePreferenceDto | null>>
   getEnvironment(id: string): Promise<ApiResponse<EnvironmentDto | null>>
   getHubConnection(): Promise<ApiResponse<HubConnectionDto | null>>
   getJob(id: string): Promise<ApiResponse<JobDto | null>>
   getOperation(id: string): Promise<ApiResponse<Operation | null>>
   importDataset(request: DatasetImportRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   installSystemUpdate(): Promise<ApiResponse<OperationResultDto | null>>
+  moveDataset(ref: string, request: DatasetParentPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
+  relocateDataset(ref: string, request: DatasetPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
+  removeDatasetRegistration(ref: string): Promise<ApiResponse<OperationResultDto | null>>
   listAgents(query?: AgentQuery): Promise<ApiResponse<Page<AgentDto> | null>>
   listDatasetTasks(ref: string, query?: DatasetTaskQuery): Promise<ApiResponse<Page<DatasetTaskDto> | null>>
   listDatasets(query?: ListQuery): Promise<ApiResponse<Page<DatasetDto> | null>>
@@ -85,15 +92,19 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     deleteAgent: (id) => send<OperationResultDto>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`, 'DELETE'),
     deleteEnvironment: (id) => send<OperationResultDto>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`, 'DELETE'),
     deleteLocalDataset: (ref) => send<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/local`, 'DELETE'),
-    downloadDataset: (ref) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/download`),
+    downloadDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/download`, body),
     getAgent: (id) => requestJson<AgentDto | null>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`),
     getDataset: (ref) => requestJson<DatasetDto | null>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}`),
+    getDatasetDefaultParent: () => requestJson<DatasetStoragePreferenceDto | null>(request, `${baseUrl}/datasets/storage/default-parent`),
     getEnvironment: (id) => requestJson<EnvironmentDto | null>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`),
     getHubConnection: () => requestJson<HubConnectionDto | null>(request, `${baseUrl}/system/hub-connection`),
     getJob: (id) => requestJson<JobDto | null>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}`),
     getOperation: (id) => requestJson<Operation | null>(request, `${baseUrl}/operations/${encodeURIComponent(id)}`),
     importDataset: (body) => post<OperationResultDto>(request, `${baseUrl}/datasets/import`, body),
     installSystemUpdate: () => post<OperationResultDto>(request, `${baseUrl}/system/service/update`),
+    moveDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/move`, body),
+    relocateDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/relocate`, body),
+    removeDatasetRegistration: (ref) => send<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/registration`, 'DELETE'),
     listAgents: (query) => requestJson<Page<AgentDto>>(request, `${baseUrl}/agents${toSearch(query)}`),
     listDatasetTasks: (ref, query) =>
       requestJson<Page<DatasetTaskDto>>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/tasks${toSearch(query)}`),

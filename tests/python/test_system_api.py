@@ -11,7 +11,7 @@ from ornnlab.services.experiment_service import ExperimentService
 def test_system_status_reports_core_fields(settings):
     payload = DoctorService(settings).status()
 
-    assert payload["db_schema_version"] == 4
+    assert payload["db_schema_version"] == 5
     assert payload["data_dir"]
     assert payload["stale_running_runs"] == 0
     assert "docker" in payload

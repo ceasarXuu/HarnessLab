@@ -10,7 +10,7 @@ describe('Stage 3 Operation write boundary', () => {
     const agent = agents.data?.items.find((item) => item.type === 'custom') as AgentDto
     const environment = environments.data?.items.find((item) => item.profileType === 'custom') as EnvironmentDto
 
-    const [job, dataset, agentUpdate, environmentUpdate, leaderboard, system, update] = await Promise.all([
+    const [job, datasetDownload, datasetMove, datasetRelocate, datasetRegistration, agentUpdate, environmentUpdate, leaderboard, system, update] = await Promise.all([
       client.createJob({
         config: {
           agentSetupTimeoutMultiplier: 1,
@@ -41,7 +41,10 @@ describe('Stage 3 Operation write boundary', () => {
         },
         runImmediately: true,
       }),
-      client.downloadDataset('swe-bench-lite@2026.06'),
+      client.downloadDataset('swe-bench-lite@2026.06', { parentPath: '/tmp/datasets' }),
+      client.moveDataset('terminal-bench@2.0', { parentPath: '/tmp/relocated' }),
+      client.relocateDataset('terminal-bench@2.0', { path: '/tmp/relocated/terminal-bench@2.0' }),
+      client.removeDatasetRegistration('harbor/hello-world@latest'),
       client.updateAgent(agent.id, agent),
       client.updateEnvironment(environment.id, environment),
       client.updateJobLeaderboard('job_91a7', { includeInLeaderboard: false }),
@@ -50,7 +53,10 @@ describe('Stage 3 Operation write boundary', () => {
     ])
 
     expect(job.data?.operation).toMatchObject({ status: 'completed', type: 'run-job' })
-    expect(dataset.data?.operation.status).toBe('queued')
+    expect(datasetDownload.data?.operation.status).toBe('queued')
+    expect(datasetMove.data?.operation.status).toBe('queued')
+    expect(datasetRelocate.data?.operation.status).toBe('completed')
+    expect(datasetRegistration.data?.operation.status).toBe('completed')
     expect(agentUpdate.data?.operation.status).toBe('completed')
     expect(environmentUpdate.data?.operation.status).toBe('completed')
     expect(leaderboard.data?.operation.status).toBe('completed')

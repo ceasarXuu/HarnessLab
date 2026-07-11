@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
 from fastapi import APIRouter, Request
@@ -8,6 +9,8 @@ from ornnlab.models.webui import (
     AgentInput,
     CreateJobInput,
     DatasetImportInput,
+    DatasetParentPathInput,
+    DatasetPathInput,
     EnvironmentInput,
     LeaderboardUpdateInput,
 )
@@ -224,13 +227,21 @@ async def import_dataset(payload: DatasetImportInput, request: Request) -> dict:
     return _data(request, {"operation": operation})
 
 
+@router.get("/datasets/storage/default-parent")
+async def dataset_default_parent(request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, _datasets(request).default_download_parent())
+
+
 @router.post("/datasets/{dataset_ref:path}/download")
-async def download_dataset(dataset_ref: str, request: Request) -> dict:
+async def download_dataset(
+    dataset_ref: str, payload: DatasetParentPathInput, request: Request
+) -> dict:
     _require_query(request, set())
     datasets = _datasets(request)
 
     async def work(progress) -> None:
-        await datasets.download(dataset_ref, progress)
+        await datasets.download(dataset_ref, payload.parent_path, progress)
 
     operation = _operations(request).submit("download-dataset", "dataset", dataset_ref, work)
     return _data(request, {"operation": operation})
@@ -253,6 +264,42 @@ async def delete_local_dataset(dataset_ref: str, request: Request) -> dict:
     _datasets(request).delete_local(dataset_ref)
     operation = _operations(request).complete(
         "delete-local-dataset", "dataset", dataset_ref, "Local dataset removed"
+    )
+    return _data(request, {"operation": operation})
+
+
+@router.delete("/datasets/{dataset_ref:path}/registration")
+async def remove_dataset_registration(dataset_ref: str, request: Request) -> dict:
+    _require_query(request, set())
+    _datasets(request).remove_registration(dataset_ref)
+    operation = _operations(request).complete(
+        "remove-dataset-registration", "dataset", dataset_ref, "Dataset registration removed"
+    )
+    return _data(request, {"operation": operation})
+
+
+@router.post("/datasets/{dataset_ref:path}/move")
+async def move_dataset(
+    dataset_ref: str, payload: DatasetParentPathInput, request: Request
+) -> dict:
+    _require_query(request, set())
+    datasets = _datasets(request)
+
+    async def work(progress) -> None:
+        progress(10, "Moving Dataset")
+        await asyncio.to_thread(datasets.move, dataset_ref, payload.parent_path)
+        progress(100, "Dataset moved")
+
+    operation = _operations(request).submit("move-dataset", "dataset", dataset_ref, work)
+    return _data(request, {"operation": operation})
+
+
+@router.post("/datasets/{dataset_ref:path}/relocate")
+async def relocate_dataset(dataset_ref: str, payload: DatasetPathInput, request: Request) -> dict:
+    _require_query(request, set())
+    _datasets(request).relocate(dataset_ref, payload.path)
+    operation = _operations(request).complete(
+        "relocate-dataset", "dataset", dataset_ref, "Dataset path updated"
     )
     return _data(request, {"operation": operation})
 
