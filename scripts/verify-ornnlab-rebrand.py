@@ -113,10 +113,10 @@ def main() -> int:
 
 def _check_doc_inventory() -> dict[str, Any]:
     discovered = {
-        str(path.relative_to(ROOT))
+        _normalize_path(path.relative_to(ROOT))
         for root in ["docs"]
         for path in (ROOT / root).rglob("*.md")
-        if "/archive/" not in str(path.relative_to(ROOT))
+        if "/archive/" not in _normalize_path(path.relative_to(ROOT))
     }
     expected = set(DOC_INVENTORY)
     missing = sorted(discovered - expected)
@@ -127,6 +127,10 @@ def _check_doc_inventory() -> dict[str, Any]:
         not missing and not stale,
         {"missing": missing, "stale": stale, "count": len(discovered)},
     )
+
+
+def _normalize_path(path: Path) -> str:
+    return path.as_posix()
 
 
 def _check_doc_control_tables() -> dict[str, Any]:

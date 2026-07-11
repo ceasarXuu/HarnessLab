@@ -1,5 +1,5 @@
 from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -25,3 +25,11 @@ def test_v1_0_5_document_inventory_tracks_current_release_documents():
 
     assert inventory == expected
     assert all((ROOT / path).is_file() for path in inventory)
+
+
+def test_rebrand_inventory_normalizes_windows_paths():
+    module = _verification_module()
+
+    assert module._normalize_path(PureWindowsPath("docs\\releases\\v1.0.5\\prd.md")) == (
+        "docs/releases/v1.0.5/prd.md"
+    )
