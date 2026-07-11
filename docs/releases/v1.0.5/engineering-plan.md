@@ -13,7 +13,7 @@
 | 2 | 前端契约层 | Done | DTO、HTTP/mock client、MSW、ViewModel、Operation 轮询与旧接口隔离完成 |
 | 3 | 后端 API 破坏性升级 | Done | `/api/webui/v1` 已成为唯一产品 API；全量质量门、Codex Web Preview 和两轮 OpenCode 审计均已完成 |
 | 4 | API 模式联调 | Done | 已以真实 `/api/webui/v1`、Docker、Harbor 与 Hub 可观察状态完成全栈验证；直接启动前端仍默认 mock |
-| 5 | 发布前硬化 | In progress | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归、发布包和最终审计 |
+| 5 | 发布前硬化 | In progress | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归已通过；等待当前提交的 CI 和最终独立审计闭环 |
 
 ## 2. Stage 3 验收矩阵
 
@@ -58,10 +58,10 @@ Stage 5 的唯一目标是证明 v1.0.5 可作为本地 WebUI 产品进入发布
 | S5-01 | API 模式配置 | 直接前端开发未设置模式时仍为 mock；`run_dev.sh`、`ornnlab dev` 和生产 build 默认为 API；显式非法值或 mock 生产 build 在启动/构建前失败 | Done |
 | S5-02 | 跨平台产品启动器 | `ornnlab dev` 先等待后端健康，再启动带 API proxy 的前端；proxy 健康通过后才输出 URL，任一进程退出或收到终止信号会收敛子进程 | Done |
 | S5-03 | 本机全栈启动回归 | `scripts/test-run-dev-api.sh` 使用独立 `ORNNLAB_HOME` 和随机端口，验证 `run_dev.sh` 的直接 API、Vite proxy、非法模式拒绝和退出清理 | Done |
-| S5-04 | 跨平台 CI | Windows 路径、命令解析、file:// URI、日志换行和 npm spawn 已修复并推送；macOS 全量门禁通过；待三平台 CI 重跑确认 | In progress |
+| S5-04 | 跨平台 CI | CI `#29147417367` 在 Ubuntu、macOS、Windows 的 Python 与前端门禁均通过；Windows 路径、命令解析、file:// URI、日志换行、npm spawn 与文档清单路径均有回归覆盖 | Done |
 | S5-05 | 真实 Harbor 条件回归 | `ORNNLAB_REAL_HARBOR=1` 下 Python API smoke、subprocess smoke 和 cancel recovery 全部通过（3 passed, 414s）；缺失凭证时明确 skip | Done |
 | S5-06 | 发布包与性能检查 | npm pack 内容和启动器依赖由 `verify-npm-reservation-package.sh` 验证；生产 build 后最大 JS 不超过 400 KiB、CSS 不超过 50 KiB，Storybook 静态构建仍在全量门禁中 | Done |
-| S5-07 | 最终质量与独立审计 | 全量本地门禁通过（83 passed / 3 skipped）；首轮 OpenCode 审计 APPROVED 无阻断（7 项非阻断 W1-W7）；W1/W3/W4 已修复；第二轮 OpenCode 复审 APPROVED 无阻断 | Done |
+| S5-07 | 最终质量与独立审计 | 全量本地门禁通过（84 passed / 3 skipped）；首轮 OpenCode 审计 APPROVED 无阻断（7 项非阻断 W1-W7）；W1/W3/W4 及 Windows CI 审查阻断均已修复。当前提交仍需通过 CI 并完成两轮最终 OpenCode 复审 | In progress |
 
 ## 5. 已实施内容
 
@@ -160,3 +160,6 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - Vite dev server 输出包含 ANSI 颜色码（如 `\x1b[36m`），即使输出重定向到文件也不自动剥离；从日志解析 URL 时必须先 `sed` 剥离 ANSI 码再 grep，否则 URL 中嵌入的转义码会破坏后续的字符串处理。
 - Windows 下 `shlex.split` 使用 posix 模式会把反斜杠路径中的 `\` 当作转义符，导致路径损坏；跨平台命令解析必须根据 `os.name` 切换 posix 模式。
 - Windows 下 Node `child_process.spawn` 不支持直接执行 `npm`（它不是 `.exe`），必须设置 `shell: true` 让系统通过 PATH 解析；进程终止使用 `taskkill /t /f` 而非进程组信号。
+- 跨平台文档清单不能直接比较 `str(Path)`；仓库相对路径和归档筛选一律使用 `Path.as_posix()`，避免 Windows 反斜杠造成误报。
+- Windows 的 `asyncio.Process.terminate()` 是强制终止，不会执行 Unix `SIGTERM` handler；取消回归应验证进程已退出和清理记录已写入，信号 handler 断言只适用于 POSIX。
+- 高密度 JSDOM 页面断言在 Windows runner 上可明显慢于 macOS；为该测试显式声明合理时限，避免默认 5 秒把平台性能差异误判为功能失败。
