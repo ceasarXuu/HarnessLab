@@ -48,11 +48,11 @@ def trial_log_path(result: dict[str, Any]) -> str | None:
     parsed = urlparse(trial_uri)
     if parsed.scheme != "file":
         return None
-    path = _file_uri_path(parsed.path, parsed.netloc) / "trial.log"
+    path = Path(_file_uri_path(parsed.path, parsed.netloc)) / "trial.log"
     return str(path) if path.is_file() else None
 
 
-def _file_uri_path(path: str, host: str, *, windows: bool | None = None) -> Path:
+def _file_uri_path(path: str, host: str, *, windows: bool | None = None) -> str:
     decoded = unquote(path)
     if host and host != "localhost":
         decoded = f"//{host}{decoded}"
@@ -65,4 +65,4 @@ def _file_uri_path(path: str, host: str, *, windows: bool | None = None) -> Path
         and decoded[2] == ":"
     ):
         decoded = decoded[1:]
-    return Path(decoded)
+    return decoded

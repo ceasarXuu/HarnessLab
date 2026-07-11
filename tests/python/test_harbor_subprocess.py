@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import signal
 import sys
 
 import pytest
@@ -195,7 +197,11 @@ def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):
     cleanup = json.loads((tmp_path / "harbor-job" / "harbor.cleanup.json").read_text())
     assert cleanup["reason"] == "task_cancelled"
     assert cleanup["terminated"] is True
-    assert terminated.read_text() == "15"
+    assert cleanup["returncode"] is not None
+    if os.name != "nt":
+        assert terminated.read_text() == str(signal.SIGTERM)
+    else:
+        assert not terminated.exists()
 
 
 def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):

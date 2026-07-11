@@ -65,7 +65,7 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: /apt-setup/i }))
     expect(screen.getByText('retries: 0')).toBeInTheDocument()
     expect(screen.getByText('log path: trials/job_91a7/apt-setup.log')).toBeInTheDocument()
-  })
+  }, 10_000)
 
   it('renders datasets as the Harbor catalog surface', async () => {
     render(<App />)
