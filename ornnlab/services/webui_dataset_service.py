@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shutil
+import time
 from pathlib import Path
 
 from harbor.registry.client.factory import RegistryClientFactory
@@ -19,11 +20,15 @@ logger = logging.getLogger(__name__)
 
 _MARKER_FILE = ".ornnlab-dataset.json"
 _LAST_PARENT_KEY = "last_dataset_parent_path"
+_REGISTRY_CACHE_TTL_SECONDS = 60
 
 
 class WebUiDatasetService:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self._registry_cache: list[dict] | None = None
+        self._registry_cache_lock = asyncio.Lock()
+        self._registry_cache_updated_at = 0.0
 
     async def list_datasets(self, query: str | None = None) -> list[dict]:
         local = self._local_datasets()
@@ -266,8 +271,29 @@ class WebUiDatasetService:
         return row
 
     async def _remote_datasets(self) -> list[dict]:
-        summaries = await RegistryClientFactory.create().list_datasets()
-        return [_remote_dto(item.name, item.version, item.task_count) for item in summaries]
+        if self._registry_cache_is_fresh():
+            logger.debug("Using cached Harbor registry Dataset catalog")
+            return list(self._registry_cache or [])
+
+        async with self._registry_cache_lock:
+            if self._registry_cache_is_fresh():
+                logger.debug("Using cached Harbor registry Dataset catalog after lock")
+                return list(self._registry_cache or [])
+            summaries = await RegistryClientFactory.create().list_datasets()
+            self._registry_cache = [
+                _remote_dto(item.name, item.version, item.task_count) for item in summaries
+            ]
+            self._registry_cache_updated_at = time.monotonic()
+            logger.info(
+                "Refreshed Harbor registry Dataset catalog count=%s", len(self._registry_cache)
+            )
+            return list(self._registry_cache)
+
+    def _registry_cache_is_fresh(self) -> bool:
+        return (
+            self._registry_cache is not None
+            and time.monotonic() - self._registry_cache_updated_at < _REGISTRY_CACHE_TTL_SECONDS
+        )
 
     def _set_last_parent(self, parent: Path) -> None:
         now = now_iso()

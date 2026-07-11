@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHttpException
 from ornnlab.api import webui
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
+from ornnlab.services.webui_dataset_service import WebUiDatasetService
 from ornnlab.services.worker_service import QueueWorkerService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
     app.state.worker = QueueWorkerService(active_settings)
+    app.state.dataset_service = WebUiDatasetService(active_settings)
     app.state.operation_tasks = {}
 
     @app.middleware("http")

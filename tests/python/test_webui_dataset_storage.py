@@ -25,6 +25,15 @@ class FakeRegistryClient:
         return [SimpleNamespace(downloaded_path=task)]
 
 
+class CachedRegistryClient:
+    def __init__(self):
+        self.list_calls = 0
+
+    async def list_datasets(self):
+        self.list_calls += 1
+        return [SimpleNamespace(name="terminal-bench", version="2.0", task_count=89)]
+
+
 def test_registry_download_uses_selected_parent_and_remembers_it(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     parent = tmp_path / "chosen-parent"
@@ -47,6 +56,23 @@ def test_registry_download_uses_selected_parent_and_remembers_it(tmp_path, monke
     }
     assert (destination / ".ornnlab-dataset.json").is_file()
     assert service.default_download_parent()["parentPath"] == str(parent)
+
+
+def test_registry_catalog_is_cached_across_dataset_searches(tmp_path, monkeypatch):
+    settings = _settings(tmp_path)
+    registry = CachedRegistryClient()
+    monkeypatch.setattr(
+        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
+        lambda: registry,
+    )
+    service = WebUiDatasetService(settings)
+
+    terminal = asyncio.run(service.list_datasets("terminal"))
+    bench = asyncio.run(service.list_datasets("bench"))
+
+    assert registry.list_calls == 1
+    assert terminal[0]["ref"] == "terminal-bench@2.0"
+    assert bench[0]["taskCount"] == 89
 
 
 def test_registry_download_rejects_existing_destination(tmp_path, monkeypatch):

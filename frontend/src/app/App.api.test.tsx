@@ -54,6 +54,26 @@ describe('App API mode', () => {
     expect(screen.queryByText('terminal-bench')).not.toBeInTheDocument()
   })
 
+  it('reuses a cached Dataset search result when returning to a keyword', async () => {
+    const client = createMockWebUiClient()
+    const listDatasets = vi.spyOn(client, 'listDatasets')
+    render(<App client={client} dataMode="api" />)
+
+    await screen.findByText('terminal-bench-smoke')
+    fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+    await screen.findByText('terminal-bench')
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swebench' } })
+    await waitFor(() => expect(listDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swebench' }))
+    await waitFor(() => expect(screen.queryByText('Loading datasets')).not.toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'terminal' } })
+    await waitFor(() => expect(listDatasets).toHaveBeenCalledWith({ limit: 100, q: 'terminal' }))
+    await waitFor(() => expect(screen.queryByText('Loading datasets')).not.toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swebench' } })
+
+    await screen.findByText('swebench-verified')
+    expect(listDatasets.mock.calls.filter(([query]) => query?.q === 'swebench')).toHaveLength(1)
+  })
+
   it('submits Job creation through the injected API client in API mode', async () => {
     const client = createMockWebUiClient()
     const createJob = vi.spyOn(client, 'createJob')

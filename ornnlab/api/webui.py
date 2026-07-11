@@ -409,7 +409,7 @@ def _jobs(request: Request) -> WebUiJobService:
 
 
 def _datasets(request: Request) -> WebUiDatasetService:
-    return WebUiDatasetService(request.app.state.settings)
+    return request.app.state.dataset_service
 
 
 def _system(request: Request) -> WebUiSystemService:

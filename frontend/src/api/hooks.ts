@@ -88,6 +88,58 @@ export function useDatasets(
   return useWebUiResource(load, [client, query.cursor, query.limit, query.q], enabled)
 }
 
+export function useDatasetSearch(
+  client: WebUiClient,
+  query: string | undefined,
+  limit = 100,
+): WebUiResource<Page<DatasetDto>> {
+  const normalizedQuery = query?.trim().toLowerCase() ?? ''
+  const cache = useRef(new Map<string, Page<DatasetDto>>())
+  const [data, setData] = useState<Page<DatasetDto> | null>(null)
+  const [error, setError] = useState<ApiError | null>(null)
+  const [loading, setLoading] = useState(false)
+  const sequence = useRef(0)
+
+  const load = useCallback(async (bypassCache = false) => {
+    const request = ++sequence.current
+    if (!normalizedQuery) {
+      setData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    const cached = cache.current.get(normalizedQuery)
+    if (cached && !bypassCache) {
+      setData(cached)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    setData(null)
+    setError(null)
+    setLoading(true)
+    const response = await client.listDatasets({ limit, q: normalizedQuery })
+    if (request !== sequence.current) return
+    if (response.data) {
+      cache.current.set(normalizedQuery, response.data)
+    }
+    setData(response.data)
+    setError(response.error)
+    setLoading(false)
+  }, [client, limit, normalizedQuery])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const refresh = useCallback(async () => {
+    if (normalizedQuery) cache.current.delete(normalizedQuery)
+    await load(true)
+  }, [load, normalizedQuery])
+
+  return { data, error, loading, refresh }
+}
+
 export function useAgents(client: WebUiClient, query: AgentQuery = {}): WebUiResource<Page<AgentDto>> {
   const load = useCallback(() => client.listAgents(query), [client, query.cursor, query.limit, query.q, query.status, query.type])
   return useWebUiResource(load, [client, query.cursor, query.limit, query.q, query.status, query.type])

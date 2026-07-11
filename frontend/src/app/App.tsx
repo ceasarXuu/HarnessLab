@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
+import { useAgents, useDatasetSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
@@ -88,7 +88,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const hubConnectionResource = useHubConnection(client)
   const [datasetSearch, setDatasetSearch] = useState('')
   const datasetSearchQuery = datasetSearch.trim() || undefined
-  const datasetSearchResource = useDatasets(client, { limit: 100, q: datasetSearchQuery }, Boolean(datasetSearchQuery))
+  const datasetSearchResource = useDatasetSearch(client, datasetSearchQuery)
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
@@ -159,9 +159,19 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     )
   }, [jobs, search])
 
+  const datasetSearchFallback = useMemo(() => {
+    if (!datasetSearchQuery) return datasets
+    const needle = datasetSearchQuery.toLowerCase()
+    return datasets.filter((row) =>
+      [row.name, row.version, row.visibility, row.source, row.digest].some((value) =>
+        (value ?? '').toLowerCase().includes(needle),
+      ),
+    )
+  }, [datasetSearchQuery, datasets])
+
   const filteredDatasets = useMemo(
-    () => (datasetSearchQuery ? datasetSearchResource.data?.items.map(datasetDtoToRow) ?? [] : datasets),
-    [datasetSearchQuery, datasetSearchResource.data?.items, datasets],
+    () => (datasetSearchQuery ? datasetSearchResource.data?.items.map(datasetDtoToRow) ?? datasetSearchFallback : datasets),
+    [datasetSearchFallback, datasetSearchQuery, datasetSearchResource.data?.items, datasets],
   )
 
   const refreshDatasets = useCallback(
