@@ -5,6 +5,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/ornnlab-run-dev-api.XXXXXX")"
 RUN_PID=""
+BACKEND_PORT=""
+FRONTEND_PORT=""
+BACKEND_HEALTH=""
+FRONTEND_HEALTH=""
 
 find_free_port() {
   uv run python - <<'PY'
@@ -21,6 +25,42 @@ show_logs() {
     tail -n 80 "$TEST_ROOT/logs/backend.log" 2>/dev/null || true
     tail -n 80 "$TEST_ROOT/logs/frontend.log" 2>/dev/null || true
   fi
+}
+
+wait_for_port_release() {
+  local port="$1"
+  local label="$2"
+
+  for _ in {1..40}; do
+    if uv run python - "$port" <<'PY'
+import socket
+import sys
+
+with socket.socket() as sock:
+    sock.bind(("127.0.0.1", int(sys.argv[1])))
+PY
+    then
+      return
+    fi
+    sleep 0.25
+  done
+  echo "$label port $port remains bound after run_dev.sh stopped" >&2
+  exit 1
+}
+
+assert_services_stopped() {
+  [[ -n "$BACKEND_PORT" && -n "$FRONTEND_PORT" ]] || return
+
+  if [[ -n "$BACKEND_HEALTH" ]] && curl -sf "$BACKEND_HEALTH" >/dev/null 2>&1; then
+    echo "backend health endpoint remained reachable after run_dev.sh stopped" >&2
+    exit 1
+  fi
+  if [[ -n "$FRONTEND_HEALTH" ]] && curl -sf "$FRONTEND_HEALTH" >/dev/null 2>&1; then
+    echo "frontend proxy health endpoint remained reachable after run_dev.sh stopped" >&2
+    exit 1
+  fi
+  wait_for_port_release "$BACKEND_PORT" "backend"
+  wait_for_port_release "$FRONTEND_PORT" "frontend"
 }
 
 cleanup() {
@@ -40,6 +80,7 @@ cleanup() {
     fi
     wait "$RUN_PID" 2>/dev/null || true
   fi
+  assert_services_stopped
   if [[ "$exit_code" -ne 0 ]]; then
     show_logs
   fi

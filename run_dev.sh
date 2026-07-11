@@ -42,6 +42,35 @@ FRONTEND_PID=""
 TAIL_PID=""
 CLEANUP_DONE="false"
 
+stop_process_tree() {
+  local pid="$1"
+  local child_pid
+
+  # uv/npm 都可能再派生实际服务进程；只终止最外层 PID 会遗留监听端口。
+  while IFS= read -r child_pid; do
+    [[ -n "$child_pid" ]] && stop_process_tree "$child_pid"
+  done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -TERM "$pid" 2>/dev/null || true
+  fi
+}
+
+wait_for_process_exit() {
+  local pid="$1"
+  local attempts=0
+
+  while kill -0 "$pid" 2>/dev/null && [[ "$attempts" -lt 40 ]]; do
+    sleep 0.25
+    attempts=$((attempts + 1))
+  done
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -KILL "$pid" 2>/dev/null || true
+  fi
+  wait "$pid" 2>/dev/null || true
+}
+
 cleanup() {
   local exit_code=$?
   if [[ "$CLEANUP_DONE" == "true" ]]; then
@@ -52,16 +81,16 @@ cleanup() {
   echo
   echo "[run_dev] 收到退出信号，停止子进程..."
   if [[ -n "$FRONTEND_PID" ]] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
-    kill "$FRONTEND_PID" 2>/dev/null || true
-    wait "$FRONTEND_PID" 2>/dev/null || true
+    stop_process_tree "$FRONTEND_PID"
+    wait_for_process_exit "$FRONTEND_PID"
   fi
   if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
-    kill "$BACKEND_PID" 2>/dev/null || true
-    wait "$BACKEND_PID" 2>/dev/null || true
+    stop_process_tree "$BACKEND_PID"
+    wait_for_process_exit "$BACKEND_PID"
   fi
   if [[ -n "$TAIL_PID" ]] && kill -0 "$TAIL_PID" 2>/dev/null; then
-    kill "$TAIL_PID" 2>/dev/null || true
-    wait "$TAIL_PID" 2>/dev/null || true
+    stop_process_tree "$TAIL_PID"
+    wait_for_process_exit "$TAIL_PID"
   fi
   echo "[run_dev] 已停止。日志保留在 $LOG_DIR/"
   exit "$exit_code"
