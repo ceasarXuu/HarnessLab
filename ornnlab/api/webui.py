@@ -388,6 +388,12 @@ async def clean_storage_cache(request: Request) -> dict:
     return _data(request, {"operation": _system(request).clean_storage_cache()})
 
 
+@router.post("/system/directory-picker")
+async def choose_directory(request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, await asyncio.to_thread(_system(request).choose_directory))
+
+
 def _operations(request: Request) -> WebUiOperationService:
     return WebUiOperationService(request.app.state.settings, request.app.state.operation_tasks)
 

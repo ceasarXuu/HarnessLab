@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -14,6 +16,8 @@ from ornnlab.services.command_line import split_command
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class WebUiSystemService:
@@ -140,6 +144,14 @@ class WebUiSystemService:
 
         return self.operations.submit("clean-storage-cache", "system", "storage", work)
 
+    def choose_directory(self) -> dict:
+        path = _choose_native_directory()
+        if path:
+            logger.info("Selected native directory path=%s", path)
+        else:
+            logger.info("Native directory selection cancelled")
+        return {"path": path}
+
 
 def _component(
     kind: str, component: str, status: str, value: str, path: str, actions: list[str]
@@ -248,3 +260,61 @@ def _gpu_usage() -> str:
 
 def _resource_status(value: str) -> str:
     return "unavailable" if value in {"unavailable", "not available"} else "healthy"
+
+
+def _choose_native_directory() -> str | None:
+    system = platform.system()
+    if system == "Darwin":
+        return _run_directory_picker(
+            [
+                "osascript",
+                "-e",
+                'POSIX path of (choose folder with prompt "Choose a folder for OrnnLab")',
+            ],
+            cancel_markers=("-128",),
+        )
+    if system == "Windows":
+        return _run_directory_picker(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Add-Type -AssemblyName System.Windows.Forms; "
+                    "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                    "$dialog.Description = 'Choose a folder for OrnnLab'; "
+                    "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) "
+                    "{ [Console]::Write($dialog.SelectedPath) }"
+                ),
+            ],
+            cancel_markers=(),
+        )
+    if system == "Linux":
+        for command in (
+            ["zenity", "--file-selection", "--directory", "--title=Choose a folder for OrnnLab"],
+            ["kdialog", "--getexistingdirectory"],
+        ):
+            try:
+                return _run_directory_picker(command, cancel_returncodes=(1,))
+            except FileNotFoundError:
+                continue
+        raise ValueError("native directory picker is unavailable; install zenity or kdialog")
+    raise ValueError(f"native directory picker is unsupported on {system}")
+
+
+def _run_directory_picker(
+    command: list[str],
+    *,
+    cancel_markers: tuple[str, ...] = (),
+    cancel_returncodes: tuple[int, ...] = (),
+) -> str | None:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+    if result.returncode:
+        message = (result.stderr or result.stdout).strip()
+        if result.returncode in cancel_returncodes or any(
+            marker in message for marker in cancel_markers
+        ):
+            return None
+        raise ValueError(message or f"native directory picker exited with {result.returncode}")
+    selected = result.stdout.strip()
+    return str(Path(selected).expanduser().resolve()) if selected else None

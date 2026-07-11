@@ -23,6 +23,7 @@ function RunBuilderFixture({ initial = initialDraft }: { initial?: typeof initia
           onDraft={setDraft}
           onCancel={() => undefined}
           onCopyJobConfig={() => undefined}
+          onChooseDirectory={async () => ({ path: '/Users/demo/jobs' })}
           onLaunch={() => undefined}
           onReset={() => setDraft(initialDraft)}
         />

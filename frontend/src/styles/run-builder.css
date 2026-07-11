@@ -31,8 +31,16 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
 }
+.folder-path-input input[readonly] {
+  cursor: default;
+}
 .folder-path-input button {
   min-height: 34px;
+}
+.folder-path-picker-error {
+  grid-column: 1 / -1;
+  color: var(--danger);
+  font-size: 12px;
 }
 .run-config-groups {
   display: grid;

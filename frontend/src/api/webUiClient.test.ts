@@ -44,6 +44,7 @@ describe('WebUiHttpClient', () => {
       client.cancelDatasetDownload('dataset@1'),
       client.cancelOperation('operation_1'),
       client.checkForSystemUpdate(),
+      client.chooseDirectory(),
       client.cleanDockerCache(),
       client.cleanStorageCache(),
       client.copyEnvironment('environment_1'),
@@ -80,6 +81,7 @@ describe('WebUiHttpClient', () => {
       '/api/webui/v1/agents',
       '/api/webui/v1/environments',
       '/api/webui/v1/system/service/update',
+      '/api/webui/v1/system/directory-picker',
       '/api/webui/v1/system/cache/storage/clean',
     ]))
     expect(urls.every((url) => url.startsWith('/api/webui/v1/'))).toBe(true)

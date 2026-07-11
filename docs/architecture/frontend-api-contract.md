@@ -104,6 +104,7 @@ interface Operation {
 | Leaderboard | `GET /leaderboard/datasets`、`GET /leaderboard` | `Page<LeaderboardDataset>`、`Page<LeaderboardEntry>` |
 | System | `GET /system/health`、`GET /system/hub-connection` | `Page<SystemComponent>`、`HubConnection` |
 | System | `POST /system/service/update/check` | `UpdateCheckResult` |
+| System | `POST /system/directory-picker` | `{ path: string | null }` |
 | System | `POST /system/service/update`、`restart`、`POST /system/cache/docker/clean`、`POST /system/cache/storage/clean` | `{ operation }` |
 
 路径中的 Dataset ref 采用 URL encoding，例如 `terminal-bench%402.0`。
@@ -282,6 +283,8 @@ interface Environment {
 Leaderboard 请求为 `GET /leaderboard?dataset=<ref>&metric=<optional>`。`LeaderboardEntry` 包含 `rank`、`datasetRef`、`agentName`、`harness`、`model`、`score`、`trial`、`costUsd`、`tokenUsageM`、`runtimeSeconds`、`jobId`、`submittedAt`、`comparabilityKey`、可选 `reportPath`。
 
 `SystemComponent` 包含 `component`、`kind`、`status`、`value`、`path`、`actions`；kind 只为 OrnnLab service、Harbor CLI、Docker、Storage、CPU、GPU、可用存储。Hub 返回 `connected`、`disconnected` 或 `expired`。检查更新返回当前/最新版本、是否可升级、可选 release notes URL；安装更新/重启若本机不可执行，返回 failed Operation，而不是模拟成功。
+
+`POST /system/directory-picker` 仅用于本机 WebUI：服务端打开系统原生目录选择器，确认后返回绝对路径，取消时返回 `{ path: null }`。浏览器不能可靠获取本机绝对路径，因此所有需要本机目录的路径控件只读显示，并通过该端点选择；mock 模式返回明确不可用错误，不伪造目录。
 
 ## 5. 联调规则
 

@@ -6,6 +6,7 @@ import type { WebUiClient } from '../api/webUiClient'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
+import { FolderPathInput, type FolderPathSelection } from '../ui/components/FolderPathInput'
 import { OperationStatus } from '../ui/components/OperationStatus'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import type { DatasetRow } from '../domain/harbor'
@@ -100,6 +101,10 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
     const preference = await client.getDatasetDefaultParent()
     setLocationPath(preference.data?.parentPath ?? '')
     setLocationAction({ mode, row })
+  }
+  const chooseDirectory = async (): Promise<FolderPathSelection> => {
+    const response = await client.chooseDirectory()
+    return { error: response.error?.message, path: response.data?.path ?? null }
   }
   const confirmLocationAction = async () => {
     if (!writesEnabled || !locationAction) return
@@ -385,7 +390,13 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
           <div className="dataset-location-form">
             <label>
               {t(locationAction.mode === 'relocate' ? 'datasetPath' : 'datasetParentPath')}
-              <input value={locationPath} onChange={(event) => setLocationPath(event.target.value)} />
+              <FolderPathInput
+                chooseLabel={t('chooseFolder')}
+                label={t(locationAction.mode === 'relocate' ? 'datasetPath' : 'datasetParentPath')}
+                value={locationPath}
+                onChange={setLocationPath}
+                onChoose={chooseDirectory}
+              />
             </label>
           </div>
         </ConfirmDialog>

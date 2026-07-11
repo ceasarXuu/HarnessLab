@@ -1,6 +1,17 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMockWebUiClient } from '../api/mockClient'
 import { App } from './App'
+
+function pickerEnabledClient() {
+  const client = createMockWebUiClient()
+  client.chooseDirectory = async () => ({
+    data: { path: '/tmp/datasets' },
+    error: null,
+    meta: { requestId: 'directory-picker-test' },
+  })
+  return client
+}
 
 describe('App', () => {
   beforeEach(() => {
@@ -68,7 +79,7 @@ describe('App', () => {
   }, 10_000)
 
   it('renders datasets as the Harbor catalog surface', async () => {
-    render(<App />)
+    render(<App client={pickerEnabledClient()} />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
     await screen.findByText('terminal-bench')
@@ -96,7 +107,10 @@ describe('App', () => {
     expect(sweRow).not.toBeNull()
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Download' }))
     const downloadDialog = await screen.findByRole('dialog', { name: 'Download Dataset' })
-    fireEvent.change(within(downloadDialog).getByLabelText('Dataset parent directory'), { target: { value: '/tmp/datasets' } })
+    const parentInput = within(downloadDialog).getByLabelText('Dataset parent directory')
+    expect(parentInput).toHaveAttribute('readonly')
+    fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Choose folder' }))
+    await waitFor(() => expect(parentInput).toHaveValue('/tmp/datasets'))
     fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Start download' }))
     expect(screen.queryByRole('dialog', { name: 'Selected dataset' })).not.toBeInTheDocument()
     await within(sweRow as HTMLElement).findByText('0%')
@@ -147,7 +161,7 @@ describe('App', () => {
   })
 
   it('refreshes Dataset drawer actions after a download Operation completes', async () => {
-    render(<App />)
+    render(<App client={pickerEnabledClient()} />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
     const sweDataset = await screen.findByText('swe-bench-lite')
@@ -155,7 +169,8 @@ describe('App', () => {
     const datasetDialog = screen.getByRole('dialog', { name: 'Selected dataset' })
     fireEvent.click(within(datasetDialog).getByRole('button', { name: 'Download' }))
     const downloadDialog = await screen.findByRole('dialog', { name: 'Download Dataset' })
-    fireEvent.change(within(downloadDialog).getByLabelText('Dataset parent directory'), { target: { value: '/tmp/datasets' } })
+    fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Choose folder' }))
+    await waitFor(() => expect(within(downloadDialog).getByLabelText('Dataset parent directory')).toHaveValue('/tmp/datasets'))
     fireEvent.click(within(downloadDialog).getByRole('button', { name: 'Start download' }))
 
     await waitFor(

@@ -196,6 +196,17 @@ def test_system_restart_reports_real_supervisor_requirement(client):
     assert persisted["status"] == "failed"
 
 
+def test_system_directory_picker_returns_the_native_selection(client, tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        "ornnlab.services.webui_system_service._choose_native_directory", lambda: str(tmp_path)
+    )
+
+    response = client.post(f"{API}/system/directory-picker")
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {"path": str(tmp_path)}
+
+
 def test_trial_dto_uses_real_harbor_result_fields_only():
     trial = _trial_dto(
         "job-1",

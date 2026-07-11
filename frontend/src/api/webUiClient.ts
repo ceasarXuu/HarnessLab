@@ -12,6 +12,7 @@ import type {
   HubConnectionDto,
   CreateJobRequestDto,
   CreateJobResponseDto,
+  DirectoryPickerResultDto,
   DatasetImportRequestDto,
   DatasetParentPathRequestDto,
   DatasetPathRequestDto,
@@ -37,6 +38,7 @@ export interface WebUiClient {
   cancelDatasetDownload(ref: string): Promise<ApiResponse<OperationResultDto | null>>
   cancelOperation(id: string): Promise<ApiResponse<OperationResultDto | null>>
   checkForSystemUpdate(): Promise<ApiResponse<UpdateCheckResultDto | null>>
+  chooseDirectory(): Promise<ApiResponse<DirectoryPickerResultDto | null>>
   cleanDockerCache(): Promise<ApiResponse<OperationResultDto | null>>
   cleanStorageCache(): Promise<ApiResponse<OperationResultDto | null>>
   copyEnvironment(id: string): Promise<ApiResponse<OperationResultDto | null>>
@@ -83,6 +85,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     cancelDatasetDownload: (ref) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/download/cancel`),
     cancelOperation: (id) => post<OperationResultDto>(request, `${baseUrl}/operations/${encodeURIComponent(id)}/cancel`),
     checkForSystemUpdate: () => post<UpdateCheckResultDto>(request, `${baseUrl}/system/service/update/check`),
+    chooseDirectory: () => post<DirectoryPickerResultDto>(request, `${baseUrl}/system/directory-picker`),
     cleanDockerCache: () => post<OperationResultDto>(request, `${baseUrl}/system/cache/docker/clean`),
     cleanStorageCache: () => post<OperationResultDto>(request, `${baseUrl}/system/cache/storage/clean`),
     copyEnvironment: (id) => post<OperationResultDto>(request, `${baseUrl}/environments/${encodeURIComponent(id)}/copy`),

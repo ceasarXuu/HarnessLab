@@ -57,6 +57,9 @@ export function createMockWebUiClient(): WebUiClient {
     async checkForSystemUpdate() {
       return success<UpdateCheckResultDto>({ currentVersion: '0.1.3', latestVersion: '0.1.3', updateAvailable: false })
     },
+    async chooseDirectory() {
+      return failure('NATIVE_DIRECTORY_PICKER_UNAVAILABLE', 'Native directory selection is available only in API mode.')
+    },
     async cleanDockerCache() {
       return operationResult(operations.submit('clean-docker-cache', 'system', 'docker'))
     },

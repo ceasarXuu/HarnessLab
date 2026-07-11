@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import sys
+from types import SimpleNamespace
 
 from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.services.agent_service import AgentService
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.experiment_service import ExperimentService
+from ornnlab.services.webui_system_service import _choose_native_directory
 
 
 def test_system_status_reports_core_fields(settings):
@@ -19,6 +21,27 @@ def test_system_status_reports_core_fields(settings):
     assert "harbor_version" in payload
     assert payload["harbor_engine"]["mode"] == "subprocess"
     assert payload["harbor_engine"]["supports_cancel"] is True
+
+
+def test_native_directory_picker_uses_finder_and_handles_cancel(tmp_path, monkeypatch):
+    calls: list[list[str]] = []
+
+    def successful_picker(command, **_):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, stderr="", stdout=f"{tmp_path}/")
+
+    monkeypatch.setattr("ornnlab.services.webui_system_service.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("ornnlab.services.webui_system_service.subprocess.run", successful_picker)
+    assert _choose_native_directory() == str(tmp_path.resolve())
+    assert calls[0][0] == "osascript"
+
+    monkeypatch.setattr(
+        "ornnlab.services.webui_system_service.subprocess.run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=1, stderr="User canceled (-128)", stdout=""
+        ),
+    )
+    assert _choose_native_directory() is None
 
 
 def test_system_status_warns_about_ornnlab_docker_orphans(settings, monkeypatch, tmp_path):

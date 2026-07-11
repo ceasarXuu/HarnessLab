@@ -84,6 +84,13 @@ describe('MockWebUiClient', () => {
     expect(response.error).toEqual({ code: 'JOB_NOT_FOUND', message: 'Job not found' })
   })
 
+  it('does not fabricate a native directory selection in mock mode', async () => {
+    const response = await createMockWebUiClient().chooseDirectory()
+
+    expect(response.data).toBeNull()
+    expect(response.error?.code).toBe('NATIVE_DIRECTORY_PICKER_UNAVAILABLE')
+  })
+
   it('rejects built-in harness entries when a Job requires a configured Agent profile', async () => {
     const client = createMockWebUiClient()
 

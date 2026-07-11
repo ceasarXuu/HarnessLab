@@ -74,7 +74,7 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 | S6-02 | Registry 下载与取消 | 下载写入用户选择父目录下的标记子目录；同名冲突拒绝；取消/失败只清理有 OrnnLab 标记的临时目录 | Done |
 | S6-03 | 迁移、重定位与删除边界 | managed Dataset 支持异步移动；路径丢失可重新定位或移除登记；存在的 managed 目录只能删除，不能直接遗留未登记目录 | Done |
 | S6-04 | 本地导入边界 | external 导入仅登记与加载；重新定位或移除登记不会删除用户原始目录；删除请求被 API 拒绝 | Done |
-| S6-05 | 前端与 mock 对等 | API/mock/MSW 使用同一 DTO、Operation 与错误语义；Dataset 页面提供目录输入、下载、迁移、重新定位和移除入口；Storybook 覆盖 managed、external、path-unavailable 状态 | Done |
+| S6-05 | 前端与 mock 对等 | API/mock/MSW 使用同一 DTO、Operation 与错误语义；Dataset 和 New Job 路径控件通过本机原生目录选择器回填只读路径；Storybook 覆盖 managed、external、path-unavailable 状态 | Done |
 | S6-06 | 回归与审查 | 已通过后端 API/文件边界、前端交互、Storybook 与全量门禁；待独立对抗性审查确认无阻断项 | In progress |
 
 ## 6. 已实施内容

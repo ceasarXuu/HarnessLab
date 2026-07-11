@@ -44,7 +44,13 @@ function ControlsFixture() {
       <section className="surface rail-card">
         <div className="run-grid">
           <Field label="jobs_dir" wide>
-            <FolderPathInput chooseLabel="Choose" label="Choose folder" value={folder} onChange={setFolder} />
+            <FolderPathInput
+              chooseLabel="Choose"
+              label="Choose folder"
+              value={folder}
+              onChange={setFolder}
+              onChoose={async () => ({ path: '/Users/demo/jobs' })}
+            />
           </Field>
           <KeyValueControl
             label="env"

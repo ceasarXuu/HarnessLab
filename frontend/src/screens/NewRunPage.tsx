@@ -2,6 +2,7 @@ import { useDatasetTasks } from '../api/hooks'
 import { datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { RunBuilder } from '../ui/components/RunBuilder'
+import type { FolderPathSelection } from '../ui/components/FolderPathInput'
 import type { AgentRow, DatasetRow, EnvironmentRow, RunDraft } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
@@ -23,6 +24,10 @@ interface NewRunPageProps {
 export function NewRunPage({ canLaunch, agents, client, datasets, draft, environments, t, onDraft, onJobs, onCopyJobConfig, onLaunch, onReset }: NewRunPageProps) {
   const tasksResource = useDatasetTasks(client, draft.source)
   const taskRows = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
+  const chooseDirectory = async (): Promise<FolderPathSelection> => {
+    const response = await client.chooseDirectory()
+    return { error: response.error?.message, path: response.data?.path ?? null }
+  }
   return (
     <main className="workspace single-page">
       <div className="content-column">
@@ -43,6 +48,7 @@ export function NewRunPage({ canLaunch, agents, client, datasets, draft, environ
           onDraft={onDraft}
           onCancel={onJobs}
           onCopyJobConfig={onCopyJobConfig}
+          onChooseDirectory={chooseDirectory}
           onLaunch={onLaunch}
           onReset={onReset}
         />

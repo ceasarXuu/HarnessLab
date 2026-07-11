@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
-import { FolderPathInput } from './FolderPathInput'
+import { FolderPathInput, type FolderPathSelection } from './FolderPathInput'
 import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
 
@@ -18,6 +18,7 @@ interface RunBuilderProps {
   onDraft: (draft: RunDraft) => void
   onCancel: () => void
   onCopyJobConfig: () => void
+  onChooseDirectory: () => Promise<FolderPathSelection>
   onLaunch: () => void
   onReset: () => void
 }
@@ -27,7 +28,7 @@ type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 type VerifierMode = 'dataset-default' | 'skip'
 
-export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
+export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onChooseDirectory, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
@@ -132,6 +133,7 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
               label={t('jobsDirFolderPicker')}
               value={draft.jobsDir}
               onChange={(value) => onDraft({ ...draft, jobsDir: value })}
+              onChoose={onChooseDirectory}
             />
           </Field>
           <label>

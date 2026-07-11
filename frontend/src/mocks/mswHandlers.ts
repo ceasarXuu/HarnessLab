@@ -46,6 +46,9 @@ export const webuiHandlers = [
   http.post(`${webui}/operations/:operationId/cancel`, async ({ params }) =>
     HttpResponse.json(await client.cancelOperation(String(params.operationId))),
   ),
+  http.post(`${webui}/system/directory-picker`, async () =>
+    HttpResponse.json(await client.chooseDirectory()),
+  ),
   http.post(`${webui}/agents`, async ({ request }) =>
     HttpResponse.json(await client.createAgent(await jsonBody<AgentInputDto>(request))),
   ),

@@ -103,6 +103,10 @@ export interface DatasetTaskDto {
   name: string
 }
 
+export interface DirectoryPickerResultDto {
+  path: string | null
+}
+
 export type EventLevel = 'info' | 'success' | 'warning' | 'error'
 
 export interface JobEventDto {

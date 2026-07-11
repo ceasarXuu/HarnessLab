@@ -13,6 +13,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     cancelDatasetDownload: unavailable,
     cancelOperation: unavailable,
     checkForSystemUpdate: unavailable,
+    chooseDirectory: unavailable,
     cleanDockerCache: unavailable,
     cleanStorageCache: unavailable,
     copyEnvironment: unavailable,
