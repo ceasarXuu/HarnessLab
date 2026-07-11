@@ -1,13 +1,13 @@
 # Subagent VS Review: v1.0.5 Stage 5 最终 Codex 审查
 
 - Created: 2026-07-11T18:20:00+08:00
-- Updated: 2026-07-11T18:31:00+08:00
+- Updated: 2026-07-11T18:34:00+08:00
 - Report schema: adversarial-v1
 - Task: 验证 v1.0.5 Stage 5 发布前硬化是否可以完成。
 - Report path: `vs_review/2026-07-11-stage-5-final-codex-review.md`
 - Review mode: fresh internal subagents
 - Source session policy: 不继承主代理上下文；审查员只读取目标文件。
-- Status: open
+- Status: passed
 
 ## Round 1: 启动器与发布证据完整性
 
@@ -164,17 +164,142 @@ S5-02、S5-03、S5-05 和 S5-07 的生产路径、测试路径与工程计划必
 
 - Blocking findings found: yes
 - Accepted blocking findings fixed: yes
-- Blocking re-review completed: no
-- Blocking re-review passed: no
+- Blocking re-review completed: yes
+- Blocking re-review passed: yes
 - Blocking re-review round links:
-  - Round 2 pending
+  - Round 2
 - Rejected findings backed by evidence: n/a
 - Deferred findings documented: yes
-- Implementation completeness gaps resolved or accepted by user: yes, pending independent verification
+- Implementation completeness gaps resolved or accepted by user: yes
 - Target benefit warnings recorded: yes
-- Blocked reason: 等待修复后的独立 Round 2 复审。
-- Allowed to proceed: no
+- Blocked reason: n/a
+- Allowed to proceed: yes
+
+## Round 2: 修复后的独立复审
+
+### Review Input
+
+#### Objective
+验证 Round 1 的 B1、B2 是否在当前 `e3baa83` 中真实闭环，不将说明文字或测试替身当作生产修复。
+
+#### Review Target
+`run_dev.sh`、`scripts/test-run-dev-api.sh`、`lib/dev.js`、真实 Harbor 测试和 Stage 5 工程计划。
+
+#### Risk Focus
+- 递归清理是否覆盖 `uv`/`npm` 的后代。
+- 退出测试是否同时证明健康端点不可达和端口可复用。
+- S5-05 是否仍存在虚构的凭证条件。
+
+#### Verification Status
+本地 `bash scripts/test-after-change-web.sh` 通过（84 passed / 3 skipped、前端 59 tests）；当前提交 CI `#29149465969` 在六个跨平台门禁 job 全绿。
+
+#### Reviewer Instructions
+- Fresh internal subagent session.
+- 不修改文件。
+- 不依赖先前审查或主代理结论。
+- 给出 blocker、warning、严格 PASS/BLOCKED 结论。
+
+### Internal Subagent Unavailable Fallback
+
+- Required only when fresh internal subagents are unavailable.
+- Internal subagent unavailable reason: n/a
+- Fallback outcome: n/a
+
+### Reviewer Timeout Policy
+
+| Complexity | Initial Wait | Extension | Max Attempts Per Role | Blocking Closure Behavior |
+|---|---:|---:|---:|---|
+| high-risk | 120s | 120s | 2 | 未获得结论不得通过 |
+
+### Reviewer Selection
+
+| Reviewer | Reason Selected | Risk Area |
+|---|---|---|
+| `code-reviewer` | 与 Round 1 不同的全新 Codex 会话，专门确认阻断修复不是表面改动 | 进程树、测试有效性、条件回归 |
+
+### Reviewer Launch Records
+
+| Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
+|---|---|---|---|---|---|---|---|
+| `code-reviewer` | `multi_agent_v1__spawn_agent` | `019f50bb-33c3-7ba2-abe9-deff17e383be` | Codex subagent transcript | `fork_context=false` | Round 2 Review Input | 主代理历史、Round 1 结论和未提交 diff | yes |
+
+### Reviewer Timeout Records
+
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---|---:|---|---:|---|---|---|
+| R2 | `code-reviewer` | 1 | `019f50bb-33c3-7ba2-abe9-deff17e383be` | 180s | completed_after_extension | 初始等待超时后要求返回最终结论 | completed |
+
+### Reviewer Outputs
+
+#### R2
+
+##### Summary
+结论为 `PASS`，无 blocker。`run_dev.sh` 已递归终止服务后代并有受限等待；冒烟脚本已验证健康端点失效和端口可重新绑定；S5-05 文档已与真实测试的 opt-in + Docker 条件一致。
+
+##### Blocking Findings
+- none
+
+##### Non-blocking Risks
+- W3: `run_dev.sh` 依赖 `pgrep` 枚举后代；目标 macOS/Linux 开发环境默认具备该命令，当前依赖未在启动时显式探测。
+- W4: Windows 的 `taskkill` 失败后记录告警并回退直接 `SIGTERM`；这是 `taskkill` 自身失败时的降级路径，常规 Windows CI 已验证标准树终止路径。
+
+##### User-Perspective Checks
+- Usability: pass。Ctrl-C 后两个服务端口的释放有自动化证据。
+- Ease of use: pass。下一次启动不再依赖手动清理遗留端口。
+- Ease of understanding: pass。真实 Harbor 跳过条件已按实际行为描述。
+
+##### Implementation Completeness Checks
+
+| Plan Item | Expected Behavior | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status | Finding Link |
+|---|---|---|---|---|---|---|---|---|
+| S5-02 | 收敛服务树 | `run_dev.sh:45` | SIGTERM/EXIT | `test-run-dev-api.sh` | CI `#29149465969` | none | landed | none |
+| S5-03 | 端口释放回归 | `scripts/test-run-dev-api.sh:30` | 发布门禁 | 健康端点 + bind 检查 | 本地全量门禁 | none | landed | none |
+| S5-05 | 条件回归语义准确 | 真实 Harbor pytest | `ORNNLAB_REAL_HARBOR=1` | skip 条件复核 | CI 仍默认 skip real smoke | none | landed | none |
+
+##### Target Benefit Checks
+
+| Claimed Benefit | Baseline | Target | Measurement Method | Comparison Evidence | Result | Regression / Side Effect | Status | Finding Link |
+|---|---|---|---|---|---|---|---|---|
+| 本地服务可靠停止 | 仅脚本 PID 退出 | 健康端点失效、端口释放 | 真实全栈启动后 SIGTERM | `test-run-dev-api.sh` 与本地门禁 | achieved | W3/W4 已记录 | proven | none |
+
+##### Required Fixes
+- none
+
+##### Missing Tests
+- none
+
+##### Missing Logs / Observability
+- none
+
+##### Evidence
+- `run_dev.sh:45` - 后代递归终止。
+- `scripts/test-run-dev-api.sh:30` - 端口释放验证。
+- `docs/releases/v1.0.5/engineering-plan.md:62` - 真实 Harbor 条件语义。
+- `.github/workflows/ci.yml:96` - CI 只设置 `ORNNLAB_REAL_HARBOR=1`，不要求 Hub 凭证。
+
+### Main Agent Response
+
+| Reviewer | Finding | Broken Assumption / Failure Scenario | Severity | Decision | Evidence / Reason | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|
+| R2 | no blockers | Round 1 修复经独立会话复验 | n/a | accept | 审查结论 PASS；CI `#29149465969` 六个门禁 job 全绿 | 关闭 Stage 5 审查 | 将 W3/W4 作为后续启动器增强候选，不阻断 v1.0.5 |
+| R2 | W3 | `pgrep` 缺失会影响后代枚举 | non-blocking | accept-risk | 支持目标为 macOS/Linux 本地开发环境，现有本机与 macOS/Ubuntu 验证均存在 | 记录风险，不扩大本次发布范围 | 后续启动器依赖探测 |
+| R2 | W4 | `taskkill` 失败时树级回退能力有限 | non-blocking | accept-risk | 标准 Windows CI 路径已通过，代码会记录失败并尝试 SIGTERM | 记录风险，不掩盖失败 | 后续 Windows 故障注入测试 |
+
+### Closure Status
+
+- Blocking findings found: no
+- Accepted blocking findings fixed: n/a
+- Blocking re-review completed: yes
+- Blocking re-review passed: yes
+- Blocking re-review round links:
+  - Round 2
+- Rejected findings backed by evidence: n/a
+- Deferred findings documented: yes
+- Implementation completeness gaps resolved or accepted by user: yes
+- Target benefit warnings recorded: yes
+- Blocked reason: n/a
+- Allowed to proceed: yes
 
 ## Final Conclusion
 
-Round 1 不允许完成 Stage 5。阻断项已修复并通过本地全量门禁，但必须由新的独立 Codex 审查员复审后才能关闭。
+两轮独立 Codex 审查均已完成。Round 1 的两个阻断项已实现修复，Round 2 对当前实现结论为 PASS；当前提交的跨平台 CI `#29149465969` 通过。Stage 5 可以关闭，W3/W4 为已记录的非阻断后续增强项。
