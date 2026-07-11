@@ -1,6 +1,6 @@
 import { Bot, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useAgent, useOperation } from '../api/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAgent, useCachedServerSearch, useOperation } from '../api/hooks'
 import { agentRowToDto } from '../api/requestMappers'
 import { agentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
@@ -26,18 +26,22 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<AgentRow | null>(null)
   const [search, setSearch] = useState('')
+  const searchQuery = search.trim() || undefined
+  const loadSearch = useCallback((query: string) => client.listAgents({ limit: 100, q: query }), [client])
+  const searchResource = useCachedServerSearch('agents', searchQuery, loadSearch)
   const detailResource = useAgent(client, selected?.id)
   const agentOperation = useOperation(client)
   const detailAgent = detailResource.data ? agentDtoToRow(detailResource.data) : selected
   const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return rows
+    if (!searchQuery) return rows
+    if (searchResource.data) return searchResource.data.items.map(agentDtoToRow)
+    const query = searchQuery.toLowerCase()
     return rows.filter((row) =>
       [row.agentName, row.harness, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [rows, search])
+  }, [rows, searchQuery, searchResource.data])
 
   useEffect(() => {
     if (agentOperation.operation?.status !== 'completed') return
@@ -140,6 +144,11 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
           </table>
         </div>
       </section>
+      <ResourceStatus
+        error={searchResource.error?.message ?? null}
+        loading={searchResource.loading}
+        loadingLabel={t('loadingAgents')}
+      />
       {detailAgent && (
         <DetailDrawer label={t('selectedAgent')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>

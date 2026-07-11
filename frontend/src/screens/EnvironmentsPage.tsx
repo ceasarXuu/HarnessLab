@@ -1,6 +1,6 @@
 import { Box, Copy, Plus, Save, Search, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useEnvironment, useOperation } from '../api/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCachedServerSearch, useEnvironment, useOperation } from '../api/hooks'
 import { environmentRowToDto } from '../api/requestMappers'
 import { environmentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
@@ -32,6 +32,9 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
   const [deleteTarget, setDeleteTarget] = useState<EnvironmentRow | null>(null)
   const [editingDraft, setEditingDraft] = useState<EnvironmentRow | null>(null)
   const [search, setSearch] = useState('')
+  const searchQuery = search.trim() || undefined
+  const loadSearch = useCallback((query: string) => client.listEnvironments({ limit: 100, q: query }), [client])
+  const searchResource = useCachedServerSearch('environments', searchQuery, loadSearch)
   const detailResource = useEnvironment(client, selected?.id)
   const environmentOperation = useOperation(client)
   const detailEnvironment = detailResource.data ? environmentDtoToRow(detailResource.data) : selected
@@ -50,14 +53,15 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
     if (environmentOperation.operation.type === 'create-environment') onView('list')
   }, [detailResource.refresh, environmentOperation.operation?.id, environmentOperation.operation?.status, onRefresh, onView])
   const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return rows
+    if (!searchQuery) return rows
+    if (searchResource.data) return searchResource.data.items.map(environmentDtoToRow)
+    const query = searchQuery.toLowerCase()
     return rows.filter((row) =>
       [row.name, row.profileType, row.environmentType, row.importPath, row.allowedHosts].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [rows, search])
+  }, [rows, searchQuery, searchResource.data])
 
   const openDrawer = (row: EnvironmentRow) => {
     setSelected(row)
@@ -185,6 +189,11 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
           </table>
         </div>
       </section>
+      <ResourceStatus
+        error={searchResource.error?.message ?? null}
+        loading={searchResource.loading}
+        loadingLabel={t('loadingEnvironments')}
+      />
       {detailEnvironment && (
         <DetailDrawer label={t('selectedEnvironment')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>

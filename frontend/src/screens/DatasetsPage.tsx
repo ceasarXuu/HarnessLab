@@ -1,6 +1,6 @@
 import { Database, Download, FolderInput, MapPin, Plus, Search, Trash2, Unlink, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useDataset, useDatasetTasks, useOperation } from '../api/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCachedServerSearch, useDataset, useDatasetTasks, useOperation } from '../api/hooks'
 import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
@@ -66,16 +66,23 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const datasetOperation = useOperation(client)
   const selectedRef = selected?.ref ?? (selected ? datasetKey(selected) : undefined)
   const detailResource = useDataset(client, selectedRef)
-  const tasksResource = useDatasetTasks(client, selectedRef)
+  const tasksResource = useDatasetTasks(client, selectedRef, { limit: 100 })
+  const taskSearchQuery = taskSearch.trim() || undefined
+  const loadTaskSearch = useCallback(
+    (query: string) => client.listDatasetTasks(selectedRef ?? '', { limit: 100, q: query }),
+    [client, selectedRef],
+  )
+  const taskSearchResource = useCachedServerSearch(selectedRef, taskSearchQuery, loadTaskSearch)
   const detailRow = detailResource.data ? datasetDtoToRow(detailResource.data) : selected
   const selectedTasks = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
   const visibleSelectedTasks = useMemo(() => {
-    const query = taskSearch.trim().toLowerCase()
-    if (!query) return selectedTasks
+    if (!taskSearchQuery) return selectedTasks
+    if (taskSearchResource.data) return taskSearchResource.data.items.map(datasetTaskDtoToDatasetTask)
+    const query = taskSearchQuery.toLowerCase()
     return selectedTasks.filter((row) =>
       [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
     )
-  }, [selectedTasks, taskSearch])
+  }, [selectedTasks, taskSearchQuery, taskSearchResource.data])
 
   useEffect(() => {
     if (datasetOperation.operation?.status !== 'completed') return
@@ -348,8 +355,8 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               onRunTask={runTask}
             />
             <ResourceStatus
-              error={detailResource.error?.message ?? tasksResource.error?.message ?? null}
-              loading={detailResource.loading || tasksResource.loading}
+              error={detailResource.error?.message ?? tasksResource.error?.message ?? taskSearchResource.error?.message ?? null}
+              loading={detailResource.loading || tasksResource.loading || taskSearchResource.loading}
               loadingLabel={t('loadingDatasets')}
             />
           </>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useDatasetSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
+import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
@@ -80,15 +80,20 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const dataMode = injectedDataMode ?? readWebUiDataMode()
   const client = useMemo(() => injectedClient ?? createRuntimeWebUiClient(dataMode), [dataMode, injectedClient])
   const writesEnabled = true
-  const agentsResource = useAgents(client)
-  const jobsResource = useJobs(client)
+  const [search, setSearch] = useState('')
+  const jobSearchQuery = search.trim() || undefined
+  const loadJobSearch = useCallback((query: string) => client.listJobs({ limit: 100, q: query }), [client])
+  const jobSearchResource = useCachedServerSearch('jobs', jobSearchQuery, loadJobSearch)
+  const agentsResource = useAgents(client, { limit: 100 })
+  const jobsResource = useJobs(client, { limit: 100 })
   const datasetsResource = useDatasets(client, { limit: 100 })
-  const environmentsResource = useEnvironments(client)
-  const leaderboardDatasetsResource = useLeaderboardDatasets(client)
+  const environmentsResource = useEnvironments(client, { limit: 100 })
+  const leaderboardDatasetsResource = useLeaderboardDatasets(client, { limit: 100 })
   const hubConnectionResource = useHubConnection(client)
   const [datasetSearch, setDatasetSearch] = useState('')
   const datasetSearchQuery = datasetSearch.trim() || undefined
-  const datasetSearchResource = useDatasetSearch(client, datasetSearchQuery)
+  const loadDatasetSearch = useCallback((query: string) => client.listDatasets({ limit: 100, q: query }), [client])
+  const datasetSearchResource = useCachedServerSearch('datasets', datasetSearchQuery, loadDatasetSearch)
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
@@ -96,7 +101,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const jobOperation = useOperation(client)
   const [selected, setSelected] = useState<HarborJob | null>(null)
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
-  const [search, setSearch] = useState('')
   const [draft, setDraft] = useState(defaultRunDraft)
   const [language, setLanguage] = useState<Locale>(readLocale)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
@@ -150,14 +154,15 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   }, [jobOperation.operation?.id, jobOperation.operation?.status, jobsResource.refresh, leaderboardDatasetsResource.refresh, leaderboardResource.refresh])
 
   const filteredJobs = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return jobs
+    if (!jobSearchQuery) return jobs
+    if (jobSearchResource.data) return jobSearchResource.data.items.map(jobDtoToHarborJob)
+    const query = jobSearchQuery.toLowerCase()
     return jobs.filter((job) =>
       [job.name, job.dataset, job.agent, job.model, job.status].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
-  }, [jobs, search])
+  }, [jobSearchQuery, jobSearchResource.data, jobs])
 
   const datasetSearchFallback = useMemo(() => {
     if (!datasetSearchQuery) return datasets
@@ -400,8 +405,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             }}
           />
           <ResourceStatus
-            error={jobsResource.error ? t('unableToLoadJobs') : null}
-            loading={jobsResource.loading}
+            error={(jobSearchQuery ? jobSearchResource.error : jobsResource.error) ? t('unableToLoadJobs') : null}
+            loading={jobSearchQuery ? jobSearchResource.loading : jobsResource.loading}
             loadingLabel={t('loadingJobs')}
           />
           <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />

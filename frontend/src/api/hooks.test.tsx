@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiResponse } from './contract'
-import { useOperation, useWebUiResource } from './hooks'
+import { useCachedServerSearch, useOperation, useWebUiResource } from './hooks'
 import { createMockWebUiClient } from './mockClient'
 
 describe('useWebUiResource', () => {
@@ -62,6 +62,24 @@ describe('useWebUiResource', () => {
     await act(async () => resolveRefresh?.({ data: 'updated', error: null }))
     await refresh!
     expect(result.current.data).toBe('updated')
+  })
+
+  it('caches a server search result by scope and keyword', async () => {
+    const loadPage = vi.fn<(query: string) => Promise<ApiResponse<{ items: string[]; total: number } | null>>>()
+      .mockResolvedValue({ data: { items: ['swebench-verified'], total: 1 }, error: null })
+    const { result, rerender } = renderHook(
+      ({ query }) => useCachedServerSearch('datasets', query, loadPage),
+      { initialProps: { query: 'swe' } },
+    )
+
+    await waitFor(() => expect(result.current.data?.items).toEqual(['swebench-verified']))
+    rerender({ query: '' })
+    await waitFor(() => expect(result.current.data).toBeNull())
+    rerender({ query: 'swe' })
+    await waitFor(() => expect(result.current.data?.items).toEqual(['swebench-verified']))
+
+    expect(loadPage).toHaveBeenCalledTimes(1)
+    expect(loadPage).toHaveBeenCalledWith('swe')
   })
 
   it('tracks an Operation through queued, running, and completed states', async () => {

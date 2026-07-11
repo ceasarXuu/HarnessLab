@@ -54,6 +54,27 @@ describe('App API mode', () => {
     expect(screen.queryByText('terminal-bench')).not.toBeInTheDocument()
   })
 
+  it('uses server-side search for Agents, Environments, and leaderboard Datasets', async () => {
+    const client = createMockWebUiClient()
+    const listAgents = vi.spyOn(client, 'listAgents')
+    const listEnvironments = vi.spyOn(client, 'listEnvironments')
+    const listLeaderboardDatasets = vi.spyOn(client, 'listLeaderboardDatasets')
+    render(<App client={client} dataMode="api" />)
+
+    await screen.findByText('terminal-bench-smoke')
+    fireEvent.click(screen.getByRole('link', { name: 'Agents' }))
+    fireEvent.change(screen.getByLabelText('Search agents'), { target: { value: 'local' } })
+    await waitFor(() => expect(listAgents).toHaveBeenCalledWith({ limit: 100, q: 'local' }))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Environment' }))
+    fireEvent.change(screen.getByLabelText('Search environments'), { target: { value: 'docker' } })
+    await waitFor(() => expect(listEnvironments).toHaveBeenCalledWith({ limit: 100, q: 'docker' }))
+
+    fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
+    await waitFor(() => expect(listLeaderboardDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swe' }))
+  })
+
   it('reuses a cached Dataset search result when returning to a keyword', async () => {
     const client = createMockWebUiClient()
     const listDatasets = vi.spyOn(client, 'listDatasets')

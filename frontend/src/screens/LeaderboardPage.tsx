@@ -1,6 +1,6 @@
 import { Search, Trophy } from 'lucide-react'
-import { useState } from 'react'
-import { useJob, useJobEvents, useJobTrials } from '../api/hooks'
+import { useCallback, useState } from 'react'
+import { useCachedServerSearch, useJob, useJobEvents, useJobTrials } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { CustomSelect } from '../ui/components/CustomSelect'
@@ -46,15 +46,24 @@ export function LeaderboardPage({
   const detailResource = useJob(client, selectedJob?.id)
   const eventsResource = useJobEvents(client, selectedJob?.id)
   const trialsResource = useJobTrials(client, selectedJob?.id)
+  const datasetSearchQuery = datasetSearch.trim() || undefined
+  const loadDatasetSearch = useCallback(
+    (query: string) => client.listLeaderboardDatasets({ limit: 100, q: query }),
+    [client],
+  )
+  const datasetSearchResource = useCachedServerSearch('leaderboard-datasets', datasetSearchQuery, loadDatasetSearch)
   const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selectedJob
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
   const selectedDataset = leaderboardDatasets.find((row) => row.ref === dataset)
-  const visibleDatasets = leaderboardDatasets.filter((row) =>
+  const fallbackDatasets = leaderboardDatasets.filter((row) =>
     [row.name, row.version, row.ref].some((value) =>
       value.toLowerCase().includes(datasetSearch.trim().toLowerCase()),
     ),
   )
+  const visibleDatasets = datasetSearchQuery
+    ? datasetSearchResource.data?.items ?? fallbackDatasets
+    : leaderboardDatasets
   const selectableDatasets =
     selectedDataset && !visibleDatasets.includes(selectedDataset) ? [selectedDataset, ...visibleDatasets] : visibleDatasets
 
@@ -147,6 +156,11 @@ export function LeaderboardPage({
           </table>
         </div>
       </section>
+      <ResourceStatus
+        error={datasetSearchResource.error?.message ?? null}
+        loading={datasetSearchResource.loading}
+        loadingLabel={t('loadingDatasets')}
+      />
       {detailJob && (
         <DetailDrawer label={t('selectedJob')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>
