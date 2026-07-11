@@ -39,6 +39,21 @@ describe('App API mode', () => {
     expect(screen.queryByText('terminal-bench')).not.toBeInTheDocument()
   })
 
+  it('queries the Dataset catalog on the server when searching', async () => {
+    const client = createMockWebUiClient()
+    const listDatasets = vi.spyOn(client, 'listDatasets')
+    render(<App client={client} dataMode="api" />)
+
+    await screen.findByText('terminal-bench-smoke')
+    fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
+    await screen.findByText('terminal-bench')
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swebench' } })
+
+    await waitFor(() => expect(listDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swebench' }))
+    expect(await screen.findByText('swebench-verified')).toBeInTheDocument()
+    expect(screen.queryByText('terminal-bench')).not.toBeInTheDocument()
+  })
+
   it('submits Job creation through the injected API client in API mode', async () => {
     const client = createMockWebUiClient()
     const createJob = vi.spyOn(client, 'createJob')
@@ -86,7 +101,7 @@ describe('App API mode', () => {
     const client = createMockWebUiClient()
     vi.spyOn(client, 'listLeaderboardDatasets').mockResolvedValue({
       data: {
-        items: [{ name: 'swe-bench-lite', ref: 'swe-bench-lite@2026.06', version: '2026.06' }],
+        items: [{ name: 'swebench-verified', ref: 'swebench-verified@1.0', version: '1.0' }],
         total: 1,
       },
       error: null,
@@ -95,10 +110,10 @@ describe('App API mode', () => {
 
     await screen.findByText('terminal-bench-smoke')
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
-    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swe-bench-lite@2026.06'))
+    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swebench-verified@1.0'))
     fireEvent.click(screen.getByLabelText('Select dataset'))
 
-    expect(screen.getByRole('option', { name: 'swe-bench-lite@2026.06' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'swebench-verified@1.0' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'terminal-bench@2.0' })).not.toBeInTheDocument()
   })
 

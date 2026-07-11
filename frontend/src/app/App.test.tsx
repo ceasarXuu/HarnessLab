@@ -103,7 +103,7 @@ describe('App', () => {
     expect(within(datasetsTable).getByText('~/Datasets/terminal-bench@2.0')).toBeInTheDocument()
     expect(within(datasetsTable).getByText('1.2 GB')).toBeInTheDocument()
     expect(within(datasetsTable).getAllByText('Not downloaded').length).toBeGreaterThan(0)
-    const sweRow = screen.getByText('swe-bench-lite').closest('tr')
+    const sweRow = screen.getByText('swebench-verified').closest('tr')
     expect(sweRow).not.toBeNull()
     fireEvent.click(within(sweRow as HTMLElement).getByRole('button', { name: 'Download' }))
     const downloadDialog = await screen.findByRole('dialog', { name: 'Download Dataset' })
@@ -164,7 +164,7 @@ describe('App', () => {
     render(<App client={pickerEnabledClient()} />)
 
     fireEvent.click(screen.getByRole('link', { name: 'Datasets' }))
-    const sweDataset = await screen.findByText('swe-bench-lite')
+    const sweDataset = await screen.findByText('swebench-verified')
     fireEvent.click(sweDataset)
     const datasetDialog = screen.getByRole('dialog', { name: 'Selected dataset' })
     fireEvent.click(within(datasetDialog).getByRole('button', { name: 'Download' }))
@@ -204,7 +204,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Search jobs'), { target: { value: 'swe' } })
 
     const jobsTable = screen.getByRole('table')
-    expect(screen.getByText('swe-bench-lite-regression')).toBeInTheDocument()
+    expect(screen.getByText('swebench-verified-regression')).toBeInTheDocument()
     expect(within(jobsTable).queryByText('terminal-bench-smoke')).not.toBeInTheDocument()
   })
 

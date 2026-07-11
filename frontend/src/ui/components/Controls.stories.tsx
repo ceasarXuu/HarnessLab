@@ -30,7 +30,7 @@ function ControlsFixture() {
               value={dataset}
               options={[
                 { label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
-                { label: 'swe-bench-lite@2026.06', value: 'swe-bench-lite@2026.06' },
+                { label: 'swebench-verified@1.0', value: 'swebench-verified@1.0' },
                 { label: 'harbor/hello-world@latest', value: 'harbor/hello-world@latest' },
               ]}
               onChange={setDataset}

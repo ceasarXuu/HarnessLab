@@ -133,7 +133,7 @@ describe('App agents and leaderboard', () => {
 
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.click(screen.getByLabelText('Select dataset'))
-    fireEvent.click(screen.getByRole('option', { name: 'swe-bench-lite@2026.06' }))
+    fireEvent.click(screen.getByRole('option', { name: 'swebench-verified@1.0' }))
     expect(await screen.findByText('job_74c1')).toBeInTheDocument()
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })

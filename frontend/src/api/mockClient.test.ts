@@ -47,14 +47,14 @@ describe('MockWebUiClient', () => {
   it('does not expose a downloaded Dataset until its asynchronous Operation completes', async () => {
     const client = createMockWebUiClient()
 
-    const submitted = await client.downloadDataset('swe-bench-lite@2026.06', { parentPath: '/tmp/datasets' })
+    const submitted = await client.downloadDataset('swebench-verified@1.0', { parentPath: '/tmp/datasets' })
     const operationId = submitted.data?.operation.id ?? ''
 
-    expect((await client.getDataset('swe-bench-lite@2026.06')).data?.download.status).toBe('not-downloaded')
+    expect((await client.getDataset('swebench-verified@1.0')).data?.download.status).toBe('not-downloaded')
     expect((await client.getOperation(operationId)).data?.status).toBe('running')
     expect((await client.getOperation(operationId)).data?.status).toBe('completed')
-    expect((await client.getDataset('swe-bench-lite@2026.06')).data?.download.status).toBe('downloaded')
-    expect((await client.removeDatasetRegistration('swe-bench-lite@2026.06')).error?.code).toBe(
+    expect((await client.getDataset('swebench-verified@1.0')).data?.download.status).toBe('downloaded')
+    expect((await client.removeDatasetRegistration('swebench-verified@1.0')).error?.code).toBe(
       'DATASET_MANAGED_REGISTRATION_REQUIRED',
     )
   })

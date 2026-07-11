@@ -41,7 +41,7 @@ describe('Stage 3 Operation write boundary', () => {
         },
         runImmediately: true,
       }),
-      client.downloadDataset('swe-bench-lite@2026.06', { parentPath: '/tmp/datasets' }),
+      client.downloadDataset('swebench-verified@1.0', { parentPath: '/tmp/datasets' }),
       client.moveDataset('terminal-bench@2.0', { parentPath: '/tmp/relocated' }),
       client.relocateDataset('terminal-bench@2.0', { path: '/tmp/relocated/terminal-bench@2.0' }),
       client.removeDatasetRegistration('harbor/hello-world@latest'),

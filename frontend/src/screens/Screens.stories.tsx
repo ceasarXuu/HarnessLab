@@ -222,7 +222,7 @@ export const DatasetEmptyState: Story = {
   render: () => <DatasetsFixture />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByText('swe-bench-lite'))
+    await userEvent.click(canvas.getByText('swebench-verified'))
     await expect(canvas.getByText('No Tasks are available for this Dataset.')).toBeVisible()
   },
 }

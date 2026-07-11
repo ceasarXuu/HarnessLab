@@ -31,6 +31,17 @@ describe('WebUiHttpClient', () => {
     })
   })
 
+  it('encodes catalog search on the server request', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ data: { items: [], total: 0 }, error: null }), { status: 200 }),
+    )
+    const client = createWebUiHttpClient('/api/webui/v1', request)
+
+    await client.listDatasets({ limit: 100, q: 'terminal bench' })
+
+    expect(request).toHaveBeenCalledWith('/api/webui/v1/datasets?limit=100&q=terminal+bench', undefined)
+  })
+
   it('maps every visible write to a WebUI contract route rather than a legacy route', async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ data: { operation: {} }, error: null })))
     const client = createWebUiHttpClient('/api/webui/v1', request)

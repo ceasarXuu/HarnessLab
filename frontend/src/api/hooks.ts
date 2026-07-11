@@ -79,9 +79,13 @@ export function useJobs(client: WebUiClient, query: ListQuery = {}): WebUiResour
   return useWebUiResource(load, [client, query.cursor, query.limit, query.q])
 }
 
-export function useDatasets(client: WebUiClient, query: ListQuery = {}): WebUiResource<Page<DatasetDto>> {
+export function useDatasets(
+  client: WebUiClient,
+  query: ListQuery = {},
+  enabled = true,
+): WebUiResource<Page<DatasetDto>> {
   const load = useCallback(() => client.listDatasets(query), [client, query.cursor, query.limit, query.q])
-  return useWebUiResource(load, [client, query.cursor, query.limit, query.q])
+  return useWebUiResource(load, [client, query.cursor, query.limit, query.q], enabled)
 }
 
 export function useAgents(client: WebUiClient, query: AgentQuery = {}): WebUiResource<Page<AgentDto>> {

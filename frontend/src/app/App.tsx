@@ -82,11 +82,13 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const writesEnabled = true
   const agentsResource = useAgents(client)
   const jobsResource = useJobs(client)
-  const datasetsResource = useDatasets(client)
+  const datasetsResource = useDatasets(client, { limit: 100 })
   const environmentsResource = useEnvironments(client)
   const leaderboardDatasetsResource = useLeaderboardDatasets(client)
   const hubConnectionResource = useHubConnection(client)
   const [datasetSearch, setDatasetSearch] = useState('')
+  const datasetSearchQuery = datasetSearch.trim() || undefined
+  const datasetSearchResource = useDatasets(client, { limit: 100, q: datasetSearchQuery }, Boolean(datasetSearchQuery))
   const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
@@ -157,15 +159,21 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     )
   }, [jobs, search])
 
-  const filteredDatasets = useMemo(() => {
-    const query = datasetSearch.trim().toLowerCase()
-    if (!query) return datasets
-    return datasets.filter((row) =>
-      [row.name, row.version, row.visibility, row.source, row.digest].some((value) =>
-        (value ?? '').toLowerCase().includes(query),
-      ),
-    )
-  }, [datasetSearch, datasets])
+  const filteredDatasets = useMemo(
+    () => (datasetSearchQuery ? datasetSearchResource.data?.items.map(datasetDtoToRow) ?? [] : datasets),
+    [datasetSearchQuery, datasetSearchResource.data?.items, datasets],
+  )
+
+  const refreshDatasets = useCallback(
+    async () => {
+      if (datasetSearchQuery) {
+        await datasetSearchResource.refresh()
+        return
+      }
+      await datasetsResource.refresh()
+    },
+    [datasetSearchQuery, datasetSearchResource.refresh, datasetsResource.refresh],
+  )
 
   const filteredLeaderboard = useMemo(() => {
     const excludedJobIds = new Set(jobs.filter((job) => !job.includeInLeaderboard).map((job) => job.id))
@@ -276,7 +284,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             rows={filteredDatasets}
             search={datasetSearch}
             t={t}
-            onRefresh={datasetsResource.refresh}
+            onRefresh={refreshDatasets}
             onPrepareTaskRun={(datasetRef, taskName) => {
               setDraft((current) => ({ ...current, source: datasetRef, selectedTaskNames: [taskName] }))
               navigate('jobs', 'new')
@@ -284,8 +292,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onSearch={setDatasetSearch}
           />
           <ResourceStatus
-            error={datasetsResource.error ? t('unableToLoadDatasets') : null}
-            loading={datasetsResource.loading}
+            error={(datasetSearchQuery ? datasetSearchResource.error : datasetsResource.error) ? t('unableToLoadDatasets') : null}
+            loading={datasetSearchQuery ? datasetSearchResource.loading : datasetsResource.loading}
             loadingLabel={t('loadingDatasets')}
           />
         </>
