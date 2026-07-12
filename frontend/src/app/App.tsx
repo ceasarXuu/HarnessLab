@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, useSystemHealth } from '../api/hooks'
+import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useOperation, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
-import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
+import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import type { HarborJob } from '../domain/harbor'
@@ -88,13 +88,12 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const jobsResource = useJobs(client, { limit: 100 })
   const datasetsResource = useDatasets(client, { limit: 100 })
   const environmentsResource = useEnvironments(client, { limit: 100 })
-  const leaderboardDatasetsResource = useLeaderboardDatasets(client, { limit: 100 })
   const hubConnectionResource = useHubConnection(client)
   const [datasetSearch, setDatasetSearch] = useState('')
   const datasetSearchQuery = datasetSearch.trim() || undefined
   const loadDatasetSearch = useCallback((query: string) => client.listDatasets({ limit: 100, q: query }), [client])
   const datasetSearchResource = useCachedServerSearch('datasets', datasetSearchQuery, loadDatasetSearch)
-  const [leaderboardDataset, setLeaderboardDataset] = useState('terminal-bench@2.0')
+  const [leaderboardDataset, setLeaderboardDataset] = useState('')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
   const systemResource = useSystemHealth(client)
@@ -118,19 +117,12 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     [leaderboardResource.data],
   )
   const leaderboardDatasets = useMemo(
-    () => leaderboardDatasetsResource.data?.items.map(leaderboardDatasetDtoToRow) ?? [],
-    [leaderboardDatasetsResource.data],
+    () => datasets.flatMap((dataset) => dataset.ref ? [{ name: dataset.name, ref: dataset.ref, version: dataset.version }] : []),
+    [datasets],
   )
   const hubConnection = hubConnectionResource.loading
     ? 'loading'
     : hubConnectionResource.data?.status ?? 'unavailable'
-
-  useEffect(() => {
-    const firstDataset = leaderboardDatasets[0]?.ref
-    if (firstDataset && !leaderboardDatasets.some((item) => item.ref === leaderboardDataset)) {
-      setLeaderboardDataset(firstDataset)
-    }
-  }, [leaderboardDataset, leaderboardDatasets])
 
   useEffect(() => {
     if (agentsResource.loading || datasetsResource.loading || environmentsResource.loading) return
@@ -149,9 +141,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   useEffect(() => {
     if (jobOperation.operation?.status !== 'completed') return
     void jobsResource.refresh()
-    void leaderboardDatasetsResource.refresh()
     void leaderboardResource.refresh()
-  }, [jobOperation.operation?.id, jobOperation.operation?.status, jobsResource.refresh, leaderboardDatasetsResource.refresh, leaderboardResource.refresh])
+  }, [jobOperation.operation?.id, jobOperation.operation?.status, jobsResource.refresh, leaderboardResource.refresh])
 
   const filteredJobs = useMemo(() => {
     if (!jobSearchQuery) return jobs
@@ -378,8 +369,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
           <ResourceStatus
-            error={leaderboardDatasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
-            loading={leaderboardDatasetsResource.loading || leaderboardResource.loading}
+            error={datasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
+            loading={datasetsResource.loading || leaderboardResource.loading}
             loadingLabel={t('loadingLeaderboard')}
           />
         </>

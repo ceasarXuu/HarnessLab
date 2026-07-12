@@ -13,6 +13,7 @@ interface CustomSelectProps {
   className?: string
   disabled?: boolean
   leadingIcon?: ReactNode
+  placeholder?: string
   visibleLabel?: string
   onChange: (value: string) => void
 }
@@ -23,12 +24,13 @@ export function CustomSelect({
   disabled = false,
   leadingIcon,
   options,
+  placeholder,
   value,
   visibleLabel,
   onChange,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
-  const selected = options.find((option) => option.value === value) ?? options[0]
+  const selected = options.find((option) => option.value === value)
 
   return (
     <div
@@ -55,7 +57,7 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <span>{selected?.label ?? value}</span>
+        <span>{selected?.label ?? (value || placeholder || '')}</span>
         <ChevronDown aria-hidden="true" />
       </button>
       {open && !disabled && (

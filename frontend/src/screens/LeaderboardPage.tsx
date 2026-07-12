@@ -48,7 +48,7 @@ export function LeaderboardPage({
   const trialsResource = useJobTrials(client, selectedJob?.id)
   const datasetSearchQuery = datasetSearch.trim() || undefined
   const loadDatasetSearch = useCallback(
-    (query: string) => client.listLeaderboardDatasets({ limit: 100, q: query }),
+    (query: string) => client.listDatasets({ limit: 100, q: query }),
     [client],
   )
   const datasetSearchResource = useCachedServerSearch('leaderboard-datasets', datasetSearchQuery, loadDatasetSearch)
@@ -87,6 +87,7 @@ export function LeaderboardPage({
             <CustomSelect
               ariaLabel={t('selectDataset')}
               className="toolbar-select"
+              placeholder={t('selectDataset')}
               visibleLabel={t('dataset')}
               value={dataset}
               options={selectableDatasets.map((row) => ({ label: row.ref, value: row.ref }))}

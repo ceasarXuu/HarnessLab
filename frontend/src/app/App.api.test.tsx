@@ -58,7 +58,7 @@ describe('App API mode', () => {
     const client = createMockWebUiClient()
     const listAgents = vi.spyOn(client, 'listAgents')
     const listEnvironments = vi.spyOn(client, 'listEnvironments')
-    const listLeaderboardDatasets = vi.spyOn(client, 'listLeaderboardDatasets')
+    const listDatasets = vi.spyOn(client, 'listDatasets')
     render(<App client={client} dataMode="api" />)
 
     await screen.findByText('terminal-bench-smoke')
@@ -72,7 +72,7 @@ describe('App API mode', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
-    await waitFor(() => expect(listLeaderboardDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swe' }))
+    await waitFor(() => expect(listDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swe' }))
   })
 
   it('reuses a cached Dataset search result when returning to a keyword', async () => {
@@ -130,6 +130,9 @@ describe('App API mode', () => {
     expect(screen.getByText('Docker default')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
+    fireEvent.click(screen.getByLabelText('Select dataset'))
+    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench@2.0' }))
+    await screen.findByText('job_91a7')
     for (const button of screen.getAllByRole('button', { name: 'Remove' })) {
       expect(button).toBeEnabled()
     }
@@ -138,24 +141,19 @@ describe('App API mode', () => {
     expect(screen.getByRole('button', { name: 'Check update' })).toBeEnabled()
   })
 
-  it('uses the leaderboard Dataset contract rather than the generic Dataset catalog', async () => {
+  it('uses the Dataset catalog for leaderboard selection, including Datasets without rankings', async () => {
     const client = createMockWebUiClient()
-    vi.spyOn(client, 'listLeaderboardDatasets').mockResolvedValue({
-      data: {
-        items: [{ name: 'swebench-verified', ref: 'swebench-verified@1.0', version: '1.0' }],
-        total: 1,
-      },
-      error: null,
-    })
     render(<App client={client} />)
 
     await screen.findByText('terminal-bench-smoke')
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
-    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swebench-verified@1.0'))
+    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('Select dataset'))
     fireEvent.click(screen.getByLabelText('Select dataset'))
 
     expect(screen.getByRole('option', { name: 'swebench-verified@1.0' })).toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: 'terminal-bench@2.0' })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'terminal-bench@2.0' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench-nightly@nightly' }))
+    expect(await screen.findByText('No leaderboard entries are available for this Dataset.')).toBeInTheDocument()
   })
 
   it('renders Hub connection status from the injected client contract', async () => {
@@ -166,16 +164,20 @@ describe('App API mode', () => {
     expect(await screen.findByText('Hub disconnected')).toBeInTheDocument()
   })
 
-  it('refreshes selectable leaderboard Datasets after a leaderboard write completes', async () => {
+  it('does not reload the Dataset catalog after a leaderboard write completes', async () => {
     const client = createMockWebUiClient()
-    const listLeaderboardDatasets = vi.spyOn(client, 'listLeaderboardDatasets')
+    const listDatasets = vi.spyOn(client, 'listDatasets')
     render(<App client={client} />)
 
     await screen.findByText('terminal-bench-smoke')
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
-    await waitFor(() => expect(listLeaderboardDatasets).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(listDatasets).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByLabelText('Select dataset'))
+    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench@2.0' }))
+    await screen.findByText('job_91a7')
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
 
-    await waitFor(() => expect(listLeaderboardDatasets.mock.calls.length).toBeGreaterThan(1), { timeout: 2_000 })
+    await waitFor(() => expect(screen.queryByText('job_91a7')).not.toBeInTheDocument(), { timeout: 2_000 })
+    expect(listDatasets).toHaveBeenCalledTimes(1)
   })
 })
