@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -18,7 +18,14 @@ function ControlsFixture() {
   const [enabled, setEnabled] = useState(true)
   const [tpu, setTpu] = useState('v6e=2x4')
   const [paths, setPaths] = useState(['compose.gpu.yml'])
+  const [leaderboardDataset, setLeaderboardDataset] = useState('')
+  const [leaderboardSearch, setLeaderboardSearch] = useState('')
   const t = getTranslator('en')
+  const catalog = Array.from({ length: 40 }, (_, index) => {
+    const value = `benchmark-${String(index + 1).padStart(2, '0')}@1.0`
+    return { label: value, value }
+  })
+  const visibleCatalog = catalog.filter((option) => option.label.includes(leaderboardSearch))
 
   return (
     <main className="workspace single-page">
@@ -40,6 +47,21 @@ function ControlsFixture() {
             <Toggle checked={enabled} onChange={setEnabled} />
           </Field>
         </div>
+      </section>
+      <section className="surface rail-card">
+        <CustomSelect
+          ariaLabel="Select leaderboard dataset"
+          className="toolbar-select"
+          placeholder="Select dataset"
+          searchable
+          searchAriaLabel="Search leaderboard datasets"
+          searchPlaceholder="Search datasets"
+          searchValue={leaderboardSearch}
+          value={leaderboardDataset}
+          options={visibleCatalog}
+          onChange={setLeaderboardDataset}
+          onSearchChange={setLeaderboardSearch}
+        />
       </section>
       <section className="surface rail-card">
         <div className="run-grid">
@@ -129,6 +151,17 @@ export const FormControls: Story = {
     await expect(bounds.width).toBeLessThanOrEqual(180)
     await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
     await expect(canvas.getByLabelText('Allowed hosts 1')).toHaveValue('*')
+  },
+}
+
+export const SearchableSelect: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByLabelText('Select leaderboard dataset'))
+    await expect(canvas.getByLabelText('Search leaderboard datasets')).toBeVisible()
+    await expect(canvas.getAllByRole('option')).toHaveLength(40)
+    await userEvent.type(canvas.getByLabelText('Search leaderboard datasets'), '20')
+    await expect(canvas.getByRole('option', { name: 'benchmark-20@1.0' })).toBeVisible()
   },
 }
 
