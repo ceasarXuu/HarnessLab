@@ -49,6 +49,7 @@ DOC_INVENTORY = {
     "docs/releases/v0.1.4/web-connectivity/05-integration-test-gap.md": "rename-now",
     "docs/releases/v0.1.4/web-connectivity/06-web-design-best-practices.md": "rename-now",
     "docs/releases/v1.0.5/README.md": "rename-now",
+    "docs/releases/v1.0.5/dev-daemon-plan.md": "rename-now",
     "docs/releases/v1.0.5/engineering-plan.md": "rename-now",
     "docs/releases/v1.0.5/prd.md": "rename-now",
     "docs/releases/v1.0.5/technical-design.md": "rename-now",

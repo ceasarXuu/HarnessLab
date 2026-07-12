@@ -1,7 +1,7 @@
 # v1.0.5 工程计划与进度
 
 - 状态：Active
-- 更新：2026-07-11
+- 更新：2026-07-13
 - 判定规则：验收项未逐项满足、质量门未通过或独立审计仍有阻断项时，Stage 不得标记完成。
 
 ## 1. 阶段总览
@@ -15,6 +15,7 @@
 | 4 | API 模式联调 | Done | 已以真实 `/api/webui/v1`、Docker、Harbor 与 Hub 可观察状态完成全栈验证；直接启动前端仍默认 mock |
 | 5 | 发布前硬化 | Done | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归、两轮独立 Codex 审查均已闭环 |
 | 6 | Dataset 存储位置管理 | In progress | S6-01 至 S6-05 已完成并通过前后端门禁；S6-06 等待对抗性审查结论 |
+| 7 | 应用级守护进程 | Planned | 仅做 OrnnLab 应用级后台服务管理，支持主动 start/stop/restart/status 和崩溃重启；不做系统级开机自启动 |
 
 ## 2. Stage 3 验收矩阵
 
@@ -77,7 +78,20 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 | S6-05 | 前端与 mock 对等 | API/mock/MSW 使用同一 DTO、Operation 与错误语义；Dataset 和 New Job 路径控件通过本机原生目录选择器回填只读路径；Storybook 覆盖 managed、external、path-unavailable 状态 | Done |
 | S6-06 | 回归与审查 | 已通过后端 API/文件边界、前端交互、Storybook 与全量门禁；待独立对抗性审查确认无阻断项 | In progress |
 
-## 6. 已实施内容
+## 6. Stage 7 方案草案
+
+Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进程”升级为“OrnnLab 应用级守护进程管理”。该阶段不安装 launchd、systemd、Windows Service，不做登录或开机自启动。详细方案见 [应用级守护进程方案](dev-daemon-plan.md)。
+
+| ID | 验收项 | 当前证据 | 状态 |
+|---|---|---|---|
+| S7-01 | 范围收敛 | 已明确只做应用级守护，不做系统级开机自启动 | Draft |
+| S7-02 | CLI 生命周期 | 规划 `ornnlab dev start/stop/restart/status/logs` | Draft |
+| S7-03 | 崩溃重启 | 规划子进程退出检测、退避重启、最大失败阈值和未知端口保护 | Draft |
+| S7-04 | System 页接入 | 规划 `OrnnLab Service` 读取真实守护状态，并与 CLI status 对齐 | Draft |
+| S7-05 | 日志与诊断 | 规划 daemon/backend/frontend 日志和稳定事件名 | Draft |
+| S7-06 | 质量门 | 规划 CLI 集成、崩溃、端口释放、前端 System 页和 Codex Web Preview 验收 | Draft |
+
+## 7. 已实施内容
 
 ### 后端
 
@@ -96,7 +110,7 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 - built-in Agent 仅展示 Harbor Harness 身份；模型、凭证、Skills、MCP 和 kwargs 编辑只对 custom Agent 提供。
 - Environment UI 只展示当前 Harbor `EnvironmentConfig` 映射字段，移除 Docker image、network mode、healthcheck、workdir 和无效 warning suppression。
 
-## 7. 已完成验证
+## 8. 已完成验证
 
 本轮已取得以下明确结果：
 
@@ -153,13 +167,13 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - W1（`isalpha()` 驱动字母校验）、W3（POSIX 模式和空白拒绝测试）、W4（POSIX 路径、远程 host、非字母前缀测试）已修复并提交（`55d6241`）。
 - 第二轮 OpenCode 只读复审确认 W1/W3/W4 修复正确且无回归；W2/W5/W6/W7 均为非阻断级别，不阻碍 Stage 5 完成。结论为 `APPROVED`。
 
-## 8. 后续执行顺序
+## 9. 后续执行顺序
 
-1. Stage 5 为 `run_dev.sh` 增加自动化 API 模式启动与健康检查，并在部署配置中拒绝无效的 `VITE_ORNNLAB_DATA_MODE`。
-2. 在具备 Docker 和 Harbor 条件的环境中扩大真实资源操作回归，覆盖 Job 恢复、Dataset 取消和 Hub 已连接路径。
+1. 完成 Stage 6 的独立对抗性审查，确认 Dataset 任意父目录下载、导入、移动和删除边界无阻断项。
+2. 进入 Stage 7，先实现应用级守护进程核心生命周期和状态文件，再接入 System 页。
 3. 持续保持唯一 `/api/webui/v1` 契约；发现缺口时直接升级该契约，不引入旧 API adapter、API-to-mock 回退或第二套 DTO。
 
-## 9. 运行经验
+## 10. 运行经验
 
 - 前端默认是 mock；要验证真实后端必须显式使用 `VITE_ORNNLAB_DATA_MODE=api`，不能因为页面仍可显示而假设 API 已被调用。
 - Operation 完成需要至少经历提交、轮询和资源刷新；测试必须等待最终列表状态，不可仅断言按钮已点击。
