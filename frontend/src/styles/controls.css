@@ -213,6 +213,9 @@
   min-width: 180px;
   padding: 0 8px;
 }
+.leaderboard-toolbar .toolbar-select.custom-select {
+  min-width: 320px;
+}
 .header-select .select-trigger {
   min-width: 54px;
   padding: 0 4px 0 2px;

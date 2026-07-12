@@ -83,7 +83,6 @@ export function LeaderboardPage({
               searchAriaLabel={t('searchDatasets')}
               searchPlaceholder={t('searchDatasetsPlaceholder')}
               searchValue={datasetSearch}
-              visibleLabel={t('dataset')}
               value={dataset}
               options={selectableDatasets.map((row) => ({ label: row.ref, value: row.ref }))}
               onChange={onDataset}
