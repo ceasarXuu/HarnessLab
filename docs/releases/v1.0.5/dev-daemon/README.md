@@ -1,9 +1,16 @@
-# v1.0.5 应用级守护进程方案
+# v1.0.5 应用级守护进程
 
 - 状态：Draft
 - 创建：2026-07-13
 - 范围：本地开发态 OrnnLab WebUI 前后端服务守护，不包含系统级开机自启动
-- 关联文档：[PRD](prd.md)、[技术设计](technical-design.md)、[工程计划](engineering-plan.md)
+- 关联文档：[PRD](../prd.md)、[技术设计](../technical-design.md)、[工程计划](../engineering-plan.md)
+
+## 文档入口
+
+| 文档 | 负责内容 |
+|---|---|
+| [工程设计](engineering-design.md) | 实施计划、阶段门、完整性矩阵、日志链、测试、回滚与审查标准 |
+| 本 README | 产品背景、范围、用户可见入口和状态模型概要 |
 
 ## 1. 背景
 
