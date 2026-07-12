@@ -65,11 +65,67 @@ test("default backend child receives the daemon restart command", () => {
     const { commandFor } = require("../../lib/dev-daemon");
     const backend = commandFor("backend");
 
-    assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /ornnlab\.js dev restart$/);
+    assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /ornnlab\.js dev _restart-detached$/);
   } finally {
     if (original === undefined) delete process.env.ORNNLAB_DEV_BACKEND_COMMAND;
     else process.env.ORNNLAB_DEV_BACKEND_COMMAND = original;
   }
+});
+
+test("dev stop refuses to kill pids that are not proven daemon children", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-stale-pid-"));
+  const env = daemonEnv(tempRoot, await freePort(), await freePort());
+  const sleeper = spawn("sleep", ["30"], { stdio: "ignore" });
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify({ status: "running", backendPid: sleeper.pid }, null, 2));
+
+  const stop = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+
+  assert.equal(stop.status, 0, stop.stderr || stop.stdout);
+  assert.equal(isProcessAlive(sleeper.pid), true);
+  sleeper.kill("SIGTERM");
+});
+
+test("dev status does not trust a live pid without recorded process identity", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-fake-daemon-"));
+  const env = daemonEnv(tempRoot, await freePort(), await freePort());
+  const sleeper = spawn("sleep", ["30"], { stdio: "ignore" });
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify({ status: "running", daemonPid: sleeper.pid }, null, 2));
+
+  const status = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "status", "--json"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  const payload = JSON.parse(status.stdout);
+
+  assert.equal(payload.status, "stopped");
+  assert.equal(payload.daemonAlive, false);
+  sleeper.kill("SIGTERM");
+});
+
+test("concurrent dev start keeps a single daemon instance", { timeout: 45000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-singleton-"));
+  const env = daemonEnv(tempRoot, backendPort, frontendPort);
+  const [first, second] = await Promise.all([
+    runLauncher(["dev", "start"], env),
+    runLauncher(["dev", "start"], env),
+  ]);
+
+  assert.equal(first.status, 0, first.stderr || first.stdout);
+  assert.equal(second.status, 0, second.stderr || second.stdout);
+  const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
+  assert.equal((logText.match(/dev_service\.start_requested/g) || []).length, 1);
+
+  spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
 });
 
 test("dev daemon records startup failure and exits instead of idling forever", { timeout: 45000 }, async () => {
@@ -92,6 +148,23 @@ test("dev daemon records startup failure and exits instead of idling forever", {
   assert.equal(isProcessAlive(state.daemonPid), false);
   const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
   assert.match(logText, /dev_service\.restart_gave_up/);
+});
+
+test("dev stop during startup terminates children that are not healthy yet", { timeout: 45000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-start-stop-"));
+  const env = {
+    ...daemonEnv(tempRoot, backendPort, frontendPort),
+    ORNNLAB_DEV_FRONTEND_COMMAND: `${process.execPath} ${fakeService} --role frontend --host 127.0.0.1 --port ${frontendPort} --delay-health 10000`,
+  };
+  const starting = runLauncher(["dev", "start"], env);
+  await waitForState(path.join(tempRoot, "dev-service", "state.json"), "starting");
+
+  const stop = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
+
+  assert.equal(stop.status, 0, stop.stderr || stop.stdout);
+  await waitForUnavailable(`http://127.0.0.1:${frontendPort}/api/webui/v1/system/health`);
+  await starting;
 });
 
 test("dev daemon restarts a crashed frontend child", { timeout: 60000 }, async () => {
@@ -117,6 +190,103 @@ test("dev daemon restarts a crashed frontend child", { timeout: 60000 }, async (
   spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
 });
 
+test("dev daemon restarts a crashed backend child", { timeout: 60000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-backend-restart-"));
+  const env = daemonEnv(tempRoot, backendPort, frontendPort);
+  const start = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "start"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  assert.equal(start.status, 0, start.stderr || start.stdout);
+
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  process.kill(before.backendPid, "SIGTERM");
+  await waitForRestart(statePath, "backendPid", before.backendPid);
+  await waitForOk(`http://127.0.0.1:${backendPort}/api/webui/v1/system/health`);
+
+  spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
+});
+
+test("detached restart helper replaces the daemon and restores health", { timeout: 60000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-detached-restart-"));
+  const env = daemonEnv(tempRoot, backendPort, frontendPort);
+  const start = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "start"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  assert.equal(start.status, 0, start.stderr || start.stdout);
+
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  const restart = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "_restart-detached"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  assert.equal(restart.status, 0, restart.stderr || restart.stdout);
+  await waitForRestart(statePath, "daemonPid", before.daemonPid);
+  await waitForOk(`http://127.0.0.1:${frontendPort}/api/webui/v1/system/health`);
+
+  spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
+});
+
+test("dev daemon keeps retrying after a crash restart fails", { timeout: 45000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-retry-failure-"));
+  const marker = path.join(tempRoot, "frontend-first-start");
+  const env = {
+    ...daemonEnv(tempRoot, backendPort, frontendPort),
+    ORNNLAB_DEV_FRONTEND_COMMAND: `${process.execPath} ${fakeService} --role frontend --host 127.0.0.1 --port ${frontendPort} --fail-after-first ${marker}`,
+    ORNNLAB_DEV_RESTART_DELAYS_MS: "25,25",
+  };
+  const start = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "start"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  assert.equal(start.status, 0, start.stderr || start.stdout);
+
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  process.kill(before.frontendPid, "SIGTERM");
+  await waitForState(statePath, "error");
+  const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
+  assert.match(logText, /"attempt":1/);
+  assert.match(logText, /"attempt":2/);
+  assert.match(logText, /dev_service\.restart_gave_up/);
+
+  spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
+});
+
+test("dev daemon redacts sensitive child output and restricts log permissions", { timeout: 45000 }, async () => {
+  const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-log-security-"));
+  const env = {
+    ...daemonEnv(tempRoot, backendPort, frontendPort),
+    ORNNLAB_DEV_BACKEND_COMMAND: `${process.execPath} ${fakeService} --role backend --host 127.0.0.1 --port ${backendPort} --print-secret super-secret`,
+  };
+  const start = spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "start"], {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    env,
+  });
+  assert.equal(start.status, 0, start.stderr || start.stdout);
+  const backendLog = path.join(tempRoot, "dev-service", "logs", "backend.log");
+  const logText = fs.readFileSync(backendLog, "utf8");
+  const mode = fs.statSync(backendLog).mode & 0o777;
+
+  assert.doesNotMatch(logText, /super-secret/);
+  assert.match(logText, /ANTHROPIC_API_KEY=\[REDACTED\]/);
+  assert.equal(mode, 0o600);
+
+  spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
+});
+
 function daemonEnv(tempRoot, backendPort, frontendPort) {
   return {
     ...process.env,
@@ -129,6 +299,22 @@ function daemonEnv(tempRoot, backendPort, frontendPort) {
     ORNNLAB_SOURCE: repoRoot,
     ORNNLAB_STARTUP_TIMEOUT_SECONDS: "20",
   };
+}
+
+function runLauncher(args, env) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, ["bin/ornnlab.js", ...args], {
+      cwd: repoRoot,
+      encoding: "utf-8",
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("exit", (status) => resolve({ status, stdout, stderr }));
+  });
 }
 
 function freePort() {
@@ -176,6 +362,20 @@ async function waitForRestart(statePath, field, previousPid) {
     await sleep(250);
   }
   throw new Error(`${field} did not restart`);
+}
+
+async function waitForState(statePath, expected) {
+  const deadline = Date.now() + 20000;
+  while (Date.now() < deadline) {
+    try {
+      const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+      if (state.status === expected) return state;
+    } catch {
+      // state may not be written yet
+    }
+    await sleep(100);
+  }
+  throw new Error(`state did not become ${expected}`);
 }
 
 function sleep(milliseconds) {

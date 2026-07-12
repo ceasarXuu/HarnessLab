@@ -5,7 +5,7 @@ import { getTranslator } from '../i18n'
 import { createMockWebUiClient } from '../api/mockClient'
 import { jobs } from '../mocks/demo'
 import { agentRows, datasetRows, environmentRows } from '../mocks/demoCatalog'
-import { degradedSystemRows, leaderboardRows, stoppedSystemRows, systemRows } from '../mocks/demoSystem'
+import { degradedSystemRows, errorSystemRows, leaderboardRows, restartingSystemRows, startingSystemRows, stoppedSystemRows, systemRows } from '../mocks/demoSystem'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
 import { EnvironmentsPage } from './EnvironmentsPage'
@@ -429,8 +429,20 @@ export const SystemDevServiceDegraded: Story = {
   render: () => <SystemPage client={client} rows={degradedSystemRows} t={t} onRefresh={async () => undefined} />,
 }
 
+export const SystemDevServiceStarting: Story = {
+  render: () => <SystemPage client={client} rows={startingSystemRows} t={t} onRefresh={async () => undefined} />,
+}
+
+export const SystemDevServiceRestarting: Story = {
+  render: () => <SystemPage client={client} rows={restartingSystemRows} t={t} onRefresh={async () => undefined} />,
+}
+
 export const SystemDevServiceStopped: Story = {
   render: () => <SystemPage client={client} rows={stoppedSystemRows} t={t} onRefresh={async () => undefined} />,
+}
+
+export const SystemDevServiceError: Story = {
+  render: () => <SystemPage client={client} rows={errorSystemRows} t={t} onRefresh={async () => undefined} />,
 }
 
 export const SystemEmpty: Story = {

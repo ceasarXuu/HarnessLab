@@ -171,7 +171,9 @@ def _dev_service_component(settings: Settings) -> dict:
             str(settings.home),
             ["check-update", "restart-service"],
         )
-    running = state.get("status") == "running" and _pid_alive(state.get("daemonPid"))
+    running = state.get("status") == "running" and _pid_alive(
+        state.get("daemonPid"), state.get("daemonStartTime")
+    )
     status = "healthy" if running else "unavailable"
     value = (
         f"{state.get('status', 'unknown')} {state.get('frontendUrl', '')}".strip()
@@ -210,14 +212,34 @@ def _dev_service_logs_dir() -> Path:
     return _dev_service_home() / "logs"
 
 
-def _pid_alive(pid: object) -> bool:
+def _pid_alive(pid: object, start_time: object) -> bool:
     if not isinstance(pid, int) or pid < 1:
+        return False
+    if not isinstance(start_time, str) or not start_time:
         return False
     try:
         os.kill(pid, 0)
     except OSError:
         return False
-    return True
+    return _process_start_time(pid) == start_time
+
+
+def _process_start_time(pid: int) -> str | None:
+    if platform.system() == "Windows":
+        result = subprocess.run(
+            ["wmic", "process", "where", f"ProcessId={pid}", "get", "CreationDate", "/value"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+    result = subprocess.run(
+        ["ps", "-p", str(pid), "-o", "lstart="],
+        capture_output=True,
+        text=True,
+        timeout=3,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def _harbor_executable() -> str:

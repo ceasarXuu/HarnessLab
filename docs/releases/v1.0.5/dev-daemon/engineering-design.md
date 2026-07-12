@@ -255,8 +255,8 @@ flowchart TD
 | Plan Item | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status |
 |---|---|---|---|---|---|---|
 | start | `bin/ornnlab.js` / `lib/dev-daemon.js` | `ornnlab dev start` | `tests/node/dev-daemon.test.js` | `dev_service.started` | none | landed |
-| status | `lib/dev-daemon.js` | `ornnlab dev status --json` | `tests/node/dev-daemon.test.js` | state.json + status output | none | landed |
-| stop | `lib/dev-daemon.js` | `ornnlab dev stop` | `tests/node/dev-daemon.test.js` | `dev_service.stopped` | none | landed |
+| status | `lib/dev-daemon.js` | `ornnlab dev status --json` | `tests/node/dev-daemon.test.js` 覆盖 PID 身份校验 | state.json + status output | none | landed |
+| stop | `lib/dev-daemon.js` | `ornnlab dev stop` | `tests/node/dev-daemon.test.js` 覆盖 stale PID 防误杀和启动期 stop | `dev_service.stopped` | none | landed |
 
 #### Logging And Observability Design
 
@@ -339,9 +339,9 @@ daemon 监控子进程退出和健康检查失败。非用户 stop 的退出触�
 
 | Plan Item | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status |
 |---|---|---|---|---|---|---|
-| child watcher | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` | `dev_service.child_exited` | none | landed |
-| restart backoff | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` | `dev_service.restart_scheduled` | none | landed |
-| give up | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` | `dev_service.restart_gave_up` | none | landed |
+| child watcher | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` 覆盖 backend/frontend crash | `dev_service.child_exited` | none | landed |
+| restart backoff | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` 覆盖重启失败后继续退避 | `dev_service.restart_scheduled` | none | landed |
+| give up | daemon runtime | process monitor | `tests/node/dev-daemon.test.js` 覆盖启动失败和恢复失败阈值 | `dev_service.restart_gave_up` | none | landed |
 
 #### Logging And Observability Design
 
@@ -424,8 +424,8 @@ daemon 监控子进程退出和健康检查失败。非用户 stop 的退出触�
 | Plan Item | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status |
 |---|---|---|---|---|---|---|
 | status API | `ornnlab/services/webui_system_service.py` | `GET /system/health` | `tests/python/test_webui_api.py` | request log | none | landed |
-| restart API | `lib/dev-daemon.js` + system service | `POST /system/service/restart` | `tests/node/dev-daemon.test.js` + API regression | operation log | none | landed |
-| System UI | `frontend/src/screens/SystemPage.tsx` | System tab | frontend regression + Storybook smoke | browser/manual evidence pending | Storybook states | landed |
+| restart API | `lib/dev-daemon.js` + system service | `POST /system/service/restart` | `tests/node/dev-daemon.test.js` 覆盖 detached restart helper + API regression | operation log | none | landed |
+| System UI | `frontend/src/screens/SystemPage.tsx` | System tab | frontend regression + Storybook smoke/build | browser/manual evidence pending | Running/Starting/Restarting/Degraded/Stopped/Error stories | landed |
 
 #### Logging And Observability Design
 
@@ -561,12 +561,12 @@ daemon 监控子进程退出和健康检查失败。非用户 stop 的退出触�
 
 | Plan Item | Expected Behavior | Production Code Path | Integration Entry | Test Evidence | Runtime / Log Evidence | Mock / Stub Exposure | Status |
 |---|---|---|---|---|---|---|---|
-| CLI start | 后台启动 dev service | `bin/ornnlab.js`、`lib/dev-daemon.js` | `ornnlab dev start` | `npm run test:launcher` | `dev_service.started` | none | landed |
-| CLI stop | 主动停止且不复活 | `lib/dev-daemon.js` | `ornnlab dev stop` | `npm run test:launcher` | `dev_service.stopped` | none | landed |
-| CLI status | 显示真实 daemon/health 状态 | `lib/dev-daemon.js` | `ornnlab dev status --json` | `npm run test:launcher` | state.json | none | landed |
-| 自动重启 | 非用户停止的崩溃自动恢复 | `lib/dev-daemon.js` | child monitor | `npm run test:launcher` | `dev_service.restart_scheduled` | none | landed |
+| CLI start | 后台启动 dev service | `bin/ornnlab.js`、`lib/dev-daemon.js` | `ornnlab dev start` | `npm run test:launcher`，16 条 launcher/daemon 测试 | `dev_service.started` | none | landed |
+| CLI stop | 主动停止且不复活 | `lib/dev-daemon.js` | `ornnlab dev stop` | `npm run test:launcher` 覆盖 stale PID、启动期 stop、端口释放 | `dev_service.stopped` | none | landed |
+| CLI status | 显示真实 daemon/health 状态 | `lib/dev-daemon.js` | `ornnlab dev status --json` | `npm run test:launcher` 覆盖裸 PID 不可信 | state.json | none | landed |
+| 自动重启 | 非用户停止的崩溃自动恢复 | `lib/dev-daemon.js` | child monitor | `npm run test:launcher` 覆盖 backend/frontend crash、恢复失败退避和阈值 | `dev_service.restart_scheduled` | none | landed |
 | System API | 后端返回真实 dev service 状态 | `ornnlab/services/webui_system_service.py` | `/api/webui/v1/system/health` | `uv run pytest tests/python/test_webui_api.py tests/python/test_system_api.py -q` | request/operation log | none | landed |
-| System UI | 展示状态和操作 | `frontend/src/screens/SystemPage.tsx` | System tab | `npm run typecheck` + targeted Vitest + Storybook smoke | Codex Preview evidence pending subagent review | Storybook states | landed |
+| System UI | 展示状态和操作 | `frontend/src/screens/SystemPage.tsx` | System tab | `scripts/test-after-change-web.sh` | Codex Preview evidence pending subagent review | Storybook states | landed |
 
 ## 13. 风险、依赖与缓解
 
@@ -652,6 +652,7 @@ daemon 监控子进程退出和健康检查失败。非用户 stop 的退出触�
 |---|---|---|
 | 2026-07-13 | 0.1 | 初版工程设计，补齐阶段门、日志链、验证、回滚和完整性矩阵 |
 | 2026-07-13 | 0.2 | 实现进度回写：CLI daemon、自动重启、System health 接入已落地；并行 dev-service API 收敛为现有 System API 升级 |
+| 2026-07-13 | 0.3 | 首轮 subagent 对抗性审查阻断项修复：PID 身份校验、start lock、detached restart、启动期 stop、失败退避、日志脱敏和权限、Storybook 状态补齐 |
 
 ## 20. 计划质量检查
 

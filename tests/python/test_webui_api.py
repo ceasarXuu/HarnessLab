@@ -11,6 +11,7 @@ from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
 from ornnlab.services.webui_dataset_service import _stored_dto
 from ornnlab.services.webui_job_service import _job_score, _trial_dto
 from ornnlab.services.webui_operation_service import WebUiOperationService
+from ornnlab.services.webui_system_service import _process_start_time
 from ornnlab.storage import sqlite
 
 API = "/api/webui/v1"
@@ -205,8 +206,11 @@ def test_system_health_reports_app_level_dev_service_state(client, tmp_path: Pat
         "serviceId": "ornnlab-dev-service",
         "status": "running",
         "daemonPid": os.getpid(),
+        "daemonStartTime": _process_start_time(os.getpid()),
         "backendPid": os.getpid(),
+        "backendStartTime": _process_start_time(os.getpid()),
         "frontendPid": os.getpid(),
+        "frontendStartTime": _process_start_time(os.getpid()),
         "backendUrl": "http://127.0.0.1:8765",
         "frontendUrl": "http://127.0.0.1:5173",
         "updatedAt": "2026-07-13T00:00:00Z",

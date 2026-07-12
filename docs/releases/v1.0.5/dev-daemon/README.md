@@ -188,7 +188,7 @@ flowchart TD
 | S7-02 | daemon 核心 | 已完成：start/status/stop、state、logs、健康检查 |
 | S7-03 | 自动重启 | 已完成：子进程退出检测、退避重启、失败日志 |
 | S7-04 | WebUI 接入 | 已完成：System health 读取真实守护状态；WebUI 停止服务暂不开放 |
-| S7-05 | 回归与审查 | 进行中：自动化测试已通过，待 subagent 对抗性审查 |
+| S7-05 | 回归与审查 | 进行中：首轮 subagent 阻断项已修复并通过全量门禁，待复审 |
 
 ## 11. 开放问题
 
