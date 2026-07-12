@@ -423,26 +423,44 @@ export const LeaderboardEmpty: Story = {
 
 export const System: Story = {
   render: () => <SystemPage client={client} rows={systemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'healthy', 'running http://127.0.0.1:5173')
+  },
 }
 
 export const SystemDevServiceDegraded: Story = {
   render: () => <SystemPage client={client} rows={degradedSystemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'unavailable', 'degraded frontend exited')
+  },
 }
 
 export const SystemDevServiceStarting: Story = {
   render: () => <SystemPage client={client} rows={startingSystemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'unavailable', 'starting http://127.0.0.1:5173')
+  },
 }
 
 export const SystemDevServiceRestarting: Story = {
   render: () => <SystemPage client={client} rows={restartingSystemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'unavailable', 'restarting http://127.0.0.1:5173')
+  },
 }
 
 export const SystemDevServiceStopped: Story = {
   render: () => <SystemPage client={client} rows={stoppedSystemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'unavailable', 'stopped')
+  },
 }
 
 export const SystemDevServiceError: Story = {
   render: () => <SystemPage client={client} rows={errorSystemRows} t={t} onRefresh={async () => undefined} />,
+  play: async ({ canvasElement }) => {
+    await expectSystemService(canvasElement, 'unavailable', 'error frontend exceeded restart limit')
+  },
 }
 
 export const SystemEmpty: Story = {
@@ -456,4 +474,13 @@ export const SystemDestructiveConfirm: Story = {
     await userEvent.click(canvas.getAllByRole('button', { name: 'Clean cache' })[0])
     await expect(canvas.getByRole('dialog', { name: 'Clean Docker cache' })).toBeVisible()
   },
+}
+
+async function expectSystemService(canvasElement: HTMLElement, status: string, value: string) {
+  const canvas = within(canvasElement)
+  const row = canvas.getByText('OrnnLab Service').closest('tr')
+  if (!row) throw new Error('OrnnLab Service row not found')
+  await expect(within(row).getByText(status)).toBeVisible()
+  await expect(within(row).getByText(value)).toBeVisible()
+  await expect(within(row).getByText('~/.ornnlab/dev-service/logs')).toBeVisible()
 }

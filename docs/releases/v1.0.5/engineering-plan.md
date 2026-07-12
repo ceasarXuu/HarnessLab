@@ -15,7 +15,7 @@
 | 4 | API 模式联调 | Done | 已以真实 `/api/webui/v1`、Docker、Harbor 与 Hub 可观察状态完成全栈验证；直接启动前端仍默认 mock |
 | 5 | 发布前硬化 | Done | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归、两轮独立 Codex 审查均已闭环 |
 | 6 | Dataset 存储位置管理 | In progress | S6-01 至 S6-05 已完成并通过前后端门禁；S6-06 等待对抗性审查结论 |
-| 7 | 应用级守护进程 | Planned | 仅做 OrnnLab 应用级后台服务管理，支持主动 start/stop/restart/status 和崩溃重启；不做系统级开机自启动 |
+| 7 | 应用级守护进程 | Done | 应用级 daemon、CLI 生命周期、崩溃重启、System 状态接入与 hardening 测试已落地；全量门禁通过，最终 subagent 复审 APPROVED |
 
 ## 2. Stage 3 验收矩阵
 
@@ -78,18 +78,18 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 | S6-05 | 前端与 mock 对等 | API/mock/MSW 使用同一 DTO、Operation 与错误语义；Dataset 和 New Job 路径控件通过本机原生目录选择器回填只读路径；Storybook 覆盖 managed、external、path-unavailable 状态 | Done |
 | S6-06 | 回归与审查 | 已通过后端 API/文件边界、前端交互、Storybook 与全量门禁；待独立对抗性审查确认无阻断项 | In progress |
 
-## 6. Stage 7 方案草案
+## 6. Stage 7 应用级守护进程
 
 Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进程”升级为“OrnnLab 应用级守护进程管理”。该阶段不安装 launchd、systemd、Windows Service，不做登录或开机自启动。主题索引见 [应用级守护进程](dev-daemon/README.md)，具体执行见 [工程设计](dev-daemon/engineering-design.md)。
 
 | ID | 验收项 | 当前证据 | 状态 |
 |---|---|---|---|
-| S7-01 | 范围收敛 | 已明确只做应用级守护，不做系统级开机自启动 | Draft |
-| S7-02 | CLI 生命周期 | 规划 `ornnlab dev start/stop/restart/status/logs` | Draft |
-| S7-03 | 崩溃重启 | 规划子进程退出检测、退避重启、最大失败阈值和未知端口保护 | Draft |
-| S7-04 | System 页接入 | 规划 `OrnnLab Service` 读取真实守护状态，并与 CLI status 对齐 | Draft |
-| S7-05 | 日志与诊断 | 规划 daemon/backend/frontend 日志和稳定事件名 | Draft |
-| S7-06 | 质量门 | 规划 CLI 集成、崩溃、端口释放、前端 System 页和 Codex Web Preview 验收 | Draft |
+| S7-01 | 范围收敛 | 专题目录、工程计划和实现设计已明确只做应用级守护，不做系统级开机自启动 | Done |
+| S7-02 | CLI 生命周期 | `ornnlab dev start/stop/restart/status/logs` 已接入应用级 daemon，状态写入 `~/.ornnlab/dev-service` | Done |
+| S7-03 | 崩溃重启 | 已实现 backend/frontend 退出检测、退避重启、失败阈值、用户 stop 不复活和未知 PID fail closed | Done |
+| S7-04 | System 页接入 | `/api/webui/v1/system/health` 已读取真实 dev-service state，并在 daemon/child 不可信时返回 unavailable/degraded | Done |
+| S7-05 | 日志与诊断 | daemon/backend/frontend 日志、稳定事件名、私有权限和密钥脱敏已实现并有回归测试 | Done |
+| S7-06 | 质量门 | `scripts/test-after-change-web.sh` 已通过：Python 97 passed / 3 skipped，前端 16 files / 65 tests，Storybook smoke/static build，launcher 22/22；最终 subagent 复审 `APPROVED` | Done |
 
 ## 7. 已实施内容
 

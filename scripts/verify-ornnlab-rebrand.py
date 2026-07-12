@@ -51,6 +51,7 @@ DOC_INVENTORY = {
     "docs/releases/v1.0.5/README.md": "rename-now",
     "docs/releases/v1.0.5/dev-daemon/README.md": "rename-now",
     "docs/releases/v1.0.5/dev-daemon/engineering-design.md": "rename-now",
+    "docs/releases/v1.0.5/dev-daemon/implementation-design.md": "rename-now",
     "docs/releases/v1.0.5/engineering-plan.md": "rename-now",
     "docs/releases/v1.0.5/prd.md": "rename-now",
     "docs/releases/v1.0.5/technical-design.md": "rename-now",

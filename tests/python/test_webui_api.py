@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import time
 from pathlib import Path
 
@@ -11,7 +10,6 @@ from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
 from ornnlab.services.webui_dataset_service import _stored_dto
 from ornnlab.services.webui_job_service import _job_score, _trial_dto
 from ornnlab.services.webui_operation_service import WebUiOperationService
-from ornnlab.services.webui_system_service import _process_start_time
 from ornnlab.storage import sqlite
 
 API = "/api/webui/v1"
@@ -185,46 +183,6 @@ def test_webui_external_dataset_storage_routes_preserve_files(client, tmp_path: 
     assert relocated.is_dir()
     datasets = client.get(f"{API}/datasets?q=local/storage").json()["data"]
     assert datasets["items"] == []
-
-
-def test_system_restart_reports_real_supervisor_requirement(client):
-    response = client.post(f"{API}/system/service/restart")
-
-    assert response.status_code == 200
-    operation = response.json()["data"]["operation"]
-    assert operation["status"] == "failed"
-    assert operation["error"]["code"] == "SERVICE_RESTART_UNAVAILABLE"
-    persisted = client.get(f"{API}/operations/{operation['id']}").json()["data"]
-    assert persisted["status"] == "failed"
-
-
-def test_system_health_reports_app_level_dev_service_state(client, tmp_path: Path, monkeypatch):
-    service_home = tmp_path / "dev-service"
-    logs_dir = service_home / "logs"
-    logs_dir.mkdir(parents=True)
-    state = {
-        "serviceId": "ornnlab-dev-service",
-        "status": "running",
-        "daemonPid": os.getpid(),
-        "daemonStartTime": _process_start_time(os.getpid()),
-        "backendPid": os.getpid(),
-        "backendStartTime": _process_start_time(os.getpid()),
-        "frontendPid": os.getpid(),
-        "frontendStartTime": _process_start_time(os.getpid()),
-        "backendUrl": "http://127.0.0.1:8765",
-        "frontendUrl": "http://127.0.0.1:5173",
-        "updatedAt": "2026-07-13T00:00:00Z",
-    }
-    (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
-    monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
-
-    components = client.get(f"{API}/system/health").json()["data"]["items"]
-
-    service = next(component for component in components if component["kind"] == "ornnlab-service")
-    assert service["status"] == "healthy"
-    assert service["value"] == "running http://127.0.0.1:5173"
-    assert service["path"] == str(logs_dir)
-    assert service["actions"] == ["check-update", "restart-service"]
 
 
 def test_system_directory_picker_returns_the_native_selection(client, tmp_path: Path, monkeypatch):

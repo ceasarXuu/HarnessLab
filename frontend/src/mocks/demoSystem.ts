@@ -143,7 +143,7 @@ export const systemRows: SystemRow[] = [
 export const degradedSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'failed',
+      status: 'unavailable',
       value: 'degraded frontend exited',
       path: '~/.ornnlab/dev-service/logs',
   }
@@ -152,7 +152,7 @@ export const degradedSystemRows: SystemRow[] = systemRows.map((row) => row.kind 
 export const startingSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'queued',
+      status: 'unavailable',
       value: 'starting http://127.0.0.1:5173',
       path: '~/.ornnlab/dev-service/logs',
     }
@@ -161,7 +161,7 @@ export const startingSystemRows: SystemRow[] = systemRows.map((row) => row.kind 
 export const restartingSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'running',
+      status: 'unavailable',
       value: 'restarting http://127.0.0.1:5173',
       path: '~/.ornnlab/dev-service/logs',
     }
@@ -179,7 +179,7 @@ export const stoppedSystemRows: SystemRow[] = systemRows.map((row) => row.kind =
 export const errorSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'failed',
+      status: 'unavailable',
       value: 'error frontend exceeded restart limit',
       path: '~/.ornnlab/dev-service/logs',
     }

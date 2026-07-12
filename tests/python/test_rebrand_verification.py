@@ -19,6 +19,7 @@ def test_v1_0_5_document_inventory_tracks_current_release_documents():
         "docs/releases/v1.0.5/README.md",
         "docs/releases/v1.0.5/dev-daemon/README.md",
         "docs/releases/v1.0.5/dev-daemon/engineering-design.md",
+        "docs/releases/v1.0.5/dev-daemon/implementation-design.md",
         "docs/releases/v1.0.5/engineering-plan.md",
         "docs/releases/v1.0.5/prd.md",
         "docs/releases/v1.0.5/technical-design.md",

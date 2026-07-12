@@ -3,7 +3,7 @@
 - Created: 2026-07-13
 - Updated: 2026-07-13
 - Version: 0.1
-- Status: Draft
+- Status: Completed
 - Owner / Responsible: Unknown
 - Related Systems: `ornnlab dev`、`lib/dev-daemon.js`、`/api/webui/v1/system/health`、System 页、Vite dev server、FastAPI WebUI API
 - Related Links: [主题入口](README.md)、[工程计划](engineering-design.md)、[v1.0.5 PRD](../prd.md)
@@ -139,13 +139,13 @@ flowchart TD
 
 ## 6. 进程身份校验
 
-不能只用 PID 判断进程归属，因为 PID 可能复用。每个 daemon 和 child process 都必须带随机 token。
+不能只用 PID 判断进程归属，因为 PID 可能复用。每个 daemon 和 child wrapper 都必须带随机 token。macOS 下 `ps` 不能稳定读取子进程环境变量，因此当前实现不依赖 env token 做身份判断，而是让 daemon 子命令和 child wrapper 的命令行携带随机 token，并通过进程命令行校验。
 
 启动时：
 
-- daemon 环境变量：`ORNNLAB_DEV_DAEMON_TOKEN=<random>`
-- backend 环境变量：`ORNNLAB_DEV_BACKEND_TOKEN=<random>`
-- frontend 环境变量：`ORNNLAB_DEV_FRONTEND_TOKEN=<random>`
+- daemon 启动参数：`ornnlab dev _daemon --token <random>`
+- backend wrapper 启动参数：`node lib/dev-child-wrapper.js --token <random> --role backend -- <backend command>`
+- frontend wrapper 启动参数：`node lib/dev-child-wrapper.js --token <random> --role frontend -- <frontend command>`
 - token 写入 `state.json`
 
 校验时：
@@ -153,7 +153,7 @@ flowchart TD
 | 校验项 | 规则 |
 |---|---|
 | PID 存活 | 进程存在只是必要条件，不是充分条件 |
-| token 匹配 | 必须能从进程环境或等价平台 API 中读到匹配 token |
+| token 匹配 | 必须能从受管进程命令行中读到匹配 token |
 | command 辅助校验 | command 只能辅助诊断，不能替代 token |
 | token 不可读 | fail closed：视为身份不可信，不执行强杀 |
 
@@ -399,7 +399,6 @@ Storybook 需要覆盖上述状态，并用 `play` assertions 验证关键文本
 
 | 问题 | 影响 | 处理方式 |
 |---|---|---|
-| Windows 下如何可靠读取进程环境 token | 影响跨平台身份校验 | 若无法可靠读取，Windows 对停止未知 PID fail closed |
+| Windows 下如何可靠读取受管 wrapper 命令行 token | 影响跨平台身份校验 | 若无法可靠读取，Windows 对停止未知 PID fail closed |
 | WebUI 是否开放停止服务按钮 | 停止后当前页面会断连 | 首版只放 CLI stop，后续单独设计 |
 | logs 是否支持 `--follow` | 影响排障体验 | 首版可只输出路径或最近日志，后续扩展 |
-

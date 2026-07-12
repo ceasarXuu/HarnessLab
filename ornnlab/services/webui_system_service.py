@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
@@ -166,17 +167,32 @@ def _dev_service_component(settings: Settings) -> dict:
         return _component(
             "ornnlab-service",
             "OrnnLab Service",
-            "healthy",
-            _npm_version(),
-            str(settings.home),
+            "unavailable",
+            "stopped",
+            str(_dev_service_logs_dir()),
             ["check-update", "restart-service"],
         )
-    running = state.get("status") == "running" and _pid_alive(
-        state.get("daemonPid"), state.get("daemonStartTime")
+    daemon_alive = _pid_token_alive(state.get("daemonPid"), state.get("daemonToken"))
+    backend_alive = _pid_token_alive(state.get("backendPid"), state.get("backendToken"))
+    frontend_alive = _pid_token_alive(state.get("frontendPid"), state.get("frontendToken"))
+    backend_healthy = backend_alive and _health_endpoint_ok(
+        f"{state.get('backendUrl', '')}/api/webui/v1/system/health"
+    )
+    frontend_healthy = frontend_alive and _health_endpoint_ok(
+        f"{state.get('frontendUrl', '')}/api/webui/v1/system/health"
+    )
+    running = (
+        state.get("status") == "running"
+        and daemon_alive
+        and backend_healthy
+        and frontend_healthy
     )
     status = "healthy" if running else "unavailable"
+    service_state = state.get("status", "unknown")
+    if daemon_alive and service_state == "running" and not (backend_healthy and frontend_healthy):
+        service_state = "degraded"
     value = (
-        f"{state.get('status', 'unknown')} {state.get('frontendUrl', '')}".strip()
+        f"{service_state} {state.get('frontendUrl', '')}".strip()
         if state.get("status")
         else _npm_version()
     )
@@ -212,34 +228,44 @@ def _dev_service_logs_dir() -> Path:
     return _dev_service_home() / "logs"
 
 
-def _pid_alive(pid: object, start_time: object) -> bool:
+def _pid_token_alive(pid: object, token: object) -> bool:
     if not isinstance(pid, int) or pid < 1:
         return False
-    if not isinstance(start_time, str) or not start_time:
+    if not isinstance(token, str) or not token:
         return False
     try:
         os.kill(pid, 0)
     except OSError:
         return False
-    return _process_start_time(pid) == start_time
+    return token in _process_command(pid)
 
 
-def _process_start_time(pid: int) -> str | None:
+def _process_command(pid: int) -> str:
     if platform.system() == "Windows":
         result = subprocess.run(
-            ["wmic", "process", "where", f"ProcessId={pid}", "get", "CreationDate", "/value"],
+            ["wmic", "process", "where", f"ProcessId={pid}", "get", "CommandLine", "/value"],
             capture_output=True,
             text=True,
             timeout=3,
         )
-        return result.stdout.strip() if result.returncode == 0 else None
+        return result.stdout if result.returncode == 0 else ""
     result = subprocess.run(
-        ["ps", "-p", str(pid), "-o", "lstart="],
+        ["ps", "-p", str(pid), "-o", "command="],
         capture_output=True,
         text=True,
         timeout=3,
     )
-    return result.stdout.strip() if result.returncode == 0 else None
+    return result.stdout if result.returncode == 0 else ""
+
+
+def _health_endpoint_ok(url: str) -> bool:
+    if not url.startswith("http://") and not url.startswith("https://"):
+        return False
+    try:
+        with urllib.request.urlopen(url, timeout=0.5) as response:
+            return 200 <= response.status < 300
+    except OSError:
+        return False
 
 
 def _harbor_executable() -> str:
