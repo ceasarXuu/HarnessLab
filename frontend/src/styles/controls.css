@@ -247,6 +247,17 @@
   background: var(--surface);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
+.select-menu-search {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  outline: 0;
+}
 .select-menu button {
   min-height: 34px;
   padding: 0 10px;

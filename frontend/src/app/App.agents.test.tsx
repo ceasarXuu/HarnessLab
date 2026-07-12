@@ -134,8 +134,8 @@ describe('App agents and leaderboard', () => {
     expect(nextRankRow).not.toBeNull()
     expect(within(nextRankRow as HTMLElement).getByText('#1')).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.click(screen.getByLabelText('Select dataset'))
+    fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     fireEvent.click(screen.getByRole('option', { name: 'swebench-verified@1.0' }))
     expect(await screen.findByText('job_74c1')).toBeInTheDocument()
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()

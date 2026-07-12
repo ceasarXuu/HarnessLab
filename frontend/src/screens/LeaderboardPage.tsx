@@ -1,4 +1,4 @@
-import { Search, Trophy } from 'lucide-react'
+import { Trophy } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useCachedServerSearch, useJob, useJobEvents, useJobTrials } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
@@ -75,23 +75,19 @@ export function LeaderboardPage({
             <h1>{t('leaderboardTitle')}</h1>
           </div>
           <div className="toolbar leaderboard-toolbar">
-            <label className="search-field dataset-filter">
-              <Search aria-hidden="true" />
-              <input
-                aria-label={t('searchDatasets')}
-                value={datasetSearch}
-                onChange={(event) => onDatasetSearch(event.target.value)}
-                placeholder={t('searchDatasetsPlaceholder')}
-              />
-            </label>
             <CustomSelect
               ariaLabel={t('selectDataset')}
               className="toolbar-select"
               placeholder={t('selectDataset')}
+              searchable
+              searchAriaLabel={t('searchDatasets')}
+              searchPlaceholder={t('searchDatasetsPlaceholder')}
+              searchValue={datasetSearch}
               visibleLabel={t('dataset')}
               value={dataset}
               options={selectableDatasets.map((row) => ({ label: row.ref, value: row.ref }))}
               onChange={onDataset}
+              onSearchChange={onDatasetSearch}
             />
           </div>
         </div>

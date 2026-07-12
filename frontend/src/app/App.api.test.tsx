@@ -71,6 +71,7 @@ describe('App API mode', () => {
     await waitFor(() => expect(listEnvironments).toHaveBeenCalledWith({ limit: 100, q: 'docker' }))
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
+    fireEvent.click(screen.getByLabelText('Select dataset'))
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
     await waitFor(() => expect(listDatasets).toHaveBeenCalledWith({ limit: 100, q: 'swe' }))
   })

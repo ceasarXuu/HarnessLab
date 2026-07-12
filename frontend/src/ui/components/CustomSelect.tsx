@@ -14,8 +14,13 @@ interface CustomSelectProps {
   disabled?: boolean
   leadingIcon?: ReactNode
   placeholder?: string
+  searchPlaceholder?: string
+  searchAriaLabel?: string
+  searchable?: boolean
+  searchValue?: string
   visibleLabel?: string
   onChange: (value: string) => void
+  onSearchChange?: (value: string) => void
 }
 
 export function CustomSelect({
@@ -25,12 +30,27 @@ export function CustomSelect({
   leadingIcon,
   options,
   placeholder,
+  searchPlaceholder,
+  searchAriaLabel,
+  searchable = false,
+  searchValue,
   value,
   visibleLabel,
   onChange,
+  onSearchChange,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
+  const [internalSearch, setInternalSearch] = useState('')
   const selected = options.find((option) => option.value === value)
+  const activeSearch = searchValue ?? internalSearch
+  const visibleOptions = searchable && !onSearchChange
+    ? options.filter((option) => option.label.toLowerCase().includes(activeSearch.toLowerCase()))
+    : options
+
+  const updateSearch = (next: string) => {
+    if (onSearchChange) onSearchChange(next)
+    else setInternalSearch(next)
+  }
 
   return (
     <div
@@ -62,7 +82,16 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <div className="select-menu" role="listbox" aria-label={`${ariaLabel} options`}>
-          {options.map((option) => (
+          {searchable && (
+            <input
+              aria-label={searchAriaLabel ?? searchPlaceholder ?? `Search ${ariaLabel}`}
+              autoFocus
+              className="select-menu-search"
+              value={activeSearch}
+              onChange={(event) => updateSearch(event.target.value)}
+            />
+          )}
+          {visibleOptions.map((option) => (
             <button
               type="button"
               className={option.value === value ? 'active' : undefined}
