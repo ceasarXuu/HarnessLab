@@ -1,6 +1,6 @@
 # v1.0.5 应用级守护进程
 
-- 状态：Draft
+- 状态：In Progress
 - 创建：2026-07-13
 - 范围：本地开发态 OrnnLab WebUI 前后端服务守护，不包含系统级开机自启动
 - 关联文档：[PRD](../prd.md)、[技术设计](../technical-design.md)、[工程计划](../engineering-plan.md)
@@ -57,7 +57,7 @@ System 页 `OrnnLab Service` 行应对齐 CLI 能力：
 - 状态：`Running`、`Stopped`、`Starting`、`Degraded`、`Restarting`、`Error`
 - 值：前端 URL、后端 URL、API 模式、守护 PID
 - 路径：日志目录或 pid/state 文件路径
-- 操作：`检查更新`、`重启`、后续可增加 `停止服务`
+- 操作：`检查更新`、`重启`
 
 当守护进程不可用时，System 页不能假装服务正常；应显示可理解的失败原因，例如“未由守护进程启动”或“后端健康检查失败”。
 
@@ -153,17 +153,14 @@ flowchart TD
 
 ## 7. 前后端接口影响
 
-现有 `/api/webui/v1/system/health` 可继续返回 `OrnnLab Service` 行，但值应来自真实 state 文件和健康检查结果。
-
-建议新增系统操作：
+现阶段不新增一套并行的 dev-service API，避免 v1.0.5 同时维护多套系统服务接口。直接升级现有 WebUI v1 接口：
 
 | API | 作用 |
 |---|---|
-| `GET /api/webui/v1/system/dev-service` | 返回守护状态、URL、PID、健康检查和最近错误 |
-| `POST /api/webui/v1/system/dev-service/restart` | 触发应用级重启 |
-| `POST /api/webui/v1/system/dev-service/stop` | 主动停止应用级守护服务 |
+| `GET /api/webui/v1/system/health` | `OrnnLab Service` 行从 dev-service state 派生真实状态、URL 和日志目录 |
+| `POST /api/webui/v1/system/service/restart` | 在 daemon 启动后端时通过 `ORNNLAB_RESTART_COMMAND` 接入 `ornnlab dev restart` |
 
-这些接口只管理 OrnnLab dev service，不管理 Docker、Harbor Hub 或系统服务。
+这些接口只管理 OrnnLab dev service，不管理 Docker、Harbor Hub 或系统服务。停止服务首版保留在 CLI：`ornnlab dev stop`，避免用户在 WebUI 中停止承载当前页面的后端后无法获得明确反馈。
 
 ## 8. 验收标准
 
@@ -187,15 +184,15 @@ flowchart TD
 
 | Slice | 内容 | 退出条件 |
 |---|---|---|
-| S7-01 | 设计与契约 | 本方案、API 契约和工程计划同步 |
-| S7-02 | daemon 核心 | start/status/stop、state、logs、健康检查 |
-| S7-03 | 自动重启 | 子进程退出检测、退避、失败阈值、端口保护 |
-| S7-04 | WebUI 接入 | System 页读取真实守护状态，重启/停止操作 |
-| S7-05 | 回归与审查 | CLI、后端、前端、Storybook 和 Codex Web Preview 验收 |
+| S7-01 | 设计与契约 | 已完成：专题目录、工程设计和接口方向已收敛 |
+| S7-02 | daemon 核心 | 已完成：start/status/stop、state、logs、健康检查 |
+| S7-03 | 自动重启 | 已完成：子进程退出检测、退避重启、失败日志 |
+| S7-04 | WebUI 接入 | 已完成：System health 读取真实守护状态；WebUI 停止服务暂不开放 |
+| S7-05 | 回归与审查 | 进行中：自动化测试已通过，待 subagent 对抗性审查 |
 
 ## 11. 开放问题
 
 - `ornnlab dev start` 是否默认打开浏览器，还是只打印 URL。
-- System 页是否在当前 v1.0.5 就开放 `停止服务` 按钮。
+- System 页是否在后续版本开放 `停止服务` 按钮，并设计停止后用户可恢复的反馈方式。
 - `logs` 默认打印最近多少行，是否支持 `--follow`。
 - 守护进程实现放在 Node 侧还是 Python 侧。产品上无差异，但会影响跨平台进程管理细节。

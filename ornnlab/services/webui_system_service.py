@@ -31,15 +31,9 @@ class WebUiSystemService:
         disk = _disk_usage(self.settings.home)
         cpu_usage = _cpu_usage()
         gpu_usage = _gpu_usage()
+        service = _dev_service_component(self.settings)
         return [
-            _component(
-                "ornnlab-service",
-                "OrnnLab Service",
-                "healthy",
-                _npm_version(),
-                str(self.settings.home),
-                ["check-update", "restart-service"],
-            ),
+            service,
             _component(
                 "harbor-cli",
                 "Harbor CLI",
@@ -164,6 +158,66 @@ def _component(
         "path": path,
         "actions": actions,
     }
+
+
+def _dev_service_component(settings: Settings) -> dict:
+    state = _read_dev_service_state()
+    if not state:
+        return _component(
+            "ornnlab-service",
+            "OrnnLab Service",
+            "healthy",
+            _npm_version(),
+            str(settings.home),
+            ["check-update", "restart-service"],
+        )
+    running = state.get("status") == "running" and _pid_alive(state.get("daemonPid"))
+    status = "healthy" if running else "unavailable"
+    value = (
+        f"{state.get('status', 'unknown')} {state.get('frontendUrl', '')}".strip()
+        if state.get("status")
+        else _npm_version()
+    )
+    return _component(
+        "ornnlab-service",
+        "OrnnLab Service",
+        status,
+        value,
+        str(_dev_service_logs_dir()),
+        ["check-update", "restart-service"],
+    )
+
+
+def _read_dev_service_state() -> dict | None:
+    state_path = _dev_service_home() / "state.json"
+    try:
+        return json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _dev_service_home() -> Path:
+    configured = os.environ.get("ORNNLAB_DEV_SERVICE_HOME")
+    if configured:
+        return Path(configured).expanduser()
+    launcher_home = Path(
+        os.environ.get("ORNNLAB_LAUNCHER_HOME", "~/.ornnlab/launcher")
+    ).expanduser()
+    return launcher_home.parent / "dev-service"
+
+
+def _dev_service_logs_dir() -> Path:
+    return _dev_service_home() / "logs"
+
+
+def _pid_alive(pid: object) -> bool:
+    if not isinstance(pid, int) or pid < 1:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
 
 
 def _harbor_executable() -> str:

@@ -92,9 +92,9 @@ export const systemRows: SystemRow[] = [
   {
     kind: 'ornnlab-service',
     component: 'OrnnLab Service',
-    status: 'running',
-    value: '0.1.3 latest',
-    path: 'http://127.0.0.1:5173',
+    status: 'healthy',
+    value: 'running http://127.0.0.1:5173',
+    path: '~/.ornnlab/dev-service/logs',
   },
   {
     kind: 'harbor-cli',
@@ -139,3 +139,21 @@ export const systemRows: SystemRow[] = [
     path: '/Volumes/XU-1TB-NPM',
   },
 ]
+
+export const degradedSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
+  ? {
+      ...row,
+      status: 'failed',
+      value: 'degraded frontend exited',
+      path: '~/.ornnlab/dev-service/logs',
+    }
+  : row)
+
+export const stoppedSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
+  ? {
+      ...row,
+      status: 'unavailable',
+      value: 'stopped',
+      path: '~/.ornnlab/dev-service/logs',
+    }
+  : row)

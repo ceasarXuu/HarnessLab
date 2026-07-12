@@ -5,6 +5,7 @@ const { setup } = require("../lib/bootstrap");
 const { runDev, runBackend, runDoctor, runFrontend, frontendHost, frontendPort, backendHost, backendPort } = require("../lib/dev");
 const { sourceDir } = require("../lib/state");
 const { repoUrl } = require("../lib/source");
+const { handleDevCommand } = require("../lib/dev-daemon");
 const { handleUpdate } = require("../lib/update");
 const { handleUninstall } = require("../lib/uninstall");
 
@@ -16,7 +17,12 @@ Usage:
   ornnlab setup              Alias for install
   ornnlab update             Update the global launcher and managed dependencies
   ornnlab uninstall          Move launcher-managed artifacts to a dated backup
-  ornnlab dev                Start backend and frontend development servers
+  ornnlab dev                Start backend and frontend development servers in the foreground
+  ornnlab dev start          Start the app-level background dev service
+  ornnlab dev stop           Stop the app-level background dev service
+  ornnlab dev restart        Restart the app-level background dev service
+  ornnlab dev status         Show app-level dev service status
+  ornnlab dev logs           Print app-level dev service logs
   ornnlab web [args...]      Start the FastAPI backend from the managed source checkout
   ornnlab ui [args...]       Start the React frontend dev server from the managed source checkout
   ornnlab doctor [args...]   Run OrnnLab doctor from the managed source checkout
@@ -96,7 +102,13 @@ async function main() {
     runDoctor(args);
     return;
   }
-  if (command === "dev" || command === "start") {
+  if (command === "dev") {
+    const handled = await handleDevCommand(args);
+    if (handled !== null) return;
+    await runDev();
+    return;
+  }
+  if (command === "start") {
     await runDev();
     return;
   }

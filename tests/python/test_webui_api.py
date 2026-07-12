@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 
@@ -194,6 +195,32 @@ def test_system_restart_reports_real_supervisor_requirement(client):
     assert operation["error"]["code"] == "SERVICE_RESTART_UNAVAILABLE"
     persisted = client.get(f"{API}/operations/{operation['id']}").json()["data"]
     assert persisted["status"] == "failed"
+
+
+def test_system_health_reports_app_level_dev_service_state(client, tmp_path: Path, monkeypatch):
+    service_home = tmp_path / "dev-service"
+    logs_dir = service_home / "logs"
+    logs_dir.mkdir(parents=True)
+    state = {
+        "serviceId": "ornnlab-dev-service",
+        "status": "running",
+        "daemonPid": os.getpid(),
+        "backendPid": os.getpid(),
+        "frontendPid": os.getpid(),
+        "backendUrl": "http://127.0.0.1:8765",
+        "frontendUrl": "http://127.0.0.1:5173",
+        "updatedAt": "2026-07-13T00:00:00Z",
+    }
+    (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
+
+    components = client.get(f"{API}/system/health").json()["data"]["items"]
+
+    service = next(component for component in components if component["kind"] == "ornnlab-service")
+    assert service["status"] == "healthy"
+    assert service["value"] == "running http://127.0.0.1:5173"
+    assert service["path"] == str(logs_dir)
+    assert service["actions"] == ["check-update", "restart-service"]
 
 
 def test_system_directory_picker_returns_the_native_selection(client, tmp_path: Path, monkeypatch):

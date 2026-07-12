@@ -5,7 +5,7 @@ import { getTranslator } from '../i18n'
 import { createMockWebUiClient } from '../api/mockClient'
 import { jobs } from '../mocks/demo'
 import { agentRows, datasetRows, environmentRows } from '../mocks/demoCatalog'
-import { leaderboardRows, systemRows } from '../mocks/demoSystem'
+import { degradedSystemRows, leaderboardRows, stoppedSystemRows, systemRows } from '../mocks/demoSystem'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
 import { EnvironmentsPage } from './EnvironmentsPage'
@@ -423,6 +423,14 @@ export const LeaderboardEmpty: Story = {
 
 export const System: Story = {
   render: () => <SystemPage client={client} rows={systemRows} t={t} onRefresh={async () => undefined} />,
+}
+
+export const SystemDevServiceDegraded: Story = {
+  render: () => <SystemPage client={client} rows={degradedSystemRows} t={t} onRefresh={async () => undefined} />,
+}
+
+export const SystemDevServiceStopped: Story = {
+  render: () => <SystemPage client={client} rows={stoppedSystemRows} t={t} onRefresh={async () => undefined} />,
 }
 
 export const SystemEmpty: Story = {
