@@ -80,7 +80,7 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 
 ## 6. Stage 7 方案草案
 
-Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进程”升级为“OrnnLab 应用级守护进程管理”。该阶段不安装 launchd、systemd、Windows Service，不做登录或开机自启动。详细方案见 [应用级守护进程方案](dev-daemon-plan.md)。
+Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进程”升级为“OrnnLab 应用级守护进程管理”。该阶段不安装 launchd、systemd、Windows Service，不做登录或开机自启动。详细方案见 [应用级守护进程方案](dev-daemon/README.md)。
 
 | ID | 验收项 | 当前证据 | 状态 |
 |---|---|---|---|
