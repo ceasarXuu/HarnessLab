@@ -106,7 +106,9 @@ class WebUiDatasetService:
         self._set_last_parent(parent)
         destination.mkdir()
         _write_marker(destination, ref)
+        progress(5, "Preparing dataset directory")
         self._record_pending_download(ref, parent, destination)
+        progress(10, "Starting dataset download")
         logger.info("Preparing Dataset download ref=%s destination=%s", ref, destination)
         total = 0
         completed = 0
@@ -114,12 +116,12 @@ class WebUiDatasetService:
         def on_total_known(value: int) -> None:
             nonlocal total
             total = value
-            progress(0, f"Downloading {value} tasks")
+            progress(20, f"Downloading {value} tasks")
 
         def on_complete(_task_id, _result) -> None:
             nonlocal completed
             completed += 1
-            percentage = int(completed * 100 / total) if total else None
+            percentage = 20 + int(completed * 75 / total) if total else None
             progress(percentage, f"Downloaded {completed} of {total} tasks")
 
         try:

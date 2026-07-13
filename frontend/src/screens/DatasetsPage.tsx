@@ -7,7 +7,6 @@ import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
 import { FolderPathInput, type FolderPathSelection } from '../ui/components/FolderPathInput'
-import { OperationStatus } from '../ui/components/OperationStatus'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import type { DatasetRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
@@ -451,7 +450,6 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
             </div>
         </ConfirmDialog>
       )}
-      <OperationStatus error={datasetOperation.error?.message} operation={datasetOperation.operation} t={t} />
     </main>
   )
 }

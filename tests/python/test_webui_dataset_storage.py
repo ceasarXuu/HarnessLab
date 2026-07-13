@@ -58,6 +58,29 @@ def test_registry_download_uses_selected_parent_and_remembers_it(tmp_path, monke
     assert service.default_download_parent()["parentPath"] == str(parent)
 
 
+def test_registry_download_reports_stage_and_task_progress(tmp_path, monkeypatch):
+    settings = _settings(tmp_path)
+    parent = tmp_path / "chosen-parent"
+    parent.mkdir()
+    updates: list[tuple[int | None, str | None]] = []
+    monkeypatch.setattr(
+        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
+        lambda: FakeRegistryClient(),
+    )
+
+    def capture_progress(value: int | None, message: str | None = None) -> None:
+        updates.append((value, message))
+
+    asyncio.run(WebUiDatasetService(settings).download("team/eval@1.0", str(parent), capture_progress))
+
+    assert updates == [
+        (5, "Preparing dataset directory"),
+        (10, "Starting dataset download"),
+        (20, "Downloading 1 tasks"),
+        (95, "Downloaded 1 of 1 tasks"),
+    ]
+
+
 def test_registry_catalog_is_cached_across_dataset_searches(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     registry = CachedRegistryClient()
