@@ -180,7 +180,7 @@
   padding-right: 0;
 }
 .custom-select.open {
-  z-index: 100;
+  z-index: var(--z-popover);
 }
 .custom-select.disabled {
   opacity: 0.6;
@@ -243,7 +243,7 @@
   top: calc(100% + 4px);
   right: -1px;
   left: -1px;
-  z-index: 50;
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   max-height: 280px;

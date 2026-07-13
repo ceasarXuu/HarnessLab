@@ -329,7 +329,7 @@ code {
 .drawer-layer {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--z-drawer);
   pointer-events: none;
 }
 .drawer-scrim {
@@ -387,7 +387,7 @@ code {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 35;
+  z-index: var(--z-toast);
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -419,7 +419,7 @@ code {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: var(--z-modal);
   display: grid;
   place-items: center;
   padding: 20px;

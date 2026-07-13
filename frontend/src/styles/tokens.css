@@ -19,6 +19,11 @@
   --warning: #a16207;
   --danger: #b42318;
   --info: #2563eb;
+  --z-topbar: 20;
+  --z-drawer: 40;
+  --z-popover: 50;
+  --z-modal: 80;
+  --z-toast: 100;
   font-family:
     HarborCode, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }

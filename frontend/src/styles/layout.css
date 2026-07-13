@@ -5,7 +5,7 @@
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-topbar);
   display: flex;
   align-items: center;
   gap: 24px;
