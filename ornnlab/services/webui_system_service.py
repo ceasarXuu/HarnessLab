@@ -175,12 +175,8 @@ def _dev_service_component(settings: Settings) -> dict:
     daemon_alive = _pid_token_alive(state.get("daemonPid"), state.get("daemonToken"))
     backend_alive = _pid_token_alive(state.get("backendPid"), state.get("backendToken"))
     frontend_alive = _pid_token_alive(state.get("frontendPid"), state.get("frontendToken"))
-    backend_healthy = backend_alive and _health_endpoint_ok(
-        f"{state.get('backendUrl', '')}/api/webui/v1/system/health"
-    )
-    frontend_healthy = frontend_alive and _health_endpoint_ok(
-        f"{state.get('frontendUrl', '')}/api/webui/v1/system/health"
-    )
+    backend_healthy = backend_alive
+    frontend_healthy = frontend_alive and _health_endpoint_ok(str(state.get("frontendUrl", "")))
     running = (
         state.get("status") == "running"
         and daemon_alive

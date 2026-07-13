@@ -8,6 +8,22 @@ const test = require("node:test");
 
 const repoRoot = path.resolve(__dirname, "../..");
 
+test("ornnlab path resolves to the current repo when run from the repo root", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-launcher-path-"));
+  const result = spawnSync(process.execPath, ["bin/ornnlab.js", "path"], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      ORNNLAB_LAUNCHER_HOME: path.join(tempRoot, "launcher"),
+      ORNNLAB_SOURCE: "",
+    },
+    encoding: "utf8",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), repoRoot);
+});
+
 test("ornnlab dev starts an API-mode frontend proxy", { timeout: 60000 }, async (context) => {
   const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-launcher-api-"));

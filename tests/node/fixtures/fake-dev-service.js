@@ -43,7 +43,7 @@ if (splitSecret) {
 const readyAt = Date.now() + delayHealthMs;
 
 const server = http.createServer((request, response) => {
-  if (request.url === "/api/webui/v1/system/health") {
+  if (request.url === "/" || request.url === "/api/webui/v1/system/health") {
     if (Date.now() < readyAt) {
       response.writeHead(503, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: { message: "starting" } }));
