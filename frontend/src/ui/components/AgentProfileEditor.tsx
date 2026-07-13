@@ -8,6 +8,7 @@ import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
 import { McpServersControl } from './McpServersControl'
+import { ReadonlyKeyValueList, ReadonlyMcpServers, ReadonlyStringList } from './ReadonlyDisplay'
 
 type AgentTab = 'base' | 'skills' | 'mcps' | 'advanced'
 
@@ -90,8 +91,8 @@ export function AgentProfileEditor({
             <section className="surface rail-card">
               <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
               <div className="agent-form-grid">
-                {readOnly && !hasConfiguredValue(value.env) ? (
-                  <Metric label={t('genericAgentEnv')} value={t('supportedByHarness')} />
+                {readOnly ? (
+                  <ReadonlyKeyValueList label={t('genericAgentEnv')} value={value.env} emptyLabel={t('supportedByHarness')} />
                 ) : (
                   <div className="field-wide">
                     <KeyValueControl
@@ -113,8 +114,8 @@ export function AgentProfileEditor({
       {resolvedActiveTab === 'skills' && supports('skills') && (
         <section className="surface rail-card">
           <SectionTitle>{t('skillsConfig')}</SectionTitle>
-          {readOnly && !hasConfiguredValue(value.skills) ? (
-            <Metric label={t('skillsConfig')} value={t('supportedByHarness')} />
+          {readOnly ? (
+            <ReadonlyStringList label={t('skills')} value={value.skills} emptyLabel={t('supportedByHarness')} />
           ) : (
             <DirectoryListControl
               addLabel={t('add')}
@@ -133,8 +134,8 @@ export function AgentProfileEditor({
       {resolvedActiveTab === 'mcps' && supports('mcpServers') && (
         <section className="surface rail-card">
           <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
-          {readOnly && !hasConfiguredValue(value.mcp) ? (
-            <Metric label={t('mcpConfigSection')} value={t('supportedByHarness')} />
+          {readOnly ? (
+            <ReadonlyMcpServers label={t('mcpConfigSection')} labels={mcpLabels(t)} value={value.mcp} emptyLabel={t('supportedByHarness')} />
           ) : (
             <McpServersControl
               labels={mcpLabels(t)}
@@ -190,13 +191,16 @@ export function AgentProfileEditor({
               )
             )}
             {supports('customKwargs') && (
-              <KeyValueControl
-                readOnly={readOnly}
-                label={t('genericAgentKwargs')}
-                labels={defaultKeyValueLabels(t)}
-                value={value.kwargs ?? 'none'}
-                onChange={(nextValue) => setField('kwargs', nextValue)}
-              />
+              readOnly ? (
+                <ReadonlyKeyValueList label={t('genericAgentKwargs')} value={value.kwargs} emptyLabel={t('notConfigured')} />
+              ) : (
+                <KeyValueControl
+                  label={t('genericAgentKwargs')}
+                  labels={defaultKeyValueLabels(t)}
+                  value={value.kwargs ?? 'none'}
+                  onChange={(nextValue) => setField('kwargs', nextValue)}
+                />
+              )
             )}
             {supports('harnessParameters') && <AgentHarnessParameters readOnly={readOnly} t={t} value={value} onChange={onChange} />}
           </div>
@@ -221,6 +225,17 @@ export function AgentIdentityEditor({
     capabilities: agentCapabilitiesForHarness(harness, capabilitiesByHarness),
     harness,
   })
+
+  if (readOnly) {
+    return (
+      <div className="agent-form-grid">
+        <Metric label={t('agentName')} value={value.agentName} />
+        <Metric label={t('harness')} value={value.harness} />
+        <Metric label={t('agentType')} value={value.type} />
+        {usesCustomHarness && <Metric label={t('customImportPath')} value={value.adapter} />}
+      </div>
+    )
+  }
 
   return (
     <div className="agent-form-grid">

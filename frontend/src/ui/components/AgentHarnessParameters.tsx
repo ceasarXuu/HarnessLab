@@ -1,5 +1,6 @@
 import type { AgentParameter, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { Metric } from './Metric'
 
 interface AgentHarnessParametersProps {
   readOnly?: boolean
@@ -20,13 +21,21 @@ export function AgentHarnessParameters({ readOnly = false, t, value, onChange }:
     <div className="field-wide harness-parameter-grid">
       <h4>{t('harnessParameters')}</h4>
       {parameters.map((parameter) => (
-        <HarnessParameterInput
-          key={`${parameter.source}-${parameter.key}`}
-          parameter={parameter}
-          readOnly={readOnly}
-          value={getParameterValue(value, parameter)}
-          onChange={(nextValue) => setParameter(parameter, nextValue)}
-        />
+        readOnly ? (
+          <Metric
+            key={`${parameter.source}-${parameter.key}`}
+            label={parameter.label}
+            value={getReadonlyParameterValue(value, parameter, t)}
+          />
+        ) : (
+          <HarnessParameterInput
+            key={`${parameter.source}-${parameter.key}`}
+            parameter={parameter}
+            readOnly={readOnly}
+            value={getParameterValue(value, parameter)}
+            onChange={(nextValue) => setParameter(parameter, nextValue)}
+          />
+        )
       ))}
     </div>
   )
@@ -86,6 +95,12 @@ function getParameterValue(agent: AgentRow, parameter: AgentParameter) {
   const raw = parameter.source === 'env' ? agent.env : agent.kwargs
   const current = parseKeyValues(raw ?? 'none').get(parameter.key)
   return current ?? (parameter.defaultValue === undefined ? '' : String(parameter.defaultValue))
+}
+
+function getReadonlyParameterValue(agent: AgentRow, parameter: AgentParameter, t: Translate) {
+  const value = getParameterValue(agent, parameter)
+  if (value) return value
+  return parameter.defaultValue === undefined ? t('configuredAtJobRun') : String(parameter.defaultValue)
 }
 
 function parseKeyValues(value: string) {

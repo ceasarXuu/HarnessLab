@@ -1,0 +1,36 @@
+.readonly-display {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.readonly-display-title {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.readonly-display-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.readonly-display-row {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.readonly-display-row span,
+.readonly-display-row small {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.readonly-display-row strong {
+  overflow-wrap: anywhere;
+}
