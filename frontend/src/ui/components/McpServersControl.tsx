@@ -25,13 +25,14 @@ interface McpServer {
 
 interface McpServersControlProps {
   labels: McpServerLabels
+  readOnly?: boolean
   value: string
   onChange: (value: string) => void
 }
 
 const emptyServer: McpServer = { args: [], command: '', name: 'mcp-server', transport: 'stdio', url: '' }
 
-export function McpServersControl({ labels, value, onChange }: McpServersControlProps) {
+export function McpServersControl({ labels, readOnly = false, value, onChange }: McpServersControlProps) {
   const [servers, setServers] = useState(() => parseMcpServers(value))
   useEffect(() => setServers(parseMcpServers(value)), [value])
   const commit = (nextServers: McpServer[]) => {
@@ -46,32 +47,36 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
     <div className="mcp-server-control">
       <div className="rule-list-header">
         <span>{labels.name}</span>
-        <button className="secondary-button compact-action" type="button" onClick={() => commit([...servers, { ...emptyServer, name: uniqueServerName(servers) }])}>
-          <Plus aria-hidden="true" />
-          {labels.addServer}
-        </button>
+        {!readOnly && (
+          <button className="secondary-button compact-action" type="button" onClick={() => commit([...servers, { ...emptyServer, name: uniqueServerName(servers) }])}>
+            <Plus aria-hidden="true" />
+            {labels.addServer}
+          </button>
+        )}
       </div>
       <div className="mcp-server-list">
         {servers.map((server, index) => (
           <section className="mcp-server-card" key={`${server.name}-${index}`}>
             <div className="mcp-server-header">
               <strong>{server.name || labels.name}</strong>
-              <button aria-label={`${labels.deleteServer}: ${server.name}`} className="icon-button" type="button" onClick={() => commit(servers.filter((_, current) => current !== index))}><Trash2 aria-hidden="true" /></button>
+              {!readOnly && (
+                <button aria-label={`${labels.deleteServer}: ${server.name}`} className="icon-button" type="button" onClick={() => commit(servers.filter((_, current) => current !== index))}><Trash2 aria-hidden="true" /></button>
+              )}
             </div>
             <div className="agent-form-grid">
-              <label>{labels.name}<input value={server.name} onChange={(event) => update(index, { name: event.target.value })} /></label>
+              <label>{labels.name}<input readOnly={readOnly} value={server.name} onChange={(event) => update(index, { name: event.target.value })} /></label>
               <label>
                 {labels.transport}
-                <select value={server.transport} onChange={(event) => update(index, { transport: event.target.value as McpTransport })}>
+                <select disabled={readOnly} value={server.transport} onChange={(event) => update(index, { transport: event.target.value as McpTransport })}>
                   <option value="stdio">stdio</option>
                   <option value="sse">SSE</option>
                   <option value="streamable-http">Streamable HTTP</option>
                 </select>
               </label>
               {server.transport === 'stdio' ? (
-                <label className="field-wide">{labels.command}<input value={server.command ?? ''} onChange={(event) => update(index, { command: event.target.value, url: undefined })} /></label>
+                <label className="field-wide">{labels.command}<input readOnly={readOnly} value={server.command ?? ''} onChange={(event) => update(index, { command: event.target.value, url: undefined })} /></label>
               ) : (
-                <label className="field-wide">{labels.url}<input type="url" value={server.url ?? ''} onChange={(event) => update(index, { command: undefined, url: event.target.value })} /></label>
+                <label className="field-wide">{labels.url}<input readOnly={readOnly} type="url" value={server.url ?? ''} onChange={(event) => update(index, { command: undefined, url: event.target.value })} /></label>
               )}
               <EditableStringList
                 addLabel={labels.addServer}
@@ -79,6 +84,7 @@ export function McpServersControl({ labels, value, onChange }: McpServersControl
                 deleteLabel={labels.deleteItem}
                 itemAriaLabel={() => labels.args}
                 label={labels.args}
+                readOnly={readOnly}
                 values={server.args.length ? server.args : ['']}
                 onChange={(args) => update(index, { args: args.map((item) => item.trim()).filter(Boolean) })}
               />

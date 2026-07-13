@@ -102,6 +102,7 @@ code {
 .agent-form-grid .metric,
 .agent-form-grid .key-value-control,
 .agent-form-grid .model-list-control,
+.agent-form-grid .harness-parameter-grid,
 .agent-form-grid .tag-group-control {
   min-width: 0;
 }
@@ -127,6 +128,30 @@ code {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+.capability-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.capability-chip {
+  border: 1px solid var(--border);
+  padding: 7px 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+}
+.harness-parameter-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.harness-parameter-grid h4 {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
 }
 .directory-list-control .rule-list-row {
   align-items: center;
@@ -317,6 +342,9 @@ code {
 }
 @media (max-width: 760px) {
   .agent-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .harness-parameter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .network-host-list .rule-list-row {

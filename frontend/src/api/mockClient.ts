@@ -1,7 +1,9 @@
 import { events, jobs, trialRows } from '../mocks/demo'
 import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
+import { fallbackAgentCapabilities } from '../domain/agentCapabilities'
 import type {
+  AgentDto,
   ApiError,
   ApiResponse,
   DatasetDto,
@@ -74,7 +76,7 @@ export function createMockWebUiClient(): WebUiClient {
       return operationResult(operations.complete('copy-environment', 'environment', copy.id, 'Environment copied'))
     },
     async createAgent(agent) {
-      agentDtos = [{ ...agent, status: 'configured' }, ...agentDtos]
+      agentDtos = [withMockAgentCapabilities({ ...agent, status: 'configured' }), ...agentDtos]
       return operationResult(operations.complete('create-agent', 'agent', agent.id, 'Agent created'))
     },
     async createEnvironment(environment) {
@@ -275,7 +277,11 @@ export function createMockWebUiClient(): WebUiClient {
       const target = agentDtos.find((item) => item.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
       if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be updated')
-      agentDtos = agentDtos.map((item) => item.id === id ? { ...agent, id, status: 'configured' } : item)
+      agentDtos = agentDtos.map((item) => (
+        item.id === id
+          ? withMockAgentCapabilities({ ...agent, capabilities: target.capabilities, id, status: 'configured' })
+          : item
+      ))
       return operationResult(operations.complete('update-agent', 'agent', id, 'Agent updated'))
     },
     async updateEnvironment(id, environment) {
@@ -354,7 +360,11 @@ function managedDatasetDirectory(ref: string): string {
   return ref.replace('/', '--')
 }
 
-function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent: import('./contract').AgentDto): JobDto {
+function withMockAgentCapabilities(agent: Omit<AgentDto, 'capabilities'> & Partial<Pick<AgentDto, 'capabilities'>>): AgentDto {
+  return { ...agent, capabilities: agent.capabilities ?? fallbackAgentCapabilities() }
+}
+
+function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent: AgentDto): JobDto {
   const id = uniqueId(existing, request.config.jobName.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
   const root = `/Users/xuzhang/.ornnlab/HarnessLab/${request.config.jobsDir}`
   const selectedTaskCount = request.config.selectedTaskNames?.length ?? 0

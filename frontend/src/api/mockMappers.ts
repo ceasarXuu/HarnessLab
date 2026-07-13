@@ -1,5 +1,6 @@
 import { events } from '../mocks/demo'
 import { datasetRows } from '../mocks/demoCatalog'
+import { fallbackAgentCapabilities } from '../domain/agentCapabilities'
 import type { AgentRow, DatasetRow, EnvironmentRow, HarborJob, LeaderboardRow, SystemRow, TaskRow, TrialRow } from '../domain/harbor'
 import type { AgentDto, DatasetDto, DatasetTaskDto, EnvironmentDto, JobDto, JobEventDto, LeaderboardDatasetDto, LeaderboardEntryDto, ScoreDto, SystemComponentDto, TrialDto } from './contract'
 import { optional, parseKeyValues, parseMcpServers, seconds, splitList } from './formValueParsers'
@@ -16,7 +17,7 @@ export function toJobDto(job: HarborJob): JobDto {
 
 export function toAgentDto(agent: AgentRow): AgentDto {
   return {
-    agentName: agent.agentName, env: parseKeyValues(agent.env), harness: agent.harness, id: agent.id,
+    agentName: agent.agentName, capabilities: agent.capabilities ?? fallbackAgentCapabilities(), env: parseKeyValues(agent.env), harness: agent.harness, id: agent.id,
     importPath: optional(agent.adapter), kwargs: agent.kwargs ?? '', maxTimeoutSeconds: seconds(agent.maxTimeout),
     mcpServers: parseMcpServers(agent.mcp), models: splitList(agent.models), setupTimeoutSeconds: seconds(agent.setupTimeout), timeoutSeconds: seconds(agent.timeout),
     skillSources: splitList(agent.skills), status: agent.status, type: agent.type,

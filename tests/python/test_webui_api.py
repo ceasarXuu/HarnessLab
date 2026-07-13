@@ -55,6 +55,15 @@ def test_webui_agent_and_environment_crud(client):
     assert agent["harness"] == "oracle"
     assert agent["status"] == "configured"
     assert agent["timeoutSeconds"] == 1200
+    assert set(agent["capabilities"]["supportedFields"]) == {"customKwargs", "env", "timeouts"}
+
+    built_in_agent = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
+    built_in_fields = set(built_in_agent["capabilities"]["supportedFields"])
+    assert {"env", "harnessParameters", "mcpServers", "modelName", "skills", "timeouts"} <= (
+        built_in_fields
+    )
+    built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
+    assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
 
     built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
     assert built_in_delete.status_code == 403

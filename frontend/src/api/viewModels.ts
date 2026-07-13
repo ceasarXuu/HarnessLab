@@ -1,4 +1,5 @@
 import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, EventLog, HarborJob, LeaderboardDataset, LeaderboardRow, SystemRow, TrialRow } from '../domain/harbor'
+import { fallbackAgentCapabilities } from '../domain/agentCapabilities'
 import type {
   AgentDto,
   DatasetDto,
@@ -64,6 +65,7 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
   return {
     adapter: importPath,
     agentName: agent.agentName,
+    capabilities: agent.capabilities ?? fallbackAgentCapabilities(),
     env: formatKeyValues(agent.env),
     harness: agent.harness,
     id: agent.id,

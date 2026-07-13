@@ -15,6 +15,7 @@ from ornnlab.models.agent import (
     SkillsProfile,
 )
 from ornnlab.models.webui import AgentInput, EnvironmentInput
+from ornnlab.services.agent_capabilities import agent_capabilities, custom_agent_capabilities
 from ornnlab.services.agent_service import AgentService
 from ornnlab.services.clock import now_iso
 from ornnlab.settings import Settings
@@ -315,11 +316,20 @@ class WebUiProfileService:
 
 
 def _agent_dto(payload: AgentInput) -> dict:
-    return {**payload.model_dump(by_alias=True, exclude_none=True), "status": "configured"}
+    agent = payload.model_dump(by_alias=True, exclude_none=True)
+    return {
+        **agent,
+        "capabilities": custom_agent_capabilities(agent["harness"]),
+        "status": "configured",
+    }
 
 
 def _configured_custom_agent(agent: dict) -> dict:
-    return {**agent, "status": "configured"}
+    return {
+        **agent,
+        "capabilities": custom_agent_capabilities(agent["harness"]),
+        "status": "configured",
+    }
 
 
 def _environment_dto(payload: EnvironmentInput) -> dict:
@@ -328,6 +338,7 @@ def _environment_dto(payload: EnvironmentInput) -> dict:
 
 def _built_in_agent(harness: str) -> dict:
     return {
+        "capabilities": agent_capabilities(harness),
         "id": f"built-in:{harness}",
         "agentName": harness,
         "env": [],

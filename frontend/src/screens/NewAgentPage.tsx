@@ -2,6 +2,7 @@ import { Save, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useOperation } from '../api/hooks'
 import { agentRowToDto } from '../api/requestMappers'
+import { agentCapabilitiesByHarness, agentCapabilitiesForHarness } from '../domain/agentCapabilities'
 import type { WebUiClient } from '../api/webUiClient'
 import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
@@ -18,7 +19,8 @@ interface NewAgentPageProps {
 }
 
 export function NewAgentPage({ canSave = true, client, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
-  const [draft, setDraft] = useState(() => buildNewAgent(rows))
+  const capabilitiesByHarness = agentCapabilitiesByHarness(rows)
+  const [draft, setDraft] = useState(() => buildNewAgent(rows, capabilitiesByHarness))
   const agentOperation = useOperation(client)
 
   useEffect(() => {
@@ -58,9 +60,9 @@ export function NewAgentPage({ canSave = true, client, rows, t, onAgents, onRefr
             </div>
           </div>
           <section className="surface rail-card">
-            <AgentIdentityEditor value={draft} t={t} onChange={setDraft} />
+            <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
           </section>
-          <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
+          <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
         </section>
       </div>
       <OperationStatus error={agentOperation.error?.message} operation={agentOperation.operation} t={t} />
@@ -72,7 +74,7 @@ function isOperationRunning(status: string | undefined) {
   return status === 'queued' || status === 'running'
 }
 
-function buildNewAgent(rows: AgentRow[]): AgentRow {
+function buildNewAgent(rows: AgentRow[], capabilitiesByHarness: ReturnType<typeof agentCapabilitiesByHarness>): AgentRow {
   return {
     id: buildAgentId(rows, 'Custom Agent'),
     agentName: buildUniqueAgentName(rows, 'Custom Agent'),
@@ -90,6 +92,7 @@ function buildNewAgent(rows: AgentRow[]): AgentRow {
     setupTimeout: '300s',
     timeout: '1800s',
     maxTimeout: '3600s',
+    capabilities: agentCapabilitiesForHarness('custom-harness', capabilitiesByHarness),
   }
 }
 

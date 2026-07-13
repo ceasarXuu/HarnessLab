@@ -1,4 +1,4 @@
-import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, TaskRow } from '../domain/harbor'
+import type { AgentCapabilities, AgentRow, DatasetRow, DatasetTask, EnvironmentRow, TaskRow } from '../domain/harbor'
 
 export const datasetRows: DatasetRow[] = [
   {
@@ -184,6 +184,33 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
   }
 })
 
+const customAgentCapabilities: AgentCapabilities = {
+  parameters: [],
+  supportedFields: ['customKwargs', 'env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
+}
+
+const claudeCodeCapabilities: AgentCapabilities = {
+  parameters: [
+    { key: 'max_turns', kind: 'number', label: 'Max turns', source: 'kwarg' },
+    { choices: ['low', 'medium', 'high', 'xhigh', 'max'], key: 'reasoning_effort', kind: 'select', label: 'Reasoning effort', source: 'kwarg' },
+    { key: 'allowed_tools', kind: 'text', label: 'Allowed tools', source: 'kwarg' },
+  ],
+  supportedFields: ['env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
+}
+
+const codexCapabilities: AgentCapabilities = {
+  parameters: [
+    { defaultValue: 'high', key: 'reasoning_effort', kind: 'text', label: 'Reasoning effort', source: 'kwarg' },
+    { choices: ['auto', 'concise', 'detailed', 'none'], key: 'reasoning_summary', kind: 'select', label: 'Reasoning summary', source: 'kwarg' },
+  ],
+  supportedFields: ['env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
+}
+
+const oracleCapabilities: AgentCapabilities = {
+  parameters: [],
+  supportedFields: ['env', 'timeouts'],
+}
+
 export const agentRows: AgentRow[] = [
   {
     id: 'claude-code-default',
@@ -199,6 +226,7 @@ export const agentRows: AgentRow[] = [
     kwargs: 'none',
     skills: 'none',
     mcp: 'none',
+    capabilities: claudeCodeCapabilities,
   },
   {
     id: 'codex-cli-default',
@@ -214,6 +242,7 @@ export const agentRows: AgentRow[] = [
     kwargs: 'none',
     skills: 'none',
     mcp: 'none',
+    capabilities: codexCapabilities,
   },
   {
     id: 'oracle-baseline',
@@ -229,6 +258,7 @@ export const agentRows: AgentRow[] = [
     kwargs: 'none',
     skills: 'none',
     mcp: 'none',
+    capabilities: oracleCapabilities,
   },
   {
     id: 'local-repair-agent',
@@ -248,6 +278,7 @@ export const agentRows: AgentRow[] = [
     setupTimeout: '300s',
     timeout: '1800s',
     maxTimeout: '3600s',
+    capabilities: customAgentCapabilities,
   },
 ]
 

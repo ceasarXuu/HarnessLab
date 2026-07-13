@@ -155,6 +155,29 @@ export interface McpServerDto {
   url?: string
 }
 
+export type AgentCapabilityField =
+  | 'customKwargs'
+  | 'env'
+  | 'harnessParameters'
+  | 'mcpServers'
+  | 'modelName'
+  | 'skills'
+  | 'timeouts'
+
+export interface AgentParameterDto {
+  choices?: string[]
+  defaultValue?: boolean | number | string
+  key: string
+  kind: 'boolean' | 'number' | 'select' | 'text'
+  label: string
+  source: 'env' | 'kwarg'
+}
+
+export interface AgentCapabilitiesDto {
+  parameters: AgentParameterDto[]
+  supportedFields: AgentCapabilityField[]
+}
+
 export interface AgentInputDto {
   agentName: string
   env: KeyValueDto[]
@@ -172,6 +195,7 @@ export interface AgentInputDto {
 }
 
 export interface AgentDto extends AgentInputDto {
+  capabilities: AgentCapabilitiesDto
   status: AgentAvailability
 }
 

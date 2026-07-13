@@ -154,6 +154,30 @@ export interface AgentRow {
   setupTimeout?: string
   timeout?: string
   maxTimeout?: string
+  capabilities?: AgentCapabilities
+}
+
+export type AgentCapabilityField =
+  | 'customKwargs'
+  | 'env'
+  | 'harnessParameters'
+  | 'mcpServers'
+  | 'modelName'
+  | 'skills'
+  | 'timeouts'
+
+export interface AgentParameter {
+  choices?: string[]
+  defaultValue?: boolean | number | string
+  key: string
+  kind: 'boolean' | 'number' | 'select' | 'text'
+  label: string
+  source: 'env' | 'kwarg'
+}
+
+export interface AgentCapabilities {
+  parameters: AgentParameter[]
+  supportedFields: AgentCapabilityField[]
 }
 
 export interface EnvironmentRow {

@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
-import type { AgentRow } from '../../domain/harbor'
+import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/agentCapabilities'
+import type { AgentCapabilities, AgentCapabilityField, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { AgentHarnessParameters } from './AgentHarnessParameters'
 import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
@@ -10,6 +12,8 @@ import { McpServersControl } from './McpServersControl'
 type AgentTab = 'base' | 'skills' | 'mcps' | 'advanced'
 
 interface AgentProfileEditorProps {
+  capabilitiesByHarness?: Record<string, AgentCapabilities>
+  readOnly?: boolean
   value: AgentRow
   t: Translate
   onChange: (value: AgentRow) => void
@@ -23,25 +27,30 @@ const harnessOptions = [
   'custom-harness',
 ]
 
-export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorProps) {
+export function AgentProfileEditor({
+  capabilitiesByHarness,
+  readOnly = false,
+  value,
+  t,
+  onChange,
+}: AgentProfileEditorProps) {
   const [activeTab, setActiveTab] = useState<AgentTab>('base')
+  const capabilities = value.capabilities ?? agentCapabilitiesForHarness(value.harness, capabilitiesByHarness)
+  const supports = (field: AgentCapabilityField) => supportsAgentField(capabilities, field)
+  const tabs = buildAgentTabs(capabilities, t)
+  const resolvedActiveTab = tabs.some((tab) => tab.key === activeTab) ? activeTab : tabs[0]?.key ?? 'base'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
 
   return (
     <div className="agent-profile-editor">
       <div className="run-tabs agent-detail-tabs" role="tablist" aria-label={t('selectedAgent')}>
-        {[
-          { key: 'base' as const, label: t('runTabCore') },
-          { key: 'skills' as const, label: t('skillsTab') },
-          { key: 'mcps' as const, label: t('mcpsTab') },
-          { key: 'advanced' as const, label: t('agentAdvancedTab') },
-        ].map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
             role="tab"
-            aria-selected={activeTab === tab.key}
-            className={activeTab === tab.key ? 'active' : undefined}
+            aria-selected={resolvedActiveTab === tab.key}
+            className={resolvedActiveTab === tab.key ? 'active' : undefined}
             onClick={() => setActiveTab(tab.key)}
           >
             {tab.label}
@@ -49,84 +58,147 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
         ))}
       </div>
 
-      {activeTab === 'base' && (
+      {resolvedActiveTab === 'base' && (
         <>
-          <section className="surface rail-card">
-            <SectionTitle>{t('modelSettings')}</SectionTitle>
-            <div className="agent-form-grid">
-              <ModelListControl
-                addLabel={t('add')}
-                deleteLabel={t('delete')}
-                itemLabel={t('modelName')}
-                label={t('supportedModels')}
-                value={value.models}
-                onChange={(nextValue) => setField('models', nextValue)}
-              />
-            </div>
-          </section>
-
-          <section className="surface rail-card">
-            <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
-            <div className="agent-form-grid">
-              <div className="field-wide">
-                <KeyValueControl
-                  compact
-                  label={t('genericAgentEnv')}
-                  labels={envKeyValueLabels(t)}
-                  value={value.env ?? 'none'}
-                  onChange={(nextValue) => setField('env', nextValue)}
-                />
+          {readOnly && (
+            <section className="surface rail-card">
+              <SectionTitle>{t('supportedAgentCapabilities')}</SectionTitle>
+              <AgentCapabilitySummary capabilities={capabilities} t={t} />
+            </section>
+          )}
+          {supports('modelName') && (
+            <section className="surface rail-card">
+              <SectionTitle>{t('modelSettings')}</SectionTitle>
+              <div className="agent-form-grid">
+                {readOnly ? (
+                  <Metric label={t('supportedModels')} value={displayReadOnlyValue(value.models, t('configuredAtJobRun'))} />
+                ) : (
+                  <ModelListControl
+                    addLabel={t('add')}
+                    deleteLabel={t('delete')}
+                    itemLabel={t('modelName')}
+                    label={t('supportedModels')}
+                    value={value.models}
+                    onChange={(nextValue) => setField('models', nextValue)}
+                  />
+                )}
               </div>
-            </div>
-          </section>
+            </section>
+          )}
+
+          {supports('env') && (
+            <section className="surface rail-card">
+              <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
+              <div className="agent-form-grid">
+                {readOnly && !hasConfiguredValue(value.env) ? (
+                  <Metric label={t('genericAgentEnv')} value={t('supportedByHarness')} />
+                ) : (
+                  <div className="field-wide">
+                    <KeyValueControl
+                      compact
+                      readOnly={readOnly}
+                      label={t('genericAgentEnv')}
+                      labels={envKeyValueLabels(t)}
+                      value={value.env ?? 'none'}
+                      onChange={(nextValue) => setField('env', nextValue)}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </>
       )}
 
-      {activeTab === 'skills' && (
+      {resolvedActiveTab === 'skills' && supports('skills') && (
         <section className="surface rail-card">
           <SectionTitle>{t('skillsConfig')}</SectionTitle>
-          <DirectoryListControl
-            addLabel={t('add')}
-            chooseLabel={t('chooseFolder')}
-            deleteLabel={t('delete')}
-            description={t('skillsConfigDescription')}
-            label={t('skills')}
-            value={value.skills ?? 'none'}
-            onChange={(nextValue) => setField('skills', nextValue)}
-          />
+          {readOnly && !hasConfiguredValue(value.skills) ? (
+            <Metric label={t('skillsConfig')} value={t('supportedByHarness')} />
+          ) : (
+            <DirectoryListControl
+              addLabel={t('add')}
+              chooseLabel={t('chooseFolder')}
+              deleteLabel={t('delete')}
+              description={t('skillsConfigDescription')}
+              label={t('skills')}
+              readOnly={readOnly}
+              value={value.skills ?? 'none'}
+              onChange={(nextValue) => setField('skills', nextValue)}
+            />
+          )}
         </section>
       )}
 
-      {activeTab === 'mcps' && (
+      {resolvedActiveTab === 'mcps' && supports('mcpServers') && (
         <section className="surface rail-card">
           <SectionTitle>{t('mcpConfigSection')}</SectionTitle>
-          <McpServersControl labels={mcpLabels(t)} value={value.mcp ?? 'none'} onChange={(nextValue) => setField('mcp', nextValue)} />
+          {readOnly && !hasConfiguredValue(value.mcp) ? (
+            <Metric label={t('mcpConfigSection')} value={t('supportedByHarness')} />
+          ) : (
+            <McpServersControl
+              labels={mcpLabels(t)}
+              readOnly={readOnly}
+              value={value.mcp ?? 'none'}
+              onChange={(nextValue) => setField('mcp', nextValue)}
+            />
+          )}
         </section>
       )}
 
-      {activeTab === 'advanced' && (
+      {resolvedActiveTab === 'advanced' && (
         <section className="surface rail-card">
           <SectionTitle>{t('advancedAgentParams')}</SectionTitle>
           <div className="agent-form-grid">
-            <label>
-              {t('agentExecutionTimeout')}
-              <input min="1" type="number" value={secondsInput(value.timeout)} onChange={(event) => setField('timeout', withSeconds(event.target.value))} />
-            </label>
-            <label>
-              {t('setupTimeout')}
-              <input min="1" type="number" value={secondsInput(value.setupTimeout)} onChange={(event) => setField('setupTimeout', withSeconds(event.target.value))} />
-            </label>
-            <label>
-              {t('maxTimeout')}
-              <input min="1" type="number" value={secondsInput(value.maxTimeout)} onChange={(event) => setField('maxTimeout', withSeconds(event.target.value))} />
-            </label>
-            <KeyValueControl
-              label={t('genericAgentKwargs')}
-              labels={defaultKeyValueLabels(t)}
-              value={value.kwargs ?? 'none'}
-              onChange={(nextValue) => setField('kwargs', nextValue)}
-            />
-            <Metric label={t('sourceRef')} value={value.source} />
+            {supports('timeouts') && (
+              readOnly ? (
+                <>
+                  <Metric label={t('agentExecutionTimeout')} value={t('configuredAtJobRun')} />
+                  <Metric label={t('setupTimeout')} value={t('configuredAtJobRun')} />
+                  <Metric label={t('maxTimeout')} value={t('configuredAtJobRun')} />
+                </>
+              ) : (
+                <>
+                  <label>
+                    {t('agentExecutionTimeout')}
+                    <input
+                      min="1"
+                      type="number"
+                      value={secondsInput(value.timeout)}
+                      onChange={(event) => setField('timeout', withSeconds(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    {t('setupTimeout')}
+                    <input
+                      min="1"
+                      type="number"
+                      value={secondsInput(value.setupTimeout)}
+                      onChange={(event) => setField('setupTimeout', withSeconds(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    {t('maxTimeout')}
+                    <input
+                      min="1"
+                      type="number"
+                      value={secondsInput(value.maxTimeout)}
+                      onChange={(event) => setField('maxTimeout', withSeconds(event.target.value))}
+                    />
+                  </label>
+                </>
+              )
+            )}
+            {supports('customKwargs') && (
+              <KeyValueControl
+                readOnly={readOnly}
+                label={t('genericAgentKwargs')}
+                labels={defaultKeyValueLabels(t)}
+                value={value.kwargs ?? 'none'}
+                onChange={(nextValue) => setField('kwargs', nextValue)}
+              />
+            )}
+            {supports('harnessParameters') && <AgentHarnessParameters readOnly={readOnly} t={t} value={value} onChange={onChange} />}
           </div>
         </section>
       )}
@@ -134,12 +206,19 @@ export function AgentProfileEditor({ value, t, onChange }: AgentProfileEditorPro
   )
 }
 
-export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: AgentProfileEditorProps & { readOnly?: boolean }) {
+export function AgentIdentityEditor({
+  capabilitiesByHarness,
+  readOnly = false,
+  value,
+  t,
+  onChange,
+}: AgentProfileEditorProps & { readOnly?: boolean }) {
   const usesCustomHarness = value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
   const setHarness = (harness: string) => onChange({
     ...value,
     adapter: harness === 'custom-harness' ? value.adapter || 'agents.custom:Agent' : 'none',
+    capabilities: agentCapabilitiesForHarness(harness, capabilitiesByHarness),
     harness,
   })
 
@@ -164,7 +243,7 @@ export function AgentIdentityEditor({ readOnly = false, value, t, onChange }: Ag
       {usesCustomHarness && (
         <label>
           {t('customImportPath')}
-          <input value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
+          <input readOnly={readOnly} value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
         </label>
       )}
     </div>
@@ -177,6 +256,51 @@ function mcpLabels(t: Translate) {
     deleteItem: t('deleteItem'), deleteServer: t('deleteMcpServer'),
     name: t('mcpServerName'), transport: t('mcpTransport'), url: t('mcpUrl'),
   }
+}
+
+function buildAgentTabs(capabilities: AgentCapabilities, t: Translate) {
+  const hasBase = supportsAgentField(capabilities, 'modelName') || supportsAgentField(capabilities, 'env')
+  const hasAdvanced = supportsAgentField(capabilities, 'timeouts')
+    || supportsAgentField(capabilities, 'customKwargs')
+    || supportsAgentField(capabilities, 'harnessParameters')
+  return [
+    hasBase ? { key: 'base' as const, label: t('runTabCore') } : null,
+    supportsAgentField(capabilities, 'skills') ? { key: 'skills' as const, label: t('skillsTab') } : null,
+    supportsAgentField(capabilities, 'mcpServers') ? { key: 'mcps' as const, label: t('mcpsTab') } : null,
+    hasAdvanced ? { key: 'advanced' as const, label: t('agentAdvancedTab') } : null,
+  ].filter((tab): tab is { key: AgentTab; label: string } => tab !== null)
+}
+
+function AgentCapabilitySummary({ capabilities, t }: { capabilities: AgentCapabilities; t: Translate }) {
+  return (
+    <div className="capability-chip-row">
+      {capabilities.supportedFields.map((field) => (
+        <span className="capability-chip" key={field}>{capabilityFieldLabel(field, t)}</span>
+      ))}
+    </div>
+  )
+}
+
+function capabilityFieldLabel(field: AgentCapabilityField, t: Translate) {
+  const labels: Record<AgentCapabilityField, ReturnType<Translate>> = {
+    customKwargs: t('capabilityCustomKwargs'),
+    env: t('capabilityEnv'),
+    harnessParameters: t('capabilityHarnessParameters'),
+    mcpServers: t('capabilityMcpServers'),
+    modelName: t('capabilityModelName'),
+    skills: t('capabilitySkills'),
+    timeouts: t('capabilityTimeouts'),
+  }
+  return labels[field]
+}
+
+function displayReadOnlyValue(value: string | undefined, fallback: string) {
+  if (!hasConfiguredValue(value) || value === '-') return fallback
+  return value ?? fallback
+}
+
+function hasConfiguredValue(value: string | undefined) {
+  return Boolean(value && value !== 'none' && value !== '-')
 }
 
 function defaultKeyValueLabels(t: Translate) {
@@ -193,6 +317,7 @@ function DirectoryListControl({
   deleteLabel,
   description,
   label,
+  readOnly = false,
   value,
   onChange,
 }: {
@@ -201,6 +326,7 @@ function DirectoryListControl({
   deleteLabel: string
   description: string
   label: string
+  readOnly?: boolean
   value: string
   onChange: (value: string) => void
 }) {
@@ -227,6 +353,7 @@ function DirectoryListControl({
         deleteLabel={deleteLabel}
         itemAriaLabel={() => label}
         label={label}
+        readOnly={readOnly}
         values={paths}
         onChange={commit}
         extraActions={(
@@ -247,6 +374,7 @@ function ModelListControl({
   deleteLabel,
   itemLabel,
   label,
+  readOnly = false,
   value,
   onChange,
 }: {
@@ -254,6 +382,7 @@ function ModelListControl({
   deleteLabel: string
   itemLabel: string
   label: string
+  readOnly?: boolean
   value: string
   onChange: (value: string) => void
 }) {
@@ -269,6 +398,7 @@ function ModelListControl({
       deleteLabel={deleteLabel}
       itemAriaLabel={() => itemLabel}
       label={label}
+      readOnly={readOnly}
       values={models}
       onChange={commit}
     />

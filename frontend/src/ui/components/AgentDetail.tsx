@@ -40,7 +40,7 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
         </div>
         <AgentIdentityEditor readOnly={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
       </section>
-      {draft.type === 'custom' && <AgentProfileEditor value={draft} t={t} onChange={setDraft} />}
+      <AgentProfileEditor readOnly={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
     </aside>
   )
 }

@@ -73,7 +73,9 @@ def test_registry_download_reports_stage_and_task_progress(tmp_path, monkeypatch
     def capture_progress(value: int | None, message: str | None = None) -> None:
         updates.append((value, message))
 
-    asyncio.run(WebUiDatasetService(settings).download("team/eval@1.0", str(parent), capture_progress))
+    asyncio.run(
+        WebUiDatasetService(settings).download("team/eval@1.0", str(parent), capture_progress)
+    )
 
     assert updates == [
         (5, "Preparing dataset directory"),
