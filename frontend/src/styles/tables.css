@@ -209,6 +209,30 @@ tbody tr:hover,
   min-height: 34px;
 }
 .progress-label { min-width: 42px; color: var(--foreground); font-size: 12px; font-weight: 600; }
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+.pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pagination-controls .icon-button {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+}
+.pagination-controls .icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .action-groups {
   display: grid;
   gap: 14px;

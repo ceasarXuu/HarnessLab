@@ -1,9 +1,12 @@
 import { Search } from 'lucide-react'
 import type { HarborJob, JobStatus } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import type { PaginationState } from '../pagination'
+import { Pagination } from './Pagination'
 
 interface JobsTableProps {
   jobs: HarborJob[]
+  pagination?: PaginationState<HarborJob>
   selectedId?: string
   search: string
   t: Translate
@@ -12,7 +15,7 @@ interface JobsTableProps {
   onSelect: (job: HarborJob) => void
 }
 
-export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
+export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
   const statusLabels: Record<JobStatus, string> = {
     completed: t('statusCompleted'),
     cancelled: t('statusCancelled'),
@@ -95,6 +98,7 @@ export function JobsTable({ jobs, selectedId, search, t, onNewJob, onSearch, onS
           </tbody>
         </table>
       </div>
+      {pagination && <Pagination {...pagination} t={t} onPage={pagination.setPage} />}
     </section>
   )
 }

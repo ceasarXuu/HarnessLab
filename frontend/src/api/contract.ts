@@ -93,6 +93,7 @@ export interface DatasetDto {
     path?: string
     sizeBytes?: number
     storageKind?: DatasetStorageKind
+    updatedAt?: string
   }
   registryUrl?: string
 }

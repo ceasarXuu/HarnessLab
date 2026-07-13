@@ -168,11 +168,13 @@ def test_webui_external_dataset_storage_routes_preserve_files(client, tmp_path: 
     ).json()["data"]["operation"]
     assert moved["status"] == "completed"
     detail = client.get(f"{API}/datasets/local%2Fstorage%40v1").json()["data"]
+    assert detail["download"]["updatedAt"]
     assert detail["download"] == {
         "path": str(relocated),
         "sizeBytes": detail["download"]["sizeBytes"],
         "status": "downloaded",
         "storageKind": "external",
+        "updatedAt": detail["download"]["updatedAt"],
     }
 
     removed = client.delete(f"{API}/datasets/local%2Fstorage%40v1/registration").json()["data"][

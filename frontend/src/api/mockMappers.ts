@@ -32,6 +32,7 @@ export function toDatasetDto(dataset: DatasetRow): DatasetDto {
       path: dataset.downloadPath ?? dataset.path ?? dataset.downloadDir,
       sizeBytes: parseSizeBytes(dataset.size),
       storageKind: dataset.storageKind ?? (dataset.source === 'local package' ? 'external' : 'managed'),
+      updatedAt: dataset.downloadedAt,
     },
     registryUrl: dataset.registryUrl,
   }

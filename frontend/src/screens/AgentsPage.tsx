@@ -8,7 +8,9 @@ import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { AgentDetail } from '../ui/components/AgentDetail'
 import { OperationStatus } from '../ui/components/OperationStatus'
+import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { usePaginatedItems } from '../ui/pagination'
 import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
@@ -42,6 +44,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
       ),
     )
   }, [rows, searchQuery, searchResource.data])
+  const pagination = usePaginatedItems({ items: filteredRows, resetKey: search })
 
   useEffect(() => {
     if (agentOperation.operation?.status !== 'completed') return
@@ -98,7 +101,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
+              {pagination.items.map((row) => (
                 <tr
                   key={getAgentKey(row)}
                   className={selected && getAgentKey(selected) === getAgentKey(row) ? 'selected-row' : undefined}
@@ -143,6 +146,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       <ResourceStatus
         error={searchResource.error?.message ?? null}

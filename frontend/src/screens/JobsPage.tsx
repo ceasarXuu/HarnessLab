@@ -7,6 +7,7 @@ import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { JobsTable } from '../ui/components/JobsTable'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { usePaginatedItems } from '../ui/pagination'
 import type { HarborJob } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
@@ -48,6 +49,7 @@ export function JobsPage({
   const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
+  const pagination = usePaginatedItems({ items: jobs, resetKey: search })
 
   const requestJobAction = (jobId: string, action: 'cancel' | 'resume') => {
     if (action !== 'cancel') {
@@ -68,7 +70,8 @@ export function JobsPage({
     <main className="workspace single-page">
       <div className="content-column">
         <JobsTable
-          jobs={jobs}
+          jobs={pagination.items}
+          pagination={pagination}
           selectedId={selected?.id}
           search={search}
           t={t}

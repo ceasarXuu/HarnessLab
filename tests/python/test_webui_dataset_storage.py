@@ -48,11 +48,13 @@ def test_registry_download_uses_selected_parent_and_remembers_it(tmp_path, monke
 
     destination = parent / "team--eval@1.0"
     dataset = asyncio.run(service.get_dataset("team/eval@1.0"))
+    assert dataset["download"]["updatedAt"]
     assert dataset["download"] == {
         "path": str(destination),
         "sizeBytes": pytest.approx(_directory_size(destination)),
         "status": "downloaded",
         "storageKind": "managed",
+        "updatedAt": dataset["download"]["updatedAt"],
     }
     assert (destination / ".ornnlab-dataset.json").is_file()
     assert service.default_download_parent()["parentPath"] == str(parent)

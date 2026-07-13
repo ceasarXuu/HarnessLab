@@ -398,6 +398,7 @@ def _stored_dto(row: dict) -> dict:
             "sizeBytes": _directory_size(path),
             "status": "downloaded",
             "storageKind": storage_kind,
+            "updatedAt": row.get("updated_at"),
         }
     elif path:
         download = {"path": local_path, "status": "path-unavailable", "storageKind": storage_kind}

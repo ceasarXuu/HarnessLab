@@ -135,6 +135,7 @@ export function createMockWebUiClient(): WebUiClient {
               sizeBytes: item.download.sizeBytes,
               status: 'downloaded',
               storageKind: 'managed',
+              updatedAt: new Date().toISOString(),
             },
           } : item)
         },
@@ -166,7 +167,7 @@ export function createMockWebUiClient(): WebUiClient {
     async importDataset(request) {
       const ref = `${request.name}@${request.version}`
       const dataset: DatasetDto = {
-        download: { path: request.path, status: 'downloaded', storageKind: 'external' },
+        download: { path: request.path, status: 'downloaded', storageKind: 'external', updatedAt: new Date().toISOString() },
         name: request.name,
         ref,
         source: 'local import',
@@ -194,7 +195,7 @@ export function createMockWebUiClient(): WebUiClient {
         onCompleted: () => {
           datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
             ...item,
-            download: { ...item.download, path: `${parentPath}/${managedDatasetDirectory(ref)}` },
+            download: { ...item.download, path: `${parentPath}/${managedDatasetDirectory(ref)}`, updatedAt: new Date().toISOString() },
           } : item)
         },
       }))
@@ -206,7 +207,7 @@ export function createMockWebUiClient(): WebUiClient {
       if (!path) return failure('INVALID_REQUEST', 'Dataset path is required')
       datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
         ...item,
-        download: { ...item.download, path, status: 'downloaded' },
+        download: { ...item.download, path, status: 'downloaded', updatedAt: new Date().toISOString() },
       } : item)
       return operationResult(operations.complete('relocate-dataset', 'dataset', ref, 'Dataset path updated'))
     },

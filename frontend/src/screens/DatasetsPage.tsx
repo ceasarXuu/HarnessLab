@@ -3,11 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCachedServerSearch, useDataset, useDatasetTasks, useOperation } from '../api/hooks'
 import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
+import { orderDatasetCatalog } from '../domain/datasetOrdering'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { DatasetDetail } from '../ui/components/DatasetDetail'
 import { FolderPathInput, type FolderPathSelection } from '../ui/components/FolderPathInput'
+import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { usePaginatedItems } from '../ui/pagination'
 import type { DatasetRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
@@ -82,6 +85,8 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
       [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
     )
   }, [selectedTasks, taskSearchQuery, taskSearchResource.data])
+  const orderedRows = useMemo(() => orderDatasetCatalog(rows), [rows])
+  const pagination = usePaginatedItems({ items: orderedRows, resetKey: search })
 
   useEffect(() => {
     if (datasetOperation.operation?.status !== 'completed') return
@@ -205,7 +210,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {pagination.items.map((row) => {
                 const downloadState = downloadStateFor(row)
                 return (
                   <tr
@@ -321,7 +326,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                   </tr>
                 )
               })}
-              {rows.length === 0 && (
+              {orderedRows.length === 0 && (
                 <tr>
                   <td className="empty-row" colSpan={8}>{t('noDatasetsAvailable')}</td>
                 </tr>
@@ -329,6 +334,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       {detailRow && selected && (
         <DetailDrawer label={t('selectedDataset')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>

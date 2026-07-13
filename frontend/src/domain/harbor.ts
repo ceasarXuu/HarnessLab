@@ -122,6 +122,7 @@ export interface DatasetRow {
   updated?: string
   downloadStatus: 'downloaded' | 'not-downloaded' | 'path-unavailable'
   downloadPath?: string
+  downloadedAt?: string
   storageKind?: 'external' | 'managed'
   size?: string
   registryUrl?: string

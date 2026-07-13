@@ -5,7 +5,9 @@ import type { SystemRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { OperationStatus } from '../ui/components/OperationStatus'
+import { Pagination } from '../ui/components/Pagination'
 import { Toast } from '../ui/components/Toast'
+import { usePaginatedItems } from '../ui/pagination'
 
 interface SystemPageProps {
   writesEnabled?: boolean
@@ -27,6 +29,7 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
   const [toast, setToast] = useState<ToastState | null>(null)
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
   const systemOperation = useOperation(client)
+  const pagination = usePaginatedItems({ items: rows })
   const confirmContent = confirmAction === 'docker-cache'
     ? {
         title: t('dockerCacheCleanupTitle'),
@@ -124,7 +127,7 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {pagination.items.map((row) => (
                 <tr key={row.component}>
                   <td>
                     <span className="cell-title">
@@ -172,6 +175,7 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       {toast && (
         <Toast dismissLabel={t('dismiss')} message={toast.message} remaining={toast.remaining} onDismiss={() => setToast(null)} />

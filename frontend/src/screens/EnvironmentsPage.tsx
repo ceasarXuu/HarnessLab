@@ -11,7 +11,9 @@ import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEditor'
 import { OperationStatus } from '../ui/components/OperationStatus'
+import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { usePaginatedItems } from '../ui/pagination'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
 
@@ -62,6 +64,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
       ),
     )
   }, [rows, searchQuery, searchResource.data])
+  const pagination = usePaginatedItems({ items: filteredRows, resetKey: search })
 
   const openDrawer = (row: EnvironmentRow) => {
     setSelected(row)
@@ -155,7 +158,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
+              {pagination.items.map((row) => (
                 <tr
                   key={row.id}
                   className={selected?.id === row.id ? 'selected-row' : undefined}
@@ -188,6 +191,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       <ResourceStatus
         error={searchResource.error?.message ?? null}

@@ -44,12 +44,14 @@ describe('WebUI view model mappers', () => {
         status: 'downloaded',
         path: '~/.cache/harbor/datasets/terminal-bench',
         sizeBytes: 1288490188,
+        updatedAt: '2026-07-13T08:10:00Z',
       },
       registryUrl: 'https://hub.harborframework.com',
     }
 
     expect(datasetDtoToRow(dataset)).toMatchObject({
       name: 'terminal-bench',
+      downloadedAt: '2026-07-13T08:10:00Z',
       downloadStatus: 'downloaded',
       size: '1.2 GB',
     })

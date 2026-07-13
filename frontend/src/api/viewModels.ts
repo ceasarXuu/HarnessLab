@@ -46,6 +46,7 @@ export function datasetDtoToRow(dataset: DatasetDto): DatasetRow {
     source: dataset.source,
     downloadStatus: dataset.download.status,
     downloadPath: dataset.download.path,
+    downloadedAt: dataset.download.updatedAt,
     storageKind: dataset.download.storageKind,
     size: dataset.download.sizeBytes === undefined ? undefined : formatBytes(dataset.download.sizeBytes),
     registryUrl: dataset.registryUrl,

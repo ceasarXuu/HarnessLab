@@ -6,7 +6,9 @@ import type { WebUiClient } from '../api/webUiClient'
 import { CustomSelect } from '../ui/components/CustomSelect'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { DetailRail } from '../ui/components/DetailRail'
+import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { usePaginatedItems } from '../ui/pagination'
 import type { HarborJob, LeaderboardDataset, LeaderboardRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
@@ -66,6 +68,7 @@ export function LeaderboardPage({
     : leaderboardDatasets
   const selectableDatasets =
     selectedDataset && !visibleDatasets.includes(selectedDataset) ? [selectedDataset, ...visibleDatasets] : visibleDatasets
+  const pagination = usePaginatedItems({ items: rows, resetKey: dataset })
 
   return (
     <main className="workspace single-page">
@@ -109,7 +112,7 @@ export function LeaderboardPage({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {pagination.items.map((row) => (
                 <tr key={`${row.dataset}-${row.rank}-${row.jobId}`}>
                   <td>
                     <span className="cell-title">
@@ -151,6 +154,7 @@ export function LeaderboardPage({
             </tbody>
           </table>
         </div>
+        <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       <ResourceStatus
         error={datasetSearchResource.error?.message ?? null}
