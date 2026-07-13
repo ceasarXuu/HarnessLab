@@ -191,7 +191,37 @@ flowchart TD
 | S7-04 | WebUI 接入 | 已完成：System health 读取真实守护状态；WebUI 停止服务暂不开放 |
 | S7-05 | 回归与审查 | 已完成：健康误报、stop fail-closed、System health probe、Storybook 契约对齐和日志 hardening 均有回归；全量门禁通过，最终 subagent 复审 `APPROVED` |
 
-## 11. 开放问题
+## 11. 常见排障
+
+### 11.1 Web Preview 白屏但服务仍在运行
+
+现象：Codex Web Preview 白屏，前端端口 `5173` 可访问，后端健康端点也正常。
+
+优先检查：
+
+```bash
+ornnlab dev status
+lsof -nP -iTCP:5173 -sTCP:LISTEN
+lsof -nP -iTCP:8765 -sTCP:LISTEN
+curl -sS http://127.0.0.1:8765/api/webui/v1/system/health
+tail -120 ~/.ornnlab/dev-service/logs/frontend.log
+```
+
+如果 `frontend.log` 中出现 Vite HMR 旧模块错误，例如：
+
+```text
+The requested module '/src/api/viewModels.ts?t=...' does not provide an export named ...
+```
+
+这通常不是后端掉线，而是浏览器页停留在旧的 Vite/HMR 模块图。处理方式：
+
+```bash
+ornnlab dev restart
+```
+
+重启后确认 `http://127.0.0.1:5173/` 返回的入口脚本不再携带旧 `?t=...` 参数，再刷新 Codex Web Preview。
+
+## 12. 开放问题
 
 - `ornnlab dev start` 是否默认打开浏览器，还是只打印 URL。
 - System 页是否在后续版本开放 `停止服务` 按钮，并设计停止后用户可恢复的反馈方式。
