@@ -204,7 +204,6 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                 <th>{t('visibility')}</th>
                 <th>{t('tasksCount')}</th>
                 <th>{t('sourceRef')}</th>
-                <th>{t('path')}</th>
                 <th>{t('size')}</th>
                 <th>{t('actions')}</th>
               </tr>
@@ -237,11 +236,6 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
                     </td>
                     <td>{row.tasks}</td>
                     <td>{row.source}</td>
-                    <td>
-                      {downloadState.status === 'downloaded' || downloadState.status === 'path-unavailable' ? (
-                        <code>{downloadState.path}</code>
-                      ) : t('notDownloaded')}
-                    </td>
                     <td>
                       {downloadState.status === 'downloaded'
                         ? downloadState.size
@@ -328,7 +322,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               })}
               {orderedRows.length === 0 && (
                 <tr>
-                  <td className="empty-row" colSpan={8}>{t('noDatasetsAvailable')}</td>
+                  <td className="empty-row" colSpan={7}>{t('noDatasetsAvailable')}</td>
                 </tr>
               )}
             </tbody>
