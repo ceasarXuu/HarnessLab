@@ -20,6 +20,7 @@ export function runDraftToCreateJobRequest(draft: RunDraft): CreateJobRequestDto
       jobsDir: draft.jobsDir,
       maxRetries: draft.maxRetries,
       metric: draft.metric,
+      modelName: draft.model,
       notes: draft.notes,
       retryExclude: draft.retryExclude,
       retryInclude: draft.retryInclude,

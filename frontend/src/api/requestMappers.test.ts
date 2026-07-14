@@ -5,7 +5,7 @@ import { agentRowToDto, environmentRowToDto, runDraftToCreateJobRequest } from '
 
 describe('WebUI mutation request mappers', () => {
   it('maps UI draft and editors to structured contract requests', () => {
-    const job = runDraftToCreateJobRequest(defaultRunDraft)
+    const job = runDraftToCreateJobRequest({ ...defaultRunDraft, model: 'claude-sonnet-4-5' })
     const agent = agentRowToDto(agentRows[0])
     const environment = environmentRowToDto(environmentRows[1])
 
@@ -18,11 +18,15 @@ describe('WebUI mutation request mappers', () => {
         environmentPresetId: '',
         extraInstructionPaths: [],
         jobName: 'new-job',
+        modelName: 'claude-sonnet-4-5',
         verifierTimeoutMultiplier: 1,
       },
       runImmediately: true,
     })
-    expect(agent).toMatchObject({ id: 'claude-code-default', models: [] })
+    expect(agent).toMatchObject({
+      id: 'claude-code-default',
+      models: ['claude-haiku-4-5', 'claude-sonnet-4-5'],
+    })
     expect(agent).not.toHaveProperty('status')
     expect(environment).toMatchObject({
       allowedHosts: ['pypi.org', 'github.com', 'huggingface.co'],

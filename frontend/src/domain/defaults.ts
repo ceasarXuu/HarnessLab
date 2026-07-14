@@ -1,4 +1,5 @@
 import type { AgentRow, DatasetRow, EnvironmentRow, RunDraft } from './harbor'
+import { reconcileAgentModel } from './agentModels'
 
 export const defaultRunDraft: RunDraft = {
   agent: '',
@@ -15,6 +16,7 @@ export const defaultRunDraft: RunDraft = {
   jobName: 'new-job',
   maxRetries: 0,
   metric: 'mean',
+  model: '',
   notes: '',
   retryExclude: '',
   retryInclude: 'TimeoutError',
@@ -41,11 +43,13 @@ export function reconcileRunDraftResources(
   const datasets = resources.datasets.map((dataset) => `${dataset.name}@${dataset.version}`)
   const agents = resources.agents.map((agent) => agent.agentName)
   const environments = resources.environments.map((environment) => environment.id)
+  const agent = resources.agents.find((candidate) => candidate.agentName === resolveResourceValue(draft.agent, agents))
 
   return {
     ...draft,
-    agent: resolveResourceValue(draft.agent, agents),
+    agent: agent?.agentName ?? '',
     environment: resolveResourceValue(draft.environment, environments),
+    model: reconcileAgentModel(draft.model, agent),
     source: resolveResourceValue(draft.source, datasets),
   }
 }

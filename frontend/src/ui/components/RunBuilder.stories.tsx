@@ -41,7 +41,17 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const NewJobFlow: Story = {}
+export const NewJobFlow: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText('Model')).toHaveTextContent('qwen3-coder-local')
+    await userEvent.click(canvas.getByLabelText('Agent'))
+    await userEvent.click(canvas.getByRole('option', { name: 'Claude Code default' }))
+    await expect(canvas.getByLabelText('Model')).toHaveTextContent('claude-haiku-4-5')
+    await userEvent.click(canvas.getByLabelText('Model'))
+    await expect(canvas.getByRole('option', { name: 'claude-sonnet-4-5' })).toBeVisible()
+  },
+}
 
 export const VerifierSkipLocksLeaderboard: Story = {
   render: () => <RunBuilderFixture />,

@@ -28,6 +28,7 @@ describe('Stage 3 Operation write boundary', () => {
           jobsDir: 'jobs/operation-test',
           maxRetries: 0,
           metric: 'mean',
+          modelName: agent.models[0],
           notes: '',
           retryExclude: '',
           retryInclude: '',

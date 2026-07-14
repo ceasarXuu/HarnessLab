@@ -108,6 +108,7 @@ describe('App API mode', () => {
     expect(runJob).toBeEnabled()
     fireEvent.click(runJob)
     await waitFor(() => expect(createJob).toHaveBeenCalledOnce())
+    expect(createJob.mock.calls[0][0].config.modelName).toBe('claude-haiku-4-5')
   })
 
   it('keeps defined write actions available in API mode', async () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Operation } from './contract'
 import { createMockWebUiClient } from './mockClient'
+import { runDraftToCreateJobRequest } from './requestMappers'
+import { defaultRunDraft } from '../domain/defaults'
 
 describe('MockWebUiClient', () => {
   it('uses the shared Operation contract for asynchronous actions', () => {
@@ -111,6 +113,7 @@ describe('MockWebUiClient', () => {
         jobsDir: 'jobs/invalid-agent-job',
         maxRetries: 0,
         metric: 'mean',
+        modelName: 'claude-haiku-4-5',
         notes: '',
         retryExclude: '',
         retryInclude: '',
@@ -127,5 +130,22 @@ describe('MockWebUiClient', () => {
 
     expect(response.error).toBeNull()
     expect(response.data?.job.agentName).toBe('Claude Code default')
+    expect(response.data?.job.model).toBe('claude-haiku-4-5')
+  })
+
+  it('rejects a Job model outside the selected Agent template', async () => {
+    const client = createMockWebUiClient()
+    const request = runDraftToCreateJobRequest({
+      ...defaultRunDraft,
+      agent: 'Claude Code default',
+      environment: 'docker-default',
+      model: 'not-configured',
+      source: 'terminal-bench@2.0',
+    })
+
+    const response = await client.createJob(request)
+
+    expect(response.data).toBeNull()
+    expect(response.error?.code).toBe('INVALID_AGENT_MODEL')
   })
 })

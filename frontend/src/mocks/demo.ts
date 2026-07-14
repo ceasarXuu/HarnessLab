@@ -9,6 +9,7 @@ export const initialDraft: RunDraft = {
   debug: false,
   notes: '',
   agent: 'Local repair agent',
+  model: 'qwen3-coder-local',
   environment: 'docker-default',
   verifierMode: 'dataset-default',
   concurrency: 4,

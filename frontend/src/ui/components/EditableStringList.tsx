@@ -9,6 +9,7 @@ interface EditableStringListProps {
   itemAriaLabel?: (value: string, index: number) => string
   label: string
   onChange: (values: string[]) => void
+  placeholder?: string
   readOnly?: boolean
   values: string[]
 }
@@ -21,6 +22,7 @@ export function EditableStringList({
   itemAriaLabel,
   label,
   onChange,
+  placeholder,
   readOnly = false,
   values,
 }: EditableStringListProps) {
@@ -53,6 +55,7 @@ export function EditableStringList({
             <input
               aria-label={itemAriaLabel ? itemAriaLabel(value, index) : `${label} ${index + 1}`}
               readOnly={readOnly}
+              placeholder={placeholder}
               value={value}
               onChange={(event) => setRow(index, event.target.value)}
             />

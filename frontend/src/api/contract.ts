@@ -313,6 +313,7 @@ export interface JobConfigDto {
   jobsDir: string
   maxRetries: number
   metric: 'sum' | 'min' | 'max' | 'mean' | 'uv-script'
+  modelName: string
   notes: string
   retryExclude: string
   retryInclude: string

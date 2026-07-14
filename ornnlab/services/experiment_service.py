@@ -268,7 +268,7 @@ class ExperimentService:
             webui_config.get("jobs_dir"), self.settings.experiments_dir / run["id"] / "harbor-job"
         )
         try:
-            agent_config = self.agent_configs.config(run["agent_id"])
+            agent_config = self.agent_configs.config(run["agent_id"], webui_config.get("model"))
             if agent_config.get("import_path"):
                 agent_config.pop("name", None)
             config = self.builder.build(

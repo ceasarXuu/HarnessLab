@@ -5,6 +5,7 @@ import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from 
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
+import { agentModelNames } from '../domain/agentModels'
 import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
 import { OperationStatus } from '../ui/components/OperationStatus'
@@ -135,7 +136,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
         datasets,
         environments: environmentProfiles,
       })
-      return next.agent === current.agent && next.environment === current.environment && next.source === current.source
+      return next.agent === current.agent
+        && next.environment === current.environment
+        && next.model === current.model
+        && next.source === current.source
         ? current
         : next
     })
@@ -417,7 +421,9 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
               && draft.jobName.trim().length > 0
               && draft.source.length > 0
               && draft.environment.length > 0
-              && configuredAgents.some((agent) => agent.agentName === draft.agent)
+              && configuredAgents.some((agent) =>
+                agent.agentName === draft.agent && agentModelNames(agent).includes(draft.model),
+              )
             }
             agents={configuredAgents}
             datasets={datasets}

@@ -80,6 +80,8 @@ class WebUiJobService:
         config = request.config
         agent = self.profiles.resolve_agent(config.agent_name)
         agent = self.profiles.ensure_agent_persisted(agent)
+        if config.model_name not in agent["models"]:
+            raise ValueError("selected model is not configured for this Agent")
         environment = self.profiles.get_environment(config.environment_preset_id)
         benchmark_name, benchmark_version = _dataset_ref(config.dataset_ref)
         selected_tasks = config.selected_task_names
@@ -125,7 +127,7 @@ class WebUiJobService:
             "job_name": config.job_name,
             "jobs_dir": config.jobs_dir,
             "harbor_overrides": overrides,
-            "model": _first(agent["models"]),
+            "model": config.model_name,
         }
         with sqlite.connect(self.settings) as conn:
             conn.execute(
@@ -138,6 +140,12 @@ class WebUiJobService:
                 "UPDATE runs SET leaderboard_eligible = ? WHERE id = ?",
                 (int(config.include_in_leaderboard and config.verifier_mode != "skip"), run["id"]),
             )
+        self.events.append(
+            "run",
+            run["id"],
+            "webui.job.configured",
+            {"agent_name": agent["agentName"], "model_name": config.model_name},
+        )
         if request.run_immediately:
             QueueService(self.settings).enqueue_experiment(created["experiment"]["id"])
             self.worker.start()
@@ -487,7 +495,3 @@ def _trial_token_usage(agent_result: object, step_results: object) -> dict:
             if isinstance(value, int | float):
                 result[key] = result.get(key, 0.0) + float(value)
     return result
-
-
-def _first(values: list[str]) -> str | None:
-    return values[0] if values else None

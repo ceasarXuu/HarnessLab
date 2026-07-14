@@ -4,8 +4,8 @@ import { defaultRunDraft, reconcileRunDraftResources } from './defaults'
 describe('reconcileRunDraftResources', () => {
   const resources = {
     agents: [
-      { agentName: 'Built-in', type: 'built-in' },
-      { agentName: 'Configured agent', type: 'custom' },
+      { agentName: 'Built-in', models: 'model-a, model-b', type: 'built-in' },
+      { agentName: 'Configured agent', models: 'model-c, model-d', type: 'custom' },
     ],
     datasets: [{ name: 'hello-world', version: '1.0' }],
     environments: [{ id: 'built-in:docker' }],
@@ -15,16 +15,22 @@ describe('reconcileRunDraftResources', () => {
     expect(reconcileRunDraftResources(defaultRunDraft, resources as never)).toMatchObject({
       agent: 'Built-in',
       environment: 'built-in:docker',
+      model: 'model-a',
       source: 'hello-world@1.0',
     })
   })
 
   it('preserves a current valid selection', () => {
-    const draft = { ...defaultRunDraft, agent: 'Configured agent', environment: 'built-in:docker', source: 'hello-world@1.0' }
+    const draft = { ...defaultRunDraft, agent: 'Configured agent', environment: 'built-in:docker', model: 'model-d', source: 'hello-world@1.0' }
     expect(reconcileRunDraftResources(draft, resources as never)).toMatchObject(draft)
   })
 
   it('leaves a required selector empty when the active API has no matching resource', () => {
     expect(reconcileRunDraftResources(defaultRunDraft, { ...resources, agents: [] } as never).agent).toBe('')
+  })
+
+  it('resets a model that is not available from the selected Agent', () => {
+    const draft = { ...defaultRunDraft, agent: 'Configured agent', model: 'model-a' }
+    expect(reconcileRunDraftResources(draft, resources as never).model).toBe('model-c')
   })
 })

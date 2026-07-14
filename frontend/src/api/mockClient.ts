@@ -86,6 +86,9 @@ export function createMockWebUiClient(): WebUiClient {
     async createJob(request) {
       const agent = agentDtos.find((item) => item.agentName === request.config.agentName)
       if (!agent) return failure('AGENT_NOT_FOUND', 'Agent not found')
+      if (!agent.models.includes(request.config.modelName)) {
+        return failure('INVALID_AGENT_MODEL', 'Selected model is not configured for this Agent')
+      }
       const job = buildQueuedJob(jobDtos, request, agent)
       jobDtos = [job, ...jobDtos]
       const operation = operations.complete(
@@ -380,7 +383,7 @@ function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent:
     id,
     includeInLeaderboard: request.config.includeInLeaderboard,
     jobDir: request.config.jobsDir,
-    model: agent.models[0] ?? '',
+    model: request.config.modelName,
     name: request.config.jobName,
     runtimeSeconds: 0,
     score: null,

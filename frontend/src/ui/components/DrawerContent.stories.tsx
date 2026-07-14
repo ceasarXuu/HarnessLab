@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { agentRows, datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
@@ -28,7 +28,12 @@ export const BuiltInAgent: Story = {
     await expect(canvas.getByText('Claude Code default')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Save' })).toBeVisible()
     await expect(canvas.getByLabelText('Agent Name')).toBeEnabled()
-    await expect(canvas.getByLabelText('Model name')).toHaveValue('')
+    const modelInputs = canvas.getAllByLabelText('Model name')
+    await expect(modelInputs).toHaveLength(2)
+    await expect(modelInputs[0]).toHaveValue('claude-haiku-4-5')
+    await expect(modelInputs[1]).toHaveValue('claude-sonnet-4-5')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add' }))
+    await expect(canvas.getAllByLabelText('Model name')).toHaveLength(3)
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()

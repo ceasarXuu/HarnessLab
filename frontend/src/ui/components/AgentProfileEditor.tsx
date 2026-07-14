@@ -76,6 +76,7 @@ export function AgentProfileEditor({
                     deleteLabel={t('delete')}
                     itemLabel={t('modelName')}
                     label={t('supportedModels')}
+                    placeholder={t('modelNamePlaceholder')}
                     value={value.models}
                     onChange={(nextValue) => setField('models', nextValue)}
                   />
@@ -403,6 +404,7 @@ function ModelListControl({
   deleteLabel,
   itemLabel,
   label,
+  placeholder,
   readOnly = false,
   value,
   onChange,
@@ -411,6 +413,7 @@ function ModelListControl({
   deleteLabel: string
   itemLabel: string
   label: string
+  placeholder: string
   readOnly?: boolean
   value: string
   onChange: (value: string) => void
@@ -427,6 +430,7 @@ function ModelListControl({
       deleteLabel={deleteLabel}
       itemAriaLabel={() => itemLabel}
       label={label}
+      placeholder={placeholder}
       readOnly={readOnly}
       values={models}
       onChange={commit}

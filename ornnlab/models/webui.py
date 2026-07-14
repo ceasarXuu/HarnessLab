@@ -88,6 +88,7 @@ class JobConfigInput(WebUiModel):
     jobs_dir: str = Field(alias="jobsDir", min_length=1)
     max_retries: int = Field(alias="maxRetries", ge=0)
     metric: Literal["sum", "min", "max", "mean", "uv-script"] = "mean"
+    model_name: str = Field(alias="modelName", min_length=1)
     notes: str = ""
     retry_exclude: str = Field(alias="retryExclude")
     retry_include: str = Field(alias="retryInclude")

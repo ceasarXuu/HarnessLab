@@ -43,6 +43,7 @@ export interface RunDraft {
   debug: boolean
   notes: string
   agent: string
+  model: string
   environment: string
   verifierMode: 'dataset-default' | 'skip'
   concurrency: number

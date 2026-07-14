@@ -24,6 +24,7 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
     config = HarborConfigBuilder(settings).build(
         agent_config={
             "name": "oracle",
+            "model_name": "oracle-secondary",
             "agent_timeout_sec": 120,
             "env": {"ORNNLAB_TEST_ENV": None},
         },
@@ -47,6 +48,7 @@ def test_builder_emits_valid_harbor_job_config_payload(settings, monkeypatch):
     job_config = JobConfig.model_validate(payload)
 
     assert payload["agents"][0]["override_timeout_sec"] == 120
+    assert payload["agents"][0]["model_name"] == "oracle-secondary"
     assert payload["agents"][0]["env"] == {"ORNNLAB_TEST_ENV": "present"}
     assert payload["datasets"][0] == {
         "name": "terminal-bench",

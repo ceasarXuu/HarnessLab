@@ -182,12 +182,13 @@ interface CreateJobRequest {
     retryMinWaitSeconds: number
     retryMaxWaitSeconds: number
     metric: 'sum' | 'min' | 'max' | 'mean' | 'uv-script'
+    modelName: string
     notes: string
   }
 }
 ```
 
-后端只接受已配置的 custom Agent profile。它把 Agent 展开为 `AgentConfig`，把 Environment 预设展开为 `EnvironmentConfig`，再写入 Harbor `JobConfig` override。`split`、`model`、`agentEnv`、`agentImportPath`、`agentKwargs`、custom verifier、`env_file`、输出/Hub/plugin 参数均不属于 Job 请求。
+后端接受 OrnnLab 中已配置的 Agent profile。Agent 的 `models` 是可选集合，Job 的 `modelName` 是本次运行的唯一模型；后端必须校验该值属于所选 Agent，并写入 Harbor `AgentConfig.model_name`。其余 Agent 字段展开为 `AgentConfig`，Environment 预设展开为 `EnvironmentConfig`。`split`、`agentEnv`、`agentImportPath`、`agentKwargs`、custom verifier、`env_file`、输出/Hub/plugin 参数均不属于 Job 请求。
 
 如果 `verifierMode` 为 `skip`，后端会禁用 verifier，并要求 `includeInLeaderboard` 为 false；后续尝试把该 Job 加回排行榜返回 `422`。
 

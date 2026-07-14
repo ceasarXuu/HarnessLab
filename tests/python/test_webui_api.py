@@ -5,6 +5,7 @@ import json
 import time
 from pathlib import Path
 
+from ornnlab.services.agent_config_service import AgentConfigService
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
 from ornnlab.services.webui_dataset_service import _stored_dto
@@ -68,20 +69,27 @@ def test_webui_agent_and_environment_crud(client):
 
     built_in_agent = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
     built_in_fields = set(built_in_agent["capabilities"]["supportedFields"])
-    assert {"customKwargs", "env", "harnessParameters", "mcpServers", "modelName", "skills", "timeouts"} <= (
-        built_in_fields
-    )
+    expected_fields = {
+        "customKwargs",
+        "env",
+        "harnessParameters",
+        "mcpServers",
+        "modelName",
+        "skills",
+        "timeouts",
+    }
+    assert expected_fields <= built_in_fields
     built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
     assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
 
     built_in_update = _built_in_agent_payload("claude-code")
     built_in_update["agentName"] = "Claude reusable profile"
-    built_in_update["models"] = ["claude-sonnet-4-5"]
+    built_in_update["models"] = ["claude-haiku-4-5", "claude-sonnet-4-5"]
     updated = client.patch(f"{API}/agents/built-in:claude-code", json=built_in_update)
     assert updated.status_code == 200
     saved_built_in = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
     assert saved_built_in["agentName"] == "Claude reusable profile"
-    assert saved_built_in["models"] == ["claude-sonnet-4-5"]
+    assert saved_built_in["models"] == ["claude-haiku-4-5", "claude-sonnet-4-5"]
 
     built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
     assert built_in_delete.status_code == 403
@@ -109,6 +117,7 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     assert created["operation"]["status"] == "completed"
     assert created["job"]["name"] == "webui-smoke"
     assert created["job"]["harness"] == "oracle"
+    assert created["job"]["model"] == "oracle-secondary"
     job_id = created["job"]["id"]
     with sqlite.connect(client.app.state.settings) as conn:
         stored = sqlite.rows(
@@ -123,11 +132,16 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     stored_config = json.loads(stored["config_json"])
     assert stored_config["jobs_dir"] == "jobs/webui-smoke"
     assert stored_config["environment_name"] == "Local Docker"
+    assert stored_config["model"] == "oracle-secondary"
+    compiled_agent = AgentConfigService(client.app.state.settings).config(
+        "oracle-profile", stored_config["model"]
+    )
+    assert compiled_agent["model_name"] == "oracle-secondary"
 
     listing = client.get(f"{API}/jobs?q=webui-smoke").json()["data"]
     assert listing["total"] == 1
     events = client.get(f"{API}/jobs/{job_id}/events").json()["data"]
-    assert events
+    assert any(event["message"] == "webui.job.configured" for event in events)
 
     update = client.patch(
         f"{API}/jobs/{job_id}/leaderboard",
@@ -137,10 +151,25 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     assert update["operation"]["status"] == "completed"
 
 
-def test_webui_job_materializes_a_built_in_harness_agent_profile(client):
+def test_webui_job_rejects_model_outside_agent_template(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()
+    payload["modelName"] = "not-configured"
+
+    response = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_webui_job_materializes_a_built_in_harness_agent_profile(client):
+    _create_profile_prerequisites(client)
+    built_in = _built_in_agent_payload("oracle")
+    built_in["models"] = ["oracle-primary", "oracle-secondary"]
+    assert client.patch(f"{API}/agents/built-in:oracle", json=built_in).status_code == 200
+    payload = _job_payload()
     payload["agentName"] = "oracle"
+    payload["modelName"] = "oracle-primary"
 
     response = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
 
@@ -438,7 +467,7 @@ def _agent_payload() -> dict:
         "env": [],
         "kwargs": "",
         "mcpServers": [],
-        "models": [],
+        "models": ["oracle-primary", "oracle-secondary"],
         "skillSources": [],
         "timeoutSeconds": 1200,
     }
@@ -498,6 +527,7 @@ def _job_payload() -> dict:
         "jobsDir": "jobs/webui-smoke",
         "maxRetries": 0,
         "metric": "mean",
+        "modelName": "oracle-secondary",
         "notes": "",
         "retryExclude": "",
         "retryInclude": "",

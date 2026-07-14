@@ -1,6 +1,7 @@
 import { Copy, Play, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
 import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
+import { agentModelNames, reconcileAgentModel } from '../../domain/agentModels'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput, type FolderPathSelection } from './FolderPathInput'
@@ -34,6 +35,8 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
   const agentOptions = agents
     .map((agent) => ({ label: agent.agentName, value: agent.agentName }))
+  const selectedAgent = agents.find((agent) => agent.agentName === draft.agent)
+  const modelOptions = agentModelNames(selectedAgent).map((model) => ({ label: model, value: model }))
   const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
   const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
@@ -153,8 +156,23 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
               value={draft.agent}
               options={agentOptions}
               onChange={(value) => {
-                onDraft({ ...draft, agent: value })
+                const agent = agents.find((candidate) => candidate.agentName === value)
+                onDraft({ ...draft, agent: value, model: reconcileAgentModel(draft.model, agent) })
               }}
+            />
+          </label>
+          <label>
+            {t('jobModel')}
+            <CustomSelect
+              ariaLabel={t('jobModel')}
+              value={draft.model}
+              options={modelOptions}
+              disabled={modelOptions.length === 0}
+              placeholder={t('agentModelsRequired')}
+              searchable
+              searchAriaLabel={t('searchModels')}
+              searchPlaceholder={t('searchModels')}
+              onChange={(value) => onDraft({ ...draft, model: value })}
             />
           </label>
           <label>
