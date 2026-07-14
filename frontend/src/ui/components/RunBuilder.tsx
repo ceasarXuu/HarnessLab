@@ -33,7 +33,6 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
   const agentOptions = agents
-    .filter((agent) => agent.type === 'custom')
     .map((agent) => ({ label: agent.agentName, value: agent.agentName }))
   const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
   const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)

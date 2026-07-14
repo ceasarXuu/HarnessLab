@@ -23,7 +23,7 @@ flowchart LR
   Core --> Harbor[Harbor 0.13.x]
 ```
 
-前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：直接运行 `npm run dev` 时默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。`run_dev.sh` 是全栈联调入口，默认以 `api` 启动并通过 `ORNNLAB_API_TARGET` 配置 Vite proxy；两种模式共享 DTO、ViewModel、页面和 Operation 状态流，API 模式不得回退到 mock。mock 不能放宽后端会拒绝的约束，例如 built-in Agent 不能直接创建 Job。
+前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：直接运行 `npm run dev` 时默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。`run_dev.sh` 是全栈联调入口，默认以 `api` 启动并通过 `ORNNLAB_API_TARGET` 配置 Vite proxy；两种模式共享 DTO、ViewModel、页面和 Operation 状态流，API 模式不得回退到 mock。mock 与后端执行相同的 Agent 来源和删除约束。
 
 后端只注册 `ornnlab.api.webui`。旧的 experiments、runs、benchmarks、leaderboard、system、agents、templates 产品路由已删除，不提供兼容入口。
 
@@ -47,7 +47,7 @@ flowchart LR
 
 后端返回的 Job、Dataset、Trial、Agent、Environment、Leaderboard、System DTO 均保持结构化值：金额为数字、Token 为百万数量、时长为秒、得分为结构化分数。`frontend/src/api/viewModels.ts` 是唯一的展示格式化层；页面不得把格式化字符串回传给 API。
 
-`RunDraft` 是 UI 草稿，`runDraftToCreateJobRequest` 将其映射到真实 Harbor `JobConfig` 可接受的运行级字段。模型、凭证、Skills、MCP 和 kwargs 只从 custom Agent profile 映射；环境细节从 Environment 模板映射。
+`RunDraft` 是 UI 草稿，`runDraftToCreateJobRequest` 将其映射到真实 Harbor `JobConfig` 可接受的运行级字段。模型、凭证、Skills、MCP 和 kwargs 从选中的 OrnnLab Agent 配置映射；环境细节从 Environment 模板映射。
 
 ### 4.2 Harbor 能力映射
 
@@ -71,8 +71,8 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 ### 4.3 Agent 和 Environment 的可写边界
 
 - `Agent` 在 OrnnLab 中是可复用的 Harbor `AgentConfig` 配置，不代表修改 Harbor 的 Agent 实现。它组合 Harness、模型、环境变量、kwargs、Skills、MCP 和超时配置；创建 Job 时由后端展开为 Harbor `AgentConfig`。
-- built-in 行是运行时从 Harbor `AgentName` 枚举生成的只读 Harness 模板，不是可直接运行的 Agent 配置。详情按 Harness 能力展示可配置字段，并提供“基于此新建 Agent”；不展示禁用表单，也不保存伪默认值。
-- custom Agent profile 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。创建 Job 只选择 custom Agent profile。
+- Agent 资源是 OrnnLab 对 Harbor 运行参数的可复用配置层。运行时从 Harbor `AgentName` 生成的 built-in 记录是系统预置 Agent：可编辑名称及该 Harness 支持的配置字段，可直接用于 Job，但不能删除或更换 Harness。首次保存或首次用于 Job 时，后端以相同 ID 将其物化到 OrnnLab Agent 存储，不修改 Harbor 源码或枚举。
+- 自定义 Agent 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。详情只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。列表合并运行时预置项和已物化配置，以持久化配置覆盖同 ID 默认值。
 - Harness 通用能力全集包括 model、env、kwargs、Skills、MCP servers、执行/启动/最大超时；Harness 专属参数通过结构化 capability 定义选择框、数字、开关或文本交互。网络访问继续归 Environment 管理，MCP 不承担安装或容器部署编排。
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。

@@ -20,18 +20,20 @@ type Story = StoryObj<typeof meta>
 export const BuiltInAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows[0]} t={t} onSave={() => undefined} onCreateProfile={() => undefined} />
+      <AgentDetail agent={agentRows[0]} t={t} onSave={() => undefined} />
     </main>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Claude Code default')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Create Agent' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Save' })).toBeVisible()
+    await expect(canvas.getByLabelText('Agent Name')).toBeEnabled()
+    await expect(canvas.getByLabelText('Model name')).toHaveValue('')
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Advanced' })).toBeVisible()
-    await expect(canvas.getByText('Supported configuration')).toBeVisible()
+    await expect(canvas.getByText('Harbor built-in Harness')).toBeVisible()
   },
 }
 

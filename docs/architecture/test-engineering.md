@@ -8,6 +8,7 @@
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked test strategy to document version governance. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue frontend gates with the Harbor Viewer-aligned React/Vite demo gates. |
 | 1.3 | `ornnlab` npm `0.1.3`; Python app `0.3.0` | 2026-07-10 | Replaced retired product API references with the v1.0.5 WebUI contract and Operation tests. |
+| 1.4 | `ornnlab` npm `0.1.3`; Python app `0.3.0` | 2026-07-15 | 记录外置磁盘环境下 Vitest worker 启动规避方式。 |
 
 The Rust CLI test-engineering document was archived on 2026-06-15.
 
@@ -83,3 +84,17 @@ tests now target the Harbor Viewer-aligned React/Vite demo under `frontend/`.
 Operational note: CI keeps real Harbor Docker smoke out of the default required
 jobs. Use workflow dispatch with `real_harbor_smoke=true` when Docker-backed
 Harbor behavior must be revalidated.
+
+## 外置磁盘上的 Vitest
+
+在 macOS 外置磁盘工作区中，Vitest 默认 `forks` 或 `threads` worker 可能在
+加载 jsdom 前触发 `Timeout waiting for worker to respond`，此时用例实际尚未
+执行。不要将其视为测试失败或通过；改用单个 VM worker 复跑目标用例：
+
+```bash
+npx vitest run <test-files> --pool=vmThreads --maxWorkers=1 \
+  --no-file-parallelism --no-isolate
+```
+
+该模式会复用同一个 jsdom 环境，启动较慢但能稳定进入断言。CI 仍使用默认
+脚本，只有确认是本机 worker 启动超时后才使用此命令诊断。

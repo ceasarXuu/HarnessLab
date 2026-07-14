@@ -74,6 +74,15 @@ def test_webui_agent_and_environment_crud(client):
     built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
     assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
 
+    built_in_update = _built_in_agent_payload("claude-code")
+    built_in_update["agentName"] = "Claude reusable profile"
+    built_in_update["models"] = ["claude-sonnet-4-5"]
+    updated = client.patch(f"{API}/agents/built-in:claude-code", json=built_in_update)
+    assert updated.status_code == 200
+    saved_built_in = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
+    assert saved_built_in["agentName"] == "Claude reusable profile"
+    assert saved_built_in["models"] == ["claude-sonnet-4-5"]
+
     built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
     assert built_in_delete.status_code == 403
     assert built_in_delete.json()["error"]["code"] == "RESOURCE_IMMUTABLE"
@@ -128,15 +137,18 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     assert update["operation"]["status"] == "completed"
 
 
-def test_webui_job_requires_a_configured_custom_agent_profile(client):
+def test_webui_job_materializes_a_built_in_harness_agent_profile(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()
     payload["agentName"] = "oracle"
 
     response = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
 
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+    assert response.status_code == 200
+    assert response.json()["data"]["job"]["harness"] == "oracle"
+    with sqlite.connect(client.app.state.settings) as conn:
+        persisted = sqlite.rows(conn, "SELECT id FROM agents WHERE id = ?", ("built-in:oracle",))
+    assert persisted == [{"id": "built-in:oracle"}]
 
 
 def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_path: Path):
@@ -429,6 +441,20 @@ def _agent_payload() -> dict:
         "models": [],
         "skillSources": [],
         "timeoutSeconds": 1200,
+    }
+
+
+def _built_in_agent_payload(harness: str) -> dict:
+    return {
+        "id": f"built-in:{harness}",
+        "agentName": harness,
+        "harness": harness,
+        "type": "built-in",
+        "env": [],
+        "kwargs": "",
+        "mcpServers": [],
+        "models": [],
+        "skillSources": [],
     }
 
 

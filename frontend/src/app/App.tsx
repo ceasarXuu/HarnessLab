@@ -108,7 +108,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
   const t = useMemo(() => getTranslator(language), [language])
   const agents = useMemo(() => agentsResource.data?.items.map(agentDtoToRow) ?? [], [agentsResource.data])
-  const configuredAgents = useMemo(() => agents.filter((agent) => agent.type === 'custom'), [agents])
+  const configuredAgents = agents
   const datasets = useMemo(() => datasetsResource.data?.items.map(datasetDtoToRow) ?? [], [datasetsResource.data])
   const environmentProfiles = useMemo(
     () => environmentsResource.data?.items.map(environmentDtoToRow) ?? [],

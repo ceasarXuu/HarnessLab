@@ -13,7 +13,7 @@ describe('reconcileRunDraftResources', () => {
 
   it('replaces demo or missing identifiers only with active resource values', () => {
     expect(reconcileRunDraftResources(defaultRunDraft, resources as never)).toMatchObject({
-      agent: 'Configured agent',
+      agent: 'Built-in',
       environment: 'built-in:docker',
       source: 'hello-world@1.0',
     })

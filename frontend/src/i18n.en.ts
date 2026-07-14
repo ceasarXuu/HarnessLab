@@ -130,6 +130,8 @@ export const enMessages = {
     harness: 'Harness',
     agentType: 'Type',
     agentResourceType: 'Resource type',
+    harborBuiltInHarness: 'Harbor built-in Harness',
+    customHarness: 'Custom Harness',
     harnessTemplate: 'Harness template',
     agentProfile: 'Agent profile',
     createAgentFromHarness: 'Create Agent',

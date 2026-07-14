@@ -91,7 +91,7 @@ describe('MockWebUiClient', () => {
     expect(response.error?.code).toBe('NATIVE_DIRECTORY_PICKER_UNAVAILABLE')
   })
 
-  it('rejects built-in harness entries when a Job requires a configured Agent profile', async () => {
+  it('runs a Job with an OrnnLab Agent configuration backed by a built-in Harness', async () => {
     const client = createMockWebUiClient()
 
     const response = await client.createJob({
@@ -125,7 +125,7 @@ describe('MockWebUiClient', () => {
       runImmediately: true,
     })
 
-    expect(response.data).toBeNull()
-    expect(response.error?.code).toBe('AGENT_PROFILE_REQUIRED')
+    expect(response.error).toBeNull()
+    expect(response.data?.job.agentName).toBe('Claude Code default')
   })
 })

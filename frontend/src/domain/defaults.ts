@@ -39,7 +39,7 @@ export function reconcileRunDraftResources(
   resources: { agents: AgentRow[]; datasets: DatasetRow[]; environments: EnvironmentRow[] },
 ): RunDraft {
   const datasets = resources.datasets.map((dataset) => `${dataset.name}@${dataset.version}`)
-  const agents = resources.agents.filter((agent) => agent.type === 'custom').map((agent) => agent.agentName)
+  const agents = resources.agents.map((agent) => agent.agentName)
   const environments = resources.environments.map((environment) => environment.id)
 
   return {

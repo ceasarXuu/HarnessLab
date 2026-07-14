@@ -209,11 +209,11 @@ export function AgentProfileEditor({
 
 export function AgentIdentityEditor({
   capabilitiesByHarness,
-  readOnly = false,
+  lockHarness = false,
   value,
   t,
   onChange,
-}: AgentProfileEditorProps & { readOnly?: boolean }) {
+}: AgentProfileEditorProps & { lockHarness?: boolean }) {
   const usesCustomHarness = value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
   const setHarness = (harness: string) => onChange({
@@ -223,36 +223,32 @@ export function AgentIdentityEditor({
     harness,
   })
 
-  if (readOnly) {
-    return (
-      <div className="agent-form-grid">
-        <Metric label={t('agentName')} value={value.agentName} />
-        <Metric label={t('harness')} value={value.harness} />
-        <Metric label={t('agentResourceType')} value={value.type === 'built-in' ? t('harnessTemplate') : t('agentProfile')} />
-        {usesCustomHarness && <Metric label={t('customImportPath')} value={value.adapter} />}
-      </div>
-    )
-  }
-
   return (
     <div className="agent-form-grid">
       <label>
         {t('agentName')}
-        <input readOnly={readOnly} value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
+        <input value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
       </label>
-      <label>
-        {t('harness')}
-        <select disabled={readOnly} value={value.harness} onChange={(event) => setHarness(event.target.value)}>
-          {harnessOptions.map((harness) => (
-            <option key={harness} value={harness}>{harness}</option>
-          ))}
-        </select>
-      </label>
-      <Metric label={t('agentResourceType')} value={t('agentProfile')} />
+      {lockHarness ? (
+        <Metric label={t('harness')} value={value.harness} />
+      ) : (
+        <label>
+          {t('harness')}
+          <select value={value.harness} onChange={(event) => setHarness(event.target.value)}>
+            {harnessOptions.map((harness) => (
+              <option key={harness} value={harness}>{harness}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      <Metric
+        label={t('agentResourceType')}
+        value={value.type === 'built-in' ? t('harborBuiltInHarness') : t('customHarness')}
+      />
       {usesCustomHarness && (
         <label>
           {t('customImportPath')}
-          <input readOnly={readOnly} value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
+          <input value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
         </label>
       )}
     </div>
@@ -439,6 +435,7 @@ function ModelListControl({
 }
 
 function parseModelNames(value: string) {
+  if (!value || value === '-') return ['']
   const names = parseList(value)
   return names.length ? names : ['']
 }

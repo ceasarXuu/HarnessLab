@@ -79,8 +79,7 @@ class WebUiJobService:
     def create_job(self, request: CreateJobInput) -> tuple[dict, dict]:
         config = request.config
         agent = self.profiles.resolve_agent(config.agent_name)
-        if agent["type"] == "built-in":
-            raise ValueError("select a configured custom Agent profile before creating a Job")
+        agent = self.profiles.ensure_agent_persisted(agent)
         environment = self.profiles.get_environment(config.environment_preset_id)
         benchmark_name, benchmark_version = _dataset_ref(config.dataset_ref)
         selected_tasks = config.selected_task_names

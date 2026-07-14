@@ -86,9 +86,6 @@ export function createMockWebUiClient(): WebUiClient {
     async createJob(request) {
       const agent = agentDtos.find((item) => item.agentName === request.config.agentName)
       if (!agent) return failure('AGENT_NOT_FOUND', 'Agent not found')
-      if (agent.type !== 'custom') {
-        return failure('AGENT_PROFILE_REQUIRED', 'Select a configured custom Agent profile before creating a Job')
-      }
       const job = buildQueuedJob(jobDtos, request, agent)
       jobDtos = [job, ...jobDtos]
       const operation = operations.complete(
@@ -276,7 +273,10 @@ export function createMockWebUiClient(): WebUiClient {
     async updateAgent(id, agent) {
       const target = agentDtos.find((item) => item.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
-      if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be updated')
+      if (target.type !== agent.type) return failure('AGENT_SOURCE_IMMUTABLE', 'Agent Harness source cannot be changed')
+      if (target.type === 'built-in' && target.harness !== agent.harness) {
+        return failure('AGENT_HARNESS_IMMUTABLE', 'Built-in Harness cannot be changed')
+      }
       agentDtos = agentDtos.map((item) => (
         item.id === id
           ? withMockAgentCapabilities({ ...agent, capabilities: target.capabilities, id, status: 'configured' })

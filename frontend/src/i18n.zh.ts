@@ -132,6 +132,8 @@ export const zhMessages = {
     harness: 'Harness',
     agentType: '类型',
     agentResourceType: '资源类型',
+    harborBuiltInHarness: 'Harbor 内置 Harness',
+    customHarness: '自定义 Harness',
     harnessTemplate: 'Harness 模板',
     agentProfile: 'Agent 配置',
     createAgentFromHarness: '基于此新建 Agent',

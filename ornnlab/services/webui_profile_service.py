@@ -28,7 +28,9 @@ class WebUiProfileService:
     def list_agents(
         self, query: str | None = None, profile_type: str | None = None, status: str | None = None
     ) -> list[dict]:
-        records = self._built_in_agents() + self._custom_agents()
+        records_by_id = {record["id"]: record for record in self._built_in_agents()}
+        records_by_id.update({record["id"]: record for record in self._configured_agents()})
+        records = list(records_by_id.values())
         filtered = [record for record in records if _matches(record, query)]
         if profile_type:
             filtered = [record for record in filtered if record["type"] == profile_type]
@@ -39,18 +41,18 @@ class WebUiProfileService:
         )
 
     def get_agent(self, agent_id: str) -> dict:
-        for agent in self._built_in_agents():
-            if agent["id"] == agent_id:
-                return agent
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
                 "SELECT config_json FROM webui_agent_configs WHERE agent_id = ?",
                 (agent_id,),
             )
-        if not rows:
-            raise KeyError(agent_id)
-        return _configured_custom_agent(json.loads(rows[0]["config_json"]))
+        if rows:
+            return _configured_agent(json.loads(rows[0]["config_json"]))
+        for agent in self._built_in_agents():
+            if agent["id"] == agent_id:
+                return agent
+        raise KeyError(agent_id)
 
     def resolve_agent(self, value: str) -> dict:
         for agent in self.list_agents():
@@ -68,16 +70,26 @@ class WebUiProfileService:
         return agent
 
     def update_agent(self, agent_id: str, payload: AgentInput) -> dict:
-        self._assert_mutable_agent(agent_id)
+        existing = self.get_agent(agent_id)
         if payload.id != agent_id:
             raise ValueError("agent id cannot be changed")
+        if payload.type != existing["type"]:
+            raise ValueError("agent Harness source cannot be changed")
+        if existing["type"] == "built-in" and payload.harness != existing["harness"]:
+            raise ValueError("built-in Harness cannot be changed")
         agent = _agent_dto(payload)
         self._validate_agent(agent)
-        self._write_agent_profile(agent, create=False)
+        self._write_agent_profile(agent, create=not self._agent_is_persisted(agent_id))
         return agent
 
+    def ensure_agent_persisted(self, agent: dict) -> dict:
+        if not self._agent_is_persisted(agent["id"]):
+            self._validate_agent(agent)
+            self._write_agent_profile(agent, create=True)
+        return self.get_agent(agent["id"])
+
     def delete_agent(self, agent_id: str) -> None:
-        self._assert_mutable_agent(agent_id)
+        self._assert_deletable_agent(agent_id)
         self.agents.soft_delete(agent_id)
         with sqlite.connect(self.settings) as conn:
             conn.execute("DELETE FROM webui_agent_configs WHERE agent_id = ?", (agent_id,))
@@ -257,10 +269,17 @@ class WebUiProfileService:
             return
         raise ValueError("agent id already exists")
 
-    def _assert_mutable_agent(self, agent_id: str) -> None:
+    def _assert_deletable_agent(self, agent_id: str) -> None:
         if agent_id.startswith("built-in:"):
-            raise PermissionError("built-in Harbor agents are immutable")
+            raise PermissionError("built-in Agent presets cannot be deleted")
         self.get_agent(agent_id)
+
+    def _agent_is_persisted(self, agent_id: str) -> bool:
+        try:
+            self.agents.get(agent_id)
+        except KeyError:
+            return False
+        return True
 
     def _assert_mutable_environment(self, environment_id: str) -> None:
         if environment_id.startswith("built-in:"):
@@ -272,14 +291,14 @@ class WebUiProfileService:
 
         return [_built_in_agent(name) for name in AgentName.values()]
 
-    def _custom_agents(self) -> list[dict]:
+    def _configured_agents(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
                 "SELECT config_json FROM webui_agent_configs JOIN agents ON agents.id = agent_id "
                 "WHERE agents.status != 'deleted'",
             )
-        return [_configured_custom_agent(json.loads(row["config_json"])) for row in rows]
+        return [_configured_agent(json.loads(row["config_json"])) for row in rows]
 
     def _built_in_environments(self) -> list[dict]:
         return [_built_in_environment(item.value) for item in _environment_type()]
@@ -325,7 +344,7 @@ def _agent_dto(payload: AgentInput) -> dict:
     }
 
 
-def _configured_custom_agent(agent: dict) -> dict:
+def _configured_agent(agent: dict) -> dict:
     return {
         **agent,
         "capabilities": custom_agent_capabilities(agent["harness"]),
@@ -339,8 +358,8 @@ def _environment_dto(payload: EnvironmentInput) -> dict:
 
 def _built_in_agent(harness: str) -> dict:
     return {
-        # A built-in row is a Harness template. Its capabilities describe the
-        # complete Agent profile users can create from that template.
+        # This is an OrnnLab Agent preset backed by a Harbor built-in Harness.
+        # Saving it materializes an editable profile without modifying Harbor.
         "capabilities": custom_agent_capabilities(harness),
         "id": f"built-in:{harness}",
         "agentName": harness,

@@ -69,7 +69,7 @@ describe('App agents and leaderboard', () => {
       ['Harness', 'custom-harness'],
       ['Custom import path', 'agents.local_repair:Agent'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
-    expect(agentForm.getByText('Agent profile')).toBeInTheDocument()
+    expect(agentForm.getByText('Custom Harness')).toBeInTheDocument()
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Permission mode')).not.toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
 
-  it('uses built-in agents as Harness templates for creating editable profiles', async () => {
+  it('edits a reusable Agent configuration backed by a built-in Harness', async () => {
     render(<App />)
     await screen.findByText('terminal-bench-smoke')
 
@@ -151,21 +151,20 @@ describe('App agents and leaderboard', () => {
 
     const agentDialog = screen.getByRole('dialog', { name: 'Selected agent' })
     const agentForm = within(agentDialog)
-    expect(agentForm.getAllByText('Claude Code default')).not.toHaveLength(0)
+    const nameInput = agentForm.getByLabelText('Agent Name')
+    expect(nameInput).toHaveValue('Claude Code default')
+    expect(nameInput).toBeEnabled()
     expect(agentForm.getByRole('tab', { name: 'Basic' })).toBeInTheDocument()
     expect(agentForm.getByRole('tab', { name: 'Skills' })).toBeInTheDocument()
     expect(agentForm.getByRole('tab', { name: 'MCPs' })).toBeInTheDocument()
     expect(agentForm.getByRole('tab', { name: 'Advanced' })).toBeInTheDocument()
-    expect(agentForm.getByText('Supported configuration')).toBeInTheDocument()
-
-    fireEvent.click(agentForm.getByRole('button', { name: 'Create Agent' }))
-    expect(screen.getByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Harness')).toHaveValue('claude-code')
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
-    expect(screen.getByLabelText('Model name')).toHaveValue('')
+    expect(agentForm.getByText('Harbor built-in Harness')).toBeInTheDocument()
+    fireEvent.change(nameInput, { target: { value: 'Claude reusable profile' } })
+    fireEvent.click(agentForm.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(screen.getByText('Claude reusable profile')).toBeInTheDocument())
   })
 
-  it('preserves the Harness template when the new Agent route is opened directly', async () => {
+  it('preserves the selected Harness when the new Agent route is opened directly', async () => {
     window.location.hash = '#agents/new?harness=claude-code'
     render(<App />)
 

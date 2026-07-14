@@ -64,7 +64,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
   }
 
   const saveAgent = async (agent: AgentRow) => {
-    if (!writesEnabled || agent.type !== 'custom') return
+    if (!writesEnabled) return
     await agentOperation.submit(() => client.updateAgent(agent.id, agentRowToDto(agent)), ({ operation }) => operation)
   }
 
@@ -117,7 +117,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                     </span>
                   </td>
                   <td>{row.harness}</td>
-                  <td>{row.type === 'built-in' ? t('harnessTemplate') : t('agentProfile')}</td>
+                  <td>{row.type === 'built-in' ? t('harborBuiltInHarness') : t('customHarness')}</td>
                   <td>{row.models || '-'}</td>
                   <td>
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
@@ -161,10 +161,6 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               canSave={writesEnabled && !isOperationRunning(agentOperation.operation?.status)}
               t={t}
               onSave={saveAgent}
-              onCreateProfile={(harness) => {
-                setDrawerOpen(false)
-                onNewAgent(harness)
-              }}
             />
             <ResourceStatus
               error={detailResource.error?.message ?? null}
