@@ -363,7 +363,7 @@ function DirectoryListControl({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [paths, setPaths] = useState(() => parseDirectoryPaths(value))
   const commit = (nextPaths: string[]) => {
-    setPaths(nextPaths.length ? nextPaths : [''])
+    setPaths(nextPaths)
     onChange(formatDirectoryPaths(nextPaths))
   }
   const updateFromFiles = (files: FileList | null) => {
@@ -420,7 +420,7 @@ function ModelListControl({
 }) {
   const [models, setModels] = useState(() => parseModelNames(value))
   const commit = (nextModels: string[]) => {
-    setModels(nextModels.length ? nextModels : [''])
+    setModels(nextModels)
     onChange(formatModelNames(nextModels))
   }
   return (
@@ -439,9 +439,9 @@ function ModelListControl({
 }
 
 function parseModelNames(value: string) {
-  if (!value || value === '-') return ['']
+  if (!value || value === '-') return []
   const names = parseList(value)
-  return names.length ? names : ['']
+  return names
 }
 
 function parseList(value: string) {
@@ -454,9 +454,9 @@ function formatModelNames(models: string[]) {
 }
 
 function parseDirectoryPaths(value: string) {
-  if (!value || value === 'none') return ['']
+  if (!value || value === 'none') return []
   const paths = value.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
-  return paths.length ? paths : ['']
+  return paths
 }
 
 function formatDirectoryPaths(paths: string[]) {

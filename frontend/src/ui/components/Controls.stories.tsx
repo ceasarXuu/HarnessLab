@@ -133,6 +133,31 @@ function FeedbackFixture() {
   )
 }
 
+function TransientListFixture() {
+  const [models, setModels] = useState<string[]>([])
+  const [environment, setEnvironment] = useState('none')
+  return (
+    <main className="workspace single-page">
+      <section className="surface rail-card">
+        <EditableStringList
+          addLabel="Add"
+          deleteLabel="Delete"
+          label="Models"
+          values={models}
+          onChange={setModels}
+        />
+        <KeyValueControl
+          label="Environment"
+          labels={{ add: 'Add variable', delete: 'Delete', key: 'Key', value: 'Value' }}
+          value={environment}
+          onChange={setEnvironment}
+        />
+        <button type="button">Outside</button>
+      </section>
+    </main>
+  )
+}
+
 const meta = {
   title: 'Components/Controls',
   component: ControlsFixture,
@@ -171,5 +196,21 @@ export const FeedbackControls: StoryObj<typeof FeedbackFixture> = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('dialog', { name: 'Clean local cache' })).toBeVisible()
     await expect(canvas.getByRole('status')).toHaveTextContent('3s')
+  },
+}
+
+export const TransientEmptyListRow: StoryObj<typeof TransientListFixture> = {
+  render: () => <TransientListFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('textbox', { name: 'Models 1' })).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Add' }))
+    await expect(canvas.getByRole('textbox', { name: 'Models 1' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Outside' }))
+    await expect(canvas.queryByRole('textbox', { name: 'Models 1' })).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Add variable' }))
+    await expect(canvas.getByRole('textbox', { name: 'Key' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Outside' }))
+    await expect(canvas.queryByRole('textbox', { name: 'Key' })).not.toBeInTheDocument()
   },
 }

@@ -96,6 +96,7 @@ System 展示 OrnnLab Service、Harbor CLI、Docker、Storage、CPU、GPU 与可
 - 搜索框、下拉、按钮和菜单必须使用共享组件，dark/light 与中英文下尺寸、边框和弹层宽度一致。
 - Job、Dataset、Agent、Environment 详情使用可调整宽度的右侧抽屉；抽屉内容在窄宽度下不横向溢出。
 - 弹窗默认没有副标题，标题和内容左对齐。Toast 3 秒自动消失并显示倒计时。
+- 可添加列表在空状态下只展示“添加”操作；新增空行属于临时编辑态，用户未输入内容并将焦点移出整行时自动销毁。Key/Value 等多字段行在行内切换焦点时不得误删。
 - 所有用户可见文案必须进入 i18n；新增组件必须有 Storybook story 与必要状态。
 
 ## 6. 非目标

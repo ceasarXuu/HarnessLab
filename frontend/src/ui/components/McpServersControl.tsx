@@ -85,7 +85,7 @@ export function McpServersControl({ labels, readOnly = false, value, onChange }:
                 itemAriaLabel={() => labels.args}
                 label={labels.args}
                 readOnly={readOnly}
-                values={server.args.length ? server.args : ['']}
+                values={server.args}
                 onChange={(args) => update(index, { args: args.map((item) => item.trim()).filter(Boolean) })}
               />
             </div>

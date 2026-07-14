@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface KeyValueControlProps {
@@ -23,8 +23,12 @@ interface KeyValueRow {
 
 export function KeyValueControl({ label, value, onChange, className, compact = false, readOnly = false, labels }: KeyValueControlProps) {
   const [rows, setRows] = useState(() => parseRows(value))
+  useEffect(() => {
+    setRows(parseRows(value))
+  }, [value])
+
   const commit = (nextRows: KeyValueRow[]) => {
-    setRows(nextRows.length ? nextRows : [{ key: '', value: '' }])
+    setRows(nextRows)
     onChange(formatRows(nextRows))
   }
   const rootClassName = compact ? 'key-value-control compact-key-value field-wide' : `key-value-control field-wide ${className ?? ''}`
@@ -38,7 +42,7 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
             aria-label={compact ? `${labels.add} ${label}` : undefined}
             className="secondary-button compact-action"
             type="button"
-            onClick={() => commit([...rows, { key: '', value: '' }])}
+            onClick={() => setRows([...rows.filter((row) => row.key.trim() || row.value.trim()), { key: '', value: '' }])}
           >
             <Plus aria-hidden="true" />
             {labels.add}
@@ -47,11 +51,21 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
       </div>
       <div className="key-value-list">
         {rows.map((row, index) => (
-          <div className="key-value-row" key={index}>
+          <div
+            className="key-value-row"
+            key={index}
+            onBlur={(event) => {
+              if (event.currentTarget.contains(event.relatedTarget)) return
+              if (!row.key.trim() && !row.value.trim()) {
+                setRows(rows.filter((_, rowIndex) => rowIndex !== index))
+              }
+            }}
+          >
             <label>
               <span className={compact ? 'visually-hidden' : undefined}>{labels.key}</span>
               <input
                 aria-label={compact ? labels.key : undefined}
+                autoFocus={!readOnly && !row.key && !row.value}
                 readOnly={readOnly}
                 value={row.key}
                 onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, key: event.target.value } : item))}
@@ -85,7 +99,7 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
 }
 
 function parseRows(value: string): KeyValueRow[] {
-  if (!value || value === 'none') return [{ key: '', value: '' }]
+  if (!value || value === 'none') return []
   return value.split('\n').map((line) => {
     const [key, ...rest] = line.split('=')
     return { key: key.trim(), value: rest.join('=').trim() }

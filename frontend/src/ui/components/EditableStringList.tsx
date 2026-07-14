@@ -26,13 +26,13 @@ export function EditableStringList({
   readOnly = false,
   values,
 }: EditableStringListProps) {
-  const rows = values.length ? values : ['']
+  const rows = values
   const setRow = (index: number, value: string) => {
     onChange(rows.map((item, rowIndex) => (rowIndex === index ? value : item)))
   }
   const removeRow = (index: number) => {
     const nextValues = rows.filter((_, rowIndex) => rowIndex !== index)
-    onChange(nextValues.length ? nextValues : [''])
+    onChange(nextValues)
   }
 
   return (
@@ -41,7 +41,11 @@ export function EditableStringList({
         <span>{label}</span>
         {!readOnly && (
           <div className="editable-string-list-actions">
-            <button className="secondary-button compact-action" type="button" onClick={() => onChange([...rows, ''])}>
+            <button
+              className="secondary-button compact-action"
+              type="button"
+              onClick={() => onChange([...rows.filter((row) => row.trim()), ''])}
+            >
               <Plus aria-hidden="true" />
               {addLabel}
             </button>
@@ -51,9 +55,17 @@ export function EditableStringList({
       </div>
       <div className="rule-list-rows">
         {rows.map((value, index) => (
-          <div className="rule-list-row" key={index}>
+          <div
+            className="rule-list-row"
+            key={index}
+            onBlur={(event) => {
+              if (event.currentTarget.contains(event.relatedTarget)) return
+              if (!value.trim()) removeRow(index)
+            }}
+          >
             <input
               aria-label={itemAriaLabel ? itemAriaLabel(value, index) : `${label} ${index + 1}`}
+              autoFocus={!readOnly && !value}
               readOnly={readOnly}
               placeholder={placeholder}
               value={value}

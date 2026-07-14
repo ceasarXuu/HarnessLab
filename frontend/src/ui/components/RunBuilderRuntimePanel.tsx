@@ -314,13 +314,11 @@ function RuleListControl({
   value: string
 }) {
   const [rows, setRows] = useState(() => {
-    const initialRows = splitRules(value)
-    return initialRows.length ? initialRows : ['']
+    return splitRules(value)
   })
 
   useEffect(() => {
-    const nextRows = splitRules(value)
-    setRows(nextRows.length ? nextRows : [''])
+    setRows(splitRules(value))
   }, [value])
 
   const commit = (nextRows: string[]) => {
