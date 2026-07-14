@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { agentRows, datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
@@ -22,6 +23,15 @@ export const BuiltInAgent: Story = {
       <AgentDetail agent={agentRows[0]} t={t} onSave={() => undefined} />
     </main>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Claude Code default')).toBeVisible()
+    await expect(canvas.queryByRole('tab', { name: 'Basic' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('tab', { name: 'Skills' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('tab', { name: 'MCPs' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('tab', { name: 'Advanced' })).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Supported configuration')).not.toBeInTheDocument()
+  },
 }
 
 export const CustomAgent: Story = {

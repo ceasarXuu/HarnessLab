@@ -37,10 +37,13 @@ export function AgentProfileEditor({
 }: AgentProfileEditorProps) {
   const [activeTab, setActiveTab] = useState<AgentTab>('base')
   const capabilities = value.capabilities ?? agentCapabilitiesForHarness(value.harness, capabilitiesByHarness)
-  const supports = (field: AgentCapabilityField) => supportsAgentField(capabilities, field)
-  const tabs = buildAgentTabs(capabilities, t)
+  const visibleFields = agentVisibleFields(value, capabilities, readOnly)
+  const supports = (field: AgentCapabilityField) => visibleFields[field]
+  const tabs = buildAgentTabs(visibleFields, t)
   const resolvedActiveTab = tabs.some((tab) => tab.key === activeTab) ? activeTab : tabs[0]?.key ?? 'base'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
+
+  if (!tabs.length) return null
 
   return (
     <div className="agent-profile-editor">
@@ -61,12 +64,6 @@ export function AgentProfileEditor({
 
       {resolvedActiveTab === 'base' && (
         <>
-          {readOnly && (
-            <section className="surface rail-card">
-              <SectionTitle>{t('supportedAgentCapabilities')}</SectionTitle>
-              <AgentCapabilitySummary capabilities={capabilities} t={t} />
-            </section>
-          )}
           {supports('modelName') && (
             <section className="surface rail-card">
               <SectionTitle>{t('modelSettings')}</SectionTitle>
@@ -273,40 +270,64 @@ function mcpLabels(t: Translate) {
   }
 }
 
-function buildAgentTabs(capabilities: AgentCapabilities, t: Translate) {
-  const hasBase = supportsAgentField(capabilities, 'modelName') || supportsAgentField(capabilities, 'env')
-  const hasAdvanced = supportsAgentField(capabilities, 'timeouts')
-    || supportsAgentField(capabilities, 'customKwargs')
-    || supportsAgentField(capabilities, 'harnessParameters')
+type AgentVisibleFields = Record<AgentCapabilityField, boolean>
+
+function agentVisibleFields(agent: AgentRow, capabilities: AgentCapabilities, readOnly: boolean): AgentVisibleFields {
+  return {
+    customKwargs: fieldVisible(agent, capabilities, 'customKwargs', readOnly),
+    env: fieldVisible(agent, capabilities, 'env', readOnly),
+    harnessParameters: fieldVisible(agent, capabilities, 'harnessParameters', readOnly),
+    mcpServers: fieldVisible(agent, capabilities, 'mcpServers', readOnly),
+    modelName: fieldVisible(agent, capabilities, 'modelName', readOnly),
+    skills: fieldVisible(agent, capabilities, 'skills', readOnly),
+    timeouts: fieldVisible(agent, capabilities, 'timeouts', readOnly),
+  }
+}
+
+function fieldVisible(
+  agent: AgentRow,
+  capabilities: AgentCapabilities,
+  field: AgentCapabilityField,
+  readOnly: boolean,
+) {
+  if (!supportsAgentField(capabilities, field)) return false
+  if (!readOnly) return true
+  if (field === 'modelName') return hasConfiguredValue(agent.models)
+  if (field === 'env') return hasConfiguredValue(agent.env)
+  if (field === 'skills') return hasConfiguredValue(agent.skills)
+  if (field === 'mcpServers') return hasConfiguredValue(agent.mcp)
+  if (field === 'customKwargs') return hasConfiguredValue(agent.kwargs)
+  if (field === 'timeouts') return Boolean(
+    hasConfiguredValue(agent.timeout)
+    || hasConfiguredValue(agent.setupTimeout)
+    || hasConfiguredValue(agent.maxTimeout),
+  )
+  return hasConfiguredHarnessParameters(agent, capabilities)
+}
+
+function hasConfiguredHarnessParameters(agent: AgentRow, capabilities: AgentCapabilities) {
+  return capabilities.parameters.some((parameter) => {
+    const raw = parameter.source === 'env' ? agent.env : agent.kwargs
+    return keyValueHasKey(raw, parameter.key)
+  })
+}
+
+function keyValueHasKey(value: string | undefined, key: string) {
+  if (!hasConfiguredValue(value)) return false
+  return value.split('\n').some((line) => line.split('=')[0]?.trim() === key)
+}
+
+function buildAgentTabs(visibleFields: AgentVisibleFields, t: Translate) {
+  const hasBase = visibleFields.modelName || visibleFields.env
+  const hasAdvanced = visibleFields.timeouts
+    || visibleFields.customKwargs
+    || visibleFields.harnessParameters
   return [
     hasBase ? { key: 'base' as const, label: t('runTabCore') } : null,
-    supportsAgentField(capabilities, 'skills') ? { key: 'skills' as const, label: t('skillsTab') } : null,
-    supportsAgentField(capabilities, 'mcpServers') ? { key: 'mcps' as const, label: t('mcpsTab') } : null,
+    visibleFields.skills ? { key: 'skills' as const, label: t('skillsTab') } : null,
+    visibleFields.mcpServers ? { key: 'mcps' as const, label: t('mcpsTab') } : null,
     hasAdvanced ? { key: 'advanced' as const, label: t('agentAdvancedTab') } : null,
   ].filter((tab): tab is { key: AgentTab; label: string } => tab !== null)
-}
-
-function AgentCapabilitySummary({ capabilities, t }: { capabilities: AgentCapabilities; t: Translate }) {
-  return (
-    <div className="capability-chip-row">
-      {capabilities.supportedFields.map((field) => (
-        <span className="capability-chip" key={field}>{capabilityFieldLabel(field, t)}</span>
-      ))}
-    </div>
-  )
-}
-
-function capabilityFieldLabel(field: AgentCapabilityField, t: Translate) {
-  const labels: Record<AgentCapabilityField, ReturnType<Translate>> = {
-    customKwargs: t('capabilityCustomKwargs'),
-    env: t('capabilityEnv'),
-    harnessParameters: t('capabilityHarnessParameters'),
-    mcpServers: t('capabilityMcpServers'),
-    modelName: t('capabilityModelName'),
-    skills: t('capabilitySkills'),
-    timeouts: t('capabilityTimeouts'),
-  }
-  return labels[field]
 }
 
 function displayReadOnlyValue(value: string | undefined, fallback: string) {

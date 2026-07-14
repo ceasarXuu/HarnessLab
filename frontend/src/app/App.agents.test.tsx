@@ -140,4 +140,24 @@ describe('App agents and leaderboard', () => {
     expect(await screen.findByText('job_74c1')).toBeInTheDocument()
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
+
+  it('hides unsupported agent detail tabs instead of showing placeholders', async () => {
+    render(<App />)
+    await screen.findByText('terminal-bench-smoke')
+
+    fireEvent.click(screen.getByRole('link', { name: 'Agents' }))
+    await screen.findByRole('heading', { name: 'Agent catalog' })
+    fireEvent.click(screen.getByText('Claude Code default'))
+
+    const agentDialog = screen.getByRole('dialog', { name: 'Selected agent' })
+    const agentForm = within(agentDialog)
+    expect(agentForm.getByText('Claude Code default')).toBeInTheDocument()
+    expect(agentForm.queryByRole('tab', { name: 'Basic' })).not.toBeInTheDocument()
+    expect(agentForm.queryByRole('tab', { name: 'Skills' })).not.toBeInTheDocument()
+    expect(agentForm.queryByRole('tab', { name: 'MCPs' })).not.toBeInTheDocument()
+    expect(agentForm.queryByRole('tab', { name: 'Advanced' })).not.toBeInTheDocument()
+    expect(agentForm.queryByText('Supported configuration')).not.toBeInTheDocument()
+    expect(agentForm.queryByText('Model settings')).not.toBeInTheDocument()
+    expect(agentForm.queryByText('Credentials and parameters')).not.toBeInTheDocument()
+  })
 })
