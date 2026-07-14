@@ -349,7 +349,14 @@ async def leaderboard(
 @router.get("/system/health")
 async def system_health(request: Request) -> dict:
     _require_query(request, set())
-    return _page(request, _system(request).health(), None, 100)
+    items = await asyncio.to_thread(_system(request).health)
+    return _page(request, items, None, 100)
+
+
+@router.get("/system/live")
+async def system_live(request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, {"status": "ok"})
 
 
 @router.get("/system/hub-connection")

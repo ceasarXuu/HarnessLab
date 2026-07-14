@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import http.client
 import json
 import logging
 import os
@@ -8,8 +9,8 @@ import platform
 import shutil
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 from packaging.version import InvalidVersion, Version
 
@@ -255,13 +256,23 @@ def _process_command(pid: int) -> str:
 
 
 def _health_endpoint_ok(url: str) -> bool:
-    if not url.startswith("http://") and not url.startswith("https://"):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         return False
+    connection_class = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    connection = connection_class(parsed.hostname, parsed.port, timeout=0.5)
     try:
-        with urllib.request.urlopen(url, timeout=0.5) as response:
-            return 200 <= response.status < 300
-    except OSError:
+        connection.request("GET", path)
+        response = connection.getresponse()
+        response.read()
+        return 200 <= response.status < 300
+    except (OSError, http.client.HTTPException):
         return False
+    finally:
+        connection.close()
 
 
 def _harbor_executable() -> str:

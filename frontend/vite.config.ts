@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type ConfigEnv, type UserConfig } from 'vite'
 import { resolveWebUiDataMode } from './src/api/dataMode'
+import { devServerWatchIgnored } from './src/config/viteWatch'
 
 export function createWebUiViteConfig(command: ConfigEnv['command']): UserConfig {
   const dataMode = resolveWebUiDataMode(
@@ -20,6 +21,9 @@ export function createWebUiViteConfig(command: ConfigEnv['command']): UserConfig
       host: '127.0.0.1',
       port: frontendPort,
       strictPort: true,
+      watch: {
+        ignored: devServerWatchIgnored,
+      },
       proxy: {
         '/api': {
           target: process.env.ORNNLAB_API_TARGET ?? 'http://127.0.0.1:8765',

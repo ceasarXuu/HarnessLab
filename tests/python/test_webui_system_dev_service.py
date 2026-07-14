@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
+
+from ornnlab.services.webui_system_service import _health_endpoint_ok
 
 API = "/api/webui/v1"
 
@@ -169,3 +173,27 @@ def test_system_health_dev_service_probe_does_not_call_system_health(
 
     assert response.status_code == 200
     assert probed_urls == ["http://127.0.0.1:5173"]
+
+
+def test_health_endpoint_probe_bypasses_system_proxy(monkeypatch):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, _format, *args):
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:9")
+    monkeypatch.setenv("https_proxy", "http://127.0.0.1:9")
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    try:
+        assert _health_endpoint_ok(f"http://127.0.0.1:{server.server_port}") is True
+    finally:
+        server.shutdown()
+        server.server_close()

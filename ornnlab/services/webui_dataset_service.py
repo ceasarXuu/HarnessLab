@@ -9,8 +9,6 @@ import shutil
 import time
 from pathlib import Path
 
-from harbor.registry.client.factory import RegistryClientFactory
-
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
 from ornnlab.settings import Settings
@@ -56,7 +54,7 @@ class WebUiDatasetService:
         if local:
             return local
         name, version = _split_ref(ref)
-        metadata = await RegistryClientFactory.create().get_dataset_metadata(
+        metadata = await _registry_client_factory().create().get_dataset_metadata(
             _join_ref(name, version)
         )
         return _remote_dto(metadata.name, metadata.version, len(metadata.task_ids))
@@ -78,7 +76,7 @@ class WebUiDatasetService:
             tasks = []
         else:
             name, version = _split_ref(ref)
-            metadata = await RegistryClientFactory.create().get_dataset_metadata(
+            metadata = await _registry_client_factory().create().get_dataset_metadata(
                 _join_ref(name, version)
             )
             tasks = [
@@ -125,7 +123,7 @@ class WebUiDatasetService:
             progress(percentage, f"Downloaded {completed} of {total} tasks")
 
         try:
-            items = await RegistryClientFactory.create().download_dataset(
+            items = await _registry_client_factory().create().download_dataset(
                 _join_ref(name, version),
                 output_dir=destination,
                 export=True,
@@ -281,7 +279,7 @@ class WebUiDatasetService:
             if self._registry_cache_is_fresh():
                 logger.debug("Using cached Harbor registry Dataset catalog after lock")
                 return list(self._registry_cache or [])
-            summaries = await RegistryClientFactory.create().list_datasets()
+            summaries = await _registry_client_factory().create().list_datasets()
             self._registry_cache = [
                 _remote_dto(item.name, item.version, item.task_count) for item in summaries
             ]
@@ -426,6 +424,12 @@ def _local_tasks(path: Path, ref: str) -> list[dict]:
         for child in sorted(path.iterdir())
         if child.is_dir() and Task.is_valid_dir(child, disable_verification=True)
     ]
+
+
+def _registry_client_factory():
+    from harbor.registry.client.factory import RegistryClientFactory
+
+    return RegistryClientFactory
 
 
 def _require_parent_directory(value: str) -> Path:

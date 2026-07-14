@@ -80,10 +80,11 @@ System 页 `OrnnLab Service` 行应对齐 CLI 能力：
 ```mermaid
 flowchart TD
   CLI["ornnlab dev start"] --> Daemon["OrnnLab dev daemon"]
-  Daemon --> Backend["uv run ornnlab web"]
+  Daemon --> Backend[".venv/bin/ornnlab web 或 uv run fallback"]
   Daemon --> Frontend["npm run dev"]
   Daemon --> State["state / pid / logs"]
   WebUI["System tab"] --> API["/api/webui/v1/system/health"]
+  Daemon --> Live["/api/webui/v1/system/live"]
   API --> State
 ```
 
@@ -122,18 +123,19 @@ flowchart TD
 
 - 后端或前端异常退出时，守护进程进入 `Degraded`，记录退出码和最后日志片段。
 - 重启使用退避策略：1s、2s、5s、10s、30s，最多连续 5 次。
+- 启动健康检查默认等待 300 秒；Harbor/Python 冷启动、首次 import、依赖缓存刷新或外置卷冷读可能明显超过 30 秒。需要临时调整时可设置 `ORNNLAB_STARTUP_TIMEOUT_SECONDS`，合法范围 1-300 秒。
 - 连续失败达到阈值后进入 `Error`，不再自动重启，等待用户 `restart`。
 - 用户执行 `stop` 后进入 `Stopped`，不得被守护进程自动拉起。
 - 端口被非 OrnnLab 进程占用时进入 `Error`，不得强杀未知进程。
 
 ### 6.4 健康检查
 
-守护进程只使用当前产品契约检查健康：
+守护进程只使用当前产品契约中的轻量探活检查健康：
 
-- 后端：`GET /api/webui/v1/system/health`
-- 前端 proxy：`GET <frontendUrl>/api/webui/v1/system/health`
+- 后端：`GET /api/webui/v1/system/live`
+- 前端 proxy：`GET <frontendUrl>/api/webui/v1/system/live`
 
-不得重新引入旧 `/api/system/status` 或旧产品路由。
+完整 `GET /api/webui/v1/system/health` 只服务 System 页展示，包含 Docker、Storage、Hub、资源等体检项，不得作为 daemon 启动/存活探测使用。不得重新引入旧 `/api/system/status` 或旧产品路由。
 
 ### 6.5 日志
 
@@ -141,7 +143,7 @@ flowchart TD
 
 | 事件 | 字段 |
 |---|---|
-| `dev_service.start_requested` | port、frontendPort、dataMode |
+| `dev_service.start_requested` | port、frontendPort、dataMode、startupTimeoutMs |
 | `dev_service.started` | daemonPid、backendPid、frontendPid、frontendUrl |
 | `dev_service.health_check_failed` | target、status、error |
 | `dev_service.child_exited` | child、pid、exitCode、signal |
@@ -203,7 +205,7 @@ flowchart TD
 ornnlab dev status
 lsof -nP -iTCP:5173 -sTCP:LISTEN
 lsof -nP -iTCP:8765 -sTCP:LISTEN
-curl -sS http://127.0.0.1:8765/api/webui/v1/system/health
+curl --noproxy '*' -sS http://127.0.0.1:8765/api/webui/v1/system/live
 tail -120 ~/.ornnlab/dev-service/logs/frontend.log
 ```
 
@@ -220,6 +222,27 @@ ornnlab dev restart
 ```
 
 重启后确认 `http://127.0.0.1:5173/` 返回的入口脚本不再携带旧 `?t=...` 参数，再刷新 Codex Web Preview。
+
+### 11.2 Status 显示 Degraded 但端口已经监听
+
+现象：`lsof` 显示 8765/5173 正常监听，但 `ornnlab dev status` 显示 `Degraded`，或 `curl http://127.0.0.1:8765/...` 超时。
+
+优先检查本机代理环境：
+
+```bash
+env | rg -i 'http.*proxy|no_proxy'
+curl -v http://127.0.0.1:8765/api/webui/v1/system/live
+curl --noproxy '*' -sS http://127.0.0.1:8765/api/webui/v1/system/live
+```
+
+如果 `curl -v` 显示请求 127.0.0.1 时仍连接 `http_proxy`，说明本地代理污染了 localhost 探活。启动器会自动补齐：
+
+```text
+NO_PROXY=127.0.0.1,localhost,::1
+no_proxy=127.0.0.1,localhost,::1
+```
+
+后端内部对前端的健康探测必须使用直接 TCP/HTTP 连接，不依赖 `urllib` 的系统代理规则。
 
 ## 12. 开放问题
 

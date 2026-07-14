@@ -29,6 +29,15 @@ def test_webui_envelope_and_legacy_routes_are_not_registered(client):
     assert client.post(f"{API}/jobs/example/retry").status_code == 404
 
 
+def test_webui_live_endpoint_is_lightweight(client):
+    live = client.get(f"{API}/system/live")
+
+    assert live.status_code == 200
+    body = live.json()
+    assert body["error"] is None
+    assert body["data"] == {"status": "ok"}
+
+
 def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
     dataset = _stored_dto(
         {

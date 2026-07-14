@@ -27,6 +27,44 @@ test("dev stop kills managed children that ignore SIGTERM", { timeout: 45000 }, 
   assert.equal(isProcessAlive(state.frontendPid), false);
 });
 
+test("dev child wrapper terminates descendant services", { timeout: 20000 }, async () => {
+  if (process.platform === "win32") return;
+  const port = await freePort();
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-wrapper-tree-"));
+  const serverScript = path.join(tempRoot, "server.js");
+  const parentScript = path.join(tempRoot, "parent.js");
+  fs.writeFileSync(serverScript, `
+const http = require("node:http");
+const port = Number(process.argv[2]);
+http.createServer((request, response) => {
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(JSON.stringify({ ok: true }));
+}).listen(port, "127.0.0.1");
+setInterval(() => {}, 30000);
+`);
+  fs.writeFileSync(parentScript, `
+const { spawn } = require("node:child_process");
+const child = spawn(process.execPath, [${JSON.stringify(serverScript)}, process.argv[2]], { stdio: "ignore" });
+child.unref();
+setInterval(() => {}, 30000);
+`);
+  const wrapper = spawn(process.execPath, [
+    path.join(repoRoot, "lib/dev-child-wrapper.js"),
+    "--token",
+    "wrapper-tree-test-token",
+    "--",
+    process.execPath,
+    parentScript,
+    String(port),
+  ], { cwd: repoRoot, stdio: "ignore" });
+  await waitForOk(`http://127.0.0.1:${port}/`);
+
+  wrapper.kill("SIGTERM");
+
+  await waitForUnavailable(`http://127.0.0.1:${port}/`);
+  assert.equal(await waitForExit(wrapper), true);
+});
+
 test("dev status degrades when daemon is alive but a child is missing", { timeout: 45000 }, async () => {
   const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-dev-degraded-status-"));
@@ -231,4 +269,15 @@ function isProcessAlive(pid) {
   } catch {
     return false;
   }
+}
+
+function waitForExit(child) {
+  if (child.exitCode !== null) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 5000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
 }

@@ -24,7 +24,7 @@ test("ornnlab path resolves to the current repo when run from the repo root", ()
   assert.equal(result.stdout.trim(), repoRoot);
 });
 
-test("ornnlab dev starts an API-mode frontend proxy", { timeout: 60000 }, async (context) => {
+test("ornnlab dev starts an API-mode frontend proxy", { timeout: 330000 }, async (context) => {
   const [backendPort, frontendPort] = await Promise.all([freePort(), freePort()]);
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ornnlab-launcher-api-"));
   const child = spawn(process.execPath, ["bin/ornnlab.js", "dev"], {
@@ -37,7 +37,7 @@ test("ornnlab dev starts an API-mode frontend proxy", { timeout: 60000 }, async 
       ORNNLAB_HOME: path.join(tempRoot, "data"),
       ORNNLAB_LAUNCHER_HOME: path.join(tempRoot, "launcher"),
       ORNNLAB_SOURCE: repoRoot,
-      ORNNLAB_STARTUP_TIMEOUT_SECONDS: "30",
+      ORNNLAB_STARTUP_TIMEOUT_SECONDS: "300",
     },
   });
   let output = "";
@@ -70,7 +70,7 @@ function freePort() {
 }
 
 async function waitForOk(url, child, getOutput) {
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + 300000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
       throw new Error(`Launcher exited before the API proxy became ready:\n${getOutput()}`);

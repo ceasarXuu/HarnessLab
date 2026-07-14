@@ -66,10 +66,25 @@ test("default backend child receives the daemon restart command", () => {
     const backend = commandFor("backend");
 
     assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /ornnlab\.js dev _restart-detached$/);
+    if (process.platform !== "win32") assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /^\/usr\/bin\/env node /);
   } finally {
     if (original === undefined) delete process.env.ORNNLAB_DEV_BACKEND_COMMAND;
     else process.env.ORNNLAB_DEV_BACKEND_COMMAND = original;
   }
+});
+
+test("dev daemon uses a PATH-stable node launcher for child scripts", () => {
+  const { nodeScriptInvocation } = require("../../lib/dev-daemon");
+  const invocation = nodeScriptInvocation("/tmp/ornnlab-child.js", ["--flag"]);
+
+  if (process.platform === "win32") {
+    assert.equal(invocation.command, "node");
+    assert.deepEqual(invocation.args, ["/tmp/ornnlab-child.js", "--flag"]);
+    return;
+  }
+  assert.equal(invocation.command, "/usr/bin/env");
+  assert.deepEqual(invocation.args, ["node", "/tmp/ornnlab-child.js", "--flag"]);
+  assert.notEqual(invocation.command, process.execPath);
 });
 
 test("dev stop refuses to kill pids that are not proven daemon children", async () => {

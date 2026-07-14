@@ -5,7 +5,7 @@
 - Version: 0.1
 - Status: Completed
 - Owner / Responsible: Unknown
-- Related Systems: `ornnlab dev`、`lib/dev-daemon.js`、`/api/webui/v1/system/health`、System 页、Vite dev server、FastAPI WebUI API
+- Related Systems: `ornnlab dev`、`lib/dev-daemon.js`、`/api/webui/v1/system/live`、`/api/webui/v1/system/health`、System 页、Vite dev server、FastAPI WebUI API
 - Related Links: [主题入口](README.md)、[工程计划](engineering-design.md)、[v1.0.5 PRD](../prd.md)
 - Risk Level: Medium
 - Plan Type: Standard
@@ -37,7 +37,7 @@
 flowchart TD
   CLI["ornnlab dev start"] --> Launcher["CLI launcher"]
   Launcher --> Daemon["dev daemon"]
-  Daemon --> Backend["backend: uv run ornnlab web"]
+  Daemon --> Backend["backend: .venv/bin/ornnlab web 或 uv run fallback"]
   Daemon --> Frontend["frontend: npm run dev"]
   Daemon --> State["~/.ornnlab/dev-service/state.json"]
   Daemon --> Logs["~/.ornnlab/dev-service/logs/*.log"]
@@ -183,8 +183,8 @@ sequenceDiagram
   Daemon->>State: write starting
   Daemon->>Backend: spawn with backend token
   Daemon->>Frontend: spawn with frontend token
-  Daemon->>Backend: health check
-  Daemon->>Frontend: proxy health check
+  Daemon->>Backend: live check
+  Daemon->>Frontend: proxy live check
   Daemon->>State: write running or degraded/error
 ```
 
@@ -237,18 +237,20 @@ Restart 等价于受控 `stop + start`，但要保留日志连续性。
 
 连续失败达到阈值后进入 `error`，等待用户主动 restart。
 
+启动健康检查默认等待 300 秒，并通过 `dev_service.start_requested.startupTimeoutMs` 写入日志。这个默认值覆盖 Harbor/Python 冷启动、首次 import、依赖缓存刷新、外置卷冷读等场景；仍可通过 `ORNNLAB_STARTUP_TIMEOUT_SECONDS` 临时覆盖，合法范围 1-300 秒。
+
 ## 8. 健康检查
 
 后端健康：
 
 ```text
-GET http://127.0.0.1:<backendPort>/api/webui/v1/system/health
+GET http://127.0.0.1:<backendPort>/api/webui/v1/system/live
 ```
 
 前端健康：
 
 ```text
-GET http://127.0.0.1:<frontendPort>/api/webui/v1/system/health
+GET http://127.0.0.1:<frontendPort>/api/webui/v1/system/live
 ```
 
 判定规则：
@@ -316,7 +318,8 @@ GET http://127.0.0.1:<frontendPort>/api/webui/v1/system/health
 
 | API | 行为 |
 |---|---|
-| `GET /api/webui/v1/system/health` | 返回 `OrnnLab Service` 行真实状态 |
+| `GET /api/webui/v1/system/live` | daemon 专用轻量探活，只返回服务是否可响应 |
+| `GET /api/webui/v1/system/health` | 返回 `OrnnLab Service` 行真实状态和 System 页完整体检 |
 | `POST /api/webui/v1/system/service/restart` | 触发应用级服务重启 |
 
 System 页只展示：

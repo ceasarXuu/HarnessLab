@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from uuid import uuid4
-
-from harbor.models.environment_type import EnvironmentType
-from harbor.models.trial.config import AgentConfig, EnvironmentConfig, ResourceMode
 
 from ornnlab.models.agent import (
     AgentProfile,
@@ -284,7 +282,7 @@ class WebUiProfileService:
         return [_configured_custom_agent(json.loads(row["config_json"])) for row in rows]
 
     def _built_in_environments(self) -> list[dict]:
-        return [_built_in_environment(item.value) for item in EnvironmentType]
+        return [_built_in_environment(item.value) for item in _environment_type()]
 
     def _custom_environments(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
@@ -296,19 +294,22 @@ class WebUiProfileService:
 
     def _validate_agent(self, agent: dict) -> None:
         from harbor.models.agent.name import AgentName
+        from harbor.models.trial.config import AgentConfig
 
         if not agent.get("importPath") and agent["harness"] not in AgentName.values():
             raise ValueError("harness must be a built-in Harbor AgentName or use importPath")
         AgentConfig.model_validate(self.agent_harbor_config(agent))
 
     def _validate_environment(self, environment: dict) -> None:
+        from harbor.models.trial.config import EnvironmentConfig
+
         if not environment.get("importPath") and environment["environmentType"] not in {
-            item.value for item in EnvironmentType
+            item.value for item in _environment_type()
         }:
             raise ValueError(
                 "environmentType must be a Harbor EnvironmentType or importPath must be set"
             )
-        valid_policies = {item.value for item in ResourceMode}
+        valid_policies = {item.value for item in _resource_mode()}
         for field in ("cpuPolicy", "memoryPolicy"):
             if environment[field] not in valid_policies:
                 raise ValueError(f"{field} must be one of {sorted(valid_policies)}")
@@ -419,3 +420,15 @@ def _json_or_none(value: str) -> object | None:
     if not value.strip() or value.strip().lower() == "none":
         return None
     return json.loads(value)
+
+
+def _environment_type() -> Any:
+    from harbor.models.environment_type import EnvironmentType
+
+    return EnvironmentType
+
+
+def _resource_mode() -> Any:
+    from harbor.models.trial.config import ResourceMode
+
+    return ResourceMode
