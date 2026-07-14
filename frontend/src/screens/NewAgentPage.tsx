@@ -1,5 +1,5 @@
 import { Save, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useOperation } from '../api/hooks'
 import { agentRowToDto } from '../api/requestMappers'
 import { agentCapabilitiesByHarness, agentCapabilitiesForHarness } from '../domain/agentCapabilities'
@@ -12,16 +12,23 @@ import { OperationStatus } from '../ui/components/OperationStatus'
 interface NewAgentPageProps {
   canSave?: boolean
   client: WebUiClient
+  initialHarness?: string
   rows: AgentRow[]
   t: Translate
   onAgents: () => void
   onRefresh: () => Promise<void>
 }
 
-export function NewAgentPage({ canSave = true, client, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
-  const capabilitiesByHarness = agentCapabilitiesByHarness(rows)
-  const [draft, setDraft] = useState(() => buildNewAgent(rows, capabilitiesByHarness))
+export function NewAgentPage({ canSave = true, client, initialHarness, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
+  const capabilitiesByHarness = useMemo(() => agentCapabilitiesByHarness(rows), [rows])
+  const [draft, setDraft] = useState(() => buildNewAgent(rows, capabilitiesByHarness, initialHarness))
   const agentOperation = useOperation(client)
+
+  useEffect(() => {
+    const capabilities = capabilitiesByHarness[draft.harness]
+    if (!capabilities) return
+    setDraft((current) => current.capabilities === capabilities ? current : { ...current, capabilities })
+  }, [capabilitiesByHarness, draft.harness])
 
   useEffect(() => {
     if (agentOperation.operation?.status !== 'completed') return
@@ -74,26 +81,36 @@ function isOperationRunning(status: string | undefined) {
   return status === 'queued' || status === 'running'
 }
 
-function buildNewAgent(rows: AgentRow[], capabilitiesByHarness: ReturnType<typeof agentCapabilitiesByHarness>): AgentRow {
+function buildNewAgent(
+  rows: AgentRow[],
+  capabilitiesByHarness: ReturnType<typeof agentCapabilitiesByHarness>,
+  initialHarness?: string,
+): AgentRow {
+  const harness = initialHarness || 'custom-harness'
+  const baseName = harness === 'custom-harness' ? 'Custom Agent' : `${formatHarnessName(harness)} Agent`
   return {
-    id: buildAgentId(rows, 'Custom Agent'),
-    agentName: buildUniqueAgentName(rows, 'Custom Agent'),
-    harness: 'custom-harness',
+    id: buildAgentId(rows, baseName),
+    agentName: buildUniqueAgentName(rows, baseName),
+    harness,
     type: 'custom',
-    adapter: 'agents.custom:Agent',
-    models: 'custom-model',
+    adapter: harness === 'custom-harness' ? 'agents.custom:Agent' : 'none',
+    models: '',
     status: 'configured',
     source: '~/.ornnlab/agents/custom-agent.toml',
     updated: 'just now',
-    env: 'CUSTOM_API_KEY=${CUSTOM_API_KEY}',
+    env: 'none',
     kwargs: 'none',
     skills: 'none',
     mcp: 'none',
     setupTimeout: '300s',
     timeout: '1800s',
     maxTimeout: '3600s',
-    capabilities: agentCapabilitiesForHarness('custom-harness', capabilitiesByHarness),
+    capabilities: agentCapabilitiesForHarness(harness, capabilitiesByHarness),
   }
+}
+
+function formatHarnessName(harness: string) {
+  return harness.split('-').map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part).join(' ')
 }
 
 function normalizeNewAgent(rows: AgentRow[], draft: AgentRow): AgentRow {

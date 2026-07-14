@@ -252,33 +252,35 @@ export const AgentDrawer: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByText('Claude Code default'))
     await expect(canvas.getByRole('dialog', { name: 'Selected agent' })).toBeVisible()
-    await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Claude Code default')
-    await expect(canvas.getByLabelText('Harness')).toHaveValue('claude-code')
-    await expect(canvas.getByLabelText('Type')).toHaveValue('built-in')
+    await expect(canvas.getAllByText('Claude Code default')[0]).toBeVisible()
+    await expect(canvas.getAllByText('claude-code')[0]).toBeVisible()
+    await expect(canvas.getByText('Harness template')).toBeVisible()
     await expect(canvas.queryByLabelText('Custom import path')).not.toBeInTheDocument()
-    await expect(canvas.getByLabelText('Agent Name')).toHaveAttribute('readonly')
-    await expect(canvas.getByLabelText('Harness')).toBeDisabled()
-    await expect(canvas.queryByText('Model settings')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Credentials and parameters')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Create Agent' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'Basic' })).toBeVisible()
+    await expect(canvas.getByText('Supported configuration')).toBeVisible()
+    await expect(canvas.getByText('One or more model names')).toBeVisible()
+    await expect(canvas.getByText('Key / value list')).toBeVisible()
     await expect(canvas.queryByLabelText('Permission mode')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
     await expect(canvas.queryByText('Network access')).not.toBeInTheDocument()
     await expect(canvas.queryByRole('checkbox', { name: 'Enable network access' })).not.toBeInTheDocument()
     await expect(canvas.queryByText('Capability config')).not.toBeInTheDocument()
-    await expect(canvas.queryByText('Advanced agent params')).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('tab', { name: 'Skills' })).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('tab', { name: 'MCPs' })).not.toBeInTheDocument()
-    await expect(canvas.queryByRole('tab', { name: 'Advanced' })).not.toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'Advanced' })).toBeVisible()
   },
 }
 
 function AgentsFixture() {
   const [view, setView] = useState<'list' | 'new'>('list')
+  const [initialHarness, setInitialHarness] = useState<string | undefined>()
   if (view === 'new') {
     return (
       <NewAgentPage
         client={client}
+        initialHarness={initialHarness}
         rows={agentRows}
         t={t}
         onAgents={() => setView('list')}
@@ -286,7 +288,18 @@ function AgentsFixture() {
       />
     )
   }
-  return <AgentsPage client={client} rows={agentRows} t={t} onNewAgent={() => setView('new')} onRefresh={async () => undefined} />
+  return (
+    <AgentsPage
+      client={client}
+      rows={agentRows}
+      t={t}
+      onNewAgent={(harness) => {
+        setInitialHarness(harness)
+        setView('new')
+      }}
+      onRefresh={async () => undefined}
+    />
+  )
 }
 
 export const NewAgent: Story = {
@@ -303,6 +316,27 @@ export const NewAgent: Story = {
     await expect(canvas.getByText('MCP Servers')).toBeVisible()
     await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
     await expect(canvas.getByText('Advanced agent params')).toBeVisible()
+  },
+}
+
+export const NewAgentFromHarness: Story = {
+  render: () => (
+    <NewAgentPage
+      client={client}
+      initialHarness="claude-code"
+      rows={agentRows}
+      t={t}
+      onAgents={() => undefined}
+      onRefresh={async () => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText('Harness')).toHaveValue('claude-code')
+    await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
+    await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()
+    await expect(canvas.getByRole('tab', { name: 'Advanced' })).toBeVisible()
   },
 }
 

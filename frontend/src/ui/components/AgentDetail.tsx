@@ -1,17 +1,19 @@
-import { Save } from 'lucide-react'
+import { CopyPlus, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentIdentityEditor, AgentProfileEditor, getAgentStatusLabel } from './AgentProfileEditor'
+import { AgentCapabilityPreview } from './AgentCapabilityPreview'
 
 interface AgentDetailProps {
   agent: AgentRow
   canSave?: boolean
   t: Translate
   onSave: (agent: AgentRow) => void
+  onCreateProfile?: (harness: string) => void
 }
 
-export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailProps) {
+export function AgentDetail({ agent, canSave = true, t, onSave, onCreateProfile }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
@@ -36,11 +38,21 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
                 {t('save')}
               </button>
             )}
+            {draft.type === 'built-in' && onCreateProfile && (
+              <button className="primary-button compact-action" onClick={() => onCreateProfile(draft.harness)}>
+                <CopyPlus aria-hidden="true" />
+                {t('createAgentFromHarness')}
+              </button>
+            )}
           </div>
         </div>
         <AgentIdentityEditor readOnly={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
       </section>
-      <AgentProfileEditor readOnly={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
+      {draft.type === 'built-in' ? (
+        <AgentCapabilityPreview capabilities={draft.capabilities ?? { parameters: [], supportedFields: [] }} t={t} />
+      ) : (
+        <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
+      )}
     </aside>
   )
 }

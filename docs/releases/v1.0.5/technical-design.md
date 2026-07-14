@@ -70,8 +70,10 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 
 ### 4.3 Agent 和 Environment 的可写边界
 
-- built-in Agent 是运行时从 Harbor `AgentName` 枚举生成的只读 Harness 目录；无模型、凭证或 MCP 假配置。创建 Job 必须选择 custom Agent profile。
-- custom Agent 必须是 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。保存时由 `AgentConfig.model_validate` 校验。
+- `Agent` 在 OrnnLab 中是可复用的 Harbor `AgentConfig` 配置，不代表修改 Harbor 的 Agent 实现。它组合 Harness、模型、环境变量、kwargs、Skills、MCP 和超时配置；创建 Job 时由后端展开为 Harbor `AgentConfig`。
+- built-in 行是运行时从 Harbor `AgentName` 枚举生成的只读 Harness 模板，不是可直接运行的 Agent 配置。详情按 Harness 能力展示可配置字段，并提供“基于此新建 Agent”；不展示禁用表单，也不保存伪默认值。
+- custom Agent profile 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。创建 Job 只选择 custom Agent profile。
+- Harness 通用能力全集包括 model、env、kwargs、Skills、MCP servers、执行/启动/最大超时；Harness 专属参数通过结构化 capability 定义选择框、数字、开关或文本交互。网络访问继续归 Environment 管理，MCP 不承担安装或容器部署编排。
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。
 

@@ -228,7 +228,7 @@ export function AgentIdentityEditor({
       <div className="agent-form-grid">
         <Metric label={t('agentName')} value={value.agentName} />
         <Metric label={t('harness')} value={value.harness} />
-        <Metric label={t('agentType')} value={value.type} />
+        <Metric label={t('agentResourceType')} value={value.type === 'built-in' ? t('harnessTemplate') : t('agentProfile')} />
         {usesCustomHarness && <Metric label={t('customImportPath')} value={value.adapter} />}
       </div>
     )
@@ -248,10 +248,7 @@ export function AgentIdentityEditor({
           ))}
         </select>
       </label>
-      <label>
-        {t('agentType')}
-        <input readOnly value={value.type} />
-      </label>
+      <Metric label={t('agentResourceType')} value={t('agentProfile')} />
       {usesCustomHarness && (
         <label>
           {t('customImportPath')}
@@ -314,7 +311,7 @@ function hasConfiguredHarnessParameters(agent: AgentRow, capabilities: AgentCapa
 
 function keyValueHasKey(value: string | undefined, key: string) {
   if (!hasConfiguredValue(value)) return false
-  return value.split('\n').some((line) => line.split('=')[0]?.trim() === key)
+  return value?.split('\n').some((line) => line.split('=')[0]?.trim() === key) ?? false
 }
 
 function buildAgentTabs(visibleFields: AgentVisibleFields, t: Translate) {

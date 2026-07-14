@@ -67,9 +67,9 @@ describe('App agents and leaderboard', () => {
     ;[
       ['Agent Name', 'Local repair agent'],
       ['Harness', 'custom-harness'],
-      ['Type', 'custom'],
       ['Custom import path', 'agents.local_repair:Agent'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
+    expect(agentForm.getByText('Agent profile')).toBeInTheDocument()
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Permission mode')).not.toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
 
-  it('hides unsupported agent detail tabs instead of showing placeholders', async () => {
+  it('uses built-in agents as Harness templates for creating editable profiles', async () => {
     render(<App />)
     await screen.findByText('terminal-bench-smoke')
 
@@ -151,13 +151,26 @@ describe('App agents and leaderboard', () => {
 
     const agentDialog = screen.getByRole('dialog', { name: 'Selected agent' })
     const agentForm = within(agentDialog)
-    expect(agentForm.getByText('Claude Code default')).toBeInTheDocument()
-    expect(agentForm.queryByRole('tab', { name: 'Basic' })).not.toBeInTheDocument()
-    expect(agentForm.queryByRole('tab', { name: 'Skills' })).not.toBeInTheDocument()
-    expect(agentForm.queryByRole('tab', { name: 'MCPs' })).not.toBeInTheDocument()
-    expect(agentForm.queryByRole('tab', { name: 'Advanced' })).not.toBeInTheDocument()
-    expect(agentForm.queryByText('Supported configuration')).not.toBeInTheDocument()
-    expect(agentForm.queryByText('Model settings')).not.toBeInTheDocument()
-    expect(agentForm.queryByText('Credentials and parameters')).not.toBeInTheDocument()
+    expect(agentForm.getAllByText('Claude Code default')).not.toHaveLength(0)
+    expect(agentForm.getByRole('tab', { name: 'Basic' })).toBeInTheDocument()
+    expect(agentForm.getByRole('tab', { name: 'Skills' })).toBeInTheDocument()
+    expect(agentForm.getByRole('tab', { name: 'MCPs' })).toBeInTheDocument()
+    expect(agentForm.getByRole('tab', { name: 'Advanced' })).toBeInTheDocument()
+    expect(agentForm.getByText('Supported configuration')).toBeInTheDocument()
+
+    fireEvent.click(agentForm.getByRole('button', { name: 'Create Agent' }))
+    expect(screen.getByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Harness')).toHaveValue('claude-code')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
+    expect(screen.getByLabelText('Model name')).toHaveValue('')
+  })
+
+  it('preserves the Harness template when the new Agent route is opened directly', async () => {
+    window.location.hash = '#agents/new?harness=claude-code'
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Harness')).toHaveValue('claude-code')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
   })
 })

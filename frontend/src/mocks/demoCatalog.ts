@@ -195,7 +195,7 @@ const claudeCodeCapabilities: AgentCapabilities = {
     { choices: ['low', 'medium', 'high', 'xhigh', 'max'], key: 'reasoning_effort', kind: 'select', label: 'Reasoning effort', source: 'kwarg' },
     { key: 'allowed_tools', kind: 'text', label: 'Allowed tools', source: 'kwarg' },
   ],
-  supportedFields: ['env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
+  supportedFields: ['customKwargs', 'env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
 }
 
 const codexCapabilities: AgentCapabilities = {
@@ -203,12 +203,12 @@ const codexCapabilities: AgentCapabilities = {
     { defaultValue: 'high', key: 'reasoning_effort', kind: 'text', label: 'Reasoning effort', source: 'kwarg' },
     { choices: ['auto', 'concise', 'detailed', 'none'], key: 'reasoning_summary', kind: 'select', label: 'Reasoning summary', source: 'kwarg' },
   ],
-  supportedFields: ['env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
+  supportedFields: ['customKwargs', 'env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
 }
 
 const oracleCapabilities: AgentCapabilities = {
   parameters: [],
-  supportedFields: ['env', 'timeouts'],
+  supportedFields: ['customKwargs', 'env', 'timeouts'],
 }
 
 export const agentRows: AgentRow[] = [

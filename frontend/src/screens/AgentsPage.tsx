@@ -19,7 +19,7 @@ interface AgentsPageProps {
   client: WebUiClient
   rows: AgentRow[]
   t: Translate
-  onNewAgent: () => void
+  onNewAgent: (harness?: string) => void
   onRefresh: () => Promise<void>
 }
 
@@ -85,7 +85,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                 placeholder={t('searchAgentsPlaceholder')}
               />
             </label>
-            <button className="primary-button" disabled={!writesEnabled} onClick={onNewAgent}>{t('newAgent')}</button>
+            <button className="primary-button" disabled={!writesEnabled} onClick={() => onNewAgent()}>{t('newAgent')}</button>
           </div>
         </div>
         <div className="table-wrap">
@@ -94,7 +94,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               <tr>
                 <th>{t('agentName')}</th>
                 <th>{t('harness')}</th>
-                <th>{t('agentType')}</th>
+                <th>{t('agentResourceType')}</th>
                 <th>{t('models')}</th>
                 <th>{t('status')}</th>
                 <th>{t('actions')}</th>
@@ -117,7 +117,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                     </span>
                   </td>
                   <td>{row.harness}</td>
-                  <td>{row.type}</td>
+                  <td>{row.type === 'built-in' ? t('harnessTemplate') : t('agentProfile')}</td>
                   <td>{row.models || '-'}</td>
                   <td>
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
@@ -161,6 +161,10 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               canSave={writesEnabled && !isOperationRunning(agentOperation.operation?.status)}
               t={t}
               onSave={saveAgent}
+              onCreateProfile={(harness) => {
+                setDrawerOpen(false)
+                onNewAgent(harness)
+              }}
             />
             <ResourceStatus
               error={detailResource.error?.message ?? null}
