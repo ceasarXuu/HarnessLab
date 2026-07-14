@@ -77,7 +77,25 @@ code {
 .metric {
   min-width: 0;
   padding: 10px;
+}
+.metric--card {
   border: 1px solid var(--border);
+}
+.metric--plain {
+  display: grid;
+  grid-template-rows: auto 34px;
+  gap: 6px;
+  padding: 0;
+}
+.metric.metric--plain span {
+  font-size: 12px;
+}
+.metric.metric--plain strong {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 0;
+  padding: 0 10px;
 }
 .metric span {
   display: block;

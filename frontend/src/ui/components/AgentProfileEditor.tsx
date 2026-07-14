@@ -231,7 +231,7 @@ export function AgentIdentityEditor({
         <input value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
       </label>
       {lockHarness ? (
-        <Metric label={t('harness')} value={value.harness} />
+        <Metric label={t('harness')} value={value.harness} variant="plain" />
       ) : (
         <label>
           {t('harness')}
@@ -245,6 +245,7 @@ export function AgentIdentityEditor({
       <Metric
         label={t('agentResourceType')}
         value={value.type === 'built-in' ? t('harborBuiltInHarness') : t('customHarness')}
+        variant="plain"
       />
       {usesCustomHarness && (
         <label>

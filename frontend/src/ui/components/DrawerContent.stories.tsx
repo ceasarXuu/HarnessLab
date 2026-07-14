@@ -38,7 +38,9 @@ export const BuiltInAgent: Story = {
     await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Advanced' })).toBeVisible()
-    await expect(canvas.getByText('Harbor built-in Harness')).toBeVisible()
+    const resourceType = canvas.getByText('Harbor built-in Harness').closest('.metric')
+    await expect(resourceType).toHaveClass('metric--plain')
+    await expect(resourceType).not.toHaveClass('metric--card')
   },
 }
 
