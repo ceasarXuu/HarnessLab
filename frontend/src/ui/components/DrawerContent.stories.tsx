@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { useState } from 'react'
 import { getTranslator } from '../../i18n'
 import { agentRows, datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
@@ -8,6 +8,7 @@ import { DatasetDetail } from './DatasetDetail'
 import { EnvironmentProfileEditor } from './EnvironmentProfileEditor'
 
 const t = getTranslator('en')
+const saveAgent = fn(async () => true)
 
 const meta = {
   title: 'Components/DrawerContent',
@@ -20,13 +21,14 @@ type Story = StoryObj<typeof meta>
 export const BuiltInAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows[0]} t={t} onSave={() => undefined} />
+      <AgentDetail agent={agentRows[0]} t={t} onSave={saveAgent} />
     </main>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    saveAgent.mockClear()
     await expect(canvas.getByText('Claude Code default')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Save' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Agent Name')).toBeEnabled()
     const modelInputs = canvas.getAllByLabelText('Model name')
     await expect(modelInputs).toHaveLength(2)
@@ -41,13 +43,17 @@ export const BuiltInAgent: Story = {
     const resourceType = canvas.getByText('Harbor built-in Harness').closest('.metric')
     await expect(resourceType).toHaveClass('metric--plain')
     await expect(resourceType).not.toHaveClass('metric--card')
+    await userEvent.clear(canvas.getByLabelText('Agent Name'))
+    await userEvent.type(canvas.getByLabelText('Agent Name'), 'Autosaved Agent')
+    await waitFor(() => expect(saveAgent).toHaveBeenCalledTimes(1))
+    await expect(saveAgent).toHaveBeenCalledWith(expect.objectContaining({ agentName: 'Autosaved Agent' }))
   },
 }
 
 export const CustomAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} onSave={() => undefined} />
+      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} onSave={async () => true} />
     </main>
   ),
 }

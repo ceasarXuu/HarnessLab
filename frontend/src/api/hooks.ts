@@ -37,7 +37,7 @@ export interface WebUiOperation {
   submit: <T>(
     mutation: () => Promise<ApiResponse<T | null>>,
     operationFrom: (data: T) => Operation | undefined,
-  ) => Promise<void>
+  ) => Promise<boolean>
 }
 
 export function useWebUiResource<T>(
@@ -241,18 +241,19 @@ export function useOperation(client: WebUiClient): WebUiOperation {
       setOperation(null)
       setPollFailureCount(0)
       setError(response.error ?? { code: 'OPERATION_MISSING', message: 'The mutation did not return an operation.' })
-      return
+      return false
     }
     const nextOperation = operationFrom(response.data)
     if (!nextOperation) {
       setOperation(null)
       setPollFailureCount(0)
       setError({ code: 'OPERATION_MISSING', message: 'The mutation did not return an operation.' })
-      return
+      return false
     }
     setError(response.error)
     setPollFailureCount(0)
     setOperation(nextOperation)
+    return true
   }, [])
 
   useEffect(() => {

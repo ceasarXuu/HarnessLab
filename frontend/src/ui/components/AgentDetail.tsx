@@ -1,14 +1,14 @@
-import { Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { useDebouncedAutosave } from '../useDebouncedAutosave'
 import { AgentIdentityEditor, AgentProfileEditor, getAgentStatusLabel } from './AgentProfileEditor'
 
 interface AgentDetailProps {
   agent: AgentRow
   canSave?: boolean
   t: Translate
-  onSave: (agent: AgentRow) => void
+  onSave: (agent: AgentRow) => boolean | Promise<boolean>
 }
 
 export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailProps) {
@@ -16,9 +16,7 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
 
-  useEffect(() => {
-    setDraft(agent)
-  }, [agent])
+  useDebouncedAutosave({ enabled: canSave, value: draft, onSave })
 
   return (
     <aside className="detail-rail agent-detail">
@@ -30,10 +28,6 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
           </div>
           <div className="rail-heading-actions">
             <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
-            <button className="primary-button compact-action" disabled={!canSave} onClick={() => onSave(draft)}>
-              <Save aria-hidden="true" />
-              {t('save')}
-            </button>
           </div>
         </div>
         <AgentIdentityEditor lockHarness={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />

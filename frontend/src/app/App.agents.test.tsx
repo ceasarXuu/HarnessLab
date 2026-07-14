@@ -161,8 +161,8 @@ describe('App agents and leaderboard', () => {
     const resourceType = agentForm.getByText('Harbor built-in Harness').closest('.metric')
     expect(resourceType).toHaveClass('metric--plain')
     expect(resourceType).not.toHaveClass('metric--card')
+    expect(agentForm.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     fireEvent.change(nameInput, { target: { value: 'Claude reusable profile' } })
-    fireEvent.click(agentForm.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.getByText('Claude reusable profile')).toBeInTheDocument())
   })
 

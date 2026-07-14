@@ -66,6 +66,8 @@ Dataset 详情抽屉展示来源、本地路径、大小、Registry 与 Task 列
 
 Agent = Harness x 用户配置。Agent Name 是用户命名，Harness 是 Harbor AgentName 或 custom import path。
 
+Agent 详情抽屉不设置独立保存按钮。用户修改配置后由前端短暂防抖并自动保存；连续修改必须串行提交最新值，旧请求不得覆盖较新的本地编辑。保存失败继续通过统一 Operation 错误反馈展示，失败值不得被标记为已保存。
+
 - built-in：引用 Harbor 内置 Harness 的系统预置配置；Harness 不可更换、资源不可删除，Harness 支持的配置字段可编辑。
 - custom：可新建、编辑、删除；可选模型集合、环境变量、Skills 来源、MCP server、kwargs、安装与运行超时都保存在 Agent profile。
 - MCP server 只支持 Harbor `stdio`（command + args）、`sse` 或 `streamable-http`（URL）配置。WebUI 不承诺安装、部署或 compose sidecar。
@@ -113,6 +115,7 @@ System 展示 OrnnLab Service、Harbor CLI、Docker、Storage、CPU、GPU 与可
 - 六个一级页面与上述流程可通过 WebUI 访问；没有额外一级 Tasks 或 New Job tab。
 - API 模式只访问 `/api/webui/v1`，mock 模式与 API 模式遵循相同的写操作约束和 Operation 生命周期。
 - built-in 资源不可产生可编辑但无法保存的伪交互；custom 资源的写操作均返回 Operation。
+- Agent 详情修改无需点击保存；停止输入后自动提交，连续编辑只保留最新配置，失败时展示真实错误。
 - 所有可见字段均在 Harbor/OrnnLab/本机能力边界内；未知或不支持字段被 API 拒绝。
 - Given 用户选择任意可写父目录, when 下载 registry Dataset, then OrnnLab 在该目录创建唯一 Dataset 子目录、持久化路径并在后续列表和 New Job 中无感加载。
 - Given 已登记路径在外部丢失, when 用户查看 Dataset, then UI 显示路径不可用并提供重新定位或移除登记；不会伪装为已下载。

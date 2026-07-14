@@ -64,8 +64,8 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
   }
 
   const saveAgent = async (agent: AgentRow) => {
-    if (!writesEnabled) return
-    await agentOperation.submit(() => client.updateAgent(agent.id, agentRowToDto(agent)), ({ operation }) => operation)
+    if (!writesEnabled) return false
+    return agentOperation.submit(() => client.updateAgent(agent.id, agentRowToDto(agent)), ({ operation }) => operation)
   }
 
   return (
@@ -157,6 +157,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
         <DetailDrawer label={t('selectedAgent')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>
             <AgentDetail
+              key={detailAgent.id}
               agent={detailAgent}
               canSave={writesEnabled && !isOperationRunning(agentOperation.operation?.status)}
               t={t}
