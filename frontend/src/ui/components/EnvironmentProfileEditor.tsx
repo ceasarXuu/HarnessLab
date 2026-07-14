@@ -4,6 +4,7 @@ import type { MessageKey, Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
+import { SwitchControl } from './SwitchControl'
 import { TpuSpecControl } from './TpuSpecControl'
 
 type EnvironmentTab = 'base' | 'network' | 'advanced'
@@ -150,7 +151,7 @@ function EnvironmentFieldControl({
   const label = t(field.labelKey)
   const className = field.wide ? 'field-wide' : undefined
   if (field.kind === 'switch') {
-    return <label className={`switch-control ${className ?? ''}`}><span>{label}</span><input checked={Boolean(current)} type="checkbox" onChange={(event) => onChange(field.key, event.target.checked)} /></label>
+    return <SwitchControl checked={Boolean(current)} className={className} label={label} onChange={(checked) => onChange(field.key, checked)} />
   }
   if (field.kind === 'select') {
     return <label className={className}>{label}<CustomSelect ariaLabel={label} value={String(current)} options={(field.options ?? []).map((item) => ({ label: item, value: item }))} onChange={(nextValue) => onChange(field.key, nextValue)} /></label>

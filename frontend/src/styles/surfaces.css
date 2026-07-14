@@ -171,6 +171,10 @@ code {
   margin: 0;
   font-size: 13px;
 }
+.harness-parameter-grid .switch-control {
+  align-self: end;
+  height: 34px;
+}
 .directory-list-control .rule-list-row {
   align-items: center;
 }

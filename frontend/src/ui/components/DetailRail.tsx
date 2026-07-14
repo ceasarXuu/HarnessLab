@@ -3,6 +3,7 @@ import { FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-reac
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { Metric } from './Metric'
+import { SwitchControl } from './SwitchControl'
 
 interface DetailRailProps {
   writesEnabled?: boolean
@@ -50,15 +51,12 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
           <Metric label="job_dir" value={job.jobDir ?? 'jobs/current'} />
         </div>
         <div className="button-row tight job-action-row">
-          <label className="switch-control">
-            <span>{t('includeInLeaderboard')}</span>
-            <input
-              type="checkbox"
-              disabled={!writesEnabled}
-              checked={job.includeInLeaderboard}
-              onChange={(event) => onLeaderboardChange(job.id, event.target.checked)}
-            />
-          </label>
+          <SwitchControl
+            checked={job.includeInLeaderboard}
+            disabled={!writesEnabled}
+            label={t('includeInLeaderboard')}
+            onChange={(checked) => onLeaderboardChange(job.id, checked)}
+          />
         </div>
       </section>
 

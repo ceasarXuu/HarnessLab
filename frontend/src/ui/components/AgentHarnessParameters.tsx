@@ -1,6 +1,7 @@
 import type { AgentParameter, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { Metric } from './Metric'
+import { SwitchControl } from './SwitchControl'
 
 interface AgentHarnessParametersProps {
   readOnly?: boolean
@@ -54,15 +55,12 @@ function HarnessParameterInput({
 }) {
   if (parameter.kind === 'boolean') {
     return (
-      <label className="boolean-row">
-        <span>{parameter.label}</span>
-        <input
-          checked={value === 'true'}
-          disabled={readOnly}
-          type="checkbox"
-          onChange={(event) => onChange(event.target.checked)}
-        />
-      </label>
+      <SwitchControl
+        checked={value === 'true'}
+        disabled={readOnly}
+        label={parameter.label}
+        onChange={onChange}
+      />
     )
   }
   if (parameter.choices?.length) {

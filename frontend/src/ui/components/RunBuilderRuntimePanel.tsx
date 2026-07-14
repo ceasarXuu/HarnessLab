@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
 import { Field } from './RunBuilderChrome'
+import { SwitchControl } from './SwitchControl'
 
 interface RuntimePanelProps {
   draft: RunDraft
@@ -165,15 +166,12 @@ export function RunBuilderRuntimePanel({ draft, t, onDraft }: RuntimePanelProps)
       <section className="run-config-group">
         <div className="run-config-group-heading runtime-section-heading">
           <h3>{labels.retryGroup}</h3>
-          <label className="switch-control runtime-section-switch">
-            <span>{labels.retryEnabled}</span>
-            <input
-              aria-label={labels.retryEnabled}
-              checked={retryEnabled}
-              onChange={(event) => setRetryEnabled(event.target.checked)}
-              type="checkbox"
-            />
-          </label>
+          <SwitchControl
+            checked={retryEnabled}
+            className="runtime-section-switch"
+            label={labels.retryEnabled}
+            onChange={setRetryEnabled}
+          />
         </div>
         {retryEnabled && (
           <div className="run-grid">

@@ -57,7 +57,7 @@ describe('App', () => {
     expect(screen.queryByText('Hub actions')).not.toBeInTheDocument()
     expect(within(jobDialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
     expect(within(jobDialog).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
-    expect(within(jobDialog).getByRole('checkbox', { name: 'Include in leaderboard' })).toBeChecked()
+    expect(within(jobDialog).getByRole('switch', { name: 'Include in leaderboard' })).toBeChecked()
     expect(screen.queryByRole('button', { name: 'Summarize' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Open viewer' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Analyze' })).not.toBeInTheDocument()

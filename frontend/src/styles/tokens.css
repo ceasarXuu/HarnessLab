@@ -19,6 +19,7 @@
   --warning: #a16207;
   --danger: #b42318;
   --info: #2563eb;
+  --focus: #2563eb;
   --z-topbar: 20;
   --z-drawer: 40;
   --z-popover: 50;
@@ -40,4 +41,5 @@
   --topbar-bg: rgba(15, 15, 15, 0.96);
   --primary: #f5f5f5;
   --primary-foreground: #111111;
+  --focus: #60a5fa;
 }

@@ -8,6 +8,7 @@ import { EditableStringList } from './EditableStringList'
 import { FolderPathInput } from './FolderPathInput'
 import { KeyValueControl } from './KeyValueControl'
 import { Field, Toggle } from './RunBuilderChrome'
+import { SwitchControl } from './SwitchControl'
 import { Toast } from './Toast'
 import { TpuSpecControl } from './TpuSpecControl'
 
@@ -46,6 +47,7 @@ function ControlsFixture() {
           <Field label={t('includeInLeaderboard')}>
             <Toggle checked={enabled} onChange={setEnabled} />
           </Field>
+          <SwitchControl checked={enabled} label="Cache prompts" onChange={setEnabled} />
         </div>
       </section>
       <section className="surface rail-card">
@@ -174,7 +176,10 @@ export const FormControls: Story = {
     await expect(environment).toHaveTextContent('docker')
     const bounds = environment.getBoundingClientRect()
     await expect(bounds.width).toBeLessThanOrEqual(180)
-    await expect(canvas.getByRole('checkbox', { name: 'Network access' })).toBeChecked()
+    const cachePrompts = canvas.getByRole('switch', { name: 'Cache prompts' })
+    await expect(cachePrompts).toBeChecked()
+    await userEvent.click(cachePrompts)
+    await expect(cachePrompts).not.toBeChecked()
     await expect(canvas.getByLabelText('Allowed hosts 1')).toHaveValue('*')
   },
 }
