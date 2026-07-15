@@ -7,7 +7,7 @@ import type { WebUiClient } from '../api/webUiClient'
 import type { AgentRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { AgentIdentityEditor, AgentProfileEditor } from '../ui/components/AgentProfileEditor'
-import { OperationStatus } from '../ui/components/OperationStatus'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 
 interface NewAgentPageProps {
   canSave?: boolean
@@ -72,7 +72,7 @@ export function NewAgentPage({ canSave = true, client, initialHarness, rows, t, 
           <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
         </section>
       </div>
-      <OperationStatus error={agentOperation.error?.message} operation={agentOperation.operation} t={t} />
+      <ResourceStatus error={agentOperation.error?.message ?? null} />
     </main>
   )
 }

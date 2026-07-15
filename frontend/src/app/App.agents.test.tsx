@@ -107,6 +107,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
     await waitFor(() => expect(screen.queryByText('Local repair agent')).not.toBeInTheDocument(), { timeout: 2_000 })
+    expect(screen.queryByText('Operation completed')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     expect(await screen.findByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()

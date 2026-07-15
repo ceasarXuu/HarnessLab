@@ -8,7 +8,6 @@ import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import { agentModelNames } from '../domain/agentModels'
 import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
-import { OperationStatus } from '../ui/components/OperationStatus'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { getTranslator, type Locale } from '../i18n'
 import { JobsPage } from '../screens/JobsPage'
@@ -373,7 +372,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onLeaderboardChange={updateJobLeaderboardInclusion}
             onRemove={removeFromLeaderboard}
           />
-          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
+          <ResourceStatus error={jobOperation.error?.message ?? null} />
           <ResourceStatus
             error={datasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
             loading={datasetsResource.loading || leaderboardResource.loading}
@@ -406,7 +405,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             loading={jobSearchQuery ? jobSearchResource.loading : jobsResource.loading}
             loadingLabel={t('loadingJobs')}
           />
-          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
+          <ResourceStatus error={jobOperation.error?.message ?? null} />
         </>
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (
@@ -433,7 +432,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onLaunch={launchDraft}
             onReset={() => setDraft(defaultRunDraft)}
           />
-          <OperationStatus error={jobOperation.error?.message} operation={jobOperation.operation} t={t} />
+          <ResourceStatus error={jobOperation.error?.message ?? null} />
         </>
       )}
       {route.page === 'system' && (

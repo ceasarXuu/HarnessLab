@@ -7,7 +7,6 @@ import type { WebUiClient } from '../api/webUiClient'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { AgentDetail } from '../ui/components/AgentDetail'
-import { OperationStatus } from '../ui/components/OperationStatus'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { usePaginatedItems } from '../ui/pagination'
@@ -181,7 +180,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
           onConfirm={confirmDelete}
         />
       )}
-      <OperationStatus error={agentOperation.error?.message} operation={agentOperation.operation} t={t} />
+      <ResourceStatus error={agentOperation.error?.message ?? null} />
     </main>
   )
 }

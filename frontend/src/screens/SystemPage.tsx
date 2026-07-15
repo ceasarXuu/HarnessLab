@@ -4,8 +4,8 @@ import type { WebUiClient } from '../api/webUiClient'
 import type { SystemRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
-import { OperationStatus } from '../ui/components/OperationStatus'
 import { Pagination } from '../ui/components/Pagination'
+import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { Toast } from '../ui/components/Toast'
 import { usePaginatedItems } from '../ui/pagination'
 
@@ -190,7 +190,7 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
           onConfirm={confirmAndClose}
         />
       )}
-      <OperationStatus error={updateCheckError ?? systemOperation.error?.message} operation={systemOperation.operation} t={t} />
+      <ResourceStatus error={updateCheckError ?? systemOperation.error?.message ?? null} />
     </main>
   )
 }

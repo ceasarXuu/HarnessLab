@@ -358,7 +358,8 @@ describe('App', () => {
     const runButton = within(runBuilder as HTMLElement).getByRole('button', { name: 'Run job' })
     fireEvent.click(runButton)
 
-    expect(await screen.findByText(/Operation (queued|running|completed)/)).toBeInTheDocument()
+    await waitFor(() => expect(runButton).toBeEnabled())
+    expect(screen.queryByText(/Operation (queued|running|completed)/)).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'New Job' })).toBeInTheDocument()
   })
 

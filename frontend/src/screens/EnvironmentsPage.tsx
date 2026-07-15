@@ -10,7 +10,6 @@ import type { Translate } from '../i18n'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
 import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEditor'
-import { OperationStatus } from '../ui/components/OperationStatus'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { usePaginatedItems } from '../ui/pagination'
@@ -119,7 +118,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
           onCancel={() => onView('list')}
           onSave={saveNewTemplate}
         />
-        <OperationStatus error={environmentOperation.error?.message} operation={environmentOperation.operation} t={t} />
+        <ResourceStatus error={environmentOperation.error?.message ?? null} />
       </>
     )
   }
@@ -243,7 +242,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
           onConfirm={confirmDelete}
         />
       )}
-      <OperationStatus error={environmentOperation.error?.message} operation={environmentOperation.operation} t={t} />
+      <ResourceStatus error={environmentOperation.error?.message ?? null} />
     </main>
   )
 }
