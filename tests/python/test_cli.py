@@ -24,10 +24,10 @@ def test_backup_export_command_prints_archive_path(settings, capsys):
 
 
 def test_cleanup_plan_command_prints_candidates(settings, capsys):
-    (settings.generated_agents_dir / "stale-agent").mkdir(parents=True)
+    (settings.experiments_dir / "stale-run").mkdir(parents=True)
 
     assert main(["cleanup", "plan"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["candidate_count"] == 1
-    assert payload["candidates"][0]["type"] == "generated-agent"
+    assert payload["candidates"][0]["type"] == "experiment-artifact"

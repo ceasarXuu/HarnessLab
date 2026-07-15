@@ -182,8 +182,8 @@ def test_health_endpoint_probe_bypasses_system_proxy(monkeypatch):
             self.end_headers()
             self.wfile.write(b"ok")
 
-        def log_message(self, _format, *args):
-            return
+        def log_message(self, format: str, *args: object) -> None:
+            del format, args
 
     server = HTTPServer(("127.0.0.1", 0), Handler)
     thread = Thread(target=server.serve_forever, daemon=True)

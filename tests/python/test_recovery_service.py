@@ -2,28 +2,20 @@ import json
 
 from ornnlab.app import create_app
 from ornnlab.models.experiment import ExperimentCreate
-from ornnlab.services.agent_service import AgentService
 from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.report_service import ReportService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+from tests.python.support import create_test_agent
 
 
 def _create_running_run(
     settings: Settings,
     with_result: bool,
 ) -> tuple[str, str]:
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     created = ExperimentService(settings).create(
         ExperimentCreate(
             name="Recovery", agent_ids=["oracle"], benchmark_names=["terminal-bench"], n_tasks=1

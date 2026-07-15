@@ -14,7 +14,7 @@ from ornnlab.storage import sqlite
 
 def test_backup_export_excludes_exports_and_restores_into_empty_home(settings, tmp_path):
     sqlite.initialize(settings)
-    (settings.agents_dir / "oracle.toml").write_text("name = 'Oracle'\n", encoding="utf-8")
+    (settings.logs_dir / "ornnlab.log").write_text("started\n", encoding="utf-8")
     (settings.exports_dir / "old-backup.tar.gz").write_text("skip me", encoding="utf-8")
     archive_path = settings.exports_dir / "backup.tar.gz"
 
@@ -27,7 +27,7 @@ def test_backup_export_excludes_exports_and_restores_into_empty_home(settings, t
         assert manifest_handle is not None
         manifest = json.loads(manifest_handle.read().decode("utf-8"))
     assert MANIFEST_NAME in names
-    assert "agents/oracle.toml" in names
+    assert "logs/ornnlab.log" in names
     assert "exports/old-backup.tar.gz" not in names
     assert manifest["schema_version"] == 1
 
@@ -35,9 +35,7 @@ def test_backup_export_excludes_exports_and_restores_into_empty_home(settings, t
     imported = BackupService(Settings(home=restored_home)).import_home(archive_path)
 
     assert imported["file_count"] == exported["file_count"]
-    assert (restored_home / "agents" / "oracle.toml").read_text(encoding="utf-8") == (
-        "name = 'Oracle'\n"
-    )
+    assert (restored_home / "logs" / "ornnlab.log").read_text(encoding="utf-8") == "started\n"
     assert (restored_home / "ornnlab.sqlite").exists()
 
 

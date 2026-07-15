@@ -4,16 +4,16 @@ import sys
 from types import SimpleNamespace
 
 from ornnlab.models.experiment import ExperimentCreate
-from ornnlab.services.agent_service import AgentService
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.webui_system_service import _choose_native_directory
+from tests.python.support import create_test_agent
 
 
 def test_system_status_reports_core_fields(settings):
     payload = DoctorService(settings).status()
 
-    assert payload["db_schema_version"] == 5
+    assert payload["db_schema_version"] == 6
     assert payload["data_dir"]
     assert payload["stale_running_runs"] == 0
     assert "docker" in payload
@@ -67,7 +67,7 @@ def test_system_docker_orphans_returns_cleanup_plan(settings, monkeypatch, tmp_p
 
 
 def test_system_doctor_logs_reports_latest_failed_run(settings):
-    AgentService(settings).create(_oracle_payload())
+    create_test_agent(settings)
     created = ExperimentService(settings).create(
         ExperimentCreate(
             name="Failure",
@@ -108,13 +108,3 @@ def _docker_script(tmp_path, container_id: str):
         encoding="utf-8",
     )
     return script
-
-
-def _oracle_payload() -> dict:
-    return {
-        "schema_version": 2,
-        "id": "oracle",
-        "name": "Oracle",
-        "kind": "oracle",
-        "harbor": {"agent": "oracle"},
-    }

@@ -31,14 +31,6 @@ class Settings:
         return self.home / "logs"
 
     @property
-    def agents_dir(self) -> Path:
-        return self.home / "agents"
-
-    @property
-    def generated_agents_dir(self) -> Path:
-        return self.home / "generated-agents"
-
-    @property
     def experiments_dir(self) -> Path:
         return self.home / "experiments"
 
@@ -67,8 +59,6 @@ class Settings:
         for path in [
             self.home,
             self.logs_dir,
-            self.agents_dir,
-            self.generated_agents_dir,
             self.experiments_dir,
             self.datasets_dir,
             self.exports_dir,

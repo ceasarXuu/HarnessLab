@@ -69,7 +69,7 @@ Implemented v1.0.5 WebUI foundation:
 - `ornnlab web` / `python -m ornnlab web` backend entrypoint
 - `/api/webui/v1` unified envelope for Jobs, Datasets, Agents, Environments, Leaderboard, System and Operations
 - SQLite migration and local `~/.ornnlab/data` data directory initialization
-- AgentProfile v2 validation and Harbor agent config compilation
+- Canonical Agent template storage compiled directly to Harbor `AgentConfig`
 - managed Harbor subprocess execution as the default engine path
 - cancellation cleanup evidence and doctor diagnostics for the Harbor engine
 - Docker orphan doctor scan with dry-run cleanup plans

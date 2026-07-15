@@ -44,6 +44,8 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 include = ["ornnlab", "tests/python"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
+venv = ".venv"
+venvPath = "."
 
 [tool.hatch.build.targets.wheel]
 packages = ["ornnlab"]

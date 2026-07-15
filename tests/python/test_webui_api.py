@@ -84,6 +84,20 @@ def test_webui_agent_and_environment_crud(client):
     built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
     assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
 
+    qwen_agent = client.get(f"{API}/agents/built-in:qwen-coder").json()["data"]
+    qwen_parameters = {
+        item["key"]: item for item in qwen_agent["capabilities"]["parameters"]
+    }
+    assert qwen_parameters["api_key"]["source"] == "kwarg"
+    assert qwen_parameters["base_url"]["source"] == "kwarg"
+
+    openhands_agent = client.get(f"{API}/agents/built-in:openhands").json()["data"]
+    openhands_parameters = {
+        item["key"]: item for item in openhands_agent["capabilities"]["parameters"]
+    }
+    assert openhands_parameters["reasoning_effort"]["source"] == "kwarg"
+    assert openhands_parameters["temperature"]["source"] == "kwarg"
+
     built_in_update = _built_in_agent_payload("claude-code")
     built_in_update["agentName"] = "Claude reusable profile"
     built_in_update["models"] = ["claude-haiku-4-5", "claude-sonnet-4-5"]
@@ -127,7 +141,9 @@ def test_agent_environment_variables_preserve_inherited_and_fixed_values(client,
     }
 
 
-def test_agent_environment_variable_inheritance_resolves_without_logging_values(monkeypatch, caplog):
+def test_agent_environment_variable_inheritance_resolves_without_logging_values(
+    monkeypatch, caplog
+):
     monkeypatch.setenv("AVAILABLE_TOKEN", "private-value")
 
     resolved = _resolve_env({"AVAILABLE_TOKEN": None, "MISSING_TOKEN": None})

@@ -1,29 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 from uuid import uuid4
 
-from ornnlab.models.agent import (
-    AgentProfile,
-    AuthProfile,
-    HarborProfile,
-    McpProfile,
-    RuntimeProfile,
-    SkillsProfile,
-)
 from ornnlab.models.webui import AgentInput, EnvironmentInput
 from ornnlab.services.agent_capabilities import custom_agent_capabilities
-from ornnlab.services.agent_service import AgentService
 from ornnlab.services.clock import now_iso
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+
+logger = logging.getLogger(__name__)
 
 
 class WebUiProfileService:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.agents = AgentService(settings)
 
     def list_agents(
         self, query: str | None = None, profile_type: str | None = None, status: str | None = None
@@ -44,7 +37,7 @@ class WebUiProfileService:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
-                "SELECT config_json FROM webui_agent_configs WHERE agent_id = ?",
+                "SELECT config_json FROM agents WHERE id = ? AND status = 'active'",
                 (agent_id,),
             )
         if rows:
@@ -66,7 +59,7 @@ class WebUiProfileService:
         self._assert_custom_agent_id(payload.id)
         agent = _agent_dto(payload)
         self._validate_agent(agent)
-        self._write_agent_profile(agent, create=True)
+        self._write_agent_config(agent, create=True)
         return agent
 
     def update_agent(self, agent_id: str, payload: AgentInput) -> dict:
@@ -79,20 +72,28 @@ class WebUiProfileService:
             raise ValueError("built-in Harness cannot be changed")
         agent = _agent_dto(payload)
         self._validate_agent(agent)
-        self._write_agent_profile(agent, create=not self._agent_is_persisted(agent_id))
+        self._write_agent_config(agent, create=not self._agent_is_persisted(agent_id))
         return agent
 
     def ensure_agent_persisted(self, agent: dict) -> dict:
         if not self._agent_is_persisted(agent["id"]):
             self._validate_agent(agent)
-            self._write_agent_profile(agent, create=True)
+            self._write_agent_config(agent, create=True)
         return self.get_agent(agent["id"])
 
     def delete_agent(self, agent_id: str) -> None:
         self._assert_deletable_agent(agent_id)
-        self.agents.soft_delete(agent_id)
         with sqlite.connect(self.settings) as conn:
-            conn.execute("DELETE FROM webui_agent_configs WHERE agent_id = ?", (agent_id,))
+            active_runs = conn.execute(
+                "SELECT COUNT(*) FROM runs WHERE agent_id = ? AND status IN ('queued', 'running')",
+                (agent_id,),
+            ).fetchone()[0]
+            if active_runs:
+                raise RuntimeError("agent has queued or running runs")
+            conn.execute(
+                "UPDATE agents SET status = 'deleted', updated_at = ? WHERE id = ?",
+                (now_iso(), agent_id),
+            )
 
     def agent_harbor_config(self, agent: dict, model_name: str | None = None) -> dict:
         config: dict = {
@@ -231,36 +232,43 @@ class WebUiProfileService:
             config["type"] = environment["environmentType"]
         return {key: value for key, value in config.items() if value not in (None, "", [], {})}
 
-    def _write_agent_profile(self, agent: dict, create: bool) -> None:
-        profile = AgentProfile(
-            schema_version=2,
-            id=agent["id"],
-            name=agent["agentName"],
-            kind=agent["harness"],
-            harbor=HarborProfile(
-                agent=agent["harness"],
-                model=_first(agent["models"]),
-                kwargs=_parse_kwargs(agent["kwargs"]),
-            ),
-            auth=AuthProfile(
-                inherit_env=[entry["key"] for entry in agent["env"] if entry.get("value") is None]
-            ),
-            skills=SkillsProfile(paths=agent["skillSources"]),
-            mcp=McpProfile(config_paths=[]),
-            runtime=RuntimeProfile(
-                agent_timeout_sec=agent.get("timeoutSeconds") or 3600,
-                setup_timeout_sec=agent.get("setupTimeoutSeconds") or 600,
-            ),
-        )
-        if create:
-            self.agents.create(profile.model_dump())
-        else:
-            self.agents.update(agent["id"], profile.model_dump())
+    def _write_agent_config(self, agent: dict, create: bool) -> None:
+        now = now_iso()
         with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO webui_agent_configs(agent_id, config_json) VALUES (?, ?)",
-                (agent["id"], json.dumps(agent)),
-            )
+            if create:
+                conn.execute(
+                    "INSERT INTO agents(id, name, harness, profile_type, status, config_json, "
+                    "created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)",
+                    (
+                        agent["id"],
+                        agent["agentName"],
+                        agent["harness"],
+                        agent["type"],
+                        json.dumps(agent),
+                        now,
+                        now,
+                    ),
+                )
+            else:
+                conn.execute(
+                    "UPDATE agents SET name = ?, harness = ?, config_json = ?, status = 'active', "
+                    "updated_at = ? WHERE id = ?",
+                    (
+                        agent["agentName"],
+                        agent["harness"],
+                        json.dumps(agent),
+                        now,
+                        agent["id"],
+                    ),
+                )
+        logger.info(
+            "Agent template persisted",
+            extra={
+                "agent_id": agent["id"],
+                "harness": agent["harness"],
+                "operation": "create" if create else "update",
+            },
+        )
 
     def _assert_custom_agent_id(self, agent_id: str) -> None:
         if agent_id.startswith("built-in:"):
@@ -277,11 +285,10 @@ class WebUiProfileService:
         self.get_agent(agent_id)
 
     def _agent_is_persisted(self, agent_id: str) -> bool:
-        try:
-            self.agents.get(agent_id)
-        except KeyError:
-            return False
-        return True
+        with sqlite.connect(self.settings) as conn:
+            return conn.execute(
+                "SELECT 1 FROM agents WHERE id = ? AND status = 'active'", (agent_id,)
+            ).fetchone() is not None
 
     def _assert_mutable_environment(self, environment_id: str) -> None:
         if environment_id.startswith("built-in:"):
@@ -297,8 +304,7 @@ class WebUiProfileService:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
-                "SELECT config_json FROM webui_agent_configs JOIN agents ON agents.id = agent_id "
-                "WHERE agents.status != 'deleted'",
+                "SELECT config_json FROM agents WHERE status = 'active'",
             )
         return [_configured_agent(json.loads(row["config_json"])) for row in rows]
 
@@ -321,7 +327,9 @@ class WebUiProfileService:
             raise ValueError("harness must be a built-in Harbor AgentName or use importPath")
         config = self.agent_harbor_config(agent)
         if "env" in config:
-            config["env"] = {key: value for key, value in config["env"].items() if value is not None}
+            config["env"] = {
+                key: value for key, value in config["env"].items() if value is not None
+            }
         AgentConfig.model_validate(config)
 
     def _validate_environment(self, environment: dict) -> None:

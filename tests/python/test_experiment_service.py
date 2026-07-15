@@ -5,10 +5,10 @@ import json
 from pathlib import Path
 
 from ornnlab.models.experiment import ExperimentCreate
-from ornnlab.services.agent_service import AgentService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.leaderboard_service import LeaderboardService
 from ornnlab.services.template_service import TemplateService
+from tests.python.support import create_test_agent
 
 
 def test_experiment_create_and_run_through_harbor_subprocess(settings):
@@ -109,15 +109,7 @@ def test_events_delete_clone_and_template_services(settings):
 
 
 def _create_agent(settings) -> None:
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
 
 
 def _request(name: str, benchmarks: list[str], n_tasks: int | None = None) -> ExperimentCreate:

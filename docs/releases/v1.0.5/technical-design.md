@@ -54,7 +54,7 @@ flowchart LR
 | 资源 | OrnnLab 持久化 | Harbor 真实对象/字段 |
 |---|---|---|
 | Job | `runs`、`experiments`、`webui_job_configs` | `JobConfig` overrides、队列与 Harbor job 目录 |
-| Agent | `agents`、`webui_agent_configs` | `AgentConfig`: `name`/`import_path`、model、env、kwargs、skills、MCP、超时 |
+| Agent | `agents.config_json`（唯一配置源） | `AgentConfig`: `name`/`import_path`、model、env、kwargs、skills、MCP、超时 |
 | Environment | `webui_environment_profiles` | `EnvironmentConfig`: type/import path、资源 policy/override、mounts、compose、env、kwargs、allowed hosts |
 | Dataset | `webui_datasets`、`webui_dataset_preferences`、`webui_dataset_downloads` | Dataset 列表、导入、任意父目录下载、移动、重新定位、同步、删除本地数据 |
 | Operation | `webui_operations` | OrnnLab 异步任务与状态，而非虚构 Harbor 资源 |
@@ -74,6 +74,9 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - New Job 必须从所选 Agent 的 `models` 中选择一个 `modelName`。后端校验 `modelName in agent.models`，将选择保存在 Job 配置快照中，并以该值覆盖 Harbor `AgentConfig.model_name`；禁止默认取列表首项或接受集合外模型。
 - Agent 资源是 OrnnLab 对 Harbor 运行参数的可复用配置层。运行时从 Harbor `AgentName` 生成的 built-in 记录是系统预置 Agent：可编辑名称及该 Harness 支持的配置字段，可直接用于 Job，但不能删除或更换 Harness。首次保存或首次用于 Job 时，后端以相同 ID 将其物化到 OrnnLab Agent 存储，不修改 Harbor 源码或枚举。
 - 自定义 Agent 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。详情只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。列表合并运行时预置项和已物化配置，以持久化配置覆盖同 ID 默认值。
+- `agents.config_json` 是 Agent 模板的唯一持久化配置源。运行时直接将其编译为 Harbor `AgentConfig`；不再生成或读取旧 AgentProfile 文件，不再维护 ProfileCompiler、generated-agent 目录或第二张 WebUI 配置表。
+- Harness 专属参数优先从 Harbor `CLI_FLAGS`、`ENV_VARS` descriptor 读取合法类型、枚举与默认值，统一作为构造 `kwargs` 传给 Harbor。`ENV_VARS` descriptor 的 `kwarg` 是 Harbor 的配置入口，其 `env`/`env_fallback` 只是 Harness 内部映射，前端不得把 `api_key` 等 kwarg 误写成同名容器环境变量。
+- Agent 不配置网络白名单。OrnnLab 将网络策略统一收敛到 Environment 模板；这是产品边界裁剪，不映射 Harbor `AgentConfig.extra_allowed_hosts`。
 - Harness 通用能力全集包括 model、env、kwargs、Skills、MCP servers、执行/启动/最大超时；Harness 专属参数通过结构化 capability 定义选择框、数字、开关或文本交互。网络访问继续归 Environment 管理，MCP 不承担安装或容器部署编排。
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。

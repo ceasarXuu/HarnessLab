@@ -6,12 +6,12 @@ from fastapi.testclient import TestClient
 
 from ornnlab.app import create_app
 from ornnlab.models.experiment import ExperimentCreate
-from ornnlab.services.agent_service import AgentService
 from ornnlab.services.clock import now_iso
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.worker_service import QueueWorkerService
 from ornnlab.storage import sqlite
+from tests.python.support import create_test_agent
 
 
 @pytest.fixture
@@ -21,15 +21,7 @@ def anyio_backend():
 
 def test_app_startup_drains_persisted_queue(settings):
     sqlite.initialize(settings)
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     service = ExperimentService(settings)
     created = service.create(
         ExperimentCreate(
@@ -55,15 +47,7 @@ def test_app_startup_drains_persisted_queue(settings):
 @pytest.mark.anyio
 async def test_queue_worker_drains_persisted_fifo(settings):
     sqlite.initialize(settings)
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     service = ExperimentService(settings)
     first = service.create(
         ExperimentCreate(
@@ -97,15 +81,7 @@ async def test_queue_worker_drains_persisted_fifo(settings):
 @pytest.mark.anyio
 async def test_running_cancel_is_not_overwritten_by_worker(settings):
     sqlite.initialize(settings)
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     service = ExperimentService(settings)
     created = service.create(
         ExperimentCreate(
@@ -150,15 +126,7 @@ async def test_running_cancel_is_not_overwritten_by_worker(settings):
 @pytest.mark.anyio
 async def test_mark_run_running_does_not_overwrite_cancelled_status(settings):
     sqlite.initialize(settings)
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     service = ExperimentService(settings)
     created = service.create(
         ExperimentCreate(
@@ -209,15 +177,7 @@ async def test_wait_experiment_terminal_returns_immediately_when_no_runs(setting
 @pytest.mark.anyio
 async def test_reconcile_startup_does_not_duplicate_running_runs(settings):
     sqlite.initialize(settings)
-    AgentService(settings).create(
-        {
-            "schema_version": 2,
-            "id": "oracle",
-            "name": "Oracle",
-            "kind": "oracle",
-            "harbor": {"agent": "oracle"},
-        }
-    )
+    create_test_agent(settings)
     service = ExperimentService(settings)
     created = service.create(
         ExperimentCreate(

@@ -23,7 +23,7 @@ def agent_capabilities(harness: str, *, custom_profile: bool = False) -> dict[st
         fields.add("skills")
     if harness in _MCP_HARNESSES or harness == "custom-harness":
         fields.add("mcpServers")
-    parameters = list(_PARAMETERS_BY_HARNESS.get(harness, []))
+    parameters = _parameters_for_harness(harness)
     if harness == "custom-harness":
         parameters = []
         fields.update({"modelName", "skills", "mcpServers", "harnessParameters"})
@@ -54,6 +54,47 @@ def _param(
     if default is not None:
         payload["defaultValue"] = default
     return payload
+
+
+def _parameters_for_harness(harness: str) -> list[dict[str, Any]]:
+    configured = {item["key"]: item for item in _PARAMETERS_BY_HARNESS.get(harness, [])}
+    descriptors = _harbor_descriptor_parameters(harness)
+    merged: dict[str, dict[str, Any]] = {}
+    for key in configured.keys() | descriptors.keys():
+        manual = configured.get(key, {})
+        descriptor = descriptors.get(key, {})
+        merged[key] = {
+            **manual,
+            **descriptor,
+            "label": manual.get("label", descriptor.get("label", key.replace("_", " ").title())),
+        }
+    return [merged[key] for key in sorted(merged)]
+
+
+def _harbor_descriptor_parameters(harness: str) -> dict[str, dict[str, Any]]:
+    from harbor.agents.factory import AgentFactory
+
+    agent_class = next((item for item in AgentFactory._AGENTS if item.name() == harness), None)
+    if agent_class is None:
+        return {}
+    parameters: dict[str, dict[str, Any]] = {}
+    for descriptor in [
+        *getattr(agent_class, "CLI_FLAGS", []),
+        *getattr(agent_class, "ENV_VARS", []),
+    ]:
+        kind = {"bool": "boolean", "int": "number", "float": "number"}.get(
+            descriptor.type, "text"
+        )
+        parameters[descriptor.kwarg] = _param(
+            descriptor.kwarg,
+            descriptor.kwarg.replace("_", " ").title(),
+            kind=kind,
+            choices=list(descriptor.choices or []),
+            default=descriptor.default,
+            # BaseInstalledAgent resolves both CLI_FLAGS and ENV_VARS from constructor kwargs.
+            source="kwarg",
+        )
+    return parameters
 
 
 _MCP_HARNESSES = {
@@ -191,13 +232,7 @@ _PARAMETERS_BY_HARNESS: dict[str, list[dict[str, Any]]] = {
         _param("config_file", "Config file"),
         _param("workflow_package", "Workflow package"),
         _param("nat_repo", "NAT repo"),
-        _param(
-            "verbose",
-            "Log level",
-            choices=["debug", "info", "warning", "error"],
-            default="warning",
-            source="env",
-        ),
+        _param("verbose", "Log level", choices=["debug", "info", "warning", "error"]),
     ],
     "openclaw": [
         _param("openclaw_agent_id", "OpenClaw agent ID", default="main"),
@@ -207,15 +242,15 @@ _PARAMETERS_BY_HARNESS: dict[str, list[dict[str, Any]]] = {
     "opencode": [_param("variant", "Variant")],
     "openhands": [
         _param("disable_tool_calls", "Disable tool calls", kind="boolean"),
-        _param("reasoning_effort", "Reasoning effort", default="high", source="env"),
-        _param("temperature", "Temperature", source="env"),
-        _param("max_iterations", "Max iterations", kind="number", source="env"),
-        _param("caching_prompt", "Caching prompt", kind="boolean", source="env"),
-        _param("top_p", "Top P", source="env"),
-        _param("num_retries", "Retry count", kind="number", source="env"),
-        _param("max_budget_per_task", "Max budget per task", source="env"),
-        _param("drop_params", "Drop params", kind="boolean", source="env"),
-        _param("disable_vision", "Disable vision", kind="boolean", source="env"),
+        _param("reasoning_effort", "Reasoning effort", default="high"),
+        _param("temperature", "Temperature"),
+        _param("max_iterations", "Max iterations", kind="number"),
+        _param("caching_prompt", "Caching prompt", kind="boolean"),
+        _param("top_p", "Top P"),
+        _param("num_retries", "Retry count", kind="number"),
+        _param("max_budget_per_task", "Max budget per task"),
+        _param("drop_params", "Drop params", kind="boolean"),
+        _param("disable_vision", "Disable vision", kind="boolean"),
     ],
     "openhands-sdk": [
         _param("reasoning_effort", "Reasoning effort", default="high"),
@@ -233,8 +268,8 @@ _PARAMETERS_BY_HARNESS: dict[str, list[dict[str, Any]]] = {
         )
     ],
     "qwen-coder": [
-        _param("api_key", "API key environment value", source="env"),
-        _param("base_url", "Base URL", source="env"),
+        _param("api_key", "API key environment value"),
+        _param("base_url", "Base URL"),
     ],
     "rovodev-cli": [_param("max_thinking_tokens", "Max thinking tokens", kind="number")],
     "swe-agent": [

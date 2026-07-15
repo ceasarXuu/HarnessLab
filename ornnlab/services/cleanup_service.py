@@ -15,10 +15,7 @@ class CleanupService:
 
     def plan(self) -> dict[str, Any]:
         sqlite.initialize(self.settings)
-        candidates = [
-            *self._stale_generated_agents(),
-            *self._orphan_experiment_artifacts(),
-        ]
+        candidates = self._orphan_experiment_artifacts()
         return {
             "candidate_count": len(candidates),
             "candidates": candidates,
@@ -42,27 +39,6 @@ class CleanupService:
             "archive_dir": str(destination_root),
             "archived": archived,
         }
-
-    def _stale_generated_agents(self) -> list[dict[str, Any]]:
-        self.settings.generated_agents_dir.mkdir(parents=True, exist_ok=True)
-        with sqlite.connect(self.settings) as conn:
-            active_ids = {
-                row["id"]
-                for row in sqlite.rows(conn, "SELECT id FROM agents WHERE status != 'deleted'")
-            }
-        candidates: list[dict[str, Any]] = []
-        for path in sorted(self.settings.generated_agents_dir.iterdir()):
-            if not path.is_dir() or path.name in active_ids:
-                continue
-            candidates.append(
-                {
-                    "type": "generated-agent",
-                    "path": str(path),
-                    "reason": "no_active_agent_row",
-                    "recoverable": True,
-                }
-            )
-        return candidates
 
     def _orphan_experiment_artifacts(self) -> list[dict[str, Any]]:
         self.settings.experiments_dir.mkdir(parents=True, exist_ok=True)
