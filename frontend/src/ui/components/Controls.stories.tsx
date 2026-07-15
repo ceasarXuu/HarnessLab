@@ -259,6 +259,7 @@ export const KnownEnvironmentVariables: StoryObj<typeof KnownEnvironmentVariable
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add variable Agent environment' }))
+    await expect(canvas.getByRole('button', { name: 'Value source' })).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Variable name' }))
     await expect(canvas.getByRole('option', { name: 'OPENAI_API_KEY' })).toBeVisible()
     await expect(canvas.getByRole('option', { name: 'Custom variable' })).toBeVisible()

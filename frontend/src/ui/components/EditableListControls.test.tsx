@@ -46,9 +46,10 @@ describe('editable list controls', () => {
   it('serializes inherited and fixed environment variable values distinctly', () => {
     render(<InheritedKeyValueFixture />)
 
-    expect(screen.getByRole('combobox', { name: 'Value source' })).toHaveValue('inherited')
+    expect(screen.getByRole('button', { name: 'Value source' })).toHaveTextContent('Inherit system variable')
     expect(screen.getByRole('textbox', { name: 'Value' })).toBeDisabled()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Value source' }), { target: { value: 'literal' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Value source' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Fixed value' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Value' }), { target: { value: 'secret-reference' } })
 
     expect(screen.getByTestId('serialized-env')).toHaveTextContent('API_KEY=secret-reference')
@@ -58,6 +59,8 @@ describe('editable list controls', () => {
     render(<KnownEnvironmentFixture />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Add variable Environment' }))
+    expect(screen.getByRole('button', { name: 'Value source' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Value source' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Variable name' }))
     fireEvent.click(screen.getByRole('option', { name: 'OPENAI_API_KEY' }))
     expect(screen.getByTestId('serialized-known-env')).toHaveTextContent('OPENAI_API_KEY')

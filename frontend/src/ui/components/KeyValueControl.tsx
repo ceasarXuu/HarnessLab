@@ -119,17 +119,18 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
             {allowInherited && (
               <label>
                 <span className={compact ? 'visually-hidden' : undefined}>{labels.source}</span>
-                <select
-                  aria-label={compact ? labels.source : undefined}
+                <CustomSelect
+                  ariaLabel={labels.source ?? ''}
                   disabled={readOnly}
+                  options={[
+                    { label: labels.inherited ?? '', value: 'inherited' },
+                    { label: labels.literal ?? '', value: 'literal' },
+                  ]}
                   value={row.inherited ? 'inherited' : 'literal'}
-                  onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index
-                    ? { ...item, inherited: event.target.value === 'inherited' }
+                  onChange={(nextValue) => commit(rows.map((item, rowIndex) => rowIndex === index
+                    ? { ...item, inherited: nextValue === 'inherited' }
                     : item))}
-                >
-                  <option value="inherited">{labels.inherited}</option>
-                  <option value="literal">{labels.literal}</option>
-                </select>
+                />
               </label>
             )}
             <label>
