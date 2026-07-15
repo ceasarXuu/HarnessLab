@@ -97,6 +97,7 @@ export function AgentProfileEditor({
                     <KeyValueControl
                       allowInherited
                       compact
+                      keyOptions={capabilities.environmentVariables}
                       readOnly={readOnly}
                       label={t('genericAgentEnv')}
                       labels={envKeyValueLabels(t)}
@@ -346,10 +347,12 @@ function defaultKeyValueLabels(t: Translate) {
 function envKeyValueLabels(t: Translate) {
   return {
     add: t('add'),
+    customKey: t('customEnvironmentVariable'),
     delete: t('delete'),
     inherited: t('envSourceInherited'),
     key: t('envKey'),
     literal: t('envSourceLiteral'),
+    searchKeys: t('searchEnvironmentVariables'),
     source: t('envValueSource'),
     value: t('envValue'),
   }

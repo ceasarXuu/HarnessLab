@@ -121,6 +121,8 @@ export const zhMessages = {
     topologyZ: '拓扑 Z',
     notConfigured: '未配置',
     environmentVariables: '环境变量',
+    customEnvironmentVariable: '自定义变量',
+    searchEnvironmentVariables: '搜索变量',
     forceBuild: '强制重建',
     deleteAfterRun: '运行后删除环境',
     memoryPolicy: '内存策略',

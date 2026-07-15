@@ -119,6 +119,8 @@ export const enMessages = {
     topologyZ: 'Topology Z',
     notConfigured: 'Not configured',
     environmentVariables: 'Environment variables',
+    customEnvironmentVariable: 'Custom variable',
+    searchEnvironmentVariables: 'Search variables',
     forceBuild: 'Force rebuild',
     deleteAfterRun: 'Delete environment after run',
     memoryPolicy: 'Memory policy',

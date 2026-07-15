@@ -12,6 +12,7 @@ const fullFields: AgentCapabilityField[] = [
 
 export function fallbackAgentCapabilities(): AgentCapabilities {
   return {
+    environmentVariables: [],
     parameters: [],
     supportedFields: [...fullFields],
   }

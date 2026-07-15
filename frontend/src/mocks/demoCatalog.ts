@@ -185,11 +185,13 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
 })
 
 const customAgentCapabilities: AgentCapabilities = {
+  environmentVariables: [],
   parameters: [],
   supportedFields: ['customKwargs', 'env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
 }
 
 const claudeCodeCapabilities: AgentCapabilities = {
+  environmentVariables: ['MAX_THINKING_TOKENS'],
   parameters: [
     { key: 'max_turns', kind: 'number', label: 'Max turns', source: 'kwarg' },
     { choices: ['low', 'medium', 'high', 'xhigh', 'max'], key: 'reasoning_effort', kind: 'select', label: 'Reasoning effort', source: 'kwarg' },
@@ -199,6 +201,7 @@ const claudeCodeCapabilities: AgentCapabilities = {
 }
 
 const codexCapabilities: AgentCapabilities = {
+  environmentVariables: [],
   parameters: [
     { defaultValue: 'high', key: 'reasoning_effort', kind: 'text', label: 'Reasoning effort', source: 'kwarg' },
     { choices: ['auto', 'concise', 'detailed', 'none'], key: 'reasoning_summary', kind: 'select', label: 'Reasoning summary', source: 'kwarg' },
@@ -207,6 +210,7 @@ const codexCapabilities: AgentCapabilities = {
 }
 
 const oracleCapabilities: AgentCapabilities = {
+  environmentVariables: [],
   parameters: [],
   supportedFields: ['customKwargs', 'env', 'timeouts'],
 }

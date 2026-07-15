@@ -85,18 +85,24 @@ def test_webui_agent_and_environment_crud(client):
     assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
 
     qwen_agent = client.get(f"{API}/agents/built-in:qwen-coder").json()["data"]
+    assert qwen_agent["capabilities"]["environmentVariables"] == [
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+    ]
     qwen_parameters = {
         item["key"]: item for item in qwen_agent["capabilities"]["parameters"]
     }
-    assert qwen_parameters["api_key"]["source"] == "kwarg"
-    assert qwen_parameters["base_url"]["source"] == "kwarg"
+    assert "api_key" not in qwen_parameters
+    assert "base_url" not in qwen_parameters
 
     openhands_agent = client.get(f"{API}/agents/built-in:openhands").json()["data"]
     openhands_parameters = {
         item["key"]: item for item in openhands_agent["capabilities"]["parameters"]
     }
-    assert openhands_parameters["reasoning_effort"]["source"] == "kwarg"
-    assert openhands_parameters["temperature"]["source"] == "kwarg"
+    assert "reasoning_effort" not in openhands_parameters
+    assert "temperature" not in openhands_parameters
+    assert "LLM_REASONING_EFFORT" in openhands_agent["capabilities"]["environmentVariables"]
+    assert "LLM_TEMPERATURE" in openhands_agent["capabilities"]["environmentVariables"]
 
     built_in_update = _built_in_agent_payload("claude-code")
     built_in_update["agentName"] = "Claude reusable profile"
@@ -136,7 +142,7 @@ def test_agent_environment_variables_preserve_inherited_and_fixed_values(client,
     agent = client.get(f"{API}/agents/oracle-profile").json()["data"]
     assert agent["env"] == payload["env"]
     assert WebUiProfileService(settings).agent_harbor_config(agent)["env"] == {
-        "INHERITED_TOKEN": None,
+        "INHERITED_TOKEN": "${INHERITED_TOKEN}",
         "API_BASE_URL": "https://example.test",
     }
 

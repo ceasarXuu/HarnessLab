@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { CustomSelect } from './CustomSelect'
 
 interface KeyValueControlProps {
   label: string
@@ -9,10 +10,13 @@ interface KeyValueControlProps {
   compact?: boolean
   readOnly?: boolean
   allowInherited?: boolean
+  keyOptions?: string[]
   labels: {
     add: string
+    customKey?: string
     delete: string
     key: string
+    searchKeys?: string
     value: string
     source?: string
     inherited?: string
@@ -21,16 +25,21 @@ interface KeyValueControlProps {
 }
 
 interface KeyValueRow {
+  customKey: boolean
   key: string
   value: string
   inherited: boolean
 }
 
-export function KeyValueControl({ label, value, onChange, className, compact = false, readOnly = false, allowInherited = false, labels }: KeyValueControlProps) {
-  const [rows, setRows] = useState(() => parseRows(value))
+const customKeyValue = '__ornnlab_custom_environment_variable__'
+const noKeyOptions: string[] = []
+
+export function KeyValueControl({ label, value, onChange, className, compact = false, readOnly = false, allowInherited = false, keyOptions = noKeyOptions, labels }: KeyValueControlProps) {
+  const keyOptionsSignature = keyOptions.join('\n')
+  const [rows, setRows] = useState(() => parseRows(value, keyOptions))
   useEffect(() => {
-    setRows(parseRows(value))
-  }, [value])
+    setRows(parseRows(value, keyOptionsSignature ? keyOptionsSignature.split('\n') : noKeyOptions))
+  }, [keyOptionsSignature, value])
 
   const commit = (nextRows: KeyValueRow[]) => {
     setRows(nextRows)
@@ -47,7 +56,10 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
             aria-label={compact ? `${labels.add} ${label}` : undefined}
             className="secondary-button compact-action"
             type="button"
-            onClick={() => setRows([...rows.filter((row) => row.key.trim() || row.value.trim()), { key: '', value: '', inherited: allowInherited }])}
+            onClick={() => setRows([
+              ...rows.filter((row) => row.key.trim() || row.value.trim()),
+              { customKey: keyOptions.length === 0, key: '', value: '', inherited: allowInherited },
+            ])}
           >
             <Plus aria-hidden="true" />
             {labels.add}
@@ -68,13 +80,41 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
           >
             <label>
               <span className={compact ? 'visually-hidden' : undefined}>{labels.key}</span>
-              <input
-                aria-label={compact ? labels.key : undefined}
-                autoFocus={!readOnly && !row.key && !row.value}
-                readOnly={readOnly}
-                value={row.key}
-                onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, key: event.target.value } : item))}
-              />
+              {keyOptions.length > 0 && !row.customKey ? (
+                <CustomSelect
+                  ariaLabel={labels.key}
+                  disabled={readOnly}
+                  options={[
+                    ...availableKeyOptions(keyOptions, rows, index).map((key) => ({ label: key, value: key })),
+                    { label: labels.customKey ?? labels.key, value: customKeyValue },
+                  ]}
+                  placeholder={labels.key}
+                  searchAriaLabel={labels.searchKeys}
+                  searchPlaceholder={labels.searchKeys}
+                  value={row.key}
+                  onChange={(nextKey) => {
+                    if (nextKey === customKeyValue) {
+                      setRows(rows.map((item, rowIndex) => rowIndex === index
+                        ? { ...item, customKey: true, key: '' }
+                        : item))
+                      return
+                    }
+                    commit(rows.map((item, rowIndex) => rowIndex === index
+                      ? { ...item, customKey: false, key: nextKey }
+                      : item))
+                  }}
+                />
+              ) : (
+                <input
+                  aria-label={compact ? labels.key : undefined}
+                  autoFocus={!readOnly && !row.key && !row.value}
+                  readOnly={readOnly}
+                  value={row.key}
+                  onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index
+                    ? { ...item, key: event.target.value }
+                    : item))}
+                />
+              )}
             </label>
             {allowInherited && (
               <label>
@@ -120,12 +160,24 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
   )
 }
 
-function parseRows(value: string): KeyValueRow[] {
+function parseRows(value: string, keyOptions: string[]): KeyValueRow[] {
   if (!value || value === 'none') return []
   return value.split('\n').map((line) => {
     const [key, ...rest] = line.split('=')
-    return { key: key.trim(), value: rest.join('=').trim(), inherited: !line.includes('=') }
+    return {
+      customKey: keyOptions.length > 0 && !keyOptions.includes(key.trim()),
+      key: key.trim(),
+      value: rest.join('=').trim(),
+      inherited: !line.includes('='),
+    }
   })
+}
+
+function availableKeyOptions(keyOptions: string[], rows: KeyValueRow[], currentIndex: number) {
+  const selected = new Set(
+    rows.filter((_, index) => index !== currentIndex).map((row) => row.key).filter(Boolean),
+  )
+  return keyOptions.filter((key) => !selected.has(key))
 }
 
 function formatRows(rows: KeyValueRow[]) {

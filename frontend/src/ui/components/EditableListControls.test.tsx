@@ -53,6 +53,23 @@ describe('editable list controls', () => {
 
     expect(screen.getByTestId('serialized-env')).toHaveTextContent('API_KEY=secret-reference')
   })
+
+  it('offers known Harbor variables and keeps a custom variable escape hatch', () => {
+    render(<KnownEnvironmentFixture />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add variable Environment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Variable name' }))
+    fireEvent.click(screen.getByRole('option', { name: 'OPENAI_API_KEY' }))
+    expect(screen.getByTestId('serialized-known-env')).toHaveTextContent('OPENAI_API_KEY')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add variable Environment' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Variable name' })[1])
+    fireEvent.click(screen.getByRole('option', { name: 'Custom variable' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Variable name' }), {
+      target: { value: 'MY_CUSTOM_TOKEN' },
+    })
+    expect(screen.getByTestId('serialized-known-env')).toHaveTextContent('MY_CUSTOM_TOKEN')
+  })
 })
 
 function StringListFixture() {
@@ -96,6 +113,29 @@ function InheritedKeyValueFixture() {
         onChange={setValue}
       />
       <output data-testid="serialized-env">{value}</output>
+    </>
+  )
+}
+
+function KnownEnvironmentFixture() {
+  const [value, setValue] = useState('none')
+  return (
+    <>
+      <KeyValueControl
+        allowInherited
+        compact
+        keyOptions={['OPENAI_API_KEY', 'OPENAI_BASE_URL']}
+        label="Environment"
+        labels={{
+          add: 'Add variable', customKey: 'Custom variable', delete: 'Delete',
+          inherited: 'Inherit system variable', key: 'Variable name',
+          literal: 'Fixed value', searchKeys: 'Search variables', source: 'Value source',
+          value: 'Value',
+        }}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="serialized-known-env">{value}</output>
     </>
   )
 }

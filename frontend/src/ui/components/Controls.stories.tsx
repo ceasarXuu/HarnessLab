@@ -169,6 +169,31 @@ function TransientListFixture() {
   )
 }
 
+function KnownEnvironmentVariablesFixture() {
+  const [environment, setEnvironment] = useState('none')
+  return (
+    <main className="workspace single-page">
+      <section className="surface rail-card">
+        <KeyValueControl
+          allowInherited
+          compact
+          keyOptions={['OPENAI_API_KEY', 'OPENAI_BASE_URL']}
+          label="Agent environment"
+          labels={{
+            add: 'Add variable', customKey: 'Custom variable', delete: 'Delete',
+            inherited: 'Inherit system variable', key: 'Variable name',
+            literal: 'Fixed value', searchKeys: 'Search variables', source: 'Value source',
+            value: 'Value',
+          }}
+          value={environment}
+          onChange={setEnvironment}
+        />
+        <output data-testid="environment-output">{environment}</output>
+      </section>
+    </main>
+  )
+}
+
 const meta = {
   title: 'Components/Controls',
   component: ControlsFixture,
@@ -226,5 +251,18 @@ export const TransientEmptyListRow: StoryObj<typeof TransientListFixture> = {
     await expect(canvas.getByRole('textbox', { name: 'Key' })).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Outside' }))
     await expect(canvas.queryByRole('textbox', { name: 'Key' })).not.toBeInTheDocument()
+  },
+}
+
+export const KnownEnvironmentVariables: StoryObj<typeof KnownEnvironmentVariablesFixture> = {
+  render: () => <KnownEnvironmentVariablesFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add variable Agent environment' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Variable name' }))
+    await expect(canvas.getByRole('option', { name: 'OPENAI_API_KEY' })).toBeVisible()
+    await expect(canvas.getByRole('option', { name: 'Custom variable' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('option', { name: 'OPENAI_API_KEY' }))
+    await expect(canvas.getByTestId('environment-output')).toHaveTextContent('OPENAI_API_KEY')
   },
 }

@@ -24,6 +24,12 @@ class AgentConfigService:
         config = json.loads(rows[0]["config_json"])
         logger.debug(
             "Compiling canonical Agent template",
-            extra={"agent_id": agent_id, "harness": config.get("harness")},
+            extra={
+                "agent_id": agent_id,
+                "environment_variable_names": sorted(
+                    item["key"] for item in config.get("env", [])
+                ),
+                "harness": config.get("harness"),
+            },
         )
         return WebUiProfileService(self.settings).agent_harbor_config(config, model_name)

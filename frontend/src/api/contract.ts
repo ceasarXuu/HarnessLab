@@ -175,6 +175,7 @@ export interface AgentParameterDto {
 }
 
 export interface AgentCapabilitiesDto {
+  environmentVariables: string[]
   parameters: AgentParameterDto[]
   supportedFields: AgentCapabilityField[]
 }

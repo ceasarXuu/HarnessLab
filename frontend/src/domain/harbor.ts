@@ -177,6 +177,7 @@ export interface AgentParameter {
 }
 
 export interface AgentCapabilities {
+  environmentVariables: string[]
   parameters: AgentParameter[]
   supportedFields: AgentCapabilityField[]
 }

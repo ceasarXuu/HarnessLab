@@ -420,8 +420,13 @@ def _matches(record: dict, query: str | None) -> bool:
     return query.lower() in haystack
 
 
-def _key_values(values: list[dict]) -> dict[str, str | None]:
-    return {entry["key"]: entry.get("value") for entry in values}
+def _key_values(values: list[dict[str, Any]]) -> dict[str, str]:
+    resolved: dict[str, str] = {}
+    for entry in values:
+        key = str(entry["key"])
+        value = entry.get("value")
+        resolved[key] = str(value) if value is not None else f"${{{key}}}"
+    return resolved
 
 
 def _first(values: list[str]) -> str | None:

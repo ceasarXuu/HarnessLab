@@ -30,6 +30,7 @@ def agent_capabilities(harness: str, *, custom_profile: bool = False) -> dict[st
     elif parameters:
         fields.add("harnessParameters")
     return {
+        "environmentVariables": _harbor_environment_variables(harness),
         "parameters": parameters,
         "supportedFields": sorted(fields),
     }
@@ -57,7 +58,12 @@ def _param(
 
 
 def _parameters_for_harness(harness: str) -> list[dict[str, Any]]:
-    configured = {item["key"]: item for item in _PARAMETERS_BY_HARNESS.get(harness, [])}
+    environment_kwargs = _harbor_environment_kwargs(harness)
+    configured = {
+        item["key"]: item
+        for item in _PARAMETERS_BY_HARNESS.get(harness, [])
+        if item["key"] not in environment_kwargs
+    }
     descriptors = _harbor_descriptor_parameters(harness)
     merged: dict[str, dict[str, Any]] = {}
     for key in configured.keys() | descriptors.keys():
@@ -72,16 +78,11 @@ def _parameters_for_harness(harness: str) -> list[dict[str, Any]]:
 
 
 def _harbor_descriptor_parameters(harness: str) -> dict[str, dict[str, Any]]:
-    from harbor.agents.factory import AgentFactory
-
-    agent_class = next((item for item in AgentFactory._AGENTS if item.name() == harness), None)
+    agent_class = _harbor_agent_class(harness)
     if agent_class is None:
         return {}
     parameters: dict[str, dict[str, Any]] = {}
-    for descriptor in [
-        *getattr(agent_class, "CLI_FLAGS", []),
-        *getattr(agent_class, "ENV_VARS", []),
-    ]:
+    for descriptor in getattr(agent_class, "CLI_FLAGS", []):
         kind = {"bool": "boolean", "int": "number", "float": "number"}.get(
             descriptor.type, "text"
         )
@@ -95,6 +96,26 @@ def _harbor_descriptor_parameters(harness: str) -> dict[str, dict[str, Any]]:
             source="kwarg",
         )
     return parameters
+
+
+def _harbor_environment_variables(harness: str) -> list[str]:
+    agent_class = _harbor_agent_class(harness)
+    if agent_class is None:
+        return []
+    return sorted({descriptor.env for descriptor in getattr(agent_class, "ENV_VARS", [])})
+
+
+def _harbor_environment_kwargs(harness: str) -> set[str]:
+    agent_class = _harbor_agent_class(harness)
+    if agent_class is None:
+        return set()
+    return {descriptor.kwarg for descriptor in getattr(agent_class, "ENV_VARS", [])}
+
+
+def _harbor_agent_class(harness: str) -> Any | None:
+    from harbor.agents.factory import AgentFactory
+
+    return next((item for item in AgentFactory._AGENTS if item.name() == harness), None)
 
 
 _MCP_HARNESSES = {

@@ -1,6 +1,7 @@
 import json
 import sqlite3
 
+from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
@@ -72,3 +73,22 @@ def test_agent_configuration_migration_preserves_existing_webui_profile(tmp_path
         ).fetchone()[0]
 
     assert json.loads(stored) == existing
+
+
+def test_inherited_agent_environment_variable_compiles_to_harbor_template(settings):
+    config = WebUiProfileService(settings).agent_harbor_config(
+        {
+            "env": [{"key": "OPENAI_API_KEY", "value": None}],
+            "harness": "qwen-coder",
+            "importPath": None,
+            "kwargs": "",
+            "mcpServers": [],
+            "models": ["qwen3-coder"],
+            "setupTimeoutSeconds": None,
+            "skillSources": [],
+            "timeoutSeconds": None,
+            "maxTimeoutSeconds": None,
+        }
+    )
+
+    assert config["env"] == {"OPENAI_API_KEY": "${OPENAI_API_KEY}"}
