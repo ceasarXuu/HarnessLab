@@ -135,6 +135,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
               <Search aria-hidden="true" />
               <input
                 aria-label={t('searchEnvironments')}
+                aria-busy={searchResource.loading}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('searchEnvironmentsPlaceholder')}
@@ -192,11 +193,7 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
         </div>
         <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
-      <ResourceStatus
-        error={searchResource.error?.message ?? null}
-        loading={searchResource.loading}
-        loadingLabel={t('loadingEnvironments')}
-      />
+      <ResourceStatus error={searchResource.error?.message ?? null} />
       {detailEnvironment && (
         <DetailDrawer label={t('selectedEnvironment')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>

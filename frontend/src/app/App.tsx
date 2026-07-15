@@ -303,8 +303,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus
             error={(datasetSearchQuery ? datasetSearchResource.error : datasetsResource.error) ? t('unableToLoadDatasets') : null}
-            loading={datasetSearchQuery ? datasetSearchResource.loading : datasetsResource.loading}
-            loadingLabel={t('loadingDatasets')}
           />
         </>
       )}
@@ -320,8 +318,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus
             error={agentsResource.error ? t('unableToLoadAgents') : null}
-            loading={agentsResource.loading}
-            loadingLabel={t('loadingAgents')}
           />
         </>
       )}
@@ -350,8 +346,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus
             error={environmentsResource.error ? t('unableToLoadEnvironments') : null}
-            loading={environmentsResource.loading}
-            loadingLabel={t('loadingEnvironments')}
           />
         </>
       )}
@@ -375,8 +369,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           <ResourceStatus error={jobOperation.error?.message ?? null} />
           <ResourceStatus
             error={datasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
-            loading={datasetsResource.loading || leaderboardResource.loading}
-            loadingLabel={t('loadingLeaderboard')}
           />
         </>
       )}
@@ -402,8 +394,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus
             error={(jobSearchQuery ? jobSearchResource.error : jobsResource.error) ? t('unableToLoadJobs') : null}
-            loading={jobSearchQuery ? jobSearchResource.loading : jobsResource.loading}
-            loadingLabel={t('loadingJobs')}
           />
           <ResourceStatus error={jobOperation.error?.message ?? null} />
         </>
@@ -446,8 +436,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus
             error={systemResource.error ? t('unableToLoadSystem') : null}
-            loading={systemResource.loading}
-            loadingLabel={t('loadingSystem')}
           />
         </>
       )}

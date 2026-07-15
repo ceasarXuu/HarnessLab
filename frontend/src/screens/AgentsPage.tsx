@@ -79,6 +79,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               <Search aria-hidden="true" />
               <input
                 aria-label={t('searchAgents')}
+                aria-busy={searchResource.loading}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('searchAgentsPlaceholder')}
@@ -149,8 +150,6 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
       </section>
       <ResourceStatus
         error={searchResource.error?.message ?? null}
-        loading={searchResource.loading}
-        loadingLabel={t('loadingAgents')}
       />
       {detailAgent && (
         <DetailDrawer label={t('selectedAgent')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>

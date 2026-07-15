@@ -14,6 +14,7 @@ interface CustomSelectProps {
   ariaLabel: string
   options: SelectOption[]
   value: string
+  busy?: boolean
   className?: string
   disabled?: boolean
   leadingIcon?: ReactNode
@@ -29,6 +30,7 @@ interface CustomSelectProps {
 
 export function CustomSelect({
   ariaLabel,
+  busy = false,
   className,
   disabled = false,
   leadingIcon,
@@ -93,6 +95,7 @@ export function CustomSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        aria-busy={busy}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
@@ -104,6 +107,7 @@ export function CustomSelect({
           {isSearchable && (
             <input
               aria-label={searchAriaLabel ?? searchPlaceholder ?? `Search ${ariaLabel}`}
+              aria-busy={busy}
               autoFocus
               className="select-menu-search"
               placeholder={searchPlaceholder ?? `Search ${ariaLabel}`}

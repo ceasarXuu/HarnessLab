@@ -10,6 +10,12 @@ function options(count: number) {
 }
 
 describe('CustomSelect', () => {
+  it('exposes asynchronous option loading through the control busy state', () => {
+    render(<CustomSelect ariaLabel="Async" busy options={options(2)} value="" onChange={() => undefined} />)
+
+    expect(screen.getByLabelText('Async')).toHaveAttribute('aria-busy', 'true')
+  })
+
   it('keeps lists with ten options compact', () => {
     render(<CustomSelect ariaLabel="Compact" options={options(10)} value="" onChange={() => undefined} />)
     fireEvent.click(screen.getByLabelText('Compact'))

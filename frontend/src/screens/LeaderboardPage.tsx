@@ -81,6 +81,7 @@ export function LeaderboardPage({
           <div className="toolbar leaderboard-toolbar">
             <CustomSelect
               ariaLabel={t('selectDataset')}
+              busy={datasetSearchResource.loading}
               className="toolbar-select"
               placeholder={t('selectDataset')}
               searchable
@@ -157,11 +158,7 @@ export function LeaderboardPage({
         </div>
         <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
-      <ResourceStatus
-        error={datasetSearchResource.error?.message ?? null}
-        loading={datasetSearchResource.loading}
-        loadingLabel={t('loadingDatasets')}
-      />
+      <ResourceStatus error={datasetSearchResource.error?.message ?? null} />
       {detailJob && (
         <DetailDrawer label={t('selectedJob')} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           <>

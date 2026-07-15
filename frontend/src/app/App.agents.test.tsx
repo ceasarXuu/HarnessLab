@@ -54,6 +54,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     fireEvent.change(screen.getByLabelText('Search agents'), { target: { value: 'local' } })
+    expect(screen.queryByText('Loading agents.')).not.toBeInTheDocument()
     expect(screen.getByText('Local repair agent')).toBeInTheDocument()
     expect(screen.queryByText('claude-code')).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Search agents'), { target: { value: '' } })
