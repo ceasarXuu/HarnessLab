@@ -190,8 +190,10 @@ function formatDateTime(value: string): string {
   return value.replace('T', ' ').replace(/Z$/, '')
 }
 
-function formatKeyValues(values: Array<{ key: string; value: string }>): string {
-  return values.length ? values.map((entry) => `${entry.key}=${entry.value}`).join('\n') : 'none'
+function formatKeyValues(values: Array<{ key: string; value: string | null }>): string {
+  return values.length
+    ? values.map((entry) => entry.value === null ? entry.key : `${entry.key}=${entry.value}`).join('\n')
+    : 'none'
 }
 
 function formatList(values: string[]): string {

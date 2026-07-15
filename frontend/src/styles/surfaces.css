@@ -234,6 +234,9 @@ code {
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
   align-items: end;
 }
+.compact-key-value .key-value-row--with-source {
+  grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) minmax(0, 1.1fr) auto;
+}
 .compact-key-value .key-value-row > label {
   gap: 0;
 }

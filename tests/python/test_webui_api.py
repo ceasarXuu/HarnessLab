@@ -7,10 +7,12 @@ from pathlib import Path
 
 from ornnlab.services.agent_config_service import AgentConfigService
 from ornnlab.services.experiment_service import _resolve_job_dir
+from ornnlab.services.harbor_engine import _resolve_env
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
 from ornnlab.services.webui_dataset_service import _stored_dto
 from ornnlab.services.webui_job_service import _job_score, _trial_dto
 from ornnlab.services.webui_operation_service import WebUiOperationService
+from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.storage import sqlite
 
 API = "/api/webui/v1"
@@ -105,6 +107,34 @@ def test_webui_agent_and_environment_crud(client):
 
     deleted = client.delete(f"{API}/environments/{copied['resourceId']}").json()
     assert deleted["data"]["operation"]["status"] == "completed"
+
+
+def test_agent_environment_variables_preserve_inherited_and_fixed_values(client, settings):
+    payload = _agent_payload()
+    payload["env"] = [
+        {"key": "INHERITED_TOKEN", "value": None},
+        {"key": "API_BASE_URL", "value": "https://example.test"},
+    ]
+
+    response = client.post(f"{API}/agents", json=payload)
+
+    assert response.status_code == 200
+    agent = client.get(f"{API}/agents/oracle-profile").json()["data"]
+    assert agent["env"] == payload["env"]
+    assert WebUiProfileService(settings).agent_harbor_config(agent)["env"] == {
+        "INHERITED_TOKEN": None,
+        "API_BASE_URL": "https://example.test",
+    }
+
+
+def test_agent_environment_variable_inheritance_resolves_without_logging_values(monkeypatch, caplog):
+    monkeypatch.setenv("AVAILABLE_TOKEN", "private-value")
+
+    resolved = _resolve_env({"AVAILABLE_TOKEN": None, "MISSING_TOKEN": None})
+
+    assert resolved == {"AVAILABLE_TOKEN": "private-value"}
+    assert "MISSING_TOKEN" in caplog.records[0].variable_name
+    assert "private-value" not in caplog.text
 
 
 def test_webui_job_create_events_and_leaderboard_update(client):

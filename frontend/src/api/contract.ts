@@ -144,7 +144,8 @@ export type AgentAvailability = 'available' | 'configured' | 'needs-token'
 
 export interface KeyValueDto {
   key: string
-  value: string
+  /** null asks OrnnLab to inherit the same variable from its process environment. */
+  value: string | null
 }
 
 export interface McpServerDto {

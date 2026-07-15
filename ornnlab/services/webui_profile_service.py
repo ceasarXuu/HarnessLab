@@ -242,7 +242,9 @@ class WebUiProfileService:
                 model=_first(agent["models"]),
                 kwargs=_parse_kwargs(agent["kwargs"]),
             ),
-            auth=AuthProfile(inherit_env=[entry["key"] for entry in agent["env"]]),
+            auth=AuthProfile(
+                inherit_env=[entry["key"] for entry in agent["env"] if entry.get("value") is None]
+            ),
             skills=SkillsProfile(paths=agent["skillSources"]),
             mcp=McpProfile(config_paths=[]),
             runtime=RuntimeProfile(
@@ -317,7 +319,10 @@ class WebUiProfileService:
 
         if not agent.get("importPath") and agent["harness"] not in AgentName.values():
             raise ValueError("harness must be a built-in Harbor AgentName or use importPath")
-        AgentConfig.model_validate(self.agent_harbor_config(agent))
+        config = self.agent_harbor_config(agent)
+        if "env" in config:
+            config["env"] = {key: value for key, value in config["env"].items() if value is not None}
+        AgentConfig.model_validate(config)
 
     def _validate_environment(self, environment: dict) -> None:
         from harbor.models.trial.config import EnvironmentConfig
@@ -337,6 +342,7 @@ class WebUiProfileService:
 
 def _agent_dto(payload: AgentInput) -> dict:
     agent = payload.model_dump(by_alias=True, exclude_none=True)
+    agent["env"] = [entry.model_dump() for entry in payload.env]
     return {
         **agent,
         "capabilities": custom_agent_capabilities(agent["harness"]),
@@ -353,7 +359,9 @@ def _configured_agent(agent: dict) -> dict:
 
 
 def _environment_dto(payload: EnvironmentInput) -> dict:
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    environment = payload.model_dump(by_alias=True, exclude_none=True)
+    environment["env"] = [entry.model_dump() for entry in payload.env]
+    return environment
 
 
 def _built_in_agent(harness: str) -> dict:
@@ -404,8 +412,8 @@ def _matches(record: dict, query: str | None) -> bool:
     return query.lower() in haystack
 
 
-def _key_values(values: list[dict]) -> dict[str, str]:
-    return {entry["key"]: entry["value"] for entry in values}
+def _key_values(values: list[dict]) -> dict[str, str | None]:
+    return {entry["key"]: entry.get("value") for entry in values}
 
 
 def _first(values: list[str]) -> str | None:

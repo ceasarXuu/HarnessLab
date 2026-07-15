@@ -295,6 +295,9 @@
   align-items: end;
   gap: 8px;
 }
+.key-value-row--with-source {
+  grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) minmax(0, 1.1fr) auto;
+}
 .key-value-row > label {
   min-width: 0;
 }
@@ -340,6 +343,9 @@
   .path-list-row .icon-button,
   .rule-list-row .icon-button {
     justify-self: start;
+  }
+  .key-value-row--with-source {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

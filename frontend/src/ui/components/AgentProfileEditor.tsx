@@ -88,13 +88,14 @@ export function AgentProfileEditor({
 
           {supports('env') && (
             <section className="surface rail-card">
-              <SectionTitle>{t('credentialsAndParams')}</SectionTitle>
+              <SectionTitle>{t('environmentVariables')}</SectionTitle>
               <div className="agent-form-grid">
                 {readOnly ? (
                   <ReadonlyKeyValueList label={t('genericAgentEnv')} value={value.env} emptyLabel={t('supportedByHarness')} />
                 ) : (
                   <div className="field-wide">
                     <KeyValueControl
+                      allowInherited
                       compact
                       readOnly={readOnly}
                       label={t('genericAgentEnv')}
@@ -343,7 +344,15 @@ function defaultKeyValueLabels(t: Translate) {
 }
 
 function envKeyValueLabels(t: Translate) {
-  return { add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }
+  return {
+    add: t('add'),
+    delete: t('delete'),
+    inherited: t('envSourceInherited'),
+    key: t('envKey'),
+    literal: t('envSourceLiteral'),
+    source: t('envValueSource'),
+    value: t('envValue'),
+  }
 }
 
 function DirectoryListControl({

@@ -34,14 +34,19 @@ class CachedRegistryClient:
         return [SimpleNamespace(name="terminal-bench", version="2.0", task_count=89)]
 
 
+def _use_registry_client(monkeypatch, client) -> None:
+    factory = SimpleNamespace(create=lambda: client)
+    monkeypatch.setattr(
+        "ornnlab.services.webui_dataset_service._registry_client_factory",
+        lambda: factory,
+    )
+
+
 def test_registry_download_uses_selected_parent_and_remembers_it(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     parent = tmp_path / "chosen-parent"
     parent.mkdir()
-    monkeypatch.setattr(
-        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
-        lambda: FakeRegistryClient(),
-    )
+    _use_registry_client(monkeypatch, FakeRegistryClient())
     service = WebUiDatasetService(settings)
 
     asyncio.run(service.download("team/eval@1.0", str(parent), lambda *_: None))
@@ -65,10 +70,7 @@ def test_registry_download_reports_stage_and_task_progress(tmp_path, monkeypatch
     parent = tmp_path / "chosen-parent"
     parent.mkdir()
     updates: list[tuple[int | None, str | None]] = []
-    monkeypatch.setattr(
-        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
-        lambda: FakeRegistryClient(),
-    )
+    _use_registry_client(monkeypatch, FakeRegistryClient())
 
     def capture_progress(value: int | None, message: str | None = None) -> None:
         updates.append((value, message))
@@ -88,10 +90,7 @@ def test_registry_download_reports_stage_and_task_progress(tmp_path, monkeypatch
 def test_registry_catalog_is_cached_across_dataset_searches(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     registry = CachedRegistryClient()
-    monkeypatch.setattr(
-        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
-        lambda: registry,
-    )
+    _use_registry_client(monkeypatch, registry)
     service = WebUiDatasetService(settings)
 
     terminal = asyncio.run(service.list_datasets("terminal"))
@@ -106,10 +105,7 @@ def test_registry_download_rejects_existing_destination(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     parent = tmp_path / "chosen-parent"
     (parent / "team--eval@1.0").mkdir(parents=True)
-    monkeypatch.setattr(
-        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
-        lambda: FakeRegistryClient(),
-    )
+    _use_registry_client(monkeypatch, FakeRegistryClient())
 
     with pytest.raises(ValueError, match="already exists"):
         asyncio.run(
@@ -123,10 +119,7 @@ def test_managed_dataset_can_move_to_a_new_parent(tmp_path, monkeypatch):
     second_parent = tmp_path / "second"
     first_parent.mkdir()
     second_parent.mkdir()
-    monkeypatch.setattr(
-        "ornnlab.services.webui_dataset_service.RegistryClientFactory.create",
-        lambda: FakeRegistryClient(),
-    )
+    _use_registry_client(monkeypatch, FakeRegistryClient())
     service = WebUiDatasetService(settings)
     asyncio.run(service.download("team/eval@1.0", str(first_parent), lambda *_: None))
 

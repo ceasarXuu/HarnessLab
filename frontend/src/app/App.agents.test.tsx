@@ -63,7 +63,7 @@ describe('App agents and leaderboard', () => {
     const agentDialog = screen.getByRole('dialog', { name: 'Selected agent' })
     expect(agentDialog).toBeInTheDocument()
     expect(within(agentDialog).queryByText('Selected agent')).not.toBeInTheDocument()
-    expect(screen.getByText('Credentials and parameters')).toBeInTheDocument()
+    expect(screen.getByText('Environment variables')).toBeInTheDocument()
     const agentForm = within(agentDialog)
     ;[
       ['Agent Name', 'Local repair agent'],
@@ -79,7 +79,7 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.queryByText('Network access')).not.toBeInTheDocument()
     expect(agentForm.queryByRole('checkbox', { name: 'Enable network access' })).not.toBeInTheDocument()
     const envKeyCount = agentForm.getAllByLabelText('Env key').length
-    fireEvent.click(agentForm.getByRole('button', { name: 'Add agent env' }))
+    fireEvent.click(agentForm.getByRole('button', { name: 'Add Variables' }))
     expect(agentForm.getAllByLabelText('Env key')).toHaveLength(envKeyCount + 1)
     const newEnvKeys = agentForm.getAllByLabelText('Env key')
     fireEvent.change(newEnvKeys[envKeyCount], { target: { value: 'LOCAL_TIMEOUT' } })

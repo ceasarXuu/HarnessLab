@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from importlib import import_module, metadata
 from pathlib import Path
@@ -14,6 +15,7 @@ from ornnlab.storage.paths import atomic_write_text
 
 CONFIG_FILE_NAME = "harbor.config.json"
 CAPABILITY_FILE_NAME = "harbor.capability.json"
+logger = logging.getLogger(__name__)
 
 
 class HarborConfigBuilder:
@@ -236,6 +238,11 @@ def _resolve_env(env: Any) -> dict[str, str]:
             inherited = os.environ.get(str(key))
             if inherited is not None:
                 resolved[str(key)] = inherited
+            else:
+                logger.warning(
+                    "agent environment variable was not inherited because it is unset",
+                    extra={"event": "agent_env_inherit_missing", "variable_name": str(key)},
+                )
             continue
         resolved[str(key)] = str(value)
     return resolved

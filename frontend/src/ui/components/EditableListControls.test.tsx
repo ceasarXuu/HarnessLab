@@ -42,6 +42,17 @@ describe('editable list controls', () => {
 
     expect(screen.getByRole('textbox', { name: 'Models 1' })).toHaveValue('claude-sonnet-4-5')
   })
+
+  it('serializes inherited and fixed environment variable values distinctly', () => {
+    render(<InheritedKeyValueFixture />)
+
+    expect(screen.getByRole('combobox', { name: 'Value source' })).toHaveValue('inherited')
+    expect(screen.getByRole('textbox', { name: 'Value' })).toBeDisabled()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Value source' }), { target: { value: 'literal' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Value' }), { target: { value: 'secret-reference' } })
+
+    expect(screen.getByTestId('serialized-env')).toHaveTextContent('API_KEY=secret-reference')
+  })
 })
 
 function StringListFixture() {
@@ -65,6 +76,26 @@ function KeyValueFixture() {
         onChange={setValue}
       />
       <button type="button">Outside</button>
+    </>
+  )
+}
+
+function InheritedKeyValueFixture() {
+  const [value, setValue] = useState('API_KEY')
+  return (
+    <>
+      <KeyValueControl
+        allowInherited
+        compact
+        label="Environment"
+        labels={{
+          add: 'Add', delete: 'Delete', inherited: 'Inherit system variable', key: 'Key',
+          literal: 'Fixed value', source: 'Value source', value: 'Value',
+        }}
+        value={value}
+        onChange={setValue}
+      />
+      <output data-testid="serialized-env">{value}</output>
     </>
   )
 }

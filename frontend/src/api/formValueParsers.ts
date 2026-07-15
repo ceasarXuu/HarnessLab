@@ -8,7 +8,7 @@ export function parseKeyValues(value: string | undefined): KeyValueDto[] {
   if (!value || value === 'none') return []
   return value.split('\n').map((line) => {
     const [key, ...rest] = line.split('=')
-    return { key: key.trim(), value: rest.join('=').trim() }
+    return { key: key.trim(), value: line.includes('=') ? rest.join('=').trim() : null }
   }).filter((entry) => entry.key)
 }
 

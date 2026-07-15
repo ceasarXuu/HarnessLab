@@ -11,7 +11,8 @@ class WebUiModel(BaseModel):
 
 class KeyValueInput(WebUiModel):
     key: str = Field(min_length=1)
-    value: str
+    # A null value asks Harbor to inherit the variable from OrnnLab's process.
+    value: str | None = None
 
 
 class McpServerInput(WebUiModel):

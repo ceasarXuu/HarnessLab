@@ -14,7 +14,7 @@ import { TpuSpecControl } from './TpuSpecControl'
 
 function ControlsFixture() {
   const [dataset, setDataset] = useState('terminal-bench@2.0')
-  const [envVars, setEnvVars] = useState('HTTP_PROXY=${HTTP_PROXY:-}')
+  const [envVars, setEnvVars] = useState('ANTHROPIC_API_KEY\nANTHROPIC_BASE_URL=https://api.anthropic.com')
   const [folder, setFolder] = useState('jobs/terminal-bench-smoke')
   const [enabled, setEnabled] = useState(true)
   const [tpu, setTpu] = useState('v6e=2x4')
@@ -77,8 +77,17 @@ function ControlsFixture() {
             />
           </Field>
           <KeyValueControl
-            label="env"
-            labels={{ add: t('add'), delete: t('delete'), key: t('envKey'), value: t('envValue') }}
+            allowInherited
+            label="Environment variables"
+            labels={{
+              add: t('add'),
+              delete: t('delete'),
+              inherited: t('envSourceInherited'),
+              key: t('envKey'),
+              literal: t('envSourceLiteral'),
+              source: t('envValueSource'),
+              value: t('envValue'),
+            }}
             value={envVars}
             onChange={setEnvVars}
           />
