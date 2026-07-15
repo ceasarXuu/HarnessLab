@@ -1,5 +1,6 @@
 import type { AgentParameter, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { CustomSelect } from './CustomSelect'
 import { Metric } from './Metric'
 import { SwitchControl } from './SwitchControl'
 
@@ -67,12 +68,13 @@ function HarnessParameterInput({
     return (
       <label>
         {parameter.label}
-        <select disabled={readOnly} value={value} onChange={(event) => onChange(event.target.value)}>
-          <option value="" />
-          {parameter.choices.map((choice) => (
-            <option key={choice} value={choice}>{choice}</option>
-          ))}
-        </select>
+        <CustomSelect
+          ariaLabel={parameter.label}
+          disabled={readOnly}
+          options={[{ label: '', value: '' }, ...parameter.choices.map((choice) => ({ label: choice, value: choice }))]}
+          value={value}
+          onChange={onChange}
+        />
       </label>
     )
   }

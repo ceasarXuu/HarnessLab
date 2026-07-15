@@ -99,6 +99,7 @@ export const enMessages = {
     agentsCatalog: 'Agent catalog',
     searchAgents: 'Search agents',
     searchAgentsPlaceholder: 'Search agents, adapters, models',
+    searchHarnesses: 'Search Harnesses',
     newAgent: 'New Agent',
     environmentsCatalog: 'Environment catalog',
     searchEnvironments: 'Search environments',

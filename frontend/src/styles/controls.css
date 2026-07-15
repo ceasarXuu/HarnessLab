@@ -185,7 +185,14 @@
   position: relative;
   display: flex;
   width: 100%;
+  min-height: 34px;
   padding-right: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+.custom-select:focus-within {
+  border-color: var(--foreground);
+  background: var(--subtle);
 }
 .custom-select.open {
   z-index: var(--z-popover);

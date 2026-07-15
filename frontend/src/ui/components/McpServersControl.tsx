@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { EditableStringList } from './EditableStringList'
+import { CustomSelect } from './CustomSelect'
 
 type McpTransport = 'streamable-http' | 'sse' | 'stdio'
 
@@ -67,11 +68,17 @@ export function McpServersControl({ labels, readOnly = false, value, onChange }:
               <label>{labels.name}<input readOnly={readOnly} value={server.name} onChange={(event) => update(index, { name: event.target.value })} /></label>
               <label>
                 {labels.transport}
-                <select disabled={readOnly} value={server.transport} onChange={(event) => update(index, { transport: event.target.value as McpTransport })}>
-                  <option value="stdio">stdio</option>
-                  <option value="sse">SSE</option>
-                  <option value="streamable-http">Streamable HTTP</option>
-                </select>
+                <CustomSelect
+                  ariaLabel={labels.transport}
+                  disabled={readOnly}
+                  options={[
+                    { label: 'stdio', value: 'stdio' },
+                    { label: 'SSE', value: 'sse' },
+                    { label: 'Streamable HTTP', value: 'streamable-http' },
+                  ]}
+                  value={server.transport}
+                  onChange={(transport) => update(index, { transport: transport as McpTransport })}
+                />
               </label>
               {server.transport === 'stdio' ? (
                 <label className="field-wide">{labels.command}<input readOnly={readOnly} value={server.command ?? ''} onChange={(event) => update(index, { command: event.target.value, url: undefined })} /></label>

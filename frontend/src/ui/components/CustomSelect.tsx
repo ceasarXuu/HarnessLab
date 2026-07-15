@@ -41,9 +41,10 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const [internalSearch, setInternalSearch] = useState('')
+  const isSearchable = searchable || options.length > 10
   const selected = options.find((option) => option.value === value)
   const activeSearch = searchValue ?? internalSearch
-  const visibleOptions = searchable && !onSearchChange
+  const visibleOptions = isSearchable && !onSearchChange
     ? options.filter((option) => option.label.toLowerCase().includes(activeSearch.toLowerCase()))
     : options
 
@@ -52,17 +53,22 @@ export function CustomSelect({
     else setInternalSearch(next)
   }
 
+  const closeMenu = () => {
+    setOpen(false)
+    if (!onSearchChange) setInternalSearch('')
+  }
+
   return (
     <div
       className={`custom-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className ?? ''}`}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
-          setOpen(false)
+          closeMenu()
         }
       }}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
-          setOpen(false)
+          closeMenu()
         }
       }}
     >
@@ -82,11 +88,12 @@ export function CustomSelect({
       </button>
       {open && !disabled && (
         <div className="select-menu" role="listbox" aria-label={`${ariaLabel} options`}>
-          {searchable && (
+          {isSearchable && (
             <input
               aria-label={searchAriaLabel ?? searchPlaceholder ?? `Search ${ariaLabel}`}
               autoFocus
               className="select-menu-search"
+              placeholder={searchPlaceholder ?? `Search ${ariaLabel}`}
               value={activeSearch}
               onChange={(event) => updateSearch(event.target.value)}
             />
@@ -101,7 +108,7 @@ export function CustomSelect({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
                 onChange(option.value)
-                setOpen(false)
+                closeMenu()
               }}
             >
               {option.label}

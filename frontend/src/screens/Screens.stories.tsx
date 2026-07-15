@@ -308,7 +308,7 @@ export const NewAgent: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'New Agent' })).toBeVisible()
     await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Custom Agent')
-    await expect(canvas.getByLabelText('Harness')).toHaveValue('custom-harness')
+    await expect(canvas.getByLabelText('Harness')).toHaveTextContent('custom-harness')
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
     await expect(canvas.getByText('Skills sources')).toBeVisible()
@@ -332,7 +332,7 @@ export const NewAgentFromHarness: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByLabelText('Harness')).toHaveValue('claude-code')
+    await expect(canvas.getByLabelText('Harness')).toHaveTextContent('claude-code')
     await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
     await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()

@@ -11,8 +11,6 @@
 .run-grid .field-wide {
   grid-column: 1 / -1;
 }
-.run-grid .custom-select { min-height: 34px; border: 1px solid var(--border-strong); background: var(--surface); }
-.run-grid .custom-select:focus-within { border-color: var(--foreground); background: var(--subtle); }
 .run-grid .select-menu {
   right: -1px;
   left: -1px;

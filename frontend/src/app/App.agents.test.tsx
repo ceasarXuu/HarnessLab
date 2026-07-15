@@ -29,7 +29,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New Agent' }))
     expect(screen.getByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
     expect(screen.getByLabelText('Agent Name')).toHaveValue('Custom Agent')
-    expect(screen.getByLabelText('Harness')).toHaveValue('custom-harness')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('custom-harness')
     expect(screen.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Regression custom agent' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
@@ -66,9 +66,9 @@ describe('App agents and leaderboard', () => {
     const agentForm = within(agentDialog)
     ;[
       ['Agent Name', 'Local repair agent'],
-      ['Harness', 'custom-harness'],
       ['Custom import path', 'agents.local_repair:Agent'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
+    expect(agentForm.getByLabelText('Harness')).toHaveTextContent('custom-harness')
     expect(agentForm.getByText('Custom Harness')).toBeInTheDocument()
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(agentForm.getByRole('tab', { name: 'MCPs' }))
     expect(agentForm.getByText('MCP Servers')).toBeInTheDocument()
     expect(agentForm.getByLabelText('Name')).toHaveValue('local-repair-tools')
-    expect(agentForm.getByLabelText('Transport')).toHaveValue('stdio')
+    expect(agentForm.getByLabelText('Transport')).toHaveTextContent('stdio')
     expect(agentForm.getByLabelText('Command')).toHaveValue('uvx')
     expect(agentForm.getByLabelText('Args')).toHaveValue('local-repair-mcp')
     fireEvent.click(agentForm.getByRole('tab', { name: 'Advanced' }))
@@ -171,7 +171,7 @@ describe('App agents and leaderboard', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Harness')).toHaveValue('claude-code')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('claude-code')
     expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
   })
 })

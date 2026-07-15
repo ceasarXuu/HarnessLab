@@ -4,6 +4,7 @@ import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/ag
 import type { AgentCapabilities, AgentCapabilityField, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentHarnessParameters } from './AgentHarnessParameters'
+import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
@@ -235,11 +236,14 @@ export function AgentIdentityEditor({
       ) : (
         <label>
           {t('harness')}
-          <select value={value.harness} onChange={(event) => setHarness(event.target.value)}>
-            {harnessOptions.map((harness) => (
-              <option key={harness} value={harness}>{harness}</option>
-            ))}
-          </select>
+          <CustomSelect
+            ariaLabel={t('harness')}
+            options={harnessOptions.map((harness) => ({ label: harness, value: harness }))}
+            searchAriaLabel={t('searchHarnesses')}
+            searchPlaceholder={t('searchHarnesses')}
+            value={value.harness}
+            onChange={setHarness}
+          />
         </label>
       )}
       <Metric

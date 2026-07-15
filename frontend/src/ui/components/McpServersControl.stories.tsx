@@ -45,7 +45,7 @@ export const StreamableHttp: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByLabelText('Name')).toHaveValue('terminal-bench-mcp')
-    await expect(canvas.getByLabelText('Transport')).toHaveValue('streamable-http')
+    await expect(canvas.getByLabelText('Transport')).toHaveTextContent('Streamable HTTP')
     await expect(canvas.getByLabelText('URL')).toHaveValue('http://terminal-bench-mcp:8000/mcp')
   },
 }
@@ -55,7 +55,7 @@ export const AddStdioServer: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add MCP Server' }))
     const transports = canvas.getAllByLabelText('Transport')
-    await userEvent.selectOptions(transports[1], 'stdio')
+    await expect(transports[1]).toHaveTextContent('stdio')
     await expect(canvas.getByLabelText('Command')).toBeVisible()
     await userEvent.type(canvas.getByLabelText('Command'), 'uvx')
     await userEvent.type(canvas.getByLabelText('Args'), 'repair-tools-mcp')
