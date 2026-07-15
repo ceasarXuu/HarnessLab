@@ -120,10 +120,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     () => leaderboardResource.data?.items.map(leaderboardEntryDtoToRow) ?? [],
     [leaderboardResource.data],
   )
-  const leaderboardDatasets = useMemo(
-    () => datasets.flatMap((dataset) => dataset.ref ? [{ name: dataset.name, ref: dataset.ref, version: dataset.version }] : []),
-    [datasets],
-  )
   const hubConnection = hubConnectionResource.loading
     ? 'loading'
     : hubConnectionResource.data?.status ?? 'unavailable'
@@ -366,7 +362,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             writesEnabled={writesEnabled}
             dataset={leaderboardDataset}
             datasetSearch={leaderboardDatasetSearch}
-            leaderboardDatasets={leaderboardDatasets}
+            leaderboardDatasets={datasets}
             client={client}
             jobs={jobs}
             rows={filteredLeaderboard}

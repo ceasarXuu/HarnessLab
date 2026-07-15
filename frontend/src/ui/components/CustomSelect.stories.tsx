@@ -42,3 +42,21 @@ export const CompactAtTen: Story = {
     await expect(canvas.getAllByRole('option')).toHaveLength(10)
   },
 }
+
+export const WithStatusBadges: Story = {
+  args: {
+    options: [
+      { badge: { label: 'Downloaded', tone: 'success' }, label: 'terminal-bench@2.0', value: 'terminal-bench@2.0' },
+      { badge: { label: 'Not downloaded', tone: 'neutral' }, label: 'swebench-verified@1.0', value: 'swebench-verified@1.0' },
+      { badge: { label: 'Path unavailable', tone: 'warning' }, label: 'local-eval@1.0', value: 'local-eval@1.0' },
+    ],
+    value: 'terminal-bench@2.0',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText('Dataset')).toHaveTextContent('terminal-bench@2.0Downloaded')
+    await userEvent.click(canvas.getByLabelText('Dataset'))
+    await expect(canvas.getByRole('option', { name: 'terminal-bench@2.0 Downloaded' })).toBeVisible()
+    await expect(canvas.getByRole('option', { name: 'swebench-verified@1.0 Not downloaded' })).toBeVisible()
+  },
+}

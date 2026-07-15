@@ -17,10 +17,7 @@ import { SystemPage } from './SystemPage'
 const t = getTranslator('en')
 const tZh = getTranslator('zh')
 const client = createMockWebUiClient()
-const leaderboardDatasets = [...new Map(leaderboardRows.map((row) => {
-  const [name, version = ''] = row.dataset.split('@')
-  return [row.dataset, { name, ref: row.dataset, version }]
-})).values()]
+const leaderboardDatasets = datasetRows
 
 const meta = {
   title: 'Screens/Harbor WebUI',

@@ -133,7 +133,7 @@ describe('App API mode', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     fireEvent.click(screen.getByLabelText('Select dataset'))
-    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench@2.0' }))
+    fireEvent.click(screen.getByRole('option', { name: /^terminal-bench@2\.0 / }))
     await screen.findByText('job_91a7')
     for (const button of screen.getAllByRole('button', { name: 'Remove' })) {
       expect(button).toBeEnabled()
@@ -152,9 +152,9 @@ describe('App API mode', () => {
     await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('Select dataset'))
     fireEvent.click(screen.getByLabelText('Select dataset'))
 
-    expect(screen.getByRole('option', { name: 'swebench-verified@1.0' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'terminal-bench@2.0' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench-nightly@nightly' }))
+    expect(screen.getByRole('option', { name: /^swebench-verified@1\.0 / })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /^terminal-bench@2\.0 / })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: /^terminal-bench-nightly@nightly / }))
     expect(await screen.findByText('No leaderboard entries are available for this Dataset.')).toBeInTheDocument()
   })
 
@@ -175,7 +175,7 @@ describe('App API mode', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
     await waitFor(() => expect(listDatasets).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByLabelText('Select dataset'))
-    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench@2.0' }))
+    fireEvent.click(screen.getByRole('option', { name: /^terminal-bench@2\.0 / }))
     await screen.findByText('job_91a7')
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
 

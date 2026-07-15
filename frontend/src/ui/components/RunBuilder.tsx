@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, RunDraft } from '../../domain/harbor'
 import { agentModelNames, reconcileAgentModel } from '../../domain/agentModels'
 import type { Translate } from '../../i18n'
+import { datasetRef, datasetSelectOptions } from '../datasetSelectOptions'
 import { CustomSelect } from './CustomSelect'
 import { FolderPathInput, type FolderPathSelection } from './FolderPathInput'
 import { Field, TabPanel } from './RunBuilderChrome'
@@ -26,20 +27,19 @@ interface RunBuilderProps {
 
 type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 
-const datasetValue = (row: DatasetRow) => `${row.name}@${row.version}`
 type VerifierMode = 'dataset-default' | 'skip'
 
 export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onChooseDirectory, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
   const [taskSearch, setTaskSearch] = useState('')
-  const datasetOptions = datasets.map((row) => ({ label: datasetValue(row), value: datasetValue(row) }))
+  const datasetOptions = datasetSelectOptions(datasets, t)
   const agentOptions = agents
     .map((agent) => ({ label: agent.agentName, value: agent.agentName }))
   const selectedAgent = agents.find((agent) => agent.agentName === draft.agent)
   const modelOptions = agentModelNames(selectedAgent).map((model) => ({ label: model, value: model }))
   const environmentOptions = environments.map((row) => ({ label: row.name, value: row.id }))
-  const selectedDataset = datasets.find((row) => datasetValue(row) === draft.source)
-  const selectedDatasetKey = selectedDataset ? datasetValue(selectedDataset) : draft.source
+  const selectedDataset = datasets.find((row) => datasetRef(row) === draft.source)
+  const selectedDatasetKey = selectedDataset ? datasetRef(selectedDataset) : draft.source
   const selectedDatasetTasks = taskRows.filter((row) => row.datasetRef === selectedDatasetKey)
   const searchedTasks = selectedDatasetTasks.filter((row) => {
     const query = taskSearch.trim().toLowerCase()

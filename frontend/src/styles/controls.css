@@ -246,12 +246,42 @@
   height: 15px;
   flex: 0 0 auto;
 }
-.select-trigger span {
+.select-trigger > span {
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.select-option-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+}
+.select-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-option-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.select-option-badge.success {
+  border-color: var(--success);
+  color: var(--success);
+}
+.select-option-badge.warning {
+  border-color: var(--warning);
+  color: var(--warning);
 }
 .select-menu {
   position: absolute;

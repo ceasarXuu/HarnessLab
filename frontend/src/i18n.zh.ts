@@ -64,6 +64,7 @@ export const zhMessages = {
     deleteEnvironmentTitle: '删除自定义 Environment',
     deleteEnvironmentLocalImpact: '将删除 OrnnLab 本地 Environment 模板，不会修改 Harbor 内置 backend 类型。',
     notDownloaded: '未下载',
+    downloaded: '已下载',
     size: '大小',
     visibility: '可见性',
     tasksCount: 'Tasks',

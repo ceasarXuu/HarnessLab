@@ -1,7 +1,11 @@
 import { ChevronDown } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 
-interface SelectOption {
+export interface SelectOption {
+  badge?: {
+    label: string
+    tone: 'neutral' | 'success' | 'warning'
+  }
   label: string
   value: string
 }
@@ -58,6 +62,15 @@ export function CustomSelect({
     if (!onSearchChange) setInternalSearch('')
   }
 
+  const optionContent = (option: SelectOption) => (
+    <span className="select-option-content">
+      <span className="select-option-label">{option.label}</span>
+      {option.badge && (
+        <span className={`select-option-badge ${option.badge.tone}`}>{option.badge.label}</span>
+      )}
+    </span>
+  )
+
   return (
     <div
       className={`custom-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className ?? ''}`}
@@ -83,7 +96,7 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <span>{selected?.label ?? (value || placeholder || '')}</span>
+        {selected ? optionContent(selected) : <span>{value || placeholder || ''}</span>}
         <ChevronDown aria-hidden="true" />
       </button>
       {open && !disabled && (
@@ -104,6 +117,7 @@ export function CustomSelect({
               className={option.value === value ? 'active' : undefined}
               key={option.value}
               role="option"
+              aria-label={option.badge ? `${option.label} ${option.badge.label}` : undefined}
               aria-selected={option.value === value}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
@@ -111,7 +125,7 @@ export function CustomSelect({
                 closeMenu()
               }}
             >
-              {option.label}
+              {optionContent(option)}
             </button>
           ))}
         </div>

@@ -62,6 +62,7 @@ export const enMessages = {
     deleteEnvironmentTitle: 'Delete custom environment',
     deleteEnvironmentLocalImpact: 'This removes the OrnnLab-local environment template. Harbor built-in backend types are not changed.',
     notDownloaded: 'Not downloaded',
+    downloaded: 'Downloaded',
     size: 'Size',
     visibility: 'Visibility',
     tasksCount: 'Tasks',

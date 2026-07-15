@@ -53,6 +53,16 @@ export const NewJobFlow: Story = {
   },
 }
 
+export const DatasetDownloadStatus: Story = {
+  render: () => <RunBuilderFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByLabelText('Dataset'))
+    await expect(canvas.getByRole('option', { name: 'terminal-bench@2.0 Downloaded' })).toBeVisible()
+    await expect(canvas.getByRole('option', { name: 'swebench-verified@1.0 Not downloaded' })).toBeVisible()
+  },
+}
+
 export const VerifierSkipLocksLeaderboard: Story = {
   render: () => <RunBuilderFixture />,
   play: async ({ canvasElement }) => {

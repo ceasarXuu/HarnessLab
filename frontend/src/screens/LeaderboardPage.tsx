@@ -1,7 +1,7 @@
 import { Trophy } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useCachedServerSearch, useJob, useJobEvents, useJobTrials } from '../api/hooks'
-import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
+import { datasetDtoToRow, jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { CustomSelect } from '../ui/components/CustomSelect'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
@@ -9,15 +9,16 @@ import { DetailRail } from '../ui/components/DetailRail'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { usePaginatedItems } from '../ui/pagination'
-import type { HarborJob, LeaderboardDataset, LeaderboardRow } from '../domain/harbor'
+import type { DatasetRow, HarborJob, LeaderboardRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
+import { datasetRef, datasetSelectOptions } from '../ui/datasetSelectOptions'
 
 interface LeaderboardPageProps {
   writesEnabled?: boolean
   client: WebUiClient
   dataset: string
   datasetSearch: string
-  leaderboardDatasets: LeaderboardDataset[]
+  leaderboardDatasets: DatasetRow[]
   jobs: HarborJob[]
   rows: LeaderboardRow[]
   t: Translate
@@ -57,14 +58,14 @@ export function LeaderboardPage({
   const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selectedJob
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
-  const selectedDataset = leaderboardDatasets.find((row) => row.ref === dataset)
+  const selectedDataset = leaderboardDatasets.find((row) => datasetRef(row) === dataset)
   const fallbackDatasets = leaderboardDatasets.filter((row) =>
-    [row.name, row.version, row.ref].some((value) =>
+    [row.name, row.version, datasetRef(row)].some((value) =>
       value.toLowerCase().includes(datasetSearch.trim().toLowerCase()),
     ),
   )
   const visibleDatasets = datasetSearchQuery
-    ? datasetSearchResource.data?.items ?? fallbackDatasets
+    ? datasetSearchResource.data?.items.map(datasetDtoToRow) ?? fallbackDatasets
     : leaderboardDatasets
   const selectableDatasets =
     selectedDataset && !visibleDatasets.includes(selectedDataset) ? [selectedDataset, ...visibleDatasets] : visibleDatasets
@@ -87,7 +88,7 @@ export function LeaderboardPage({
               searchPlaceholder={t('searchDatasetsPlaceholder')}
               searchValue={datasetSearch}
               value={dataset}
-              options={selectableDatasets.map((row) => ({ label: row.ref, value: row.ref }))}
+              options={datasetSelectOptions(selectableDatasets, t)}
               onChange={onDataset}
               onSearchChange={onDatasetSearch}
             />
