@@ -237,6 +237,9 @@ code {
 .compact-key-value .key-value-row--with-source {
   grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) minmax(0, 1.1fr) auto;
 }
+.compact-key-value .key-value-row--inherited {
+  grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) auto;
+}
 .compact-key-value .key-value-row > label {
   gap: 0;
 }

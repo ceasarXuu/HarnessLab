@@ -149,7 +149,7 @@ export const enMessages = {
     genericAgentEnv: 'Variables',
     envValueSource: 'Value source',
     envSourceInherited: 'Inherit system variable',
-    envSourceLiteral: 'Fixed value',
+    envSourceLiteral: 'Custom',
     supportedAgentCapabilities: 'Supported configuration',
     agentModelListConfig: 'One or more model names',
     agentKeyValueConfig: 'Key / value list',

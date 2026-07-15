@@ -43,13 +43,14 @@ describe('editable list controls', () => {
     expect(screen.getByRole('textbox', { name: 'Models 1' })).toHaveValue('claude-sonnet-4-5')
   })
 
-  it('serializes inherited and fixed environment variable values distinctly', () => {
+  it('hides the value input for inherited variables and restores it for custom values', () => {
     render(<InheritedKeyValueFixture />)
 
     expect(screen.getByRole('button', { name: 'Value source' })).toHaveTextContent('Inherit system variable')
-    expect(screen.getByRole('textbox', { name: 'Value' })).toBeDisabled()
+    expect(screen.queryByRole('textbox', { name: 'Value' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Value source' }))
-    fireEvent.click(screen.getByRole('option', { name: 'Fixed value' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Custom' }))
+    expect(screen.getByRole('textbox', { name: 'Value' })).toBeEnabled()
     fireEvent.change(screen.getByRole('textbox', { name: 'Value' }), { target: { value: 'secret-reference' } })
 
     expect(screen.getByTestId('serialized-env')).toHaveTextContent('API_KEY=secret-reference')
@@ -59,7 +60,8 @@ describe('editable list controls', () => {
     render(<KnownEnvironmentFixture />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Add variable Environment' }))
-    expect(screen.getByRole('button', { name: 'Value source' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Value source' })).toHaveTextContent('Custom')
+    expect(screen.getByRole('textbox', { name: 'Value' })).toBeEnabled()
     expect(screen.queryByRole('combobox', { name: 'Value source' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Variable name' }))
     fireEvent.click(screen.getByRole('option', { name: 'OPENAI_API_KEY' }))
@@ -110,7 +112,7 @@ function InheritedKeyValueFixture() {
         label="Environment"
         labels={{
           add: 'Add', delete: 'Delete', inherited: 'Inherit system variable', key: 'Key',
-          literal: 'Fixed value', source: 'Value source', value: 'Value',
+          literal: 'Custom', source: 'Value source', value: 'Value',
         }}
         value={value}
         onChange={setValue}
@@ -132,7 +134,7 @@ function KnownEnvironmentFixture() {
         labels={{
           add: 'Add variable', customKey: 'Custom variable', delete: 'Delete',
           inherited: 'Inherit system variable', key: 'Variable name',
-          literal: 'Fixed value', searchKeys: 'Search variables', source: 'Value source',
+          literal: 'Custom', searchKeys: 'Search variables', source: 'Value source',
           value: 'Value',
         }}
         value={value}

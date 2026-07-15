@@ -57,8 +57,8 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
             className="secondary-button compact-action"
             type="button"
             onClick={() => setRows([
-              ...rows.filter((row) => row.key.trim() || row.value.trim()),
-              { customKey: keyOptions.length === 0, key: '', value: '', inherited: allowInherited },
+            ...rows.filter((row) => row.key.trim() || row.value.trim()),
+              { customKey: keyOptions.length === 0, key: '', value: '', inherited: false },
             ])}
           >
             <Plus aria-hidden="true" />
@@ -69,7 +69,7 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
       <div className="key-value-list">
         {rows.map((row, index) => (
           <div
-            className={`key-value-row${allowInherited ? ' key-value-row--with-source' : ''}`}
+            className={`key-value-row${allowInherited ? ' key-value-row--with-source' : ''}${allowInherited && row.inherited ? ' key-value-row--inherited' : ''}`}
             key={index}
             onBlur={(event) => {
               if (event.currentTarget.contains(event.relatedTarget)) return
@@ -123,8 +123,8 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
                   ariaLabel={labels.source ?? ''}
                   disabled={readOnly}
                   options={[
-                    { label: labels.inherited ?? '', value: 'inherited' },
                     { label: labels.literal ?? '', value: 'literal' },
+                    { label: labels.inherited ?? '', value: 'inherited' },
                   ]}
                   value={row.inherited ? 'inherited' : 'literal'}
                   onChange={(nextValue) => commit(rows.map((item, rowIndex) => rowIndex === index
@@ -133,16 +133,17 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
                 />
               </label>
             )}
-            <label>
-              <span className={compact ? 'visually-hidden' : undefined}>{labels.value}</span>
-              <input
-                aria-label={compact ? labels.value : undefined}
-                readOnly={readOnly}
-                disabled={row.inherited}
-                value={row.value}
-                onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))}
-              />
-            </label>
+            {!row.inherited && (
+              <label>
+                <span className={compact ? 'visually-hidden' : undefined}>{labels.value}</span>
+                <input
+                  aria-label={compact ? labels.value : undefined}
+                  readOnly={readOnly}
+                  value={row.value}
+                  onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))}
+                />
+              </label>
+            )}
             {!readOnly && (
               <button
                 aria-label={`${labels.delete} ${label} ${row.key || index + 1}`}

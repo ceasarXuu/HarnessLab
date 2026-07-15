@@ -151,7 +151,7 @@ export const zhMessages = {
     genericAgentEnv: '变量',
     envValueSource: '取值方式',
     envSourceInherited: '继承系统变量',
-    envSourceLiteral: '固定值',
+    envSourceLiteral: '自定义',
     supportedAgentCapabilities: '支持的配置',
     agentModelListConfig: '一个或多个模型名称',
     agentKeyValueConfig: 'Key / Value 列表',
