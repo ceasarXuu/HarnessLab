@@ -124,6 +124,28 @@
   font-size: 12px;
 }
 
+.system-docker-command {
+  margin-top: 16px;
+}
+
+.system-docker-command > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.system-docker-command > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.system-docker-command input {
+  width: 100%;
+  min-width: 0;
+}
+
 .system-card-actions {
   display: flex;
   flex-wrap: wrap;

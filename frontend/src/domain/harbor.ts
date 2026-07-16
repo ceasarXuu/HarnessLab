@@ -114,7 +114,7 @@ interface SystemRowBase {
 export type SystemRow =
   | (SystemRowBase & { kind: 'ornnlab-service'; state: 'running' | 'starting' | 'restarting' | 'degraded' | 'stopped' | 'error'; endpoint: string | null; logsPath: string; error: string | null })
   | (SystemRowBase & { kind: 'harbor-cli'; state: 'installed' | 'not-installed'; version: string | null; executablePath: string })
-  | (SystemRowBase & { kind: 'docker'; state: 'running' | 'not-running' | 'not-installed' | 'error'; context: string | null; clientVersion: string | null; serverVersion: string | null; executablePath: string; error: string | null })
+  | (SystemRowBase & { kind: 'docker'; state: 'running' | 'not-running' | 'not-installed' | 'error'; context: string | null; clientVersion: string | null; serverVersion: string | null; startCommand: string; executablePath: string; error: string | null })
   | (SystemRowBase & { kind: 'storage'; state: 'available' | 'unavailable'; sizeBytes: number | null; path: string; error: string | null })
   | (SystemRowBase & { kind: 'resource-cpu'; state: 'normal' | 'elevated' | 'high' | 'unavailable'; usagePercent: number | null; logicalCores: number | null })
   | (SystemRowBase & { kind: 'resource-gpu'; state: 'normal' | 'elevated' | 'high' | 'not-detected' | 'error'; usagePercent: number | null; deviceCount: number })

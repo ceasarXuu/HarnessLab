@@ -3,11 +3,17 @@ import type { MessageKey, Translate } from '../../i18n'
 
 interface SystemDashboardProps {
   disabled: boolean
+  dockerCommand: string
+  dockerCommandError: string | null
+  dockerCommandRunning: boolean
   rows: SystemRow[]
   t: Translate
   onCheckUpdate: () => void
   onCleanDockerCache: () => void
   onCleanStorageCache: () => void
+  onDockerCommandBlur: () => void
+  onDockerCommandChange: (command: string) => void
+  onRunDockerCommand: () => void
   onRestartService: () => void
 }
 
@@ -45,7 +51,7 @@ function SystemGroupSection({ group, rows, title, ...props }: SystemDashboardPro
   )
 }
 
-function SystemCard({ row, t, disabled, onCheckUpdate, onCleanDockerCache, onCleanStorageCache, onRestartService }: Omit<SystemDashboardProps, 'rows'> & { row: SystemRow }) {
+function SystemCard({ row, t, disabled, dockerCommand, dockerCommandError, dockerCommandRunning, onCheckUpdate, onCleanDockerCache, onCleanStorageCache, onDockerCommandBlur, onDockerCommandChange, onRestartService, onRunDockerCommand }: Omit<SystemDashboardProps, 'rows'> & { row: SystemRow }) {
   const title = t(componentTitleKey(row.kind))
   const meter = resourceMeter(row)
   const message = componentMessage(row, t)
@@ -58,6 +64,30 @@ function SystemCard({ row, t, disabled, onCheckUpdate, onCleanDockerCache, onCle
       {meter && <ResourceMeter value={meter.value} label={meter.label} />}
       <SystemCardDetails row={row} t={t} />
       {message && <p className={row.kind === 'docker' && row.state === 'not-running' ? 'system-card-notice' : 'system-card-error'}>{message}</p>}
+      {row.kind === 'docker' && (
+        <div className="system-docker-command">
+          <label htmlFor="docker-start-command">{t('dockerStartCommand')}</label>
+          <div>
+            <input
+              disabled={disabled || dockerCommandRunning}
+              id="docker-start-command"
+              maxLength={500}
+              spellCheck={false}
+              value={dockerCommand}
+              onBlur={onDockerCommandBlur}
+              onChange={(event) => onDockerCommandChange(event.target.value)}
+            />
+            <button
+              className="secondary-button compact-action"
+              disabled={disabled || dockerCommandRunning || !dockerCommand.trim()}
+              onClick={onRunDockerCommand}
+            >
+              {dockerCommandRunning ? t('runningCommand') : t('runCommand')}
+            </button>
+          </div>
+          {dockerCommandError && <p className="system-card-error" role="alert">{dockerCommandError}</p>}
+        </div>
+      )}
       {row.actions.length > 0 && (
         <div className="system-card-actions">
           {row.actions.includes('check-update') && <button className="secondary-button compact-action" disabled={disabled} onClick={onCheckUpdate}>{t('checkUpdate')}</button>}

@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { createMockWebUiClient } from '../api/mockClient'
 import { systemRows } from '../mocks/demoSystem'
 import { getTranslator } from '../i18n'
@@ -62,5 +62,54 @@ describe('SystemPage', () => {
     expect(within(docker).getByText('28.1.1')).toBeVisible()
     expect(within(docker).getByText('—')).toBeVisible()
     expect(within(docker).queryByRole('button', { name: 'Clean cache' })).not.toBeInTheDocument()
+  })
+
+  it('always saves and runs the user Docker start command', async () => {
+    const client = createMockWebUiClient()
+    const saveCommand = vi.spyOn(client, 'saveDockerStartCommand')
+    const startDocker = vi.spyOn(client, 'startDocker')
+    render(
+      <SystemPage
+        client={client}
+        rows={systemRows}
+        t={getTranslator('en')}
+        onRefresh={async () => undefined}
+      />,
+    )
+
+    const docker = screen.getByRole('article', { name: 'Docker' })
+    const command = within(docker).getByLabelText('Docker start command')
+    expect(command).toHaveValue('colima start')
+
+    fireEvent.change(command, { target: { value: 'open -a Docker' } })
+    fireEvent.blur(command)
+    await waitFor(() => expect(saveCommand).toHaveBeenCalledWith('open -a Docker'))
+
+    fireEvent.click(within(docker).getByRole('button', { name: 'Run' }))
+    await waitFor(() => expect(startDocker).toHaveBeenCalledWith('open -a Docker'))
+  })
+
+  it('keeps Docker command failures concise and inside the Docker card', async () => {
+    const client = createMockWebUiClient()
+    client.startDocker = async () => ({
+      data: null,
+      error: { code: 'OPERATION_FAILED', message: 'long low-level process output' },
+    })
+    render(
+      <SystemPage
+        client={client}
+        rows={systemRows}
+        t={getTranslator('en')}
+        onRefresh={async () => undefined}
+      />,
+    )
+
+    const docker = screen.getByRole('article', { name: 'Docker' })
+    fireEvent.click(within(docker).getByRole('button', { name: 'Run' }))
+
+    expect(await within(docker).findByRole('alert')).toHaveTextContent(
+      'The Docker start command failed. Check the OrnnLab service logs for details.',
+    )
+    expect(screen.queryByText('long low-level process output')).not.toBeInTheDocument()
   })
 })

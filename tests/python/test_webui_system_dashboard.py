@@ -54,6 +54,7 @@ def test_system_health_distinguishes_installed_docker_cli_from_running_daemon(
         "context": "colima",
         "clientVersion": "28.1.1",
         "serverVersion": None,
+        "startCommand": "",
         "executablePath": "docker",
         "error": "failed to connect to the docker API",
         "actions": [],

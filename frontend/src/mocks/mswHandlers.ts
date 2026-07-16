@@ -153,4 +153,12 @@ export const webuiHandlers = [
   http.post(`${webui}/system/service/restart`, async () => HttpResponse.json(await client.restartSystemService())),
   http.post(`${webui}/system/cache/docker/clean`, async () => HttpResponse.json(await client.cleanDockerCache())),
   http.post(`${webui}/system/cache/storage/clean`, async () => HttpResponse.json(await client.cleanStorageCache())),
+  http.put(`${webui}/system/docker/start-command`, async ({ request }) => {
+    const body = await request.json() as { command: string }
+    return HttpResponse.json(await client.saveDockerStartCommand(body.command))
+  }),
+  http.post(`${webui}/system/docker/start`, async ({ request }) => {
+    const body = await request.json() as { command: string }
+    return HttpResponse.json(await client.startDocker(body.command))
+  }),
 ]

@@ -71,6 +71,8 @@ describe('WebUiHttpClient', () => {
       client.installSystemUpdate(),
       client.listHarnesses({ limit: 100 }),
       client.restartSystemService(),
+      client.saveDockerStartCommand('colima start'),
+      client.startDocker('colima start'),
       client.moveDataset('dataset@1', { parentPath: '/tmp/relocated' }),
       client.relocateDataset('dataset@1', { path: '/tmp/relocated/dataset@1' }),
       client.removeDatasetRegistration('dataset@1'),
@@ -95,6 +97,8 @@ describe('WebUiHttpClient', () => {
       '/api/webui/v1/environments',
       '/api/webui/v1/system/service/update',
       '/api/webui/v1/system/directory-picker',
+      '/api/webui/v1/system/docker/start-command',
+      '/api/webui/v1/system/docker/start',
       '/api/webui/v1/system/cache/storage/clean',
     ]))
     expect(urls.every((url) => url.startsWith('/api/webui/v1/'))).toBe(true)

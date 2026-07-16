@@ -274,6 +274,10 @@ export interface LeaderboardQuery extends ListQuery {
   metric?: string
 }
 
+export interface DockerStartCommandDto {
+  command: string
+}
+
 export type SystemComponentKind =
   | 'ornnlab-service'
   | 'harbor-cli'
@@ -309,6 +313,7 @@ export type SystemComponentDto =
       context: string | null
       clientVersion: string | null
       serverVersion: string | null
+      startCommand: string
       executablePath: string
       error: string | null
     })

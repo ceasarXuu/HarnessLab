@@ -107,6 +107,7 @@ interface Operation {
 | System | `POST /system/service/update/check` | `UpdateCheckResult` |
 | System | `POST /system/directory-picker` | `{ path: string | null }` |
 | System | `POST /system/service/update`、`restart`、`POST /system/cache/docker/clean`、`POST /system/cache/storage/clean` | `{ operation }` |
+| System | `PUT /system/docker/start-command`、`POST /system/docker/start` | `{ command }`、`{ operation }` |
 
 路径中的 Dataset ref 采用 URL encoding，例如 `terminal-bench%402.0`。
 

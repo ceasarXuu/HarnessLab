@@ -2,11 +2,30 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from ornnlab.services.command_line import split_command
 
 
 class WebUiModel(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class DockerStartCommandInput(WebUiModel):
+    command: str = Field(max_length=500)
+
+    @field_validator("command")
+    @classmethod
+    def validate_command(cls, value: str) -> str:
+        command = value.strip()
+        if not command:
+            return ""
+        if "\n" in command or "\r" in command:
+            raise ValueError("command must be a single executable and its arguments")
+        parts = split_command(command)
+        if any(part in {"&&", "||", "|", ";", ">", ">>", "<", "<<"} for part in parts):
+            raise ValueError("shell operators are not supported")
+        return command
 
 
 class KeyValueInput(WebUiModel):

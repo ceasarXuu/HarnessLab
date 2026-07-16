@@ -10,7 +10,7 @@ describe('Stage 3 Operation write boundary', () => {
     const agent = agents.data?.items.find((item) => item.id === 'local-repair-agent') as AgentDto
     const environment = environments.data?.items.find((item) => item.profileType === 'custom') as EnvironmentDto
 
-    const [job, datasetDownload, datasetMove, datasetRelocate, datasetRegistration, agentUpdate, environmentUpdate, leaderboard, system, update] = await Promise.all([
+    const [job, datasetDownload, datasetMove, datasetRelocate, datasetRegistration, agentUpdate, environmentUpdate, leaderboard, system, update, dockerStart] = await Promise.all([
       client.createJob({
         config: {
           agentSetupTimeoutMultiplier: 1,
@@ -51,6 +51,7 @@ describe('Stage 3 Operation write boundary', () => {
       client.updateJobLeaderboard('job_91a7', { includeInLeaderboard: false }),
       client.cleanStorageCache(),
       client.installSystemUpdate(),
+      client.startDocker('colima start'),
     ])
 
     expect(job.data?.operation).toMatchObject({ status: 'completed', type: 'run-job' })
@@ -63,6 +64,7 @@ describe('Stage 3 Operation write boundary', () => {
     expect(leaderboard.data?.operation.status).toBe('completed')
     expect(system.data?.operation.status).toBe('queued')
     expect(update.data?.operation.status).toBe('queued')
+    expect(dockerStart.data?.operation).toMatchObject({ status: 'queued', type: 'start-docker' })
   })
 
   it('exposes Operation polling for every submitted mock write', async () => {

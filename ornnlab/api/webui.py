@@ -11,6 +11,7 @@ from ornnlab.models.webui import (
     DatasetImportInput,
     DatasetParentPathInput,
     DatasetPathInput,
+    DockerStartCommandInput,
     EnvironmentInput,
     LeaderboardUpdateInput,
 )
@@ -403,6 +404,20 @@ async def clean_docker_cache(request: Request) -> dict:
 async def clean_storage_cache(request: Request) -> dict:
     _require_query(request, set())
     return _data(request, {"operation": _system(request).clean_storage_cache()})
+
+
+@router.put("/system/docker/start-command")
+async def save_docker_start_command(
+    payload: DockerStartCommandInput, request: Request
+) -> dict:
+    _require_query(request, set())
+    return _data(request, _system(request).save_docker_start_command(payload.command))
+
+
+@router.post("/system/docker/start")
+async def start_docker(payload: DockerStartCommandInput, request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, {"operation": _system(request).start_docker(payload.command)})
 
 
 @router.post("/system/directory-picker")

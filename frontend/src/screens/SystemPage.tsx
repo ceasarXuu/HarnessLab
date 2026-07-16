@@ -27,6 +27,11 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null)
+  const persistedDockerCommand = rows.find((row) => row.kind === 'docker')?.startCommand ?? ''
+  const [dockerCommand, setDockerCommand] = useState(persistedDockerCommand)
+  const [dockerCommandDirty, setDockerCommandDirty] = useState(false)
+  const [dockerCommandEdited, setDockerCommandEdited] = useState(false)
+  const [dockerCommandError, setDockerCommandError] = useState<string | null>(null)
   const systemOperation = useOperation(client)
   const confirmContent = confirmAction === 'docker-cache'
     ? {
@@ -56,6 +61,10 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
     if (systemOperation.operation?.status !== 'completed') return
     void onRefresh()
   }, [onRefresh, systemOperation.operation?.id, systemOperation.operation?.status])
+
+  useEffect(() => {
+    if (!dockerCommandEdited) setDockerCommand(persistedDockerCommand)
+  }, [dockerCommandEdited, persistedDockerCommand])
 
   const handleCheckUpdate = async () => {
     if (!writesEnabled) return
@@ -89,6 +98,35 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
     setToast({ message, remaining: 3 })
   }
 
+  const saveDockerCommand = async () => {
+    if (!writesEnabled || !dockerCommandDirty) return
+    const command = dockerCommand.trim()
+    const response = await client.saveDockerStartCommand(command)
+    if (response.error) {
+      setDockerCommandError(t('dockerCommandSaveFailed'))
+      return
+    }
+    setDockerCommand(command)
+    setDockerCommandDirty(false)
+    setDockerCommandError(null)
+  }
+
+  const runDockerCommand = async () => {
+    if (!writesEnabled || !dockerCommand.trim()) return
+    const command = dockerCommand.trim()
+    const submitted = await systemOperation.submit(
+      () => client.startDocker(command),
+      ({ operation }) => operation,
+    )
+    if (submitted) {
+      setDockerCommand(command)
+      setDockerCommandDirty(false)
+      setDockerCommandError(null)
+    } else {
+      setDockerCommandError(t('dockerStartFailed'))
+    }
+  }
+
   const closeConfirm = () => setConfirmAction(null)
   const confirmAndClose = async () => {
     if (!writesEnabled) return
@@ -104,6 +142,7 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
     await systemOperation.submit(mutation, ({ operation }) => operation)
     setConfirmAction(null)
   }
+  const dockerActionError = dockerCommandError ?? dockerOperationError(systemOperation.operation, t)
 
   return (
     <main className="workspace single-page">
@@ -115,11 +154,21 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
         </div>
         <SystemDashboard
           disabled={!writesEnabled || isOperationRunning(systemOperation.operation?.status)}
+          dockerCommand={dockerCommand}
+          dockerCommandError={dockerActionError}
+          dockerCommandRunning={systemOperation.operation?.type === 'start-docker' && isOperationRunning(systemOperation.operation.status)}
           rows={rows}
           t={t}
           onCheckUpdate={handleCheckUpdate}
           onCleanDockerCache={() => setConfirmAction('docker-cache')}
           onCleanStorageCache={() => setConfirmAction('local-cache')}
+          onDockerCommandBlur={() => void saveDockerCommand()}
+          onDockerCommandChange={(command) => {
+            setDockerCommand(command)
+            setDockerCommandDirty(true)
+            setDockerCommandEdited(true)
+          }}
+          onRunDockerCommand={() => void runDockerCommand()}
           onRestartService={() => setConfirmAction('service-restart')}
         />
       </section>
@@ -136,9 +185,15 @@ export function SystemPage({ writesEnabled = true, client, rows, t, onRefresh }:
           onConfirm={confirmAndClose}
         />
       )}
-      <ResourceStatus error={updateCheckError ?? systemOperation.error?.message ?? null} />
+      <ResourceStatus error={updateCheckError ?? (dockerActionError ? null : systemOperation.error?.message) ?? null} />
     </main>
   )
+}
+
+function dockerOperationError(operation: { type: string; status: string } | null, t: Translate) {
+  return operation?.type === 'start-docker' && operation.status === 'failed'
+    ? t('dockerStartFailed')
+    : null
 }
 
 function isOperationRunning(status: string | undefined) {

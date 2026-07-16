@@ -373,6 +373,46 @@ def test_system_directory_picker_returns_the_native_selection(client, tmp_path: 
     assert response.json()["data"] == {"path": str(tmp_path)}
 
 
+def test_docker_start_command_is_persisted_executed_without_shell_and_exposed(
+    client, monkeypatch
+):
+    executed: list[list[str]] = []
+    monkeypatch.setattr(
+        "ornnlab.services.webui_system_service._run_checked",
+        lambda command: executed.append(command),
+    )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_system_service._wait_for_docker",
+        lambda: None,
+        raising=False,
+    )
+
+    saved = client.put(f"{API}/system/docker/start-command", json={"command": "colima start"})
+    docker = next(
+        item
+        for item in client.get(f"{API}/system/health").json()["data"]["items"]
+        if item["kind"] == "docker"
+    )
+    started = client.post(
+        f"{API}/system/docker/start", json={"command": "colima start"}
+    ).json()["data"]["operation"]
+
+    assert saved.json()["data"] == {"command": "colima start"}
+    assert docker["startCommand"] == "colima start"
+    assert _wait_operation(client, started["id"])["status"] == "completed"
+    assert executed == [["colima", "start"]]
+
+
+def test_docker_start_command_rejects_shell_operators(client):
+    response = client.put(
+        f"{API}/system/docker/start-command",
+        json={"command": "colima start && whoami"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
 def test_trial_dto_uses_real_harbor_result_fields_only():
     trial = _trial_dto(
         "job-1",

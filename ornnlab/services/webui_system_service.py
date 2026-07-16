@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
@@ -17,8 +18,10 @@ from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.system_health_probe import probe_system_health
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
 
 logger = logging.getLogger(__name__)
+DOCKER_START_COMMAND_KEY = "docker_start_command"
 
 
 class WebUiSystemService:
@@ -28,7 +31,10 @@ class WebUiSystemService:
 
     def health(self) -> list[dict]:
         doctor = DoctorService(self.settings).status()
-        return probe_system_health(self.settings.home, doctor, _harbor_executable())
+        components = probe_system_health(self.settings.home, doctor, _harbor_executable())
+        docker = next(component for component in components if component["kind"] == "docker")
+        docker["startCommand"] = self._docker_start_command()
+        return components
 
     async def hub_connection(self) -> dict:
         try:
@@ -94,6 +100,51 @@ class WebUiSystemService:
 
         return self.operations.submit("clean-storage-cache", "system", "storage", work)
 
+    def save_docker_start_command(self, command: str) -> dict:
+        parsed = split_command(command) if command else []
+        with sqlite.connect(self.settings) as conn:
+            conn.execute(
+                "INSERT INTO webui_system_preferences(key, value, updated_at) "
+                "VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET "
+                "value = excluded.value, updated_at = excluded.updated_at",
+                (DOCKER_START_COMMAND_KEY, command),
+            )
+        logger.info(
+            "Docker start command preference saved executable=%s arg_count=%d",
+            parsed[0] if parsed else "none",
+            max(0, len(parsed) - 1),
+        )
+        return {"command": command}
+
+    def start_docker(self, command: str) -> dict:
+        if not command:
+            raise ValueError("Docker start command is required")
+        parsed = split_command(command)
+        self.save_docker_start_command(command)
+
+        async def work(progress) -> None:
+            logger.info(
+                "Docker start command requested executable=%s arg_count=%d",
+                parsed[0],
+                len(parsed) - 1,
+            )
+            progress(10, "Running Docker start command")
+            await asyncio.to_thread(_run_checked, parsed)
+            progress(70, "Waiting for Docker service")
+            await asyncio.to_thread(_wait_for_docker)
+            progress(100, "Docker service is available")
+
+        return self.operations.submit("start-docker", "system", "docker", work)
+
+    def _docker_start_command(self) -> str:
+        with sqlite.connect(self.settings) as conn:
+            rows = sqlite.rows(
+                conn,
+                "SELECT value FROM webui_system_preferences WHERE key = ?",
+                (DOCKER_START_COMMAND_KEY,),
+            )
+        return str(rows[0]["value"]) if rows else ""
+
     def choose_directory(self) -> dict:
         path = _choose_native_directory()
         if path:
@@ -143,6 +194,29 @@ def _run_checked(command: list[str]) -> None:
             or result.stdout.strip()
             or f"command exited with {result.returncode}"
         )
+
+
+def _wait_for_docker(timeout_seconds: float = 30) -> None:
+    docker_command = split_command(os.environ.get("ORNNLAB_DOCKER_COMMAND", "docker"))
+    deadline = time.monotonic() + timeout_seconds
+    last_error = ""
+    while time.monotonic() < deadline:
+        try:
+            result = subprocess.run(
+                [*docker_command, "info"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            last_error = str(exc)
+        else:
+            if result.returncode == 0:
+                return
+            last_error = result.stderr.strip() or result.stdout.strip()
+        time.sleep(1)
+    logger.error("Docker did not become available after start command: %s", last_error)
+    raise RuntimeError("Docker service did not become available after running the start command")
 
 
 def _remove_cache_dir(path: Path) -> None:

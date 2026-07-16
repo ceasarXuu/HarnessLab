@@ -43,6 +43,17 @@ export const DockerNotRunning: Story = {
   },
 }
 
+export const DockerQuickStart: Story = {
+  args: Default.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const card = canvas.getByRole('article', { name: 'Docker' })
+    await expect(within(card).getByLabelText('Docker start command')).toHaveValue('colima start')
+    await userEvent.click(within(card).getByRole('button', { name: 'Run' }))
+    await expect(await within(card).findByRole('button', { name: 'Running' })).toBeDisabled()
+  },
+}
+
 export const ServiceDegraded: Story = {
   args: { ...Default.args, rows: degradedSystemRows },
 }

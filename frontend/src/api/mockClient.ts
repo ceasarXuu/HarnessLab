@@ -32,7 +32,7 @@ export function createMockWebUiClient(): WebUiClient {
   const taskDtos = taskRows.map(toDatasetTaskDto)
   const eventDtos = events.map((event) => ({ event: toJobEventDto(event), jobId: event.jobId }))
   let leaderboardDtos = leaderboardRows.map(toLeaderboardEntryDto)
-  const systemDtos = systemRows.map(toSystemComponentDto)
+  let systemDtos = systemRows.map(toSystemComponentDto)
   const trialDtos = trialRows.map(toTrialDto)
   const operations = createMockOperationStore()
   const operationEffects = new Map<string, { onCompleted?: () => void; onRunning?: () => void }>()
@@ -266,6 +266,20 @@ export function createMockWebUiClient(): WebUiClient {
         'SERVICE_RESTART_UNAVAILABLE',
         'ORNNLAB_RESTART_COMMAND is not configured by the service supervisor',
       ))
+    },
+    async saveDockerStartCommand(command) {
+      systemDtos = systemDtos.map((item) => item.kind === 'docker' ? { ...item, startCommand: command } : item)
+      return success({ command })
+    },
+    async startDocker(command) {
+      systemDtos = systemDtos.map((item) => item.kind === 'docker' ? { ...item, startCommand: command } : item)
+      return operationResult(submitOperation('start-docker', 'system', 'docker', {
+        onCompleted: () => {
+          systemDtos = systemDtos.map((item) => item.kind === 'docker'
+            ? { ...item, state: 'running', serverVersion: item.serverVersion ?? '27.5.1', error: null }
+            : item)
+        },
+      }))
     },
     async resumeJob(id) {
       return operationResult(submitOperation('resume-job', 'job', id, {

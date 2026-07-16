@@ -102,7 +102,7 @@ export const systemRows: SystemRow[] = [
   },
   {
     kind: 'docker',
-    state: 'running', context: 'colima', clientVersion: '28.1.1', serverVersion: '27.5.1', executablePath: 'docker', error: null,
+    state: 'running', context: 'colima', clientVersion: '28.1.1', serverVersion: '27.5.1', startCommand: 'colima start', executablePath: 'docker', error: null,
     actions: ['clean-docker-cache'],
   },
   {

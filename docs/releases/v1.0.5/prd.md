@@ -97,7 +97,9 @@ System 使用分组健康看板展示 OrnnLab Service、Harbor CLI、Docker、Ha
 
 每类组件使用专属状态语义：OrnnLab Service 区分运行、启动、重启、降级、停止和错误；Harbor CLI 区分已安装与未安装；Docker 区分运行中、未启动、未安装和连接异常；CPU/GPU 使用负载等级，未检测到 GPU 不得显示为笼统的 unavailable；可用存储区分充足、偏低和严重不足。Docker CLI 已安装不代表 daemon 正常，只有实际连接成功才能显示“运行中”。
 
-OrnnLab 不安装、不内置也不管理 Docker Runtime 生命周期。Docker 卡片通过当前 Docker Context 和标准 Docker CLI/API 展示 CLI 路径、Context、Client/Server 版本及 daemon 连接状态；不识别 Docker Desktop、Colima、OrbStack 等具体产品，也不提供启动或关闭入口。页面只展示本地化的错误摘要，原始错误保留在 API 和服务日志中供诊断。用户自行负责启动和关闭其 Docker Runtime。
+OrnnLab 不安装、不内置也不识别具体 Docker Runtime。Docker 卡片通过当前 Docker Context 和标准 Docker CLI/API 展示 CLI 路径、Context、Client/Server 版本及 daemon 连接状态。页面只展示本地化的错误摘要，原始错误保留在 API 和服务日志中供诊断。
+
+Docker 卡片始终提供一组“启动命令 + 运行”快捷控件。命令由当前用户自行填写并持久化，OrnnLab 不推断 Docker Desktop、Colima、OrbStack 等产品的启动方式。命令只允许单个可执行文件及参数，不支持管道、重定向、组合命令或其他 Shell 操作符，并以 `shell=false` 运行。输入框失焦时自动保存；运行后通过异步 Operation 轮询当前 Docker Context，daemon 可连接后刷新卡片。失败时页面只显示摘要，完整命令输出写入服务日志。Docker Runtime 的安装、关闭和故障处理仍由用户负责。
 
 OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重启并查看状态；服务异常退出后可由应用级守护进程按退避策略重启。该能力只管理当前用户会话中的 OrnnLab 前后端进程，不安装系统服务，也不做开机或登录自启动。
 

@@ -14,6 +14,7 @@ import type {
   CreateJobRequestDto,
   CreateJobResponseDto,
   DirectoryPickerResultDto,
+  DockerStartCommandDto,
   DatasetImportRequestDto,
   DatasetParentPathRequestDto,
   DatasetPathRequestDto,
@@ -74,6 +75,8 @@ export interface WebUiClient {
   listLeaderboardDatasets(query?: ListQuery): Promise<ApiResponse<Page<LeaderboardDatasetDto> | null>>
   listSystemHealth(): Promise<ApiResponse<Page<SystemComponentDto> | null>>
   restartSystemService(): Promise<ApiResponse<OperationResultDto | null>>
+  saveDockerStartCommand(command: string): Promise<ApiResponse<DockerStartCommandDto | null>>
+  startDocker(command: string): Promise<ApiResponse<OperationResultDto | null>>
   resumeJob(id: string): Promise<ApiResponse<OperationResultDto | null>>
   syncDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
   updateAgent(id: string, agent: AgentInputDto): Promise<ApiResponse<OperationResultDto | null>>
@@ -123,6 +126,8 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     listLeaderboardDatasets: (query) => requestJson<Page<LeaderboardDatasetDto>>(request, `${baseUrl}/leaderboard/datasets${toSearch(query)}`),
     listSystemHealth: () => requestJson<Page<SystemComponentDto>>(request, `${baseUrl}/system/health`),
     restartSystemService: () => post<OperationResultDto>(request, `${baseUrl}/system/service/restart`),
+    saveDockerStartCommand: (command) => send<DockerStartCommandDto>(request, `${baseUrl}/system/docker/start-command`, 'PUT', { command }),
+    startDocker: (command) => post<OperationResultDto>(request, `${baseUrl}/system/docker/start`, { command }),
     resumeJob: (id) => post<OperationResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/resume`),
     syncDataset: (ref) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/sync`),
     updateAgent: (id, agent) => send<OperationResultDto>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`, 'PATCH', agent),
@@ -146,7 +151,7 @@ function post<T>(request: typeof fetch, url: string, body?: unknown): Promise<Ap
   return send<T>(request, url, 'POST', body)
 }
 
-function send<T>(request: typeof fetch, url: string, method: 'DELETE' | 'PATCH' | 'POST', body?: unknown): Promise<ApiResponse<T | null>> {
+function send<T>(request: typeof fetch, url: string, method: 'DELETE' | 'PATCH' | 'POST' | 'PUT', body?: unknown): Promise<ApiResponse<T | null>> {
   return requestJson<T>(request, url, {
     body: body === undefined ? undefined : JSON.stringify(body),
     headers: body === undefined ? undefined : { 'content-type': 'application/json' },
