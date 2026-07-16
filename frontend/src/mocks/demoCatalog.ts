@@ -1,4 +1,4 @@
-import type { AgentCapabilities, AgentRow, DatasetRow, DatasetTask, EnvironmentRow, TaskRow } from '../domain/harbor'
+import type { AgentCapabilities, AgentRow, DatasetRow, DatasetTask, EnvironmentRow, HarnessTemplate, TaskRow } from '../domain/harbor'
 
 export const datasetRows: DatasetRow[] = [
   {
@@ -229,11 +229,10 @@ export const agentRows: AgentRow[] = [
     agentName: 'Claude Code default',
     authenticationMode: 'anthropic-api',
     harness: 'claude-code',
-    type: 'built-in',
     adapter: 'none',
     models: 'claude-haiku-4-5, claude-sonnet-4-5',
-    status: 'available',
-    source: 'Harbor built-in',
+    status: 'configured',
+    source: 'OrnnLab profile',
     updated: '12m ago',
     env: 'none',
     kwargs: 'none',
@@ -245,11 +244,10 @@ export const agentRows: AgentRow[] = [
     id: 'codex-cli-default',
     agentName: 'Codex CLI default',
     harness: 'codex',
-    type: 'built-in',
     adapter: 'none',
     models: 'gpt-5.1-codex, gpt-5.1-codex-mini',
     status: 'configured',
-    source: 'Harbor built-in',
+    source: 'OrnnLab profile',
     updated: '1h ago',
     env: 'none',
     kwargs: 'none',
@@ -261,11 +259,10 @@ export const agentRows: AgentRow[] = [
     id: 'oracle-baseline',
     agentName: 'Oracle baseline',
     harness: 'oracle',
-    type: 'built-in',
     adapter: 'none',
     models: '',
-    status: 'available',
-    source: 'Harbor built-in',
+    status: 'configured',
+    source: 'OrnnLab profile',
     updated: '3h ago',
     env: 'none',
     kwargs: 'none',
@@ -277,7 +274,6 @@ export const agentRows: AgentRow[] = [
     id: 'local-repair-agent',
     agentName: 'Local repair agent',
     harness: 'custom-harness',
-    type: 'custom',
     adapter: 'agents.local_repair:Agent',
     models: 'qwen3-coder-local',
     status: 'needs-token',
@@ -294,6 +290,26 @@ export const agentRows: AgentRow[] = [
     capabilities: customAgentCapabilities,
   },
 ]
+
+const harborHarnessNames = [
+  'acp', 'aider', 'antigravity-cli', 'claude-code', 'cline-cli', 'codex', 'copilot-cli',
+  'cursor-cli', 'devin', 'gemini-cli', 'goose', 'hermes', 'kimi-cli', 'langgraph',
+  'mini-swe-agent', 'nemo-agent', 'nop', 'openclaw', 'opencode', 'openhands',
+  'openhands-sdk', 'oracle', 'pi', 'qwen-coder', 'rovodev-cli', 'swe-agent', 'terminus',
+  'terminus-1', 'terminus-2', 'trae-agent',
+]
+
+export const harnessTemplates: HarnessTemplate[] = harborHarnessNames.map((name) => ({
+  capabilities: name === 'claude-code'
+    ? claudeCodeCapabilities
+    : name === 'codex'
+      ? codexCapabilities
+      : name === 'oracle'
+        ? oracleCapabilities
+        : customAgentCapabilities,
+  name,
+  source: 'harbor-built-in',
+}))
 
 export const environmentRows: EnvironmentRow[] = [
   {

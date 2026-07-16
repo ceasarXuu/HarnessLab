@@ -16,7 +16,6 @@ def create_test_agent(
                 "id": agent_id,
                 "agentName": name,
                 "harness": harness,
-                "type": "custom",
                 "env": [],
                 "kwargs": "",
                 "mcpServers": [],

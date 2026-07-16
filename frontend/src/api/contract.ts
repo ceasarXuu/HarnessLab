@@ -139,8 +139,7 @@ export interface ListQuery {
 
 export type DatasetTaskQuery = ListQuery
 
-export type AgentProfileType = 'built-in' | 'custom'
-export type AgentAvailability = 'available' | 'configured' | 'needs-token'
+export type AgentAvailability = 'configured' | 'needs-token'
 
 export interface KeyValueDto {
   key: string
@@ -200,7 +199,6 @@ export interface AgentInputDto {
   setupTimeoutSeconds?: number
   timeoutSeconds?: number
   skillSources: string[]
-  type: AgentProfileType
   maxTimeoutSeconds?: number
 }
 
@@ -211,7 +209,12 @@ export interface AgentDto extends AgentInputDto {
 
 export interface AgentQuery extends ListQuery {
   status?: AgentAvailability
-  type?: AgentProfileType
+}
+
+export interface HarnessDto {
+  capabilities: AgentCapabilitiesDto
+  name: string
+  source: 'harbor-built-in'
 }
 
 export type EnvironmentProfileType = 'built-in' | 'custom'

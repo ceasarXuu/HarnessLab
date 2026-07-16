@@ -45,7 +45,7 @@ interface Page<T> {
 }
 ```
 
-列表端点可用 `q`、`cursor`、`limit`；Agents 额外支持 `type`、`status`，Environment 额外支持 `type`，Leaderboard 需要 `dataset` 并可选 `metric`。除契约明确列出的参数外，所有 query 参数一律返回 `422 INVALID_REQUEST`。
+列表端点可用 `q`、`cursor`、`limit`；Agents 额外支持 `status`，Environment 额外支持 `type`，Leaderboard 需要 `dataset` 并可选 `metric`。除契约明确列出的参数外，所有 query 参数一律返回 `422 INVALID_REQUEST`。
 
 ### 错误模型
 
@@ -91,6 +91,7 @@ interface Operation {
 | Operation | `POST /operations/{id}/cancel` | `{ operation }` |
 | Agent | `GET /agents`、`GET /agents/{id}` | `Page<Agent>`、`Agent` |
 | Agent | `POST /agents`、`PATCH /agents/{id}`、`DELETE /agents/{id}` | `{ operation }` |
+| Harness | `GET /harnesses` | `Page<Harness>` |
 | Environment | `GET /environments`、`GET /environments/{id}` | `Page<Environment>`、`Environment` |
 | Environment | `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`、`POST /environments/{id}/copy` | `{ operation }` |
 | Job | `GET /jobs`、`GET /jobs/{id}` | `Page<Job>`、`Job` |
@@ -227,8 +228,7 @@ interface Agent {
   id: string
   agentName: string
   harness: string
-  type: 'built-in' | 'custom'
-  status: 'available' | 'configured' | 'needs-token'
+  status: 'configured' | 'needs-token'
   models: string[]
   importPath?: string
   env: Array<{ key: string; value: string }>
@@ -245,11 +245,17 @@ interface Agent {
   timeoutSeconds?: number
   maxTimeoutSeconds?: number
 }
+
+interface Harness {
+  name: string
+  source: 'harbor-built-in'
+  capabilities: AgentCapabilities
+}
 ```
 
-built-in Agent 从 Harbor `AgentName` 生成，只读且通常没有 custom profile 配置。custom Agent 必须使用 Harbor AgentName，或在 `importPath` 存在时使用 custom harness。`stdio` MCP 必须提供 `command`；`sse`/`streamable-http` 必须提供 `url`。协议不包含启用开关、部署配置或 compose sidecar。
+`Harness` 是从当前安装的 Harbor `AgentName` 和适配器 descriptor 动态生成的只读模板目录，不是 Agent，也不写入数据库。新建 Agent 必须先从该目录选择 Harness，再保存名称、模型集合及该 Harness 支持的参数；只有保存成功的配置才会出现在 `/agents`。Agent 创建后 Harness 不可更换，但 Agent 本身可编辑或删除。`stdio` MCP 必须提供 `command`；`sse`/`streamable-http` 必须提供 `url`。协议不包含启用开关、部署配置或 compose sidecar。
 
-Agent 的 `status` 是响应字段，不属于创建或更新请求。后端仅在 custom profile 通过 Harbor `AgentConfig` 校验并保存后返回 `configured`；未实现真实凭证可用性探针时不得由前端提交或伪造 `needs-token`。
+Agent 的 `status` 是响应字段，不属于创建或更新请求。后端仅在 profile 通过 Harbor `AgentConfig` 校验并保存后返回 `configured`；未实现真实凭证可用性探针时不得由前端提交或伪造 `needs-token`。
 
 ### Environment
 

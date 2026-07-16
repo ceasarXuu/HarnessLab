@@ -7,7 +7,7 @@ describe('Stage 3 Operation write boundary', () => {
     const client = createMockWebUiClient()
     const agents = await client.listAgents()
     const environments = await client.listEnvironments()
-    const agent = agents.data?.items.find((item) => item.type === 'custom') as AgentDto
+    const agent = agents.data?.items.find((item) => item.id === 'local-repair-agent') as AgentDto
     const environment = environments.data?.items.find((item) => item.profileType === 'custom') as EnvironmentDto
 
     const [job, datasetDownload, datasetMove, datasetRelocate, datasetRegistration, agentUpdate, environmentUpdate, leaderboard, system, update] = await Promise.all([

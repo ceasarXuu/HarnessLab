@@ -30,7 +30,7 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
             <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
           </div>
         </div>
-        <AgentIdentityEditor lockHarness={draft.type === 'built-in'} value={draft} t={t} onChange={setDraft} />
+        <AgentIdentityEditor lockHarness value={draft} t={t} onChange={setDraft} />
       </section>
       <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
     </aside>

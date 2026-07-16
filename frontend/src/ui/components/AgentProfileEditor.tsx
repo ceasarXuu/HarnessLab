@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
 import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/agentCapabilities'
-import type { AgentCapabilities, AgentCapabilityField, AgentRow } from '../../domain/harbor'
+import type { AgentCapabilities, AgentCapabilityField, AgentRow, HarnessTemplate } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentHarnessParameters } from './AgentHarnessParameters'
 import { AgentEnvironmentVariables } from './AgentEnvironmentVariables'
@@ -21,14 +21,6 @@ interface AgentProfileEditorProps {
   t: Translate
   onChange: (value: AgentRow) => void
 }
-
-const harnessOptions = [
-  'acp', 'aider', 'antigravity-cli', 'claude-code', 'cline-cli', 'codex', 'copilot-cli',
-  'cursor-cli', 'devin', 'gemini-cli', 'goose', 'hermes', 'kimi-cli', 'langgraph', 'mini-swe-agent',
-  'nemo-agent', 'nop', 'openclaw', 'opencode', 'openhands', 'openhands-sdk', 'oracle', 'pi',
-  'qwen-coder', 'rovodev-cli', 'swe-agent', 'terminus', 'terminus-1', 'terminus-2', 'trae-agent',
-  'custom-harness',
-]
 
 export function AgentProfileEditor({
   capabilitiesByHarness,
@@ -200,19 +192,32 @@ export function AgentProfileEditor({
 
 export function AgentIdentityEditor({
   capabilitiesByHarness,
+  harnesses = [],
   lockHarness = false,
   value,
   t,
   onChange,
-}: AgentProfileEditorProps & { lockHarness?: boolean }) {
+}: AgentProfileEditorProps & { harnesses?: HarnessTemplate[]; lockHarness?: boolean }) {
   const usesCustomHarness = value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
-  const setHarness = (harness: string) => onChange({
-    ...value,
-    adapter: harness === 'custom-harness' ? value.adapter || 'agents.custom:Agent' : 'none',
-    capabilities: agentCapabilitiesForHarness(harness, capabilitiesByHarness),
-    harness,
-  })
+  const setHarness = (harness: string) => {
+    const capabilities = agentCapabilitiesForHarness(harness, capabilitiesByHarness)
+    onChange({
+      ...value,
+      agentName: value.agentName === defaultAgentName(value.harness)
+        ? defaultAgentName(harness)
+        : value.agentName,
+      adapter: 'none',
+      authenticationMode: capabilities.authenticationModes[0]?.value,
+      capabilities,
+      env: 'none',
+      harness,
+      kwargs: 'none',
+      mcp: 'none',
+      models: '',
+      skills: 'none',
+    })
+  }
 
   return (
     <div className="agent-form-grid">
@@ -227,7 +232,7 @@ export function AgentIdentityEditor({
           {t('harness')}
           <CustomSelect
             ariaLabel={t('harness')}
-            options={harnessOptions.map((harness) => ({ label: harness, value: harness }))}
+            options={harnesses.map((harness) => ({ label: harness.name, value: harness.name }))}
             searchAriaLabel={t('searchHarnesses')}
             searchPlaceholder={t('searchHarnesses')}
             value={value.harness}
@@ -235,11 +240,6 @@ export function AgentIdentityEditor({
           />
         </label>
       )}
-      <Metric
-        label={t('agentResourceType')}
-        value={value.type === 'built-in' ? t('harborBuiltInHarness') : t('customHarness')}
-        variant="plain"
-      />
       {usesCustomHarness && (
         <label>
           {t('customImportPath')}
@@ -248,6 +248,14 @@ export function AgentIdentityEditor({
       )}
     </div>
   )
+}
+
+function defaultAgentName(harness: string) {
+  const displayName = harness
+    .split('-')
+    .map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part)
+    .join(' ')
+  return `${displayName} Agent`
 }
 
 function mcpLabels(t: Translate) {
@@ -473,6 +481,5 @@ function withSeconds(value: string) {
 
 export function getAgentStatusLabel(status: AgentRow['status'], t: Translate) {
   if (status === 'needs-token') return t('agentStatusNeedsToken')
-  if (status === 'configured') return t('agentStatusConfigured')
-  return t('agentStatusAvailable')
+  return t('agentStatusConfigured')
 }

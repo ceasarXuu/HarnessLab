@@ -57,7 +57,7 @@ export const BuiltInAgent: Story = {
 export const CustomAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows.find((row) => row.type === 'custom') ?? agentRows[0]} t={t} onSave={async () => true} />
+      <AgentDetail agent={agentRows.find((row) => row.id === 'local-repair-agent') ?? agentRows[0]} t={t} onSave={async () => true} />
     </main>
   ),
 }

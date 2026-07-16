@@ -13,7 +13,7 @@ from tests.python.support import create_test_agent
 def test_system_status_reports_core_fields(settings):
     payload = DoctorService(settings).status()
 
-    assert payload["db_schema_version"] == 6
+    assert payload["db_schema_version"] == 7
     assert payload["data_dir"]
     assert payload["stale_running_runs"] == 0
     assert "docker" in payload

@@ -65,17 +65,19 @@ describe('WebUI MSW handlers', () => {
   })
 
   it('serves every remaining Stage 2 read resource through contract routes', async () => {
-    const [agentsResponse, environmentsResponse, hubConnectionResponse, leaderboardDatasetsResponse, leaderboardResponse, systemResponse] = await Promise.all([
+    const [agentsResponse, environmentsResponse, harnessesResponse, hubConnectionResponse, leaderboardDatasetsResponse, leaderboardResponse, systemResponse] = await Promise.all([
       fetch('http://localhost/api/webui/v1/agents'),
       fetch('http://localhost/api/webui/v1/environments'),
+      fetch('http://localhost/api/webui/v1/harnesses?limit=100'),
       fetch('http://localhost/api/webui/v1/system/hub-connection'),
       fetch('http://localhost/api/webui/v1/leaderboard/datasets'),
       fetch('http://localhost/api/webui/v1/leaderboard?dataset=terminal-bench%402.0'),
       fetch('http://localhost/api/webui/v1/system/health'),
     ])
-    const [agents, environments, hubConnection, leaderboardDatasets, leaderboard, system] = await Promise.all([
+    const [agents, environments, harnesses, hubConnection, leaderboardDatasets, leaderboard, system] = await Promise.all([
       agentsResponse.json(),
       environmentsResponse.json(),
+      harnessesResponse.json(),
       hubConnectionResponse.json(),
       leaderboardDatasetsResponse.json(),
       leaderboardResponse.json(),
@@ -83,6 +85,8 @@ describe('WebUI MSW handlers', () => {
     ])
 
     expect(agents.data.items[0]).toMatchObject({ agentName: 'Claude Code default', id: 'claude-code-default' })
+    expect(harnesses.data.items).toHaveLength(30)
+    expect(harnesses.data.items).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'claude-code', source: 'harbor-built-in' })]))
     expect(environments.data.items[0]).toMatchObject({ id: 'docker-default', name: 'Docker default' })
     expect(hubConnection.data).toMatchObject({ status: 'connected' })
     expect(leaderboardDatasets.data.items.map((item: { ref: string }) => item.ref)).toContain('terminal-bench@2.0')
@@ -92,7 +96,7 @@ describe('WebUI MSW handlers', () => {
 
   it('preserves structured Agent and Environment query filters through HTTP', async () => {
     const [agentsResponse, environmentsResponse] = await Promise.all([
-      fetch('http://localhost/api/webui/v1/agents?status=needs-token&type=custom'),
+      fetch('http://localhost/api/webui/v1/agents?status=needs-token'),
       fetch('http://localhost/api/webui/v1/environments?type=built-in'),
     ])
     const [agents, environments] = await Promise.all([
@@ -101,7 +105,7 @@ describe('WebUI MSW handlers', () => {
     ])
 
     expect(agents.data.items).toEqual([
-      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token', type: 'custom' }),
+      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token' }),
     ])
     expect(environments.data.items).toEqual([
       expect.objectContaining({ id: 'docker-default', profileType: 'built-in' }),

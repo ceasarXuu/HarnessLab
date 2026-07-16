@@ -1,10 +1,11 @@
-import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, EventLog, HarborJob, LeaderboardDataset, LeaderboardRow, SystemRow, TrialRow } from '../domain/harbor'
+import type { AgentRow, DatasetRow, DatasetTask, EnvironmentRow, EventLog, HarborJob, HarnessTemplate, LeaderboardDataset, LeaderboardRow, SystemRow, TrialRow } from '../domain/harbor'
 import { fallbackAgentCapabilities } from '../domain/agentCapabilities'
 import type {
   AgentDto,
   DatasetDto,
   DatasetTaskDto,
   EnvironmentDto,
+  HarnessDto,
   JobDto,
   JobEventDto,
   LeaderboardEntryDto,
@@ -77,11 +78,14 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
     setupTimeout: agent.setupTimeoutSeconds === undefined ? undefined : `${agent.setupTimeoutSeconds}s`,
     timeout: agent.timeoutSeconds === undefined ? undefined : `${agent.timeoutSeconds}s`,
     skills: agent.skillSources.length ? agent.skillSources.join('\n') : 'none',
-    source: agent.type === 'built-in' ? 'Harbor built-in' : importPath,
+    source: importPath,
     status: agent.status,
-    type: agent.type,
     updated: '',
   }
+}
+
+export function harnessDtoToTemplate(harness: HarnessDto): HarnessTemplate {
+  return harness
 }
 
 export function environmentDtoToRow(environment: EnvironmentDto): EnvironmentRow {

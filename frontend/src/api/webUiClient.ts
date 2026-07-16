@@ -10,6 +10,7 @@ import type {
   EnvironmentDto,
   EnvironmentQuery,
   HubConnectionDto,
+  HarnessDto,
   CreateJobRequestDto,
   CreateJobResponseDto,
   DirectoryPickerResultDto,
@@ -62,6 +63,7 @@ export interface WebUiClient {
   relocateDataset(ref: string, request: DatasetPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   removeDatasetRegistration(ref: string): Promise<ApiResponse<OperationResultDto | null>>
   listAgents(query?: AgentQuery): Promise<ApiResponse<Page<AgentDto> | null>>
+  listHarnesses(query?: ListQuery): Promise<ApiResponse<Page<HarnessDto> | null>>
   listDatasetTasks(ref: string, query?: DatasetTaskQuery): Promise<ApiResponse<Page<DatasetTaskDto> | null>>
   listDatasets(query?: ListQuery): Promise<ApiResponse<Page<DatasetDto> | null>>
   listEnvironments(query?: EnvironmentQuery): Promise<ApiResponse<Page<EnvironmentDto> | null>>
@@ -109,6 +111,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     relocateDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/relocate`, body),
     removeDatasetRegistration: (ref) => send<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/registration`, 'DELETE'),
     listAgents: (query) => requestJson<Page<AgentDto>>(request, `${baseUrl}/agents${toSearch(query)}`),
+    listHarnesses: (query) => requestJson<Page<HarnessDto>>(request, `${baseUrl}/harnesses${toSearch(query)}`),
     listDatasetTasks: (ref, query) =>
       requestJson<Page<DatasetTaskDto>>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/tasks${toSearch(query)}`),
     listDatasets: (query) => requestJson<Page<DatasetDto>>(request, `${baseUrl}/datasets${toSearch(query)}`),

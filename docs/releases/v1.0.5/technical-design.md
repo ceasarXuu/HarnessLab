@@ -72,8 +72,8 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 
 - `Agent` 在 OrnnLab 中是可复用的 Harbor `AgentConfig` 模板，不代表修改 Harbor 的 Agent 实现。它组合 Harness、可选模型集合、环境变量、kwargs、Skills、MCP 和超时配置。
 - New Job 必须从所选 Agent 的 `models` 中选择一个 `modelName`。后端校验 `modelName in agent.models`，将选择保存在 Job 配置快照中，并以该值覆盖 Harbor `AgentConfig.model_name`；禁止默认取列表首项或接受集合外模型。
-- Agent 资源是 OrnnLab 对 Harbor 运行参数的可复用配置层。运行时从 Harbor `AgentName` 生成的 built-in 记录是系统预置 Agent：可编辑名称及该 Harness 支持的配置字段，可直接用于 Job，但不能删除或更换 Harness。首次保存或首次用于 Job 时，后端以相同 ID 将其物化到 OrnnLab Agent 存储，不修改 Harbor 源码或枚举。
-- 自定义 Agent 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。详情只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。列表合并运行时预置项和已物化配置，以持久化配置覆盖同 ID 默认值。
+- `/harnesses` 从 Harbor `AgentName` 和适配器 descriptor 动态生成只读模板及能力，不持久化、不进入 Agent 列表，也不能直接用于 Job。
+- `/agents` 只读取 `agents.config_json` 中用户保存的 Agent profile。新建时必须选择 Harness；保存时由 `AgentConfig.model_validate` 校验；创建后 Harness 不可更换，Profile 可编辑、删除。新库 Agent 列表为空，不再合并或物化运行时预置项。
 - `agents.config_json` 是 Agent 模板的唯一持久化配置源。运行时直接将其编译为 Harbor `AgentConfig`；不再生成或读取旧 AgentProfile 文件，不再维护 ProfileCompiler、generated-agent 目录或第二张 WebUI 配置表。
 - Harness 专属参数优先从 Harbor descriptor 读取。`CLI_FLAGS` 以及与其同名的 `ENV_VARS` 都视为同一个类型化 Harness 参数，写入 `kwargs`，不得在环境变量区域重复出现。Harbor 的 `ENV_VARS` 不是完整的运行变量目录；OrnnLab 还维护经过对应适配器源码验证的补充目录。Claude Code 按 Anthropic API、Claude OAuth、Amazon Bedrock 三种认证方式提供互斥变量子集，公共运行变量始终可选，`CLAUDE_FORCE_OAUTH`、`CLAUDE_CODE_USE_BEDROCK` 等内部开关由认证方式自动编译，不直接暴露。用户仍可添加自定义变量。API 中 `value: null` 的继承语义在编译 Harbor `AgentConfig` 时转换为 `${VARIABLE_NAME}`，固定值保持原值。
 - Agent 不配置网络白名单。OrnnLab 将网络策略统一收敛到 Environment 模板；这是产品边界裁剪，不映射 Harbor `AgentConfig.extra_allowed_hosts`。

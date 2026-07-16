@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHubConnection, useJobs, useLeaderboard, useOperation, useSystemHealth } from '../api/hooks'
+import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHarnesses, useHubConnection, useJobs, useLeaderboard, useOperation, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
-import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
+import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import { agentModelNames } from '../domain/agentModels'
@@ -88,6 +88,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const loadJobSearch = useCallback((query: string) => client.listJobs({ limit: 100, q: query }), [client])
   const jobSearchResource = useCachedServerSearch('jobs', jobSearchQuery, loadJobSearch)
   const agentsResource = useAgents(client, { limit: 100 })
+  const harnessesResource = useHarnesses(client, { limit: 100 })
   const jobsResource = useJobs(client, { limit: 100 })
   const datasetsResource = useDatasets(client, { limit: 100 })
   const environmentsResource = useEnvironments(client, { limit: 100 })
@@ -108,6 +109,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
   const t = useMemo(() => getTranslator(language), [language])
   const agents = useMemo(() => agentsResource.data?.items.map(agentDtoToRow) ?? [], [agentsResource.data])
+  const harnesses = useMemo(
+    () => harnessesResource.data?.items.map(harnessDtoToTemplate) ?? [],
+    [harnessesResource.data],
+  )
   const configuredAgents = agents
   const datasets = useMemo(() => datasetsResource.data?.items.map(datasetDtoToRow) ?? [], [datasetsResource.data])
   const environmentProfiles = useMemo(
@@ -325,6 +330,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
         <NewAgentPage
           canSave={writesEnabled}
           client={client}
+          harnesses={harnesses}
           initialHarness={route.agentHarness}
           rows={agents}
           t={t}

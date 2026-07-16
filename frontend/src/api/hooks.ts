@@ -10,6 +10,7 @@ import type {
   EnvironmentDto,
   EnvironmentQuery,
   HubConnectionDto,
+  HarnessDto,
   JobDto,
   JobEventDto,
   LeaderboardDatasetDto,
@@ -142,8 +143,13 @@ export function useCachedServerSearch<T>(
 }
 
 export function useAgents(client: WebUiClient, query: AgentQuery = {}): WebUiResource<Page<AgentDto>> {
-  const load = useCallback(() => client.listAgents(query), [client, query.cursor, query.limit, query.q, query.status, query.type])
-  return useWebUiResource(load, [client, query.cursor, query.limit, query.q, query.status, query.type])
+  const load = useCallback(() => client.listAgents(query), [client, query.cursor, query.limit, query.q, query.status])
+  return useWebUiResource(load, [client, query.cursor, query.limit, query.q, query.status])
+}
+
+export function useHarnesses(client: WebUiClient, query: ListQuery = {}): WebUiResource<Page<HarnessDto>> {
+  const load = useCallback(() => client.listHarnesses(query), [client, query.cursor, query.limit, query.q])
+  return useWebUiResource(load, [client, query.cursor, query.limit, query.q])
 }
 
 export function useAgent(client: WebUiClient, id?: string): WebUiResource<AgentDto> {

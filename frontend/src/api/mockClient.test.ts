@@ -65,12 +65,12 @@ describe('MockWebUiClient', () => {
     const client = createMockWebUiClient()
 
     const [agentsResponse, environmentsResponse] = await Promise.all([
-      client.listAgents({ status: 'needs-token', type: 'custom' }),
+      client.listAgents({ status: 'needs-token' }),
       client.listEnvironments({ type: 'built-in' }),
     ])
 
     expect(agentsResponse.data?.items).toEqual([
-      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token', type: 'custom' }),
+      expect.objectContaining({ id: 'local-repair-agent', status: 'needs-token' }),
     ])
     expect(environmentsResponse.data?.items).toEqual([
       expect.objectContaining({ id: 'docker-default', profileType: 'built-in' }),

@@ -1,5 +1,5 @@
 import { events, jobs, trialRows } from '../mocks/demo'
-import { agentRows, datasetRows, environmentRows, taskRows } from '../mocks/demoCatalog'
+import { agentRows, datasetRows, environmentRows, harnessTemplates, taskRows } from '../mocks/demoCatalog'
 import { leaderboardRows, systemRows } from '../mocks/demoSystem'
 import { fallbackAgentCapabilities } from '../domain/agentCapabilities'
 import type {
@@ -102,7 +102,6 @@ export function createMockWebUiClient(): WebUiClient {
     async deleteAgent(id) {
       const target = agentDtos.find((agent) => agent.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
-      if (target.type === 'built-in') return failure('AGENT_BUILT_IN_IMMUTABLE', 'Built-in agents cannot be deleted')
       agentDtos = agentDtos.filter((agent) => agent.id !== id)
       return operationResult(operations.complete('delete-agent', 'agent', id, 'Agent deleted'))
     },
@@ -227,6 +226,9 @@ export function createMockWebUiClient(): WebUiClient {
     async listAgents(query) {
       return success(page(filterAgents(agentDtos, query)))
     },
+    async listHarnesses(query) {
+      return success(page(filterByQuery(harnessTemplates, query, (harness) => [harness.name])))
+    },
     async listDatasetTasks(ref, query) {
       return success(page(filterDatasetTasks(taskDtos, ref, query)))
     },
@@ -276,10 +278,7 @@ export function createMockWebUiClient(): WebUiClient {
     async updateAgent(id, agent) {
       const target = agentDtos.find((item) => item.id === id)
       if (!target) return failure('AGENT_NOT_FOUND', 'Agent not found')
-      if (target.type !== agent.type) return failure('AGENT_SOURCE_IMMUTABLE', 'Agent Harness source cannot be changed')
-      if (target.type === 'built-in' && target.harness !== agent.harness) {
-        return failure('AGENT_HARNESS_IMMUTABLE', 'Built-in Harness cannot be changed')
-      }
+      if (target.harness !== agent.harness) return failure('AGENT_HARNESS_IMMUTABLE', 'Agent Harness cannot be changed')
       agentDtos = agentDtos.map((item) => (
         item.id === id
           ? withMockAgentCapabilities({ ...agent, capabilities: target.capabilities, id, status: 'configured' })
@@ -411,10 +410,8 @@ function filterByQuery<T>(items: T[], query: ListQuery | undefined, fields: (ite
 }
 
 function filterAgents(items: import('./contract').AgentDto[], query: AgentQuery | undefined) {
-  const textMatched = filterByQuery(items, query, (agent) => [agent.agentName, agent.harness, agent.status, agent.type])
-  return textMatched.filter((agent) =>
-    (!query?.status || agent.status === query.status) && (!query?.type || agent.type === query.type),
-  )
+  const textMatched = filterByQuery(items, query, (agent) => [agent.agentName, agent.harness, agent.status])
+  return textMatched.filter((agent) => !query?.status || agent.status === query.status)
 }
 
 function filterEnvironments(items: import('./contract').EnvironmentDto[], query: EnvironmentQuery | undefined) {

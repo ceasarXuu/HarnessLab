@@ -51,7 +51,6 @@ export function agentRowToDto(agent: AgentRow): AgentInputDto {
     setupTimeoutSeconds: seconds(agent.setupTimeout),
     timeoutSeconds: seconds(agent.timeout),
     skillSources: splitList(agent.skills),
-    type: agent.type,
   }
 }
 

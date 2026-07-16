@@ -38,13 +38,23 @@ async def cancel_operation(operation_id: str, request: Request) -> dict:
 async def list_agents(
     request: Request,
     q: str | None = None,
-    type: str | None = None,
     status: str | None = None,
     cursor: str | None = None,
     limit: int = 50,
 ) -> dict:
-    _require_query(request, {"q", "type", "status", "cursor", "limit"})
-    return _page(request, _profiles(request).list_agents(q, type, status), cursor, limit)
+    _require_query(request, {"q", "status", "cursor", "limit"})
+    return _page(request, _profiles(request).list_agents(q, status), cursor, limit)
+
+
+@router.get("/harnesses")
+async def list_harnesses(
+    request: Request,
+    q: str | None = None,
+    cursor: str | None = None,
+    limit: int = 50,
+) -> dict:
+    _require_query(request, {"q", "cursor", "limit"})
+    return _page(request, _profiles(request).list_harnesses(q), cursor, limit)
 
 
 @router.get("/agents/{agent_id}")

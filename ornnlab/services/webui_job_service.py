@@ -79,7 +79,6 @@ class WebUiJobService:
     def create_job(self, request: CreateJobInput) -> tuple[dict, dict]:
         config = request.config
         agent = self.profiles.resolve_agent(config.agent_name)
-        agent = self.profiles.ensure_agent_persisted(agent)
         if config.model_name not in agent["models"]:
             raise ValueError("selected model is not configured for this Agent")
         environment = self.profiles.get_environment(config.environment_preset_id)

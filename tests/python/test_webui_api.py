@@ -59,18 +59,14 @@ def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
 
 
 def test_webui_agent_and_environment_crud(client):
-    created_agent = client.post(f"{API}/agents", json=_agent_payload()).json()["data"]["operation"]
-    assert created_agent["status"] == "completed"
+    empty_agents = client.get(f"{API}/agents").json()["data"]
+    assert empty_agents["items"] == []
+    assert empty_agents["total"] == 0
 
-    agent = client.get(f"{API}/agents/oracle-profile").json()["data"]
-    assert agent["agentName"] == "Oracle profile"
-    assert agent["harness"] == "oracle"
-    assert agent["status"] == "configured"
-    assert agent["timeoutSeconds"] == 1200
-    assert set(agent["capabilities"]["supportedFields"]) == {"customKwargs", "env", "timeouts"}
-
-    built_in_agent = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
-    built_in_fields = set(built_in_agent["capabilities"]["supportedFields"])
+    harnesses = client.get(f"{API}/harnesses?limit=100").json()["data"]["items"]
+    assert len(harnesses) >= 30
+    claude_harness = next(item for item in harnesses if item["name"] == "claude-code")
+    built_in_fields = set(claude_harness["capabilities"]["supportedFields"])
     expected_fields = {
         "customKwargs",
         "env",
@@ -81,7 +77,18 @@ def test_webui_agent_and_environment_crud(client):
         "timeouts",
     }
     assert expected_fields <= built_in_fields
-    built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
+
+    created_agent = client.post(f"{API}/agents", json=_agent_payload()).json()["data"]["operation"]
+    assert created_agent["status"] == "completed"
+
+    agent = client.get(f"{API}/agents/oracle-profile").json()["data"]
+    assert agent["agentName"] == "Oracle profile"
+    assert agent["harness"] == "oracle"
+    assert agent["status"] == "configured"
+    assert agent["timeoutSeconds"] == 1200
+    assert set(agent["capabilities"]["supportedFields"]) == {"customKwargs", "env", "timeouts"}
+
+    built_in_parameters = {item["key"] for item in claude_harness["capabilities"]["parameters"]}
     assert {
         "max_turns",
         "reasoning_effort",
@@ -90,14 +97,14 @@ def test_webui_agent_and_environment_crud(client):
     } <= built_in_parameters
     max_thinking_tokens = next(
         item
-        for item in built_in_agent["capabilities"]["parameters"]
+        for item in claude_harness["capabilities"]["parameters"]
         if item["key"] == "max_thinking_tokens"
     )
     assert max_thinking_tokens["kind"] == "number"
-    assert "MAX_THINKING_TOKENS" not in built_in_agent["capabilities"]["environmentVariables"]
+    assert "MAX_THINKING_TOKENS" not in claude_harness["capabilities"]["environmentVariables"]
     claude_auth_modes = {
         item["value"]: item["environmentVariables"]
-        for item in built_in_agent["capabilities"]["authenticationModes"]
+        for item in claude_harness["capabilities"]["authenticationModes"]
     }
     assert claude_auth_modes == {
         "anthropic-api": [
@@ -117,23 +124,23 @@ def test_webui_agent_and_environment_crud(client):
             "DISABLE_PROMPT_CACHING",
         ],
     }
-    assert built_in_agent["capabilities"]["environmentVariables"] == [
+    assert claude_harness["capabilities"]["environmentVariables"] == [
         "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING",
         "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
     ]
 
-    qwen_agent = client.get(f"{API}/agents/built-in:qwen-coder").json()["data"]
-    assert qwen_agent["capabilities"]["environmentVariables"] == [
+    qwen_harness = next(item for item in harnesses if item["name"] == "qwen-coder")
+    assert qwen_harness["capabilities"]["environmentVariables"] == [
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
     ]
     qwen_parameters = {
-        item["key"]: item for item in qwen_agent["capabilities"]["parameters"]
+        item["key"]: item for item in qwen_harness["capabilities"]["parameters"]
     }
     assert "api_key" not in qwen_parameters
     assert "base_url" not in qwen_parameters
 
-    openhands_agent = client.get(f"{API}/agents/built-in:openhands").json()["data"]
+    openhands_agent = next(item for item in harnesses if item["name"] == "openhands")
     openhands_parameters = {
         item["key"]: item for item in openhands_agent["capabilities"]["parameters"]
     }
@@ -142,23 +149,25 @@ def test_webui_agent_and_environment_crud(client):
     assert "LLM_REASONING_EFFORT" in openhands_agent["capabilities"]["environmentVariables"]
     assert "LLM_TEMPERATURE" in openhands_agent["capabilities"]["environmentVariables"]
 
-    built_in_update = _built_in_agent_payload("claude-code")
-    built_in_update["agentName"] = "Claude reusable profile"
-    built_in_update["authenticationMode"] = "oauth"
-    built_in_update["env"] = [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": None}]
-    built_in_update["models"] = ["claude-haiku-4-5", "claude-sonnet-4-5"]
-    updated = client.patch(f"{API}/agents/built-in:claude-code", json=built_in_update)
+    claude_profile = _agent_payload()
+    claude_profile.update({
+        "id": "claude-reusable",
+        "agentName": "Claude reusable profile",
+        "harness": "claude-code",
+        "authenticationMode": "oauth",
+        "env": [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": None}],
+        "models": ["claude-haiku-4-5", "claude-sonnet-4-5"],
+    })
+    updated = client.post(f"{API}/agents", json=claude_profile)
     assert updated.status_code == 200
-    saved_built_in = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
+    saved_built_in = client.get(f"{API}/agents/claude-reusable").json()["data"]
     assert saved_built_in["agentName"] == "Claude reusable profile"
     assert saved_built_in["models"] == ["claude-haiku-4-5", "claude-sonnet-4-5"]
     assert saved_built_in["authenticationMode"] == "oauth"
     compiled = WebUiProfileService(client.app.state.settings).agent_harbor_config(saved_built_in)
     assert compiled["env"]["CLAUDE_FORCE_OAUTH"] == "1"
 
-    built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
-    assert built_in_delete.status_code == 403
-    assert built_in_delete.json()["error"]["code"] == "RESOURCE_IMMUTABLE"
+    assert client.get(f"{API}/agents/built-in:oracle").status_code == 404
 
     created_environment = client.post(f"{API}/environments", json=_environment_payload()).json()
     assert created_environment["data"]["operation"]["status"] == "completed"
@@ -173,13 +182,16 @@ def test_webui_agent_and_environment_crud(client):
 
 
 def test_legacy_claude_thinking_environment_variable_moves_to_harness_parameters(client):
-    payload = _built_in_agent_payload("claude-code")
+    payload = _agent_payload()
+    payload.update(
+        {"id": "claude-profile", "agentName": "Claude profile", "harness": "claude-code"}
+    )
     payload["env"] = [{"key": "MAX_THINKING_TOKENS", "value": "4096"}]
 
-    response = client.patch(f"{API}/agents/built-in:claude-code", json=payload)
+    response = client.post(f"{API}/agents", json=payload)
 
     assert response.status_code == 200
-    saved = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
+    saved = client.get(f"{API}/agents/claude-profile").json()["data"]
     assert saved["env"] == []
     assert json.loads(saved["kwargs"])["max_thinking_tokens"] == "4096"
 
@@ -269,13 +281,10 @@ def test_webui_job_rejects_model_outside_agent_template(client):
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
-def test_webui_job_materializes_a_built_in_harness_agent_profile(client):
+def test_webui_job_uses_a_saved_agent_profile_backed_by_a_built_in_harness(client):
     _create_profile_prerequisites(client)
-    built_in = _built_in_agent_payload("oracle")
-    built_in["models"] = ["oracle-primary", "oracle-secondary"]
-    assert client.patch(f"{API}/agents/built-in:oracle", json=built_in).status_code == 200
     payload = _job_payload()
-    payload["agentName"] = "oracle"
+    payload["agentName"] = "Oracle profile"
     payload["modelName"] = "oracle-primary"
 
     response = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
@@ -283,8 +292,8 @@ def test_webui_job_materializes_a_built_in_harness_agent_profile(client):
     assert response.status_code == 200
     assert response.json()["data"]["job"]["harness"] == "oracle"
     with sqlite.connect(client.app.state.settings) as conn:
-        persisted = sqlite.rows(conn, "SELECT id FROM agents WHERE id = ?", ("built-in:oracle",))
-    assert persisted == [{"id": "built-in:oracle"}]
+        persisted = sqlite.rows(conn, "SELECT id FROM agents WHERE id = ?", ("oracle-profile",))
+    assert persisted == [{"id": "oracle-profile"}]
 
 
 def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_path: Path):
@@ -570,27 +579,12 @@ def _agent_payload() -> dict:
         "id": "oracle-profile",
         "agentName": "Oracle profile",
         "harness": "oracle",
-        "type": "custom",
         "env": [],
         "kwargs": "",
         "mcpServers": [],
         "models": ["oracle-primary", "oracle-secondary"],
         "skillSources": [],
         "timeoutSeconds": 1200,
-    }
-
-
-def _built_in_agent_payload(harness: str) -> dict:
-    return {
-        "id": f"built-in:{harness}",
-        "agentName": harness,
-        "harness": harness,
-        "type": "built-in",
-        "env": [],
-        "kwargs": "",
-        "mcpServers": [],
-        "models": [],
-        "skillSources": [],
     }
 
 

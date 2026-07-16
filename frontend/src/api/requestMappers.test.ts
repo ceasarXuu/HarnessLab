@@ -40,7 +40,6 @@ describe('WebUI mutation request mappers', () => {
       ...agentRows[0],
       adapter: 'agents.custom:Agent',
       harness: 'nop',
-      type: 'custom',
     })
 
     expect(agent.importPath).toBeUndefined()

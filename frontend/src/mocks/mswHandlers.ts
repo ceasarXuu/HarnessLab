@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { createMockWebUiClient } from '../api/mockClient'
-import type { AgentAvailability, AgentInputDto, AgentProfileType, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, DatasetParentPathRequestDto, DatasetPathRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
+import type { AgentAvailability, AgentInputDto, AgentQuery, CreateJobRequestDto, DatasetImportRequestDto, DatasetParentPathRequestDto, DatasetPathRequestDto, EnvironmentDto, EnvironmentProfileType, EnvironmentQuery, ListQuery, UpdateJobLeaderboardRequestDto } from '../api/contract'
 
 const webui = '*/api/webui/v1'
 const client = createMockWebUiClient()
@@ -19,7 +19,6 @@ function agentQuery(request: Request): AgentQuery {
   return {
     ...listQuery(request),
     status: optionalQueryValue<AgentAvailability>(url, 'status'),
-    type: optionalQueryValue<AgentProfileType>(url, 'type'),
   }
 }
 
@@ -59,6 +58,7 @@ export const webuiHandlers = [
     HttpResponse.json(await client.deleteAgent(String(params.agentId))),
   ),
   http.get(`${webui}/agents`, async ({ request }) => HttpResponse.json(await client.listAgents(agentQuery(request)))),
+  http.get(`${webui}/harnesses`, async ({ request }) => HttpResponse.json(await client.listHarnesses(listQuery(request)))),
   http.get(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.getAgent(String(params.agentId))),
   ),

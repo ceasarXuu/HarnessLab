@@ -38,7 +38,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
     if (searchResource.data) return searchResource.data.items.map(agentDtoToRow)
     const query = searchQuery.toLowerCase()
     return rows.filter((row) =>
-      [row.agentName, row.harness, row.type, row.adapter, row.models, row.status, row.source].some((value) =>
+      [row.agentName, row.harness, row.adapter, row.models, row.status, row.source].some((value) =>
         value.toLowerCase().includes(query),
       ),
     )
@@ -94,7 +94,6 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               <tr>
                 <th>{t('agentName')}</th>
                 <th>{t('harness')}</th>
-                <th>{t('agentResourceType')}</th>
                 <th>{t('models')}</th>
                 <th>{t('status')}</th>
                 <th>{t('actions')}</th>
@@ -117,7 +116,6 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                     </span>
                   </td>
                   <td>{row.harness}</td>
-                  <td>{row.type === 'built-in' ? t('harborBuiltInHarness') : t('customHarness')}</td>
                   <td>{row.models || '-'}</td>
                   <td>
                     <span className={`status-dot ${row.status === 'needs-token' ? 'warning' : 'success'}`}>
@@ -126,21 +124,19 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
                   </td>
                   <td>
                     <div className="row-actions">
-                      {row.type === 'custom' && (
-                        <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
-                          event.stopPropagation()
-                          setDeleteTarget(row)
-                        }}>
-                          {t('delete')}
-                        </button>
-                      )}
+                      <button className="secondary-button compact-action" disabled={!writesEnabled} onClick={(event) => {
+                        event.stopPropagation()
+                        setDeleteTarget(row)
+                      }}>
+                        {t('delete')}
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td className="empty-row" colSpan={6}>{t('noAgentsAvailable')}</td>
+                  <td className="empty-row" colSpan={5}>{t('noAgentsAvailable')}</td>
                 </tr>
               )}
             </tbody>

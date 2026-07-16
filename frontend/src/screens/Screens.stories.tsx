@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { getTranslator } from '../i18n'
 import { createMockWebUiClient } from '../api/mockClient'
 import { jobs } from '../mocks/demo'
-import { agentRows, datasetRows, environmentRows } from '../mocks/demoCatalog'
+import { agentRows, datasetRows, environmentRows, harnessTemplates } from '../mocks/demoCatalog'
 import { degradedSystemRows, errorSystemRows, leaderboardRows, restartingSystemRows, startingSystemRows, stoppedSystemRows, systemRows } from '../mocks/demoSystem'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
@@ -239,7 +239,7 @@ export const AgentDeleteConfirm: Story = {
     const customRow = canvas.getByText('Local repair agent').closest('tr')
     if (!customRow) throw new Error('Custom agent row not found')
     await userEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
-    await expect(canvas.getByRole('dialog', { name: 'Delete custom agent' })).toBeVisible()
+    await expect(canvas.getByRole('dialog', { name: 'Delete Agent' })).toBeVisible()
   },
 }
 
@@ -251,13 +251,12 @@ export const AgentDrawer: Story = {
     await expect(canvas.getByRole('dialog', { name: 'Selected agent' })).toBeVisible()
     await expect(canvas.getAllByText('Claude Code default')[0]).toBeVisible()
     await expect(canvas.getAllByText('claude-code')[0]).toBeVisible()
-    await expect(canvas.getByText('Harness template')).toBeVisible()
+    await expect(canvas.getByText('Harness')).toBeVisible()
     await expect(canvas.queryByLabelText('Custom import path')).not.toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Create Agent' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Create Agent' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toBeVisible()
-    await expect(canvas.getByText('Supported configuration')).toBeVisible()
-    await expect(canvas.getByText('One or more model names')).toBeVisible()
-    await expect(canvas.getByText('Key / value list')).toBeVisible()
+    await expect(canvas.getByText('Model settings')).toBeVisible()
+    await expect(canvas.getByText('Available models')).toBeVisible()
     await expect(canvas.queryByLabelText('Permission mode')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Allowed tools')).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText('Disallowed tools')).not.toBeInTheDocument()
@@ -277,6 +276,7 @@ function AgentsFixture() {
     return (
       <NewAgentPage
         client={client}
+        harnesses={harnessTemplates}
         initialHarness={initialHarness}
         rows={agentRows}
         t={t}
@@ -297,44 +297,6 @@ function AgentsFixture() {
       onRefresh={async () => undefined}
     />
   )
-}
-
-export const NewAgent: Story = {
-  render: () => <NewAgentPage client={client} rows={agentRows} t={t} onAgents={() => undefined} onRefresh={async () => undefined} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'New Agent' })).toBeVisible()
-    await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Custom Agent')
-    await expect(canvas.getByLabelText('Harness')).toHaveTextContent('custom-harness')
-    await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
-    await userEvent.click(canvas.getByRole('tab', { name: 'Skills' }))
-    await expect(canvas.getByText('Skills sources')).toBeVisible()
-    await userEvent.click(canvas.getByRole('tab', { name: 'MCPs' }))
-    await expect(canvas.getByText('MCP Servers')).toBeVisible()
-    await userEvent.click(canvas.getByRole('tab', { name: 'Advanced' }))
-    await expect(canvas.getByText('Advanced agent params')).toBeVisible()
-  },
-}
-
-export const NewAgentFromHarness: Story = {
-  render: () => (
-    <NewAgentPage
-      client={client}
-      initialHarness="claude-code"
-      rows={agentRows}
-      t={t}
-      onAgents={() => undefined}
-      onRefresh={async () => undefined}
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByLabelText('Harness')).toHaveTextContent('claude-code')
-    await expect(canvas.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
-    await expect(canvas.getByRole('tab', { name: 'Skills' })).toBeVisible()
-    await expect(canvas.getByRole('tab', { name: 'MCPs' })).toBeVisible()
-    await expect(canvas.getByRole('tab', { name: 'Advanced' })).toBeVisible()
-  },
 }
 
 function EnvironmentsFixture() {

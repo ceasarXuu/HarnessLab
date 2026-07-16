@@ -4,8 +4,8 @@ import { defaultRunDraft, reconcileRunDraftResources } from './defaults'
 describe('reconcileRunDraftResources', () => {
   const resources = {
     agents: [
-      { agentName: 'Built-in', models: 'model-a, model-b', type: 'built-in' },
-      { agentName: 'Configured agent', models: 'model-c, model-d', type: 'custom' },
+      { agentName: 'Agent A', models: 'model-a, model-b' },
+      { agentName: 'Configured agent', models: 'model-c, model-d' },
     ],
     datasets: [{ name: 'hello-world', version: '1.0' }],
     environments: [{ id: 'built-in:docker' }],
@@ -13,7 +13,7 @@ describe('reconcileRunDraftResources', () => {
 
   it('replaces demo or missing identifiers only with active resource values', () => {
     expect(reconcileRunDraftResources(defaultRunDraft, resources as never)).toMatchObject({
-      agent: 'Built-in',
+      agent: 'Agent A',
       environment: 'built-in:docker',
       model: 'model-a',
       source: 'hello-world@1.0',

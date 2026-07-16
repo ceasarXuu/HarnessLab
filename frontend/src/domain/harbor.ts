@@ -142,10 +142,9 @@ export interface AgentRow {
   agentName: string
   authenticationMode?: string
   harness: string
-  type: 'built-in' | 'custom'
   adapter: string
   models: string
-  status: 'available' | 'configured' | 'needs-token'
+  status: 'configured' | 'needs-token'
   source: string
   updated: string
   env?: string
@@ -157,6 +156,12 @@ export interface AgentRow {
   timeout?: string
   maxTimeout?: string
   capabilities?: AgentCapabilities
+}
+
+export interface HarnessTemplate {
+  capabilities: AgentCapabilities
+  name: string
+  source: 'harbor-built-in'
 }
 
 export type AgentCapabilityField =

@@ -44,7 +44,6 @@ class AgentInput(WebUiModel):
     setup_timeout_seconds: int | None = Field(alias="setupTimeoutSeconds", default=None, ge=1)
     timeout_seconds: int | None = Field(alias="timeoutSeconds", default=None, ge=1)
     skill_sources: list[str] = Field(alias="skillSources", default_factory=list)
-    type: Literal["built-in", "custom"] = "custom"
     max_timeout_seconds: int | None = Field(alias="maxTimeoutSeconds", default=None, ge=1)
 
 

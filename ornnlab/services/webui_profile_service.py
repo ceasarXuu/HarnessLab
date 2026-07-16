@@ -20,19 +20,27 @@ class WebUiProfileService:
         self.settings = settings
 
     def list_agents(
-        self, query: str | None = None, profile_type: str | None = None, status: str | None = None
+        self, query: str | None = None, status: str | None = None
     ) -> list[dict]:
-        records_by_id = {record["id"]: record for record in self._built_in_agents()}
-        records_by_id.update({record["id"]: record for record in self._configured_agents()})
-        records = list(records_by_id.values())
+        records = self._configured_agents()
         filtered = [record for record in records if _matches(record, query)]
-        if profile_type:
-            filtered = [record for record in filtered if record["type"] == profile_type]
         if status:
             filtered = [record for record in filtered if record["status"] == status]
-        return sorted(
-            filtered, key=lambda item: (item["type"] != "built-in", item["agentName"].lower())
+        return sorted(filtered, key=lambda item: item["agentName"].lower())
+
+    def list_harnesses(self, query: str | None = None) -> list[dict]:
+        from harbor.models.agent.name import AgentName
+
+        harnesses = [_harness_dto(name) for name in AgentName.values()]
+        filtered = sorted(
+            (harness for harness in harnesses if _matches(harness, query)),
+            key=lambda item: item["name"].lower(),
         )
+        logger.debug(
+            "Harbor Harness catalog resolved",
+            extra={"harness_count": len(filtered), "query": query},
+        )
+        return filtered
 
     def get_agent(self, agent_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
@@ -43,21 +51,16 @@ class WebUiProfileService:
             )
         if rows:
             return _configured_agent(json.loads(rows[0]["config_json"]))
-        for agent in self._built_in_agents():
-            if agent["id"] == agent_id:
-                return agent
         raise KeyError(agent_id)
 
     def resolve_agent(self, value: str) -> dict:
         for agent in self.list_agents():
-            if value in {agent["id"], agent["agentName"], agent["harness"]}:
+            if value in {agent["id"], agent["agentName"]}:
                 return agent
         raise KeyError(value)
 
     def create_agent(self, payload: AgentInput) -> dict:
-        if payload.type != "custom":
-            raise PermissionError("built-in agents are provided by Harbor and cannot be created")
-        self._assert_custom_agent_id(payload.id)
+        self._assert_agent_id_available(payload.id)
         agent = _agent_dto(payload)
         self._validate_agent(agent)
         self._write_agent_config(agent, create=True)
@@ -67,23 +70,15 @@ class WebUiProfileService:
         existing = self.get_agent(agent_id)
         if payload.id != agent_id:
             raise ValueError("agent id cannot be changed")
-        if payload.type != existing["type"]:
-            raise ValueError("agent Harness source cannot be changed")
-        if existing["type"] == "built-in" and payload.harness != existing["harness"]:
-            raise ValueError("built-in Harness cannot be changed")
+        if payload.harness != existing["harness"]:
+            raise ValueError("Agent Harness cannot be changed after creation")
         agent = _agent_dto(payload)
         self._validate_agent(agent)
-        self._write_agent_config(agent, create=not self._agent_is_persisted(agent_id))
+        self._write_agent_config(agent, create=False)
         return agent
 
-    def ensure_agent_persisted(self, agent: dict) -> dict:
-        if not self._agent_is_persisted(agent["id"]):
-            self._validate_agent(agent)
-            self._write_agent_config(agent, create=True)
-        return self.get_agent(agent["id"])
-
     def delete_agent(self, agent_id: str) -> None:
-        self._assert_deletable_agent(agent_id)
+        self.get_agent(agent_id)
         with sqlite.connect(self.settings) as conn:
             active_runs = conn.execute(
                 "SELECT COUNT(*) FROM runs WHERE agent_id = ? AND status IN ('queued', 'running')",
@@ -247,13 +242,12 @@ class WebUiProfileService:
         with sqlite.connect(self.settings) as conn:
             if create:
                 conn.execute(
-                    "INSERT INTO agents(id, name, harness, profile_type, status, config_json, "
-                    "created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?)",
+                    "INSERT INTO agents(id, name, harness, status, config_json, "
+                    "created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?, ?)",
                     (
                         agent["id"],
                         agent["agentName"],
                         agent["harness"],
-                        agent["type"],
                         json.dumps(agent),
                         now,
                         now,
@@ -272,7 +266,7 @@ class WebUiProfileService:
                     ),
                 )
         logger.info(
-            "Agent template persisted",
+            "Agent profile persisted",
             extra={
                 "agent_id": agent["id"],
                 "harness": agent["harness"],
@@ -280,35 +274,17 @@ class WebUiProfileService:
             },
         )
 
-    def _assert_custom_agent_id(self, agent_id: str) -> None:
-        if agent_id.startswith("built-in:"):
-            raise ValueError("agent id uses reserved built-in prefix")
+    def _assert_agent_id_available(self, agent_id: str) -> None:
         try:
             self.get_agent(agent_id)
         except KeyError:
             return
         raise ValueError("agent id already exists")
 
-    def _assert_deletable_agent(self, agent_id: str) -> None:
-        if agent_id.startswith("built-in:"):
-            raise PermissionError("built-in Agent presets cannot be deleted")
-        self.get_agent(agent_id)
-
-    def _agent_is_persisted(self, agent_id: str) -> bool:
-        with sqlite.connect(self.settings) as conn:
-            return conn.execute(
-                "SELECT 1 FROM agents WHERE id = ? AND status = 'active'", (agent_id,)
-            ).fetchone() is not None
-
     def _assert_mutable_environment(self, environment_id: str) -> None:
         if environment_id.startswith("built-in:"):
             raise PermissionError("built-in Harbor environments are immutable")
         self.get_environment(environment_id)
-
-    def _built_in_agents(self) -> list[dict]:
-        from harbor.models.agent.name import AgentName
-
-        return [_built_in_agent(name) for name in AgentName.values()]
 
     def _configured_agents(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
@@ -392,22 +368,11 @@ def _environment_dto(payload: EnvironmentInput) -> dict:
     return environment
 
 
-def _built_in_agent(harness: str) -> dict:
+def _harness_dto(harness: str) -> dict:
     return {
-        # This is an OrnnLab Agent preset backed by a Harbor built-in Harness.
-        # Saving it materializes an editable profile without modifying Harbor.
         "capabilities": agent_capabilities.custom_agent_capabilities(harness),
-        "id": f"built-in:{harness}",
-        "agentName": harness,
-        "authenticationMode": agent_capabilities.default_authentication_mode(harness),
-        "env": [],
-        "harness": harness,
-        "kwargs": "",
-        "mcpServers": [],
-        "models": [],
-        "skillSources": [],
-        "status": "available",
-        "type": "built-in",
+        "name": harness,
+        "source": "harbor-built-in",
     }
 
 

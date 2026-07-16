@@ -28,8 +28,8 @@ describe('App agents and leaderboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'New Agent' }))
     expect(screen.getByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Custom Agent')
-    expect(screen.getByLabelText('Harness')).toHaveTextContent('custom-harness')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('Acp Agent')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('acp')
     expect(screen.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Regression custom agent' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
@@ -42,15 +42,15 @@ describe('App agents and leaderboard', () => {
     expect(await screen.findByRole('heading', { name: 'Agent catalog' }, { timeout: 2_000 })).toBeInTheDocument()
     expect(screen.getByText('Regression custom agent')).toBeInTheDocument()
 
-    const builtinRow = screen.getByText('Claude Code default').closest('tr')
-    expect(builtinRow).not.toBeNull()
-    expect(within(builtinRow as HTMLElement).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    const configuredRow = screen.getByText('Claude Code default').closest('tr')
+    expect(configuredRow).not.toBeNull()
+    expect(within(configuredRow as HTMLElement).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
 
     const customRow = screen.getByText('Local repair agent').closest('tr')
     expect(customRow).not.toBeNull()
     fireEvent.click(within(customRow as HTMLElement).getByRole('button', { name: 'Delete' }))
-    expect(screen.getByRole('dialog', { name: 'Delete custom agent' })).toBeInTheDocument()
-    expect(screen.getByText('This removes the custom agent configuration from the local WebUI list.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Delete Agent' })).toBeInTheDocument()
+    expect(screen.getByText('This removes the saved Agent profile from OrnnLab.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     fireEvent.change(screen.getByLabelText('Search agents'), { target: { value: 'local' } })
@@ -69,8 +69,7 @@ describe('App agents and leaderboard', () => {
       ['Agent Name', 'Local repair agent'],
       ['Custom import path', 'agents.local_repair:Agent'],
     ].forEach(([label, value]) => expect(agentForm.getByLabelText(label)).toHaveValue(value))
-    expect(agentForm.getByLabelText('Harness')).toHaveTextContent('custom-harness')
-    expect(agentForm.getByText('Custom Harness')).toBeInTheDocument()
+    expect(agentForm.getByText('Harness').closest('.metric')).toHaveTextContent('custom-harness')
     expect(agentForm.getByLabelText('Model name')).toHaveValue('qwen3-coder-local')
     expect(agentForm.queryByText('Permissions and tools')).not.toBeInTheDocument()
     expect(agentForm.queryByLabelText('Permission mode')).not.toBeInTheDocument()
@@ -143,7 +142,7 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })
 
-  it('edits a reusable Agent configuration backed by a built-in Harness', async () => {
+  it('edits a saved Agent profile backed by a built-in Harness template', async () => {
     render(<App />)
     await screen.findByText('terminal-bench-smoke')
 
@@ -160,9 +159,9 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.getByRole('tab', { name: 'Skills' })).toBeInTheDocument()
     expect(agentForm.getByRole('tab', { name: 'MCPs' })).toBeInTheDocument()
     expect(agentForm.getByRole('tab', { name: 'Advanced' })).toBeInTheDocument()
-    const resourceType = agentForm.getByText('Harbor built-in Harness').closest('.metric')
-    expect(resourceType).toHaveClass('metric--plain')
-    expect(resourceType).not.toHaveClass('metric--card')
+    const harness = agentForm.getByText('Harness').closest('.metric')
+    expect(harness).toHaveClass('metric--plain')
+    expect(harness).not.toHaveClass('metric--card')
     expect(agentForm.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     fireEvent.change(nameInput, { target: { value: 'Claude reusable profile' } })
     await waitFor(() => expect(screen.getByText('Claude reusable profile')).toBeInTheDocument())
