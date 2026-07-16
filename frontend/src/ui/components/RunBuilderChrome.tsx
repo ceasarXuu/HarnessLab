@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { FieldError } from './FormValidationSummary'
+import { FieldError } from './FormFeedback'
 
 export function TabPanel({ active, children, title }: { active: boolean; children: ReactNode; title: string }) {
   if (!active) {

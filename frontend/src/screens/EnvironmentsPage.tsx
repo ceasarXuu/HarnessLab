@@ -12,7 +12,7 @@ import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEditor'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
-import { FormValidationSummary, issuesByField, type FormIssue } from '../ui/components/FormValidationSummary'
+import { FormSubmissionError, issuesByField, type FormIssue } from '../ui/components/FormFeedback'
 import { usePaginatedItems } from '../ui/pagination'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
@@ -270,7 +270,7 @@ function EnvironmentFormPage({
   const submit = () => {
     setValidationAttempted(true)
     if (allIssues.length) {
-      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      window.requestAnimationFrame(() => document.getElementById(`environment-${allIssues[0].field}`)?.focus())
       return
     }
     onSave(draft)
@@ -300,12 +300,7 @@ function EnvironmentFormPage({
               </button>
             </div>
           </div>
-          <FormValidationSummary
-            issues={issues}
-            serverError={serverError}
-            title={t('formValidationTitle')}
-            onIssue={(field) => document.getElementById(`environment-${field}`)?.focus()}
-          />
+          <FormSubmissionError message={serverError} />
           <EnvironmentProfileEditor fieldErrors={fieldErrors} value={draft} t={t} onChange={setDraft} />
         </section>
       </div>

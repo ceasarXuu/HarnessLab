@@ -24,9 +24,9 @@ describe('NewAgentPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByRole('alert', { name: 'Check required fields' })).toBeInTheDocument()
-    expect(screen.getAllByText('Enter Agent Name.')).toHaveLength(2)
-    expect(screen.getAllByText('Select a Harness.')).toHaveLength(2)
+    expect(screen.queryByText('Check required fields')).not.toBeInTheDocument()
+    expect(screen.getByText('Enter Agent Name.')).toBeInTheDocument()
+    expect(screen.getByText('Select a Harness.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /Agent Name/ })).toHaveAttribute('aria-invalid', 'true')
 
     fireEvent.click(screen.getByLabelText('Harness'))
@@ -81,6 +81,6 @@ describe('NewAgentPage', () => {
     fireEvent.click(screen.getByRole('option', { name: 'claude-code' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getAllByText('Add at least one available model.')).toHaveLength(2)
+    expect(screen.getByText('Add at least one available model.')).toBeInTheDocument()
   })
 })

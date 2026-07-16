@@ -36,7 +36,6 @@ export const enMessages = {
     cancelDownload: 'Cancel download',
     copy: 'Copy',
     save: 'Save',
-    formValidationTitle: 'Check required fields',
     agentNameRequired: 'Enter Agent Name.',
     harnessRequired: 'Select a Harness.',
     customImportPathRequired: 'Enter the custom Harness import path.',

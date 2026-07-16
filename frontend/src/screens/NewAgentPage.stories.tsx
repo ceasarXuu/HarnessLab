@@ -45,8 +45,8 @@ export const ValidationErrors: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
-    await expect(canvas.getByRole('alert', { name: 'Check required fields' })).toBeVisible()
-    await expect(canvas.getAllByText('Enter Agent Name.')).toHaveLength(2)
-    await expect(canvas.getAllByText('Select a Harness.')).toHaveLength(2)
+    await expect(canvas.queryByText('Check required fields')).not.toBeInTheDocument()
+    await expect(canvas.getByText('Enter Agent Name.')).toBeVisible()
+    await expect(canvas.getByText('Select a Harness.')).toBeVisible()
   },
 }

@@ -11,7 +11,7 @@ import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
 import { McpServersControl } from './McpServersControl'
 import { ReadonlyKeyValueList, ReadonlyMcpServers, ReadonlyStringList } from './ReadonlyDisplay'
-import { FieldError } from './FormValidationSummary'
+import { FieldError } from './FormFeedback'
 
 type AgentTab = 'base' | 'skills' | 'mcps' | 'advanced'
 

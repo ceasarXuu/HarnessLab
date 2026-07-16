@@ -6,7 +6,7 @@ import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { SwitchControl } from './SwitchControl'
 import { TpuSpecControl } from './TpuSpecControl'
-import { FieldError } from './FormValidationSummary'
+import { FieldError } from './FormFeedback'
 
 type EnvironmentTab = 'base' | 'network' | 'advanced'
 type FieldKind = 'number' | 'select' | 'switch' | 'text' | 'tpu'

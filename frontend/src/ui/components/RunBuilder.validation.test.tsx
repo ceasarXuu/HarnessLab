@@ -28,7 +28,7 @@ describe('RunBuilder validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Run job' }))
 
     expect(onLaunch).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert', { name: 'Check required fields' })).toBeInTheDocument()
-    expect(screen.getAllByText('Enter a Job name.')).toHaveLength(2)
+    expect(screen.queryByText('Check required fields')).not.toBeInTheDocument()
+    expect(screen.getByText('Enter a Job name.')).toBeInTheDocument()
   })
 })

@@ -16,8 +16,8 @@ describe('Environment templates', () => {
     fireEvent.change(name, { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByRole('alert', { name: 'Check required fields' })).toBeInTheDocument()
-    expect(screen.getAllByText('Enter an Environment name.')).toHaveLength(2)
+    expect(screen.queryByText('Check required fields')).not.toBeInTheDocument()
+    expect(screen.getByText('Enter an Environment name.')).toBeInTheDocument()
     expect(name).toHaveAttribute('aria-invalid', 'true')
   })
 

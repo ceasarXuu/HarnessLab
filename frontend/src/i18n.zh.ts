@@ -38,7 +38,6 @@ export const zhMessages = {
     cancelDownload: '取消下载',
     copy: '复制',
     save: '保存',
-    formValidationTitle: '请检查必填项',
     agentNameRequired: '请输入 Agent Name。',
     harnessRequired: '请选择 Harness。',
     customImportPathRequired: '请输入自定义 Harness 入口路径。',

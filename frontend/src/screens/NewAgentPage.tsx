@@ -7,7 +7,7 @@ import type { WebUiClient } from '../api/webUiClient'
 import type { AgentCapabilities, AgentRow, HarnessTemplate } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { AgentIdentityEditor, AgentProfileEditor } from '../ui/components/AgentProfileEditor'
-import { FormValidationSummary, issuesByField, type FormIssue } from '../ui/components/FormValidationSummary'
+import { FormSubmissionError, issuesByField, type FormIssue } from '../ui/components/FormFeedback'
 
 interface NewAgentPageProps {
   canSave?: boolean
@@ -51,7 +51,7 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
     if (!canSave || isOperationRunning(agentOperation.operation?.status)) return
     setValidationAttempted(true)
     if (allIssues.length) {
-      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      window.requestAnimationFrame(() => focusAgentField(allIssues[0].field))
       return
     }
     const agent = normalizeNewAgent(rows, draft)
@@ -83,12 +83,7 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
               </button>
             </div>
           </div>
-          <FormValidationSummary
-            issues={issues}
-            serverError={agentOperation.error?.message}
-            title={t('formValidationTitle')}
-            onIssue={focusAgentField}
-          />
+          <FormSubmissionError message={agentOperation.error?.message} />
           <section className="surface rail-card">
             <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} harnesses={harnesses} value={draft} t={t} onChange={setDraft} />
           </section>

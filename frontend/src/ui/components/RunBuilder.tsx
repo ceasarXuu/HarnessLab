@@ -8,7 +8,7 @@ import { CustomSelect } from './CustomSelect'
 import { FolderPathInput, type FolderPathSelection } from './FolderPathInput'
 import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
-import { FieldError, FormValidationSummary, issuesByField, type FormIssue } from './FormValidationSummary'
+import { FieldError, FormSubmissionError, issuesByField, type FormIssue } from './FormFeedback'
 
 interface RunBuilderProps {
   canLaunch?: boolean
@@ -61,7 +61,7 @@ export function RunBuilder({ canLaunch = true, submitError, agents, datasets, dr
     setValidationAttempted(true)
     if (allIssues.length) {
       setActiveTab('core')
-      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      window.requestAnimationFrame(() => document.getElementById(`job-${allIssues[0].field}`)?.focus())
       return
     }
     onLaunch()
@@ -125,15 +125,7 @@ export function RunBuilder({ canLaunch = true, submitError, agents, datasets, dr
           </button>
         </div>
       </div>
-      <FormValidationSummary
-        issues={issues}
-        serverError={submitError}
-        title={t('formValidationTitle')}
-        onIssue={(field) => {
-          setActiveTab('core')
-          window.requestAnimationFrame(() => document.getElementById(`job-${field}`)?.focus())
-        }}
-      />
+      <FormSubmissionError message={submitError} />
       <div className="run-tabs" role="tablist" aria-label={t('jobConfig')}>
         {tabs.map((tab) => (
           <button
