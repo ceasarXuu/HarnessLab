@@ -39,6 +39,7 @@ export function runDraftToCreateJobRequest(draft: RunDraft): CreateJobRequestDto
 export function agentRowToDto(agent: AgentRow): AgentInputDto {
   return {
     agentName: agent.agentName,
+    authenticationMode: agent.authenticationMode,
     env: parseKeyValues(agent.env),
     harness: agent.harness,
     id: agent.id,

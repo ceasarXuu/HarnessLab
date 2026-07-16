@@ -119,6 +119,7 @@ export const enMessages = {
     topologyZ: 'Topology Z',
     notConfigured: 'Not configured',
     environmentVariables: 'Environment variables',
+    agentAuthenticationMethod: 'Authentication method',
     customEnvironmentVariable: 'Custom variable',
     searchEnvironmentVariables: 'Search variables',
     forceBuild: 'Force rebuild',

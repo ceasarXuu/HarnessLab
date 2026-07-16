@@ -174,7 +174,14 @@ export interface AgentParameterDto {
   source: 'env' | 'kwarg'
 }
 
+export interface AgentAuthenticationModeDto {
+  environmentVariables: string[]
+  label: string
+  value: string
+}
+
 export interface AgentCapabilitiesDto {
+  authenticationModes: AgentAuthenticationModeDto[]
   environmentVariables: string[]
   parameters: AgentParameterDto[]
   supportedFields: AgentCapabilityField[]
@@ -182,6 +189,7 @@ export interface AgentCapabilitiesDto {
 
 export interface AgentInputDto {
   agentName: string
+  authenticationMode?: string
   env: KeyValueDto[]
   harness: string
   id: string

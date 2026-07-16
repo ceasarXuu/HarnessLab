@@ -65,6 +65,7 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
   return {
     adapter: importPath,
     agentName: agent.agentName,
+    authenticationMode: agent.authenticationMode,
     capabilities: agent.capabilities ?? fallbackAgentCapabilities(),
     env: formatKeyValues(agent.env),
     harness: agent.harness,

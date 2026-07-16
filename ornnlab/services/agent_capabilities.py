@@ -30,6 +30,7 @@ def agent_capabilities(harness: str, *, custom_profile: bool = False) -> dict[st
     elif parameters:
         fields.add("harnessParameters")
     return {
+        "authenticationModes": _authentication_modes(harness),
         "environmentVariables": _harbor_environment_variables(harness),
         "parameters": parameters,
         "supportedFields": sorted(fields),
@@ -38,6 +39,11 @@ def agent_capabilities(harness: str, *, custom_profile: bool = False) -> dict[st
 
 def custom_agent_capabilities(harness: str) -> dict[str, Any]:
     return agent_capabilities(harness, custom_profile=True)
+
+
+def default_authentication_mode(harness: str) -> str | None:
+    modes = _authentication_modes(harness)
+    return modes[0]["value"] if modes else None
 
 
 def _param(
@@ -102,7 +108,15 @@ def _harbor_environment_variables(harness: str) -> list[str]:
     agent_class = _harbor_agent_class(harness)
     if agent_class is None:
         return []
-    return sorted({descriptor.env for descriptor in getattr(agent_class, "ENV_VARS", [])})
+    cli_kwargs = {
+        descriptor.kwarg for descriptor in getattr(agent_class, "CLI_FLAGS", [])
+    }
+    described = {
+        descriptor.env
+        for descriptor in getattr(agent_class, "ENV_VARS", [])
+        if descriptor.kwarg not in cli_kwargs
+    }
+    return sorted(described | set(_ENVIRONMENT_VARIABLES_BY_HARNESS.get(harness, [])))
 
 
 def _harbor_environment_kwargs(harness: str) -> set[str]:
@@ -116,6 +130,51 @@ def _harbor_agent_class(harness: str) -> Any | None:
     from harbor.agents.factory import AgentFactory
 
     return next((item for item in AgentFactory._AGENTS if item.name() == harness), None)
+
+
+def _authentication_modes(harness: str) -> list[dict[str, Any]]:
+    return [dict(item) for item in _AUTHENTICATION_MODES_BY_HARNESS.get(harness, [])]
+
+
+_ENVIRONMENT_VARIABLES_BY_HARNESS: dict[str, list[str]] = {
+    "claude-code": [
+        "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING",
+        "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+    ],
+}
+
+_AUTHENTICATION_MODES_BY_HARNESS: dict[str, list[dict[str, Any]]] = {
+    "claude-code": [
+        {
+            "environmentVariables": [
+                "ANTHROPIC_API_KEY",
+                "ANTHROPIC_AUTH_TOKEN",
+                "ANTHROPIC_BASE_URL",
+            ],
+            "label": "Anthropic API",
+            "value": "anthropic-api",
+        },
+        {
+            "environmentVariables": ["CLAUDE_CODE_OAUTH_TOKEN"],
+            "label": "Claude OAuth",
+            "value": "oauth",
+        },
+        {
+            "environmentVariables": [
+                "AWS_BEARER_TOKEN_BEDROCK",
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_SESSION_TOKEN",
+                "AWS_PROFILE",
+                "AWS_REGION",
+                "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION",
+                "DISABLE_PROMPT_CACHING",
+            ],
+            "label": "Amazon Bedrock",
+            "value": "bedrock",
+        },
+    ],
+}
 
 
 _MCP_HARNESSES = {

@@ -33,6 +33,7 @@ class McpServerInput(WebUiModel):
 
 class AgentInput(WebUiModel):
     agent_name: str = Field(alias="agentName", min_length=1)
+    authentication_mode: str | None = Field(alias="authenticationMode", default=None)
     env: list[KeyValueInput] = Field(default_factory=list)
     harness: str = Field(min_length=1)
     id: str = Field(min_length=1)

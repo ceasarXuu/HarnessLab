@@ -121,6 +121,7 @@ export const zhMessages = {
     topologyZ: '拓扑 Z',
     notConfigured: '未配置',
     environmentVariables: '环境变量',
+    agentAuthenticationMethod: '认证方式',
     customEnvironmentVariable: '自定义变量',
     searchEnvironmentVariables: '搜索变量',
     forceBuild: '强制重建',

@@ -140,6 +140,7 @@ export interface DatasetRow {
 export interface AgentRow {
   id: string
   agentName: string
+  authenticationMode?: string
   harness: string
   type: 'built-in' | 'custom'
   adapter: string
@@ -177,9 +178,16 @@ export interface AgentParameter {
 }
 
 export interface AgentCapabilities {
+  authenticationModes: AgentAuthenticationMode[]
   environmentVariables: string[]
   parameters: AgentParameter[]
   supportedFields: AgentCapabilityField[]
+}
+
+export interface AgentAuthenticationMode {
+  environmentVariables: string[]
+  label: string
+  value: string
 }
 
 export interface EnvironmentRow {

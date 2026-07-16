@@ -185,13 +185,19 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
 })
 
 const customAgentCapabilities: AgentCapabilities = {
+  authenticationModes: [],
   environmentVariables: [],
   parameters: [],
   supportedFields: ['customKwargs', 'env', 'harnessParameters', 'mcpServers', 'modelName', 'skills', 'timeouts'],
 }
 
 const claudeCodeCapabilities: AgentCapabilities = {
-  environmentVariables: ['MAX_THINKING_TOKENS'],
+  authenticationModes: [
+    { environmentVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'], label: 'Anthropic API', value: 'anthropic-api' },
+    { environmentVariables: ['CLAUDE_CODE_OAUTH_TOKEN'], label: 'Claude OAuth', value: 'oauth' },
+    { environmentVariables: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION'], label: 'Amazon Bedrock', value: 'bedrock' },
+  ],
+  environmentVariables: ['CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING', 'CLAUDE_CODE_MAX_OUTPUT_TOKENS'],
   parameters: [
     { key: 'max_turns', kind: 'number', label: 'Max turns', source: 'kwarg' },
     { choices: ['low', 'medium', 'high', 'xhigh', 'max'], key: 'reasoning_effort', kind: 'select', label: 'Reasoning effort', source: 'kwarg' },
@@ -201,6 +207,7 @@ const claudeCodeCapabilities: AgentCapabilities = {
 }
 
 const codexCapabilities: AgentCapabilities = {
+  authenticationModes: [],
   environmentVariables: [],
   parameters: [
     { defaultValue: 'high', key: 'reasoning_effort', kind: 'text', label: 'Reasoning effort', source: 'kwarg' },
@@ -210,6 +217,7 @@ const codexCapabilities: AgentCapabilities = {
 }
 
 const oracleCapabilities: AgentCapabilities = {
+  authenticationModes: [],
   environmentVariables: [],
   parameters: [],
   supportedFields: ['customKwargs', 'env', 'timeouts'],
@@ -219,6 +227,7 @@ export const agentRows: AgentRow[] = [
   {
     id: 'claude-code-default',
     agentName: 'Claude Code default',
+    authenticationMode: 'anthropic-api',
     harness: 'claude-code',
     type: 'built-in',
     adapter: 'none',

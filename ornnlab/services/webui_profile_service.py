@@ -6,7 +6,8 @@ from typing import Any
 from uuid import uuid4
 
 from ornnlab.models.webui import AgentInput, EnvironmentInput
-from ornnlab.services.agent_capabilities import custom_agent_capabilities
+from ornnlab.services import agent_capabilities
+from ornnlab.services.agent_profile_normalization import normalize_agent_profile
 from ornnlab.services.clock import now_iso
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -96,10 +97,19 @@ class WebUiProfileService:
             )
 
     def agent_harbor_config(self, agent: dict, model_name: str | None = None) -> dict:
+        agent = normalize_agent_profile(agent)
+        env = _key_values(agent["env"])
+        if agent["harness"] == "claude-code":
+            authentication_mode = agent.get("authenticationMode", "anthropic-api")
+            match authentication_mode:
+                case "oauth":
+                    env["CLAUDE_FORCE_OAUTH"] = "1"
+                case "bedrock":
+                    env["CLAUDE_CODE_USE_BEDROCK"] = "1"
         config: dict = {
             "model_name": model_name or _first(agent["models"]),
             "skills": agent["skillSources"],
-            "env": _key_values(agent["env"]),
+            "env": env,
             "kwargs": _parse_kwargs(agent["kwargs"]),
         }
         if agent.get("setupTimeoutSeconds") is not None:
@@ -325,6 +335,13 @@ class WebUiProfileService:
 
         if not agent.get("importPath") and agent["harness"] not in AgentName.values():
             raise ValueError("harness must be a built-in Harbor AgentName or use importPath")
+        capabilities = agent_capabilities.custom_agent_capabilities(agent["harness"])
+        modes = {item["value"] for item in capabilities["authenticationModes"]}
+        authentication_mode = agent.get("authenticationMode")
+        if authentication_mode and authentication_mode not in modes:
+            raise ValueError(
+                f"authenticationMode must be one of {sorted(modes)} for {agent['harness']}"
+            )
         config = self.agent_harbor_config(agent)
         if "env" in config:
             config["env"] = {
@@ -351,17 +368,20 @@ class WebUiProfileService:
 def _agent_dto(payload: AgentInput) -> dict:
     agent = payload.model_dump(by_alias=True, exclude_none=True)
     agent["env"] = [entry.model_dump() for entry in payload.env]
-    return {
+    return normalize_agent_profile({
         **agent,
-        "capabilities": custom_agent_capabilities(agent["harness"]),
+        "capabilities": agent_capabilities.custom_agent_capabilities(agent["harness"]),
         "status": "configured",
-    }
+    })
 
 
 def _configured_agent(agent: dict) -> dict:
+    agent = normalize_agent_profile(agent)
     return {
         **agent,
-        "capabilities": custom_agent_capabilities(agent["harness"]),
+        "authenticationMode": agent.get("authenticationMode")
+        or agent_capabilities.default_authentication_mode(agent["harness"]),
+        "capabilities": agent_capabilities.custom_agent_capabilities(agent["harness"]),
         "status": "configured",
     }
 
@@ -376,9 +396,10 @@ def _built_in_agent(harness: str) -> dict:
     return {
         # This is an OrnnLab Agent preset backed by a Harbor built-in Harness.
         # Saving it materializes an editable profile without modifying Harbor.
-        "capabilities": custom_agent_capabilities(harness),
+        "capabilities": agent_capabilities.custom_agent_capabilities(harness),
         "id": f"built-in:{harness}",
         "agentName": harness,
+        "authenticationMode": agent_capabilities.default_authentication_mode(harness),
         "env": [],
         "harness": harness,
         "kwargs": "",

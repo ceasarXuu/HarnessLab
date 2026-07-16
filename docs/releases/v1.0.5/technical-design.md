@@ -75,7 +75,7 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - Agent 资源是 OrnnLab 对 Harbor 运行参数的可复用配置层。运行时从 Harbor `AgentName` 生成的 built-in 记录是系统预置 Agent：可编辑名称及该 Harness 支持的配置字段，可直接用于 Job，但不能删除或更换 Harness。首次保存或首次用于 Job 时，后端以相同 ID 将其物化到 OrnnLab Agent 存储，不修改 Harbor 源码或枚举。
 - 自定义 Agent 必须选择 Harbor `AgentName`，或者提供 `import_path` 的 custom harness。详情只展示该 Harness 实际支持的配置子集，保存时由 `AgentConfig.model_validate` 校验。列表合并运行时预置项和已物化配置，以持久化配置覆盖同 ID 默认值。
 - `agents.config_json` 是 Agent 模板的唯一持久化配置源。运行时直接将其编译为 Harbor `AgentConfig`；不再生成或读取旧 AgentProfile 文件，不再维护 ProfileCompiler、generated-agent 目录或第二张 WebUI 配置表。
-- Harness 专属参数优先从 Harbor descriptor 读取。`CLI_FLAGS` 及其他构造参数以类型化控件写入 `kwargs`；`ENV_VARS` 的真实 `env` 名称作为 Agent 环境变量选择清单，不再同时生成一份重复的高级参数。用户仍可添加 Harbor 未登记的自定义变量。API 中 `value: null` 的继承语义在编译 Harbor `AgentConfig` 时转换为 `${VARIABLE_NAME}`，固定值保持原值。
+- Harness 专属参数优先从 Harbor descriptor 读取。`CLI_FLAGS` 以及与其同名的 `ENV_VARS` 都视为同一个类型化 Harness 参数，写入 `kwargs`，不得在环境变量区域重复出现。Harbor 的 `ENV_VARS` 不是完整的运行变量目录；OrnnLab 还维护经过对应适配器源码验证的补充目录。Claude Code 按 Anthropic API、Claude OAuth、Amazon Bedrock 三种认证方式提供互斥变量子集，公共运行变量始终可选，`CLAUDE_FORCE_OAUTH`、`CLAUDE_CODE_USE_BEDROCK` 等内部开关由认证方式自动编译，不直接暴露。用户仍可添加自定义变量。API 中 `value: null` 的继承语义在编译 Harbor `AgentConfig` 时转换为 `${VARIABLE_NAME}`，固定值保持原值。
 - Agent 不配置网络白名单。OrnnLab 将网络策略统一收敛到 Environment 模板；这是产品边界裁剪，不映射 Harbor `AgentConfig.extra_allowed_hosts`。
 - Harness 通用能力全集包括 model、env、kwargs、Skills、MCP servers、执行/启动/最大超时；Harness 专属参数通过结构化 capability 定义选择框、数字、开关或文本交互。网络访问继续归 Environment 管理，MCP 不承担安装或容器部署编排。
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。

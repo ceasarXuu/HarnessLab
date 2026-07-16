@@ -26,6 +26,7 @@ class AgentConfigService:
             "Compiling canonical Agent template",
             extra={
                 "agent_id": agent_id,
+                "authentication_mode": config.get("authenticationMode"),
                 "environment_variable_names": sorted(
                     item["key"] for item in config.get("env", [])
                 ),

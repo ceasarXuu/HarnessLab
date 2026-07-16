@@ -4,6 +4,7 @@ import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/ag
 import type { AgentCapabilities, AgentCapabilityField, AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentHarnessParameters } from './AgentHarnessParameters'
+import { AgentEnvironmentVariables } from './AgentEnvironmentVariables'
 import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
@@ -87,27 +88,13 @@ export function AgentProfileEditor({
           )}
 
           {supports('env') && (
-            <section className="surface rail-card">
-              <SectionTitle>{t('environmentVariables')}</SectionTitle>
-              <div className="agent-form-grid">
-                {readOnly ? (
-                  <ReadonlyKeyValueList label={t('genericAgentEnv')} value={value.env} emptyLabel={t('supportedByHarness')} />
-                ) : (
-                  <div className="field-wide">
-                    <KeyValueControl
-                      allowInherited
-                      compact
-                      keyOptions={capabilities.environmentVariables}
-                      readOnly={readOnly}
-                      label={t('genericAgentEnv')}
-                      labels={envKeyValueLabels(t)}
-                      value={value.env ?? 'none'}
-                      onChange={(nextValue) => setField('env', nextValue)}
-                    />
-                  </div>
-                )}
-              </div>
-            </section>
+            <AgentEnvironmentVariables
+              capabilities={capabilities}
+              readOnly={readOnly}
+              t={t}
+              value={value}
+              onChange={onChange}
+            />
           )}
         </>
       )}
@@ -342,20 +329,6 @@ function hasConfiguredValue(value: string | undefined) {
 
 function defaultKeyValueLabels(t: Translate) {
   return { add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }
-}
-
-function envKeyValueLabels(t: Translate) {
-  return {
-    add: t('add'),
-    customKey: t('customEnvironmentVariable'),
-    delete: t('delete'),
-    inherited: t('envSourceInherited'),
-    key: t('envKey'),
-    literal: t('envSourceLiteral'),
-    searchKeys: t('searchEnvironmentVariables'),
-    source: t('envValueSource'),
-    value: t('envValue'),
-  }
 }
 
 function DirectoryListControl({

@@ -82,7 +82,45 @@ def test_webui_agent_and_environment_crud(client):
     }
     assert expected_fields <= built_in_fields
     built_in_parameters = {item["key"] for item in built_in_agent["capabilities"]["parameters"]}
-    assert {"max_turns", "reasoning_effort", "allowed_tools"} <= built_in_parameters
+    assert {
+        "max_turns",
+        "reasoning_effort",
+        "allowed_tools",
+        "max_thinking_tokens",
+    } <= built_in_parameters
+    max_thinking_tokens = next(
+        item
+        for item in built_in_agent["capabilities"]["parameters"]
+        if item["key"] == "max_thinking_tokens"
+    )
+    assert max_thinking_tokens["kind"] == "number"
+    assert "MAX_THINKING_TOKENS" not in built_in_agent["capabilities"]["environmentVariables"]
+    claude_auth_modes = {
+        item["value"]: item["environmentVariables"]
+        for item in built_in_agent["capabilities"]["authenticationModes"]
+    }
+    assert claude_auth_modes == {
+        "anthropic-api": [
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_AUTH_TOKEN",
+            "ANTHROPIC_BASE_URL",
+        ],
+        "oauth": ["CLAUDE_CODE_OAUTH_TOKEN"],
+        "bedrock": [
+            "AWS_BEARER_TOKEN_BEDROCK",
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_PROFILE",
+            "AWS_REGION",
+            "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION",
+            "DISABLE_PROMPT_CACHING",
+        ],
+    }
+    assert built_in_agent["capabilities"]["environmentVariables"] == [
+        "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING",
+        "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+    ]
 
     qwen_agent = client.get(f"{API}/agents/built-in:qwen-coder").json()["data"]
     assert qwen_agent["capabilities"]["environmentVariables"] == [
@@ -106,12 +144,17 @@ def test_webui_agent_and_environment_crud(client):
 
     built_in_update = _built_in_agent_payload("claude-code")
     built_in_update["agentName"] = "Claude reusable profile"
+    built_in_update["authenticationMode"] = "oauth"
+    built_in_update["env"] = [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": None}]
     built_in_update["models"] = ["claude-haiku-4-5", "claude-sonnet-4-5"]
     updated = client.patch(f"{API}/agents/built-in:claude-code", json=built_in_update)
     assert updated.status_code == 200
     saved_built_in = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
     assert saved_built_in["agentName"] == "Claude reusable profile"
     assert saved_built_in["models"] == ["claude-haiku-4-5", "claude-sonnet-4-5"]
+    assert saved_built_in["authenticationMode"] == "oauth"
+    compiled = WebUiProfileService(client.app.state.settings).agent_harbor_config(saved_built_in)
+    assert compiled["env"]["CLAUDE_FORCE_OAUTH"] == "1"
 
     built_in_delete = client.delete(f"{API}/agents/built-in:oracle")
     assert built_in_delete.status_code == 403
@@ -127,6 +170,18 @@ def test_webui_agent_and_environment_crud(client):
 
     deleted = client.delete(f"{API}/environments/{copied['resourceId']}").json()
     assert deleted["data"]["operation"]["status"] == "completed"
+
+
+def test_legacy_claude_thinking_environment_variable_moves_to_harness_parameters(client):
+    payload = _built_in_agent_payload("claude-code")
+    payload["env"] = [{"key": "MAX_THINKING_TOKENS", "value": "4096"}]
+
+    response = client.patch(f"{API}/agents/built-in:claude-code", json=payload)
+
+    assert response.status_code == 200
+    saved = client.get(f"{API}/agents/built-in:claude-code").json()["data"]
+    assert saved["env"] == []
+    assert json.loads(saved["kwargs"])["max_thinking_tokens"] == "4096"
 
 
 def test_agent_environment_variables_preserve_inherited_and_fixed_values(client, settings):
