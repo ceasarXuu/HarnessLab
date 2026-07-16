@@ -115,6 +115,35 @@ describe('App API mode', () => {
     expect(within(drawer).getByText('Queued')).toBeInTheDocument()
   })
 
+  it('shows a failed resume Operation in the Job drawer and refreshes Jobs', async () => {
+    const client = createMockWebUiClient()
+    const listJobs = vi.spyOn(client, 'listJobs')
+    vi.spyOn(client, 'resumeJob').mockResolvedValue({
+      data: {
+        operation: {
+          id: 'resume-failed',
+          type: 'resume-job',
+          status: 'failed',
+          resourceType: 'job',
+          resourceId: 'job_55e9',
+          error: { code: 'OPERATION_FAILED', message: 'low-level Harbor output' },
+        },
+      },
+      error: null,
+    })
+    render(<App client={client} dataMode="api" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'harbor-hello-world' }))
+    const drawer = screen.getByRole('dialog', { name: 'Selected job' })
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Resume' }))
+
+    expect(await within(drawer).findByRole('alert')).toHaveTextContent(
+      'This Job could not be resumed. Check the Job event log for details.',
+    )
+    expect(screen.queryByText('low-level Harbor output')).not.toBeInTheDocument()
+    await waitFor(() => expect(listJobs.mock.calls.length).toBeGreaterThan(1))
+  })
+
   it('keeps an active Job status synchronized between its list row and detail drawer', async () => {
     const client = createMockWebUiClient()
     const listJobs = client.listJobs.bind(client)

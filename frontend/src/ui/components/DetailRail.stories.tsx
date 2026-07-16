@@ -39,9 +39,20 @@ export const JobDetail: Story = {
 
 export const RecoverableJobAction: Story = {
   args: {
-    job: jobs[2],
+    job: jobs.find((job) => job.status === 'failed' && job.canResume)!,
     events,
-    trials: trialRows.filter((row) => row.jobId === jobs[2].id),
+    trials: trialRows.filter((row) => row.jobId === jobs.find((job) => job.status === 'failed' && job.canResume)?.id),
+    t,
+    onJobAction: () => undefined,
+    onLeaderboardChange: () => undefined,
+  },
+}
+
+export const FailedWithoutResumeArtifacts: Story = {
+  args: {
+    job: { ...jobs.find((job) => job.status === 'failed')!, canResume: false },
+    events,
+    trials: [],
     t,
     onJobAction: () => undefined,
     onLeaderboardChange: () => undefined,

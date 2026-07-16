@@ -250,6 +250,7 @@ export const zhMessages = {
     skillsTab: 'Skills',
     mcpsTab: 'MCPs',
     resume: '恢复',
+    resumeJobFailed: 'Job 无法恢复，请查看 Job 事件日志了解详情。',
     pause: '暂停',
     upload: '上传',
     openViewer: '打开 Viewer',

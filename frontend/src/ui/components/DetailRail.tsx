@@ -19,7 +19,7 @@ interface DetailRailProps {
 export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
-  const primaryJobAction = getPrimaryJobAction(job.status, t)
+  const primaryJobAction = getPrimaryJobAction(job, t)
 
   return (
     <aside className="detail-rail">
@@ -131,11 +131,13 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
   )
 }
 
-function getPrimaryJobAction(status: HarborJob['status'], t: Translate) {
-  if (status === 'running' || status === 'queued') {
+function getPrimaryJobAction(job: HarborJob, t: Translate) {
+  if (job.status === 'running' || job.status === 'queued') {
     return { kind: 'cancel' as const, label: t('cancel') }
   }
-  if (status === 'failed' || status === 'interrupted') return { kind: 'resume' as const, label: t('resume') }
+  if ((job.status === 'failed' || job.status === 'interrupted') && job.canResume) {
+    return { kind: 'resume' as const, label: t('resume') }
+  }
   return null
 }
 

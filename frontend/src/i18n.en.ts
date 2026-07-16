@@ -248,6 +248,7 @@ export const enMessages = {
     skillsTab: 'Skills',
     mcpsTab: 'MCPs',
     resume: 'Resume',
+    resumeJobFailed: 'This Job could not be resumed. Check the Job event log for details.',
     pause: 'Pause',
     upload: 'Upload',
     openViewer: 'Open viewer',

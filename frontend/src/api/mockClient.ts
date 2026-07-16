@@ -395,6 +395,7 @@ function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent:
     harness: agent.harness,
     id,
     includeInLeaderboard: request.config.includeInLeaderboard,
+    canResume: false,
     jobDir: request.config.jobsDir,
     model: request.config.modelName,
     name: request.config.jobName,

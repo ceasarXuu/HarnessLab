@@ -16,6 +16,7 @@ export interface HarborJob {
   runtimeDuration: string
   createdAt: string
   includeInLeaderboard: boolean
+  canResume: boolean
   jobDir?: string
   eventLogPath?: string
   artifactPaths?: string[]

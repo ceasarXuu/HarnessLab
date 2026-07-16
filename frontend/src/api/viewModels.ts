@@ -32,6 +32,7 @@ export function jobDtoToHarborJob(job: JobDto): HarborJob {
     runtimeDuration: formatDuration(job.runtimeSeconds),
     createdAt: formatDateTime(job.createdAt),
     includeInLeaderboard: job.includeInLeaderboard,
+    canResume: job.canResume,
     jobDir: job.jobDir,
     eventLogPath: job.eventLogPath,
     artifactPaths: job.artifactPaths,

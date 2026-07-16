@@ -482,6 +482,35 @@ def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: P
     ]
 
 
+def test_job_dto_only_marks_a_failed_job_resumable_when_harbor_config_exists(
+    client, tmp_path: Path
+):
+    _create_profile_prerequisites(client)
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+    job_id = created["id"]
+    job_dir = tmp_path / "resume-root"
+    job_dir.mkdir()
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'failed', job_dir = ?, harbor_job_name = ? WHERE id = ?",
+            (str(job_dir), "native-job", job_id),
+        )
+
+    unavailable = client.get(f"{API}/jobs/{job_id}").json()["data"]
+    rejected_resume = client.post(f"{API}/jobs/{job_id}/resume")
+    native_dir = job_dir / "native-job"
+    native_dir.mkdir()
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    available = client.get(f"{API}/jobs/{job_id}").json()["data"]
+
+    assert unavailable["canResume"] is False
+    assert rejected_resume.status_code == 422
+    assert rejected_resume.json()["error"]["code"] == "INVALID_REQUEST"
+    assert available["canResume"] is True
+
+
 def test_scores_require_an_explicit_harbor_scale():
     assert _job_score({"stats": {"evals": {"test": {"pass_at_k": {"1": 0.72}}}}}) == {
         "kind": "percentage",

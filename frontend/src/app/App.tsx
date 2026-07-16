@@ -151,10 +151,17 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   }, [agentsResource.loading, configuredAgents, datasets, datasetsResource.loading, environmentProfiles, environmentsResource.loading])
 
   useEffect(() => {
-    if (jobOperation.operation?.status !== 'completed') return
+    const status = jobOperation.operation?.status
+    if (status !== 'completed' && status !== 'failed' && status !== 'cancelled') return
     void jobsResource.refresh()
-    void leaderboardResource.refresh()
+    if (status === 'completed') void leaderboardResource.refresh()
   }, [jobOperation.operation?.id, jobOperation.operation?.status, jobsResource.refresh, leaderboardResource.refresh])
+
+  const selectedJobActionError = jobOperation.operation?.type === 'resume-job'
+    && jobOperation.operation.resourceId === selectedJob?.id
+    && jobOperation.operation.status === 'failed'
+    ? t('resumeJobFailed')
+    : jobOperation.error?.message ?? null
 
   const filteredJobs = useMemo(() => {
     if (!jobSearchQuery) return jobs
@@ -395,6 +402,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             open={jobDrawerOpen}
             search={search}
             selected={selectedJob}
+            actionError={selectedJobActionError}
             t={t}
             onClose={() => setJobDrawerOpen(false)}
             onLeaderboardChange={updateJobLeaderboardInclusion}
@@ -409,7 +417,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           <ResourceStatus
             error={(jobSearchQuery ? jobSearchResource.error : jobsResource.error) ? t('unableToLoadJobs') : null}
           />
-          <ResourceStatus error={jobOperation.error?.message ?? null} />
         </>
       )}
       {route.page === 'jobs' && route.jobView === 'new' && (

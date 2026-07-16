@@ -71,6 +71,7 @@ export interface JobDto {
   runtimeSeconds: number | null
   createdAt: string
   includeInLeaderboard: boolean
+  canResume: boolean
   jobDir?: string
   eventLogPath?: string
   artifactPaths?: string[]

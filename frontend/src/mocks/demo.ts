@@ -48,6 +48,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '00:42:18',
     createdAt: '2026-06-29 03:46:12',
     includeInLeaderboard: true,
+    canResume: false,
     jobDir: 'jobs/terminal-bench-smoke',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log',
     artifactPaths: [
@@ -75,6 +76,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '03:20:44',
     createdAt: '2026-06-29 00:18:05',
     includeInLeaderboard: true,
+    canResume: false,
     jobDir: 'jobs/swebench-verified-regression',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swebench-verified-regression/job.log',
     artifactPaths: [
@@ -102,6 +104,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '00:47:08',
     createdAt: '2026-06-28 21:12:44',
     includeInLeaderboard: true,
+    canResume: false,
     jobDir: 'jobs/terminal-bench-codex',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-codex/job.log',
     artifactPaths: [
@@ -127,6 +130,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '03:45:02',
     createdAt: '2026-06-28 18:42:18',
     includeInLeaderboard: true,
+    canResume: false,
     jobDir: 'jobs/swebench-verified-claude',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/swebench-verified-claude/job.log',
     artifactPaths: [
@@ -152,6 +156,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '00:02:00',
     createdAt: '2026-06-28 16:05:09',
     includeInLeaderboard: true,
+    canResume: false,
     jobDir: 'jobs/harbor-hello-world-baseline',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world-baseline/job.log',
     artifactPaths: [
@@ -177,6 +182,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '00:07:39',
     createdAt: '2026-06-28 23:05:41',
     includeInLeaderboard: false,
+    canResume: true,
     jobDir: 'jobs/harbor-hello-world',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/harbor-hello-world/job.log',
     artifactPaths: [
@@ -206,6 +212,7 @@ export const jobs: HarborJob[] = [
     runtimeDuration: '00:00:00',
     createdAt: '2026-06-29 04:08:22',
     includeInLeaderboard: false,
+    canResume: false,
     jobDir: 'jobs/terminal-bench-nightly',
     eventLogPath: '/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-nightly/job.log',
     artifactPaths: [

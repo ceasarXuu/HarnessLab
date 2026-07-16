@@ -18,6 +18,7 @@ interface JobsPageProps {
   open: boolean
   search: string
   selected: HarborJob | null
+  actionError?: string | null
   t: Translate
   onClose: () => void
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
@@ -34,6 +35,7 @@ export function JobsPage({
   open,
   search,
   selected,
+  actionError = null,
   t,
   onClose,
   onJobAction,
@@ -48,7 +50,7 @@ export function JobsPage({
   const trialsResource = useJobTrials(client, selected?.id)
   const loadedDetailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
   const detailJob = loadedDetailJob && selected
-    ? { ...loadedDetailJob, status: selected.status }
+    ? { ...loadedDetailJob, status: selected.status, canResume: selected.canResume }
     : loadedDetailJob
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
@@ -101,7 +103,7 @@ export function JobsPage({
               onLeaderboardChange={onLeaderboardChange}
             />
             <ResourceStatus
-              error={detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
+              error={actionError ?? detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
               loading={
                 (detailResource.loading && !detailResource.data)
                 || (eventsResource.loading && !eventsResource.data)

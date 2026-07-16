@@ -20,6 +20,7 @@ describe('WebUI view model mappers', () => {
       runtimeSeconds: 2538,
       createdAt: '2026-07-10T01:02:03Z',
       includeInLeaderboard: true,
+      canResume: false,
     }
 
     expect(jobDtoToHarborJob(job)).toMatchObject({

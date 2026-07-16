@@ -168,7 +168,7 @@ class WebUiJobService:
         if not run.get("job_dir"):
             raise ValueError("Harbor job directory is unavailable for resume")
         job_path = resolve_harbor_job_path(Path(run["job_dir"]), run.get("harbor_job_name"))
-        if not job_path.is_dir():
+        if not job_path.is_dir() or not (job_path / "config.json").is_file():
             raise ValueError("Harbor job directory is unavailable for resume")
 
         async def work(progress) -> None:
@@ -367,11 +367,19 @@ def _job_dto(row: dict) -> dict:
         "runtimeSeconds": _duration_seconds(row.get("started_at"), row.get("finished_at")),
         "createdAt": row["created_at"],
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
+        "canResume": _can_resume(row, status),
         "jobDir": row.get("job_dir"),
         "eventLogPath": _event_log_path(row, config),
         "artifactPaths": _artifacts(row),
         "failureCode": row.get("failure_code"),
     }
+
+
+def _can_resume(row: dict, status: str) -> bool:
+    if status not in {"failed", "interrupted"} or not row.get("job_dir"):
+        return False
+    job_path = resolve_harbor_job_path(Path(row["job_dir"]), row.get("harbor_job_name"))
+    return (job_path / "config.json").is_file()
 
 
 def _trial_dto(job_id: str, item: dict) -> dict:
