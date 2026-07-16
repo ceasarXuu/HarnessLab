@@ -57,7 +57,8 @@ describe('SystemPage', () => {
 
     const docker = screen.getByRole('article', { name: 'Docker' })
     expect(within(docker).getByText('Not running')).toBeVisible()
-    expect(within(docker).getByText('daemon unavailable')).toBeVisible()
+    expect(within(docker).getByText('Docker service is not running. Start your local Docker service to use Harbor.')).toBeVisible()
+    expect(within(docker).queryByText('daemon unavailable')).not.toBeInTheDocument()
     expect(within(docker).getByText('28.1.1')).toBeVisible()
     expect(within(docker).getByText('—')).toBeVisible()
     expect(within(docker).queryByRole('button', { name: 'Clean cache' })).not.toBeInTheDocument()

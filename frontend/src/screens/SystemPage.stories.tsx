@@ -35,6 +35,8 @@ export const DockerNotRunning: Story = {
   play: async ({ canvasElement }) => {
     const card = within(canvasElement).getByRole('article', { name: 'Docker' })
     await expect(within(card).getByText('Not running')).toBeVisible()
+    await expect(within(card).getByText('Docker service is not running. Start your local Docker service to use Harbor.')).toBeVisible()
+    await expect(within(card).queryByText('Docker daemon is not running')).not.toBeInTheDocument()
     await expect(within(card).getByText('28.1.1')).toBeVisible()
     await expect(within(card).getByText('Server version')).toBeVisible()
     await expect(within(card).queryByRole('button', { name: 'Clean cache' })).not.toBeInTheDocument()

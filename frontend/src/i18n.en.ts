@@ -341,6 +341,8 @@ export const enMessages = {
     dockerContext: 'Docker context',
     clientVersion: 'Client version',
     serverVersion: 'Server version',
+    dockerNotRunningHelp: 'Docker service is not running. Start your local Docker service to use Harbor.',
+    dockerConnectionErrorHelp: 'Docker could not be reached. Check the current Docker context and service status.',
     cacheSize: 'Cache size',
     logicalCores: 'Logical cores',
     gpuDevices: 'GPU devices',

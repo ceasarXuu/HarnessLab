@@ -118,6 +118,12 @@
   overflow-wrap: anywhere;
 }
 
+.system-card-notice {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .system-card-actions {
   display: flex;
   flex-wrap: wrap;

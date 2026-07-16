@@ -343,6 +343,8 @@ export const zhMessages = {
     dockerContext: 'Docker 上下文',
     clientVersion: '客户端版本',
     serverVersion: '服务端版本',
+    dockerNotRunningHelp: 'Docker 服务未运行，请自行启动本机 Docker 服务后再使用 Harbor。',
+    dockerConnectionErrorHelp: '无法连接 Docker，请检查当前 Docker 上下文和服务状态。',
     cacheSize: '缓存大小',
     logicalCores: '逻辑核心',
     gpuDevices: 'GPU 数量',

@@ -48,6 +48,7 @@ function SystemGroupSection({ group, rows, title, ...props }: SystemDashboardPro
 function SystemCard({ row, t, disabled, onCheckUpdate, onCleanDockerCache, onCleanStorageCache, onRestartService }: Omit<SystemDashboardProps, 'rows'> & { row: SystemRow }) {
   const title = t(componentTitleKey(row.kind))
   const meter = resourceMeter(row)
+  const message = componentMessage(row, t)
   return (
     <article className={`system-card system-card-${row.kind}`} aria-label={title}>
       <header className="system-card-header">
@@ -56,7 +57,7 @@ function SystemCard({ row, t, disabled, onCheckUpdate, onCleanDockerCache, onCle
       </header>
       {meter && <ResourceMeter value={meter.value} label={meter.label} />}
       <SystemCardDetails row={row} t={t} />
-      {'error' in row && row.error && <p className="system-card-error">{row.error}</p>}
+      {message && <p className={row.kind === 'docker' && row.state === 'not-running' ? 'system-card-notice' : 'system-card-error'}>{message}</p>}
       {row.actions.length > 0 && (
         <div className="system-card-actions">
           {row.actions.includes('check-update') && <button className="secondary-button compact-action" disabled={disabled} onClick={onCheckUpdate}>{t('checkUpdate')}</button>}
@@ -67,6 +68,14 @@ function SystemCard({ row, t, disabled, onCheckUpdate, onCleanDockerCache, onCle
       )}
     </article>
   )
+}
+
+function componentMessage(row: SystemRow, t: Translate): string | null {
+  if (row.kind === 'docker') {
+    if (row.state === 'not-running') return t('dockerNotRunningHelp')
+    if (row.state === 'error') return t('dockerConnectionErrorHelp')
+  }
+  return 'error' in row ? row.error : null
 }
 
 function SystemCardDetails({ row, t }: { row: SystemRow; t: Translate }) {
