@@ -22,19 +22,12 @@ from ornnlab.services.harbor_score import result_pass_at_one
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
+from ornnlab.services.webui_job_copy import load_job_copy_config
+from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
-
-_JOB_SELECT = """
-    SELECT runs.*, experiments.name AS experiment_name,
-           agents.name AS agent_profile_name, webui_job_configs.config_json
-    FROM runs
-    JOIN experiments ON experiments.id = runs.experiment_id
-    JOIN agents ON agents.id = runs.agent_id
-    LEFT JOIN webui_job_configs ON webui_job_configs.run_id = runs.id
-"""
 
 
 class WebUiJobService:
@@ -55,7 +48,7 @@ class WebUiJobService:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
-                _JOB_SELECT + "WHERE experiments.status != 'deleted' ORDER BY runs.created_at DESC",
+                JOB_SELECT + "WHERE experiments.status != 'deleted' ORDER BY runs.created_at DESC",
             )
         jobs = [_job_dto(row) for row in rows]
         if not query:
@@ -69,12 +62,15 @@ class WebUiJobService:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(
                 conn,
-                _JOB_SELECT + "WHERE runs.id = ?",
+                JOB_SELECT + "WHERE runs.id = ?",
                 (job_id,),
             )
         if not rows:
             raise KeyError(job_id)
         return _job_dto(rows[0])
+
+    def copy_job_config(self, job_id: str) -> dict:
+        return load_job_copy_config(self.settings, job_id)
 
     def create_job(self, request: CreateJobInput) -> tuple[dict, dict]:
         config = request.config

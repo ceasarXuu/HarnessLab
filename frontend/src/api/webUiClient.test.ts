@@ -42,6 +42,17 @@ describe('WebUiHttpClient', () => {
     expect(request).toHaveBeenCalledWith('/api/webui/v1/datasets?limit=100&q=terminal+bench', undefined)
   })
 
+  it('loads the editable configuration for a copied Job without creating one', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ data: {}, error: null }), { status: 200 }),
+    )
+    const client = createWebUiHttpClient('/api/webui/v1', request)
+
+    await client.getJobCopyConfig('job/1')
+
+    expect(request).toHaveBeenCalledWith('/api/webui/v1/jobs/job%2F1/copy-config', undefined)
+  })
+
   it('maps every visible write to a WebUI contract route rather than a legacy route', async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ data: { operation: {} }, error: null })))
     const client = createWebUiHttpClient('/api/webui/v1', request)

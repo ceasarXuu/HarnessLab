@@ -115,6 +115,73 @@ describe('App API mode', () => {
     expect(within(drawer).getByText('Queued')).toBeInTheDocument()
   })
 
+  it('copies a Job into New Job without creating it and falls back for stale references', async () => {
+    const client = createMockWebUiClient()
+    const createJob = vi.spyOn(client, 'createJob')
+    vi.spyOn(client, 'getJobCopyConfig').mockResolvedValue({
+      data: {
+        agentSetupTimeoutMultiplier: 1,
+        agentName: 'Deleted agent',
+        agentTimeoutMultiplier: 1,
+        attempts: 2,
+        concurrency: 3,
+        datasetRef: 'deleted-dataset@1.0',
+        debug: true,
+        environmentPresetId: 'deleted-environment',
+        environmentBuildTimeoutMultiplier: 1,
+        extraInstructionPaths: ['instructions/copied.md'],
+        includeInLeaderboard: false,
+        jobName: 'terminal-bench-smoke-copy',
+        jobsDir: 'jobs/terminal-bench-smoke',
+        maxRetries: 0,
+        metric: 'mean',
+        modelName: 'deleted-model',
+        notes: 'copied note',
+        retryExclude: '',
+        retryInclude: '',
+        retryMaxWaitSeconds: 30,
+        retryMinWaitSeconds: 2,
+        retryWaitMultiplier: 1.5,
+        selectedTaskNames: null,
+        timeoutMultiplier: 1,
+        verifierTimeoutMultiplier: 1,
+        verifierMode: 'dataset-default',
+      },
+      error: null,
+    })
+    render(<App client={client} dataMode="api" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'terminal-bench-smoke' }))
+    const drawer = screen.getByRole('dialog', { name: 'Selected job' })
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Copy' }))
+
+    await waitFor(() => expect(window.location.hash).toBe('#jobs/new'))
+    expect(screen.getByLabelText('job_name')).toHaveValue('terminal-bench-smoke-copy')
+    expect(screen.getByLabelText('jobs_dir')).toHaveValue('jobs/terminal-bench-smoke')
+    await waitFor(() => expect(screen.getByLabelText('Dataset')).toHaveTextContent('terminal-bench@2.0'))
+    expect(screen.getByLabelText('Agent')).toHaveTextContent('Claude Code default')
+    expect(createJob).not.toHaveBeenCalled()
+  })
+
+  it('keeps the original Job open when its saved configuration cannot be copied', async () => {
+    const client = createMockWebUiClient()
+    vi.spyOn(client, 'getJobCopyConfig').mockResolvedValue({
+      data: null,
+      error: { code: 'INVALID_REQUEST', message: 'raw config error' },
+    })
+    render(<App client={client} dataMode="api" />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'terminal-bench-smoke' }))
+    const drawer = screen.getByRole('dialog', { name: 'Selected job' })
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Copy' }))
+
+    expect(await within(drawer).findByRole('alert')).toHaveTextContent(
+      'This Job cannot be copied because its original configuration is unavailable.',
+    )
+    expect(window.location.hash).toBe('#jobs')
+    expect(screen.queryByText('raw config error')).not.toBeInTheDocument()
+  })
+
   it('shows a failed resume Operation in the Job drawer and refreshes Jobs', async () => {
     const client = createMockWebUiClient()
     const listJobs = vi.spyOn(client, 'listJobs')

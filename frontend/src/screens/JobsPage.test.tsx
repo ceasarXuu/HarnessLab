@@ -20,6 +20,7 @@ describe('JobsPage', () => {
         t={getTranslator('zh')}
         onClose={() => undefined}
         onJobAction={() => undefined}
+        onCopyJob={() => undefined}
         onLeaderboardChange={() => undefined}
         onNewJob={() => undefined}
         onSearch={() => undefined}
@@ -46,6 +47,7 @@ describe('JobsPage', () => {
         t={getTranslator('en')}
         onClose={() => undefined}
         onJobAction={onJobAction}
+        onCopyJob={() => undefined}
         onLeaderboardChange={() => undefined}
         onNewJob={() => undefined}
         onSearch={() => undefined}

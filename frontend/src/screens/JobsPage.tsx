@@ -22,6 +22,7 @@ interface JobsPageProps {
   t: Translate
   onClose: () => void
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
+  onCopyJob?: (jobId: string) => void
   onNewJob: () => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onSearch: (value: string) => void
@@ -39,6 +40,7 @@ export function JobsPage({
   t,
   onClose,
   onJobAction,
+  onCopyJob = () => undefined,
   onNewJob,
   onLeaderboardChange,
   onSearch,
@@ -100,6 +102,7 @@ export function JobsPage({
               t={t}
               writesEnabled={writesEnabled}
               onJobAction={requestJobAction}
+              onCopyJob={onCopyJob}
               onLeaderboardChange={onLeaderboardChange}
             />
             <ResourceStatus

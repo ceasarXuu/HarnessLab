@@ -1,4 +1,5 @@
 import type { AgentRow, DatasetRow, EnvironmentRow, RunDraft } from './harbor'
+import type { JobConfigDto } from '../api/contract'
 import { reconcileAgentModel } from './agentModels'
 
 export const defaultRunDraft: RunDraft = {
@@ -52,6 +53,54 @@ export function reconcileRunDraftResources(
     model: reconcileAgentModel(draft.model, agent),
     source: resolveResourceValue(draft.source, datasets),
   }
+}
+
+export function jobConfigDtoToRunDraft(config: JobConfigDto): RunDraft {
+  return {
+    agent: config.agentName,
+    agentSetupTimeoutMultiplier: String(config.agentSetupTimeoutMultiplier),
+    agentTimeoutMultiplier: String(config.agentTimeoutMultiplier),
+    attempts: config.attempts,
+    concurrency: config.concurrency,
+    debug: config.debug,
+    environment: config.environmentPresetId,
+    environmentBuildTimeoutMultiplier: String(config.environmentBuildTimeoutMultiplier),
+    extraInstructions: config.extraInstructionPaths.join('\n'),
+    includeInLeaderboard: config.includeInLeaderboard,
+    jobsDir: config.jobsDir,
+    jobName: config.jobName,
+    maxRetries: config.maxRetries,
+    metric: config.metric,
+    model: config.modelName,
+    notes: config.notes,
+    retryExclude: config.retryExclude,
+    retryInclude: config.retryInclude,
+    retryIntervalPolicy: retryIntervalPolicy(config),
+    retryMaxWaitSec: String(config.retryMaxWaitSeconds),
+    retryMinWaitSec: String(config.retryMinWaitSeconds),
+    retryWaitMultiplier: String(config.retryWaitMultiplier),
+    selectedTaskNames: config.selectedTaskNames,
+    source: config.datasetRef,
+    timeoutMultiplier: config.timeoutMultiplier,
+    timeoutPolicy: timeoutPolicy(config.timeoutMultiplier),
+    verifierMode: config.verifierMode,
+    verifierTimeoutMultiplier: String(config.verifierTimeoutMultiplier),
+  }
+}
+
+function timeoutPolicy(multiplier: number): RunDraft['timeoutPolicy'] {
+  if (multiplier === 0.5) return 'strict'
+  if (multiplier === 1) return 'standard'
+  if (multiplier === 2) return 'relaxed'
+  return 'custom'
+}
+
+function retryIntervalPolicy(config: JobConfigDto): RunDraft['retryIntervalPolicy'] {
+  const signature = `${config.retryWaitMultiplier}:${config.retryMinWaitSeconds}:${config.retryMaxWaitSeconds}`
+  if (signature === '1.5:2:30') return 'standard'
+  if (signature === '1:0:5') return 'fast'
+  if (signature === '2:10:120') return 'slow'
+  return 'custom'
 }
 
 function resolveResourceValue(current: string, values: string[]): string {

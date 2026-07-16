@@ -14,6 +14,7 @@ describe('DetailRail Job actions', () => {
         trials={[]}
         t={getTranslator('en')}
         onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
         onLeaderboardChange={vi.fn()}
       />,
     )
@@ -27,6 +28,7 @@ describe('DetailRail Job actions', () => {
         trials={[]}
         t={getTranslator('en')}
         onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
         onLeaderboardChange={vi.fn()}
       />,
     )

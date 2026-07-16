@@ -37,6 +37,7 @@ export const zhMessages = {
     download: '下载',
     cancelDownload: '取消下载',
     copy: '复制',
+    copyJobFailed: '无法复制此 Job，因为原始配置不可用。',
     save: '保存',
     agentNameRequired: '请输入 Agent Name。',
     harnessRequired: '请选择 Harness。',

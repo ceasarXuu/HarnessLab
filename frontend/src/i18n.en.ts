@@ -35,6 +35,7 @@ export const enMessages = {
     download: 'Download',
     cancelDownload: 'Cancel download',
     copy: 'Copy',
+    copyJobFailed: 'This Job cannot be copied because its original configuration is unavailable.',
     save: 'Save',
     agentNameRequired: 'Enter Agent Name.',
     harnessRequired: 'Select a Harness.',

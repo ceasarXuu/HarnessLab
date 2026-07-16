@@ -28,6 +28,7 @@ function DetailDrawerFixture() {
           trials={trialRows.filter((row) => row.jobId === job.id)}
           t={t}
           onJobAction={() => undefined}
+          onCopyJob={() => undefined}
           onLeaderboardChange={() => undefined}
         />
       </DetailDrawer>

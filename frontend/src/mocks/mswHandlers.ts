@@ -64,6 +64,9 @@ export const webuiHandlers = [
   ),
   http.get(`${webui}/jobs`, async ({ request }) => HttpResponse.json(await client.listJobs(listQuery(request)))),
   http.get(`${webui}/jobs/:jobId`, async ({ params }) => HttpResponse.json(await client.getJob(String(params.jobId)))),
+  http.get(`${webui}/jobs/:jobId/copy-config`, async ({ params }) =>
+    HttpResponse.json(await client.getJobCopyConfig(String(params.jobId))),
+  ),
   http.get(`${webui}/jobs/:jobId/events`, async ({ params }) =>
     HttpResponse.json(await client.listJobEvents(String(params.jobId))),
   ),

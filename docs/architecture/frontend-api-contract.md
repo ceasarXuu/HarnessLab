@@ -94,7 +94,7 @@ interface Operation {
 | Harness | `GET /harnesses` | `Page<Harness>` |
 | Environment | `GET /environments`、`GET /environments/{id}` | `Page<Environment>`、`Environment` |
 | Environment | `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`、`POST /environments/{id}/copy` | `{ operation }` |
-| Job | `GET /jobs`、`GET /jobs/{id}` | `Page<Job>`、`Job` |
+| Job | `GET /jobs`、`GET /jobs/{id}`、`GET /jobs/{id}/copy-config` | `Page<Job>`、`Job`、`JobConfig` |
 | Job | `POST /jobs` | `{ job, operation }` |
 | Job | `POST /jobs/{id}/cancel`、`resume` | `{ operation }` |
 | Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
@@ -194,6 +194,8 @@ interface CreateJobRequest {
 ```
 
 后端接受 OrnnLab 中已配置的 Agent profile。Agent 的 `models` 是可选集合，Job 的 `modelName` 是本次运行的唯一模型；后端必须校验该值属于所选 Agent，并写入 Harbor `AgentConfig.model_name`。其余 Agent 字段展开为 `AgentConfig`，Environment 预设展开为 `EnvironmentConfig`。`split`、`agentEnv`、`agentImportPath`、`agentKwargs`、custom verifier、`env_file`、输出/Hub/plugin 参数均不属于 Job 请求。
+
+`GET /jobs/{id}/copy-config` 是只读接口，返回该 Job 保存的完整 `JobConfig`，但把 `jobName` 追加 `-copy`，并保持 `jobsDir` 不变。调用不会创建 Job、Operation 或文件。前端将结果映射为 New Job 草稿，并用当前资源目录替换已经删除的 Agent、模型、Dataset 或 Environment；原 Job 没有保存配置时返回 `422 INVALID_REQUEST`。
 
 如果 `verifierMode` 为 `skip`，后端会禁用 verifier，并要求 `includeInLeaderboard` 为 false；后续尝试把该 Job 加回排行榜返回 `422`。
 

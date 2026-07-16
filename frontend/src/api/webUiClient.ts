@@ -20,6 +20,7 @@ import type {
   DatasetPathRequestDto,
   DatasetStoragePreferenceDto,
   JobDto,
+  JobConfigDto,
   JobEventDto,
   LeaderboardDatasetDto,
   LeaderboardEntryDto,
@@ -57,6 +58,7 @@ export interface WebUiClient {
   getEnvironment(id: string): Promise<ApiResponse<EnvironmentDto | null>>
   getHubConnection(): Promise<ApiResponse<HubConnectionDto | null>>
   getJob(id: string): Promise<ApiResponse<JobDto | null>>
+  getJobCopyConfig(id: string): Promise<ApiResponse<JobConfigDto | null>>
   getOperation(id: string): Promise<ApiResponse<Operation | null>>
   importDataset(request: DatasetImportRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   installSystemUpdate(): Promise<ApiResponse<OperationResultDto | null>>
@@ -107,6 +109,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     getEnvironment: (id) => requestJson<EnvironmentDto | null>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`),
     getHubConnection: () => requestJson<HubConnectionDto | null>(request, `${baseUrl}/system/hub-connection`),
     getJob: (id) => requestJson<JobDto | null>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}`),
+    getJobCopyConfig: (id) => requestJson<JobConfigDto | null>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/copy-config`),
     getOperation: (id) => requestJson<Operation | null>(request, `${baseUrl}/operations/${encodeURIComponent(id)}`),
     importDataset: (body) => post<OperationResultDto>(request, `${baseUrl}/datasets/import`, body),
     installSystemUpdate: () => post<OperationResultDto>(request, `${baseUrl}/system/service/update`),

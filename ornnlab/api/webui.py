@@ -162,6 +162,12 @@ async def get_job(job_id: str, request: Request) -> dict:
     return _data(request, _jobs(request).get_job(job_id))
 
 
+@router.get("/jobs/{job_id}/copy-config")
+async def get_job_copy_config(job_id: str, request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, _jobs(request).copy_job_config(job_id))
+
+
 @router.post("/jobs")
 async def create_job(payload: CreateJobInput, request: Request) -> dict:
     _require_query(request, set())

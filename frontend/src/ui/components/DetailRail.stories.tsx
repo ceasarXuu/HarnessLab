@@ -33,6 +33,7 @@ export const JobDetail: Story = {
     trials: trialRows.filter((row) => row.jobId === jobs[0].id),
     t,
     onJobAction: () => undefined,
+    onCopyJob: () => undefined,
     onLeaderboardChange: () => undefined,
   },
 }
@@ -44,6 +45,7 @@ export const RecoverableJobAction: Story = {
     trials: trialRows.filter((row) => row.jobId === jobs.find((job) => job.status === 'failed' && job.canResume)?.id),
     t,
     onJobAction: () => undefined,
+    onCopyJob: () => undefined,
     onLeaderboardChange: () => undefined,
   },
 }
@@ -55,6 +57,7 @@ export const FailedWithoutResumeArtifacts: Story = {
     trials: [],
     t,
     onJobAction: () => undefined,
+    onCopyJob: () => undefined,
     onLeaderboardChange: () => undefined,
   },
 }
@@ -66,6 +69,7 @@ export const ScrollableEventLog: Story = {
     trials: trialRows.filter((row) => row.jobId === jobs[0].id),
     t,
     onJobAction: () => undefined,
+    onCopyJob: () => undefined,
     onLeaderboardChange: () => undefined,
   },
   decorators: [

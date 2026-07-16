@@ -511,6 +511,40 @@ def test_job_dto_only_marks_a_failed_job_resumable_when_harbor_config_exists(
     assert available["canResume"] is True
 
 
+def test_copy_job_config_returns_an_editable_draft_without_creating_a_job(client):
+    _create_profile_prerequisites(client)
+    payload = _job_payload()
+    payload.update({
+        "jobName": "copy-source",
+        "jobsDir": "/tmp/shared-jobs",
+        "selectedTaskNames": ["hello"],
+        "notes": "keep this note",
+        "retryInclude": "TimeoutError, NetworkError",
+    })
+    created = client.post(
+        f"{API}/jobs", json={"config": payload, "runImmediately": False}
+    ).json()["data"]["job"]
+    with sqlite.connect(client.app.state.settings) as conn:
+        before = sqlite.rows(conn, "SELECT COUNT(*) AS total FROM runs")[0]["total"]
+
+    response = client.get(f"{API}/jobs/{created['id']}/copy-config")
+
+    with sqlite.connect(client.app.state.settings) as conn:
+        after = sqlite.rows(conn, "SELECT COUNT(*) AS total FROM runs")[0]["total"]
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        **payload,
+        "jobName": "copy-source-copy",
+    }
+    assert before == after
+
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute("DELETE FROM webui_job_configs WHERE run_id = ?", (created["id"],))
+    unavailable = client.get(f"{API}/jobs/{created['id']}/copy-config")
+    assert unavailable.status_code == 422
+    assert unavailable.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 def test_scores_require_an_explicit_harbor_scale():
     assert _job_score({"stats": {"evals": {"test": {"pass_at_k": {"1": 0.72}}}}}) == {
         "kind": "percentage",

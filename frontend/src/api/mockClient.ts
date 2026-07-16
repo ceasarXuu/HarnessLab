@@ -157,6 +157,11 @@ export function createMockWebUiClient(): WebUiClient {
     async getHubConnection() {
       return success({ status: 'connected' as const })
     },
+    async getJobCopyConfig(id) {
+      const job = jobDtos.find((item) => item.id === id)
+      if (!job) return failure('JOB_NOT_FOUND', 'Job not found')
+      return success(copyConfigFromJob(job))
+    },
     async getJob(id) {
       return findById(jobDtos, id, 'JOB_NOT_FOUND', 'Job not found', 'id')
     },
@@ -404,6 +409,37 @@ function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent:
     status: 'queued',
     tokenUsageM: 0,
     trial: { completed: 0, total: selectedTaskCount },
+  }
+}
+
+function copyConfigFromJob(job: JobDto): import('./contract').JobConfigDto {
+  return {
+    agentSetupTimeoutMultiplier: 1,
+    agentName: job.agentName,
+    agentTimeoutMultiplier: 1,
+    attempts: 1,
+    concurrency: 4,
+    datasetRef: job.datasetRef,
+    debug: false,
+    environmentPresetId: job.environmentName,
+    environmentBuildTimeoutMultiplier: 1,
+    extraInstructionPaths: [],
+    includeInLeaderboard: job.includeInLeaderboard,
+    jobName: `${job.name}-copy`,
+    jobsDir: job.jobDir ?? 'jobs/new-job',
+    maxRetries: 0,
+    metric: 'mean',
+    modelName: job.model,
+    notes: '',
+    retryExclude: '',
+    retryInclude: '',
+    retryMaxWaitSeconds: 30,
+    retryMinWaitSeconds: 2,
+    retryWaitMultiplier: 1.5,
+    selectedTaskNames: null,
+    timeoutMultiplier: 1,
+    verifierTimeoutMultiplier: 1,
+    verifierMode: 'dataset-default',
   }
 }
 

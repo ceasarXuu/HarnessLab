@@ -4,7 +4,7 @@ import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
-import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
+import { defaultRunDraft, jobConfigDtoToRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
@@ -100,6 +100,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const jobOperation = useOperation(client)
   const [selected, setSelected] = useState<HarborJob | null>(null)
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
+  const [copyJobError, setCopyJobError] = useState<string | null>(null)
   const [draft, setDraft] = useState(defaultRunDraft)
   const [language, setLanguage] = useState<Locale>(readLocale)
   const [theme, setTheme] = useState<'light' | 'dark'>(readTheme)
@@ -161,7 +162,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     && jobOperation.operation.resourceId === selectedJob?.id
     && jobOperation.operation.status === 'failed'
     ? t('resumeJobFailed')
-    : jobOperation.error?.message ?? null
+    : copyJobError ?? jobOperation.error?.message ?? null
 
   const filteredJobs = useMemo(() => {
     if (!jobSearchQuery) return jobs
@@ -296,6 +297,28 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     await jobOperation.submit(mutation, ({ operation }) => operation)
   }
 
+  async function copyExistingJob(jobId: string) {
+    setCopyJobError(null)
+    const response = await client.getJobCopyConfig(jobId)
+    if (!response.data) {
+      setCopyJobError(t('copyJobFailed'))
+      return
+    }
+    const copied = jobConfigDtoToRunDraft(response.data)
+    const resourcesReady = !agentsResource.loading
+      && !datasetsResource.loading
+      && !environmentsResource.loading
+    setDraft(resourcesReady
+      ? reconcileRunDraftResources(copied, {
+          agents: configuredAgents,
+          datasets,
+          environments: environmentProfiles,
+        })
+      : copied)
+    setJobDrawerOpen(false)
+    navigate('jobs', 'new')
+  }
+
   return (
     <AppShell
       activePage={route.page}
@@ -374,6 +397,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
         <>
           <LeaderboardPage
             writesEnabled={writesEnabled}
+            actionError={selectedJobActionError}
             dataset={leaderboardDataset}
             datasetSearch={leaderboardDatasetSearch}
             leaderboardDatasets={datasets}
@@ -384,6 +408,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onDataset={setLeaderboardDataset}
             onDatasetSearch={setLeaderboardDatasetSearch}
             onJobAction={runJobAction}
+            onCopyJob={copyExistingJob}
             onLeaderboardChange={updateJobLeaderboardInclusion}
             onRemove={removeFromLeaderboard}
           />
@@ -407,9 +432,11 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onClose={() => setJobDrawerOpen(false)}
             onLeaderboardChange={updateJobLeaderboardInclusion}
             onJobAction={runJobAction}
+            onCopyJob={copyExistingJob}
             onNewJob={() => navigate('jobs', 'new')}
             onSearch={setSearch}
             onSelect={(job) => {
+              setCopyJobError(null)
               setSelected(job)
               setJobDrawerOpen(true)
             }}

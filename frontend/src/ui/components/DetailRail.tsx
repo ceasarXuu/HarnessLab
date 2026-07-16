@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-react'
+import { Copy, FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { JobStatusBadge } from './JobStatusBadge'
@@ -13,10 +13,11 @@ interface DetailRailProps {
   trials: TrialRow[]
   t: Translate
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
+  onCopyJob: (jobId: string) => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onCopyJob, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job, t)
@@ -41,6 +42,10 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
                 {primaryJobAction.label}
               </button>
             )}
+            <button className="secondary-button compact-button" onClick={() => onCopyJob(job.id)}>
+              <Copy aria-hidden="true" />
+              {t('copy')}
+            </button>
           </div>
         </div>
         <div className="metric-grid">

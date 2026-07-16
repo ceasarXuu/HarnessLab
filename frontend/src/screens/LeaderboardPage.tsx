@@ -21,10 +21,12 @@ interface LeaderboardPageProps {
   leaderboardDatasets: DatasetRow[]
   jobs: HarborJob[]
   rows: LeaderboardRow[]
+  actionError?: string | null
   t: Translate
   onDataset: (value: string) => void
   onDatasetSearch: (value: string) => void
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
+  onCopyJob?: (jobId: string) => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onRemove: (jobId: string) => void
 }
@@ -37,10 +39,12 @@ export function LeaderboardPage({
   leaderboardDatasets,
   jobs,
   rows,
+  actionError = null,
   t,
   onDataset,
   onDatasetSearch,
   onJobAction,
+  onCopyJob = () => undefined,
   onLeaderboardChange,
   onRemove,
 }: LeaderboardPageProps) {
@@ -169,10 +173,11 @@ export function LeaderboardPage({
               t={t}
               writesEnabled={writesEnabled}
               onJobAction={onJobAction}
+              onCopyJob={onCopyJob}
               onLeaderboardChange={onLeaderboardChange}
             />
             <ResourceStatus
-              error={detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
+              error={actionError ?? detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
               loading={detailResource.loading || eventsResource.loading || trialsResource.loading}
               loadingLabel={t('loadingJobs')}
             />
