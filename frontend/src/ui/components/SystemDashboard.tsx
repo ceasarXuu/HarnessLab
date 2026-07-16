@@ -76,7 +76,12 @@ function SystemCardDetails({ row, t }: { row: SystemRow; t: Translate }) {
     case 'harbor-cli':
       return <DetailList items={[[t('version'), row.version ?? '—'], [t('executablePath'), row.executablePath]]} codeIndexes={[1]} />
     case 'docker':
-      return <DetailList items={[[t('dockerContext'), row.context ?? '—'], [t('executablePath'), row.executablePath]]} codeIndexes={[1]} />
+      return <DetailList items={[
+        [t('dockerContext'), row.context ?? '—'],
+        [t('clientVersion'), row.clientVersion ?? '—'],
+        [t('serverVersion'), row.serverVersion ?? '—'],
+        [t('executablePath'), row.executablePath],
+      ]} codeIndexes={[3]} />
     case 'storage':
       return <DetailList items={[[t('cacheSize'), formatBytes(row.sizeBytes)], [t('path'), row.path]]} codeIndexes={[1]} />
     case 'resource-cpu':

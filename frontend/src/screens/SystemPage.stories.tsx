@@ -30,11 +30,13 @@ export const Default: Story = {
 export const DockerNotRunning: Story = {
   args: {
     ...Default.args,
-    rows: replaceRow('docker', (row) => ({ ...row, state: 'not-running', actions: [], error: 'Docker daemon is not running' })),
+    rows: replaceRow('docker', (row) => ({ ...row, state: 'not-running', serverVersion: null, actions: [], error: 'Docker daemon is not running' })),
   },
   play: async ({ canvasElement }) => {
     const card = within(canvasElement).getByRole('article', { name: 'Docker' })
     await expect(within(card).getByText('Not running')).toBeVisible()
+    await expect(within(card).getByText('28.1.1')).toBeVisible()
+    await expect(within(card).getByText('Server version')).toBeVisible()
     await expect(within(card).queryByRole('button', { name: 'Clean cache' })).not.toBeInTheDocument()
   },
 }

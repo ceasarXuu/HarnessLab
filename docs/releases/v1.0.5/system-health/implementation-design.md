@@ -15,6 +15,7 @@
 - 错误原因直接显示在卡片内；路径是弱化信息。
 - 状态码由后端按事实计算，展示文案和颜色由前端 i18n 映射。
 - Docker 只有 daemon 可连接时才允许清理 Docker 缓存。
+- Docker 探测只依赖当前 Context 和标准 `docker version` 输出，返回 Client/Server 版本；不识别具体 Runtime，不管理启动或关闭。
 
 ## 2. API 判别联合
 
@@ -24,7 +25,7 @@
 |---|---|---|
 | `ornnlab-service` | `endpoint`、`logsPath`、`error` | `running/starting/restarting/degraded/stopped/error` |
 | `harbor-cli` | `version`、`executablePath` | `installed/not-installed` |
-| `docker` | `context`、`executablePath`、`error` | `running/not-running/not-installed/error` |
+| `docker` | `context`、`clientVersion`、`serverVersion`、`executablePath`、`error` | `running/not-running/not-installed/error` |
 | `storage` | `sizeBytes`、`path` | `available/unavailable` |
 | `resource-cpu` | `usagePercent`、`logicalCores` | `normal/elevated/high/unavailable` |
 | `resource-gpu` | `usagePercent`、`deviceCount` | `normal/elevated/high/not-detected/error` |

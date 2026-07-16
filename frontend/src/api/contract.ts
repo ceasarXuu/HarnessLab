@@ -307,6 +307,8 @@ export type SystemComponentDto =
       kind: 'docker'
       state: 'running' | 'not-running' | 'not-installed' | 'error'
       context: string | null
+      clientVersion: string | null
+      serverVersion: string | null
       executablePath: string
       error: string | null
     })

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from subprocess import CompletedProcess
 
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.system_health_probe import (
@@ -38,6 +39,11 @@ def test_system_health_distinguishes_installed_docker_cli_from_running_daemon(
         lambda _command: "colima",
         raising=False,
     )
+    monkeypatch.setattr(
+        "ornnlab.services.system_health_probe._docker_versions",
+        lambda _command: ("28.1.1", None),
+        raising=False,
+    )
 
     components = client.get(f"{API}/system/health").json()["data"]["items"]
     docker = next(component for component in components if component["kind"] == "docker")
@@ -46,6 +52,8 @@ def test_system_health_distinguishes_installed_docker_cli_from_running_daemon(
         "kind": "docker",
         "state": "not-running",
         "context": "colima",
+        "clientVersion": "28.1.1",
+        "serverVersion": None,
         "executablePath": "docker",
         "error": "failed to connect to the docker API",
         "actions": [],
@@ -53,6 +61,22 @@ def test_system_health_distinguishes_installed_docker_cli_from_running_daemon(
     assert "status" not in docker
     assert "value" not in docker
     assert "path" not in docker
+
+
+def test_docker_versions_reads_client_and_server_from_standard_docker_output(monkeypatch):
+    from ornnlab.services.system_health_probe import _docker_versions
+
+    monkeypatch.setattr(
+        "ornnlab.services.system_health_probe.subprocess.run",
+        lambda *_args, **_kwargs: CompletedProcess(
+            ["docker", "version"],
+            0,
+            stdout='{"Client":{"Version":"28.1.1"},"Server":{"Version":"27.5.1"}}',
+            stderr="",
+        ),
+    )
+
+    assert _docker_versions(["docker"]) == ("28.1.1", "27.5.1")
 
 
 def test_system_health_resource_thresholds_are_stable():

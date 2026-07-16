@@ -341,6 +341,8 @@ export const zhMessages = {
     logsPath: '日志路径',
     executablePath: '可执行文件路径',
     dockerContext: 'Docker 上下文',
+    clientVersion: '客户端版本',
+    serverVersion: '服务端版本',
     cacheSize: '缓存大小',
     logicalCores: '逻辑核心',
     gpuDevices: 'GPU 数量',

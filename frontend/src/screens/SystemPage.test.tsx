@@ -33,11 +33,17 @@ describe('SystemPage', () => {
 
     const gpu = screen.getByRole('article', { name: 'GPU usage' })
     expect(within(gpu).getByText('Not detected')).toBeVisible()
+
+    const docker = screen.getByRole('article', { name: 'Docker' })
+    expect(within(docker).getByText('Client version')).toBeVisible()
+    expect(within(docker).getByText('28.1.1')).toBeVisible()
+    expect(within(docker).getByText('Server version')).toBeVisible()
+    expect(within(docker).getByText('27.5.1')).toBeVisible()
   })
 
   it('does not offer Docker cache cleanup while the daemon is stopped', () => {
     const rows = systemRows.map((row) => row.kind === 'docker'
-      ? { ...row, state: 'not-running' as const, actions: [], error: 'daemon unavailable' }
+      ? { ...row, state: 'not-running' as const, serverVersion: null, actions: [], error: 'daemon unavailable' }
       : row)
 
     render(
@@ -52,6 +58,8 @@ describe('SystemPage', () => {
     const docker = screen.getByRole('article', { name: 'Docker' })
     expect(within(docker).getByText('Not running')).toBeVisible()
     expect(within(docker).getByText('daemon unavailable')).toBeVisible()
+    expect(within(docker).getByText('28.1.1')).toBeVisible()
+    expect(within(docker).getByText('—')).toBeVisible()
     expect(within(docker).queryByRole('button', { name: 'Clean cache' })).not.toBeInTheDocument()
   })
 })

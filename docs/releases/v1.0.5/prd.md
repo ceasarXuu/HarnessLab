@@ -97,6 +97,8 @@ System 使用分组健康看板展示 OrnnLab Service、Harbor CLI、Docker、Ha
 
 每类组件使用专属状态语义：OrnnLab Service 区分运行、启动、重启、降级、停止和错误；Harbor CLI 区分已安装与未安装；Docker 区分运行中、未启动、未安装和连接异常；CPU/GPU 使用负载等级，未检测到 GPU 不得显示为笼统的 unavailable；可用存储区分充足、偏低和严重不足。Docker CLI 已安装不代表 daemon 正常，只有实际连接成功才能显示“运行中”。
 
+OrnnLab 不安装、不内置也不管理 Docker Runtime 生命周期。Docker 卡片通过当前 Docker Context 和标准 Docker CLI/API 展示 CLI 路径、Context、Client/Server 版本、daemon 连接状态及原始错误；不识别 Docker Desktop、Colima、OrbStack 等具体产品，也不提供启动或关闭入口。用户自行负责启动和关闭其 Docker Runtime。
+
 OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重启并查看状态；服务异常退出后可由应用级守护进程按退避策略重启。该能力只管理当前用户会话中的 OrnnLab 前后端进程，不安装系统服务，也不做开机或登录自启动。
 
 系统操作有明确后果与二次确认：Docker 缓存清理只作用于 Harbor 规则匹配的资源；Storage 清理作用于 `~/.cache/harbor`；检查更新与安装更新对应 OrnnLab npm 发行包。

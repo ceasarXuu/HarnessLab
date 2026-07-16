@@ -339,6 +339,8 @@ export const enMessages = {
     logsPath: 'Logs path',
     executablePath: 'Executable path',
     dockerContext: 'Docker context',
+    clientVersion: 'Client version',
+    serverVersion: 'Server version',
     cacheSize: 'Cache size',
     logicalCores: 'Logical cores',
     gpuDevices: 'GPU devices',

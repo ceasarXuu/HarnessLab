@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -90,15 +91,60 @@ def _docker_component(doctor: dict) -> dict:
         state = "not-running"
     else:
         state = "error"
+    client_version, server_version = _docker_versions(command)
     _log_probe_transition("docker", state, error)
     return {
         "kind": "docker",
         "state": state,
         "context": _docker_context(command),
+        "clientVersion": client_version,
+        "serverVersion": server_version,
         "executablePath": executable,
         "error": error,
         "actions": ["clean-docker-cache"] if state == "running" else [],
     }
+
+
+def _docker_versions(command: list[str]) -> tuple[str | None, str | None]:
+    try:
+        result = subprocess.run(
+            [*command, "version", "--format", "{{json .}}"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
+    try:
+        payload = json.loads(result.stdout)
+    except (json.JSONDecodeError, TypeError):
+        return _docker_client_version(command), None
+    client = payload.get("Client") if isinstance(payload, dict) else None
+    server = payload.get("Server") if isinstance(payload, dict) else None
+    return _version_value(client), _version_value(server)
+
+
+def _docker_client_version(command: list[str]) -> str | None:
+    try:
+        result = subprocess.run(
+            [*command, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    match = re.search(r"Docker version\s+([^,\s]+)", result.stdout, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def _version_value(section: object) -> str | None:
+    if not isinstance(section, dict):
+        return None
+    value = section.get("Version")
+    return str(value) if value else None
 
 
 def _docker_context(command: list[str]) -> str | None:
