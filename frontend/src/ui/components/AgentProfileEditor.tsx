@@ -331,7 +331,7 @@ function defaultKeyValueLabels(t: Translate) {
   return { add: t('add'), delete: t('delete'), key: t('formKey'), value: t('value') }
 }
 
-function DirectoryListControl({
+export function DirectoryListControl({
   addLabel,
   chooseLabel,
   deleteLabel,
@@ -374,6 +374,7 @@ function DirectoryListControl({
         itemAriaLabel={() => label}
         label={label}
         readOnly={readOnly}
+        showAddAction={false}
         values={paths}
         onChange={commit}
         extraActions={(

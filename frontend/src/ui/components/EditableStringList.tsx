@@ -11,6 +11,7 @@ interface EditableStringListProps {
   onChange: (values: string[]) => void
   placeholder?: string
   readOnly?: boolean
+  showAddAction?: boolean
   values: string[]
 }
 
@@ -24,6 +25,7 @@ export function EditableStringList({
   onChange,
   placeholder,
   readOnly = false,
+  showAddAction = true,
   values,
 }: EditableStringListProps) {
   const rows = values
@@ -41,14 +43,16 @@ export function EditableStringList({
         <span>{label}</span>
         {!readOnly && (
           <div className="editable-string-list-actions">
-            <button
-              className="secondary-button compact-action"
-              type="button"
-              onClick={() => onChange([...rows.filter((row) => row.trim()), ''])}
-            >
-              <Plus aria-hidden="true" />
-              {addLabel}
-            </button>
+            {showAddAction && (
+              <button
+                className="secondary-button compact-action"
+                type="button"
+                onClick={() => onChange([...rows.filter((row) => row.trim()), ''])}
+              >
+                <Plus aria-hidden="true" />
+                {addLabel}
+              </button>
+            )}
             {extraActions}
           </div>
         )}

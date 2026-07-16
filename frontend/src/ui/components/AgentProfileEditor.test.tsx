@@ -23,7 +23,7 @@ const claudeCapabilities = {
   parameters: [
     { key: 'max_thinking_tokens', kind: 'number', label: 'Max thinking tokens', source: 'kwarg' },
   ],
-  supportedFields: ['env', 'harnessParameters'],
+  supportedFields: ['env', 'harnessParameters', 'skills'],
 } as AgentCapabilities
 
 describe('AgentProfileEditor', () => {
@@ -50,6 +50,15 @@ describe('AgentProfileEditor', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }))
     expect(screen.getByRole('spinbutton', { name: 'Max thinking tokens' })).toBeInTheDocument()
+  })
+
+  it('uses folder selection as the only way to add a Skills source', () => {
+    render(<ClaudeEditorFixture />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
+
+    expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
   })
 })
 
