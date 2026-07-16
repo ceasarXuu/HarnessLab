@@ -60,6 +60,12 @@ export const DatasetDownloadStatus: Story = {
     await userEvent.click(canvas.getByLabelText('Dataset'))
     await expect(canvas.getByRole('option', { name: 'terminal-bench@2.0 Downloaded' })).toBeVisible()
     await expect(canvas.getByRole('option', { name: 'swebench-verified@1.0 Not downloaded' })).toBeVisible()
+    await expect(canvas.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'terminal-bench@2.0Downloaded',
+      'harbor/hello-world@latestDownloaded',
+      'swebench-verified@1.0Not downloaded',
+      'terminal-bench-nightly@nightlyNot downloaded',
+    ])
   },
 }
 
