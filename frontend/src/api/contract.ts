@@ -283,18 +283,59 @@ export type SystemComponentKind =
   | 'resource-gpu'
   | 'resource-storage'
 
-export type SystemComponentStatus = JobStatus | 'healthy' | 'unavailable'
-
 export type SystemAction = 'check-update' | 'restart-service' | 'clean-docker-cache' | 'clean-storage-cache'
 
-export interface SystemComponentDto {
+interface SystemComponentBaseDto {
   actions: SystemAction[]
-  component: string
-  kind: SystemComponentKind
-  path: string
-  status: SystemComponentStatus
-  value: string
 }
+
+export type SystemComponentDto =
+  | (SystemComponentBaseDto & {
+      kind: 'ornnlab-service'
+      state: 'running' | 'starting' | 'restarting' | 'degraded' | 'stopped' | 'error'
+      endpoint: string | null
+      logsPath: string
+      error: string | null
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'harbor-cli'
+      state: 'installed' | 'not-installed'
+      version: string | null
+      executablePath: string
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'docker'
+      state: 'running' | 'not-running' | 'not-installed' | 'error'
+      context: string | null
+      executablePath: string
+      error: string | null
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'storage'
+      state: 'available' | 'unavailable'
+      sizeBytes: number | null
+      path: string
+      error: string | null
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'resource-cpu'
+      state: 'normal' | 'elevated' | 'high' | 'unavailable'
+      usagePercent: number | null
+      logicalCores: number | null
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'resource-gpu'
+      state: 'normal' | 'elevated' | 'high' | 'not-detected' | 'error'
+      usagePercent: number | null
+      deviceCount: number
+    })
+  | (SystemComponentBaseDto & {
+      kind: 'resource-storage'
+      state: 'normal' | 'low' | 'critical' | 'unavailable'
+      availableBytes: number | null
+      totalBytes: number | null
+      path: string
+    })
 
 export interface OperationResultDto {
   operation: Operation

@@ -137,13 +137,7 @@ export function leaderboardDatasetDtoToRow(dataset: LeaderboardDatasetDto): Lead
 }
 
 export function systemComponentDtoToRow(component: SystemComponentDto): SystemRow {
-  return {
-    component: component.component,
-    kind: component.kind,
-    path: component.path,
-    status: component.status,
-    value: component.value,
-  }
+  return component
 }
 
 export function jobEventDtoToEventLog(event: JobEventDto): EventLog {

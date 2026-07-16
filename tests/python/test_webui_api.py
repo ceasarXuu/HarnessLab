@@ -543,13 +543,14 @@ def test_webui_rejects_cancelling_terminal_job(client):
 
 
 def test_system_health_degrades_storage_when_disk_probe_fails(client, monkeypatch):
-    monkeypatch.setattr("ornnlab.services.webui_system_service._disk_usage", lambda _path: None)
+    monkeypatch.setattr("ornnlab.services.system_health_probe._disk_usage", lambda _path: None)
 
     components = client.get(f"{API}/system/health").json()["data"]["items"]
 
     storage = next(component for component in components if component["kind"] == "resource-storage")
-    assert storage["status"] == "unavailable"
-    assert storage["value"] == "unavailable"
+    assert storage["state"] == "unavailable"
+    assert storage["availableBytes"] is None
+    assert storage["totalBytes"] is None
 
 
 def _create_profile_prerequisites(client) -> None:

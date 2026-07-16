@@ -86,7 +86,7 @@ export function buildLeaderboardDatasets(entries: LeaderboardEntryDto[]): Leader
 }
 
 export function toSystemComponentDto(row: SystemRow): SystemComponentDto {
-  return { actions: systemActionsFor(row.kind), component: row.component, kind: row.kind, path: row.path, status: row.status, value: row.value }
+  return row
 }
 
 function parseTrial(value: string) {
@@ -119,13 +119,6 @@ function parseTokenUsageM(value: string): number {
 
 function parseNumber(value: string): number {
   return Number(value.replace(/[^0-9.]/g, ''))
-}
-
-function systemActionsFor(kind: SystemRow['kind']): SystemComponentDto['actions'] {
-  if (kind === 'ornnlab-service') return ['check-update', 'restart-service']
-  if (kind === 'docker') return ['clean-docker-cache']
-  if (kind === 'storage') return ['clean-storage-cache']
-  return []
 }
 
 function parseSizeBytes(value: string | undefined): number | undefined {

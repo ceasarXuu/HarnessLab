@@ -5,7 +5,7 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
-from ornnlab.services.webui_system_service import _health_endpoint_ok
+from ornnlab.services.system_health_probe import _health_endpoint_ok
 
 API = "/api/webui/v1"
 
@@ -41,20 +41,21 @@ def test_system_health_reports_app_level_dev_service_state(client, tmp_path, mon
     (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._process_command",
+        "ornnlab.services.system_health_probe._process_command",
         lambda _pid: "daemon-token backend-token frontend-token",
     )
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._health_endpoint_ok",
+        "ornnlab.services.system_health_probe._health_endpoint_ok",
         lambda _url: True,
     )
 
     components = client.get(f"{API}/system/health").json()["data"]["items"]
 
     service = next(component for component in components if component["kind"] == "ornnlab-service")
-    assert service["status"] == "healthy"
-    assert service["value"] == "running http://127.0.0.1:5173"
-    assert service["path"] == str(logs_dir)
+    assert service["state"] == "running"
+    assert service["endpoint"] == "http://127.0.0.1:5173"
+    assert service["logsPath"] == str(logs_dir)
+    assert service["error"] is None
     assert service["actions"] == ["check-update", "restart-service"]
 
 
@@ -65,9 +66,9 @@ def test_system_health_reports_dev_service_stopped_without_state(client, tmp_pat
     components = client.get(f"{API}/system/health").json()["data"]["items"]
 
     service = next(component for component in components if component["kind"] == "ornnlab-service")
-    assert service["status"] == "unavailable"
-    assert service["value"] == "stopped"
-    assert service["path"] == str(service_home / "logs")
+    assert service["state"] == "stopped"
+    assert service["endpoint"] is None
+    assert service["logsPath"] == str(service_home / "logs")
 
 
 def test_system_health_degrades_when_dev_service_child_is_not_trusted(
@@ -89,15 +90,15 @@ def test_system_health_degrades_when_dev_service_child_is_not_trusted(
     (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._process_command",
+        "ornnlab.services.system_health_probe._process_command",
         lambda _pid: "daemon-token backend-token",
     )
 
     components = client.get(f"{API}/system/health").json()["data"]["items"]
 
     service = next(component for component in components if component["kind"] == "ornnlab-service")
-    assert service["status"] == "unavailable"
-    assert service["value"] == "degraded http://127.0.0.1:5173"
+    assert service["state"] == "degraded"
+    assert service["endpoint"] == "http://127.0.0.1:5173"
 
 
 def test_system_health_degrades_when_dev_service_health_probe_fails(
@@ -120,19 +121,19 @@ def test_system_health_degrades_when_dev_service_health_probe_fails(
     (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._process_command",
+        "ornnlab.services.system_health_probe._process_command",
         lambda _pid: "daemon-token backend-token frontend-token",
     )
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._health_endpoint_ok",
+        "ornnlab.services.system_health_probe._health_endpoint_ok",
         lambda _url: False,
     )
 
     components = client.get(f"{API}/system/health").json()["data"]["items"]
 
     service = next(component for component in components if component["kind"] == "ornnlab-service")
-    assert service["status"] == "unavailable"
-    assert service["value"] == "degraded http://127.0.0.1:5173"
+    assert service["state"] == "degraded"
+    assert service["endpoint"] == "http://127.0.0.1:5173"
 
 
 def test_system_health_dev_service_probe_does_not_call_system_health(
@@ -155,7 +156,7 @@ def test_system_health_dev_service_probe_does_not_call_system_health(
     (service_home / "state.json").write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setenv("ORNNLAB_DEV_SERVICE_HOME", str(service_home))
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._process_command",
+        "ornnlab.services.system_health_probe._process_command",
         lambda _pid: "daemon-token backend-token frontend-token",
     )
     probed_urls = []
@@ -165,7 +166,7 @@ def test_system_health_dev_service_probe_does_not_call_system_health(
         return True
 
     monkeypatch.setattr(
-        "ornnlab.services.webui_system_service._health_endpoint_ok",
+        "ornnlab.services.system_health_probe._health_endpoint_ok",
         record_probe,
     )
 

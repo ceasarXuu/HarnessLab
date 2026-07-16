@@ -319,13 +319,13 @@ GET http://127.0.0.1:<frontendPort>/api/webui/v1/system/live
 | API | 行为 |
 |---|---|
 | `GET /api/webui/v1/system/live` | daemon 专用轻量探活，只返回服务是否可响应 |
-| `GET /api/webui/v1/system/health` | 返回 `OrnnLab Service` 行真实状态和 System 页完整体检 |
+| `GET /api/webui/v1/system/health` | 返回 `OrnnLab Service` 判别联合成员和 System 页完整体检 |
 | `POST /api/webui/v1/system/service/restart` | 触发应用级服务重启 |
 
 System 页只展示：
 
 - 当前状态。
-- frontend/backend URL。
+- frontend URL。
 - 日志目录。
 - 重启操作。
 

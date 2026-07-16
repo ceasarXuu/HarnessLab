@@ -289,7 +289,19 @@ interface Environment {
 
 Leaderboard 请求为 `GET /leaderboard?dataset=<ref>&metric=<optional>`。`LeaderboardEntry` 包含 `rank`、`datasetRef`、`agentName`、`harness`、`model`、`score`、`trial`、`costUsd`、`tokenUsageM`、`runtimeSeconds`、`jobId`、`submittedAt`、`comparabilityKey`、可选 `reportPath`。
 
-`SystemComponent` 包含 `component`、`kind`、`status`、`value`、`path`、`actions`；kind 只为 OrnnLab service、Harbor CLI、Docker、Storage、CPU、GPU、可用存储。Hub 返回 `connected`、`disconnected` 或 `expired`。检查更新返回当前/最新版本、是否可升级、可选 release notes URL；安装更新/重启若本机不可执行，返回 failed Operation，而不是模拟成功。
+`SystemComponent` 是以 `kind` 为判别字段的联合类型，不再包含通用的 `component/status/value/path` 展示字符串：
+
+| kind | 事实字段 | state |
+|---|---|---|
+| `ornnlab-service` | `endpoint`、`logsPath`、`error` | `running/starting/restarting/degraded/stopped/error` |
+| `harbor-cli` | `version`、`executablePath` | `installed/not-installed` |
+| `docker` | `context`、`executablePath`、`error` | `running/not-running/not-installed/error` |
+| `storage` | `sizeBytes`、`path`、`error` | `available/unavailable` |
+| `resource-cpu` | `usagePercent`、`logicalCores` | `normal/elevated/high/unavailable` |
+| `resource-gpu` | `usagePercent`、`deviceCount` | `normal/elevated/high/not-detected/error` |
+| `resource-storage` | `availableBytes`、`totalBytes`、`path` | `normal/low/critical/unavailable` |
+
+每个成员都包含 `actions`。Docker CLI 已安装与 daemon 可连接是两个事实，只有 daemon 探测成功才返回 `running` 和 `clean-docker-cache` 操作。Hub 返回 `connected`、`disconnected` 或 `expired`。检查更新返回当前/最新版本、是否可升级、可选 release notes URL；安装更新/重启若本机不可执行，返回 failed Operation，而不是模拟成功。
 
 `POST /system/directory-picker` 仅用于本机 WebUI：服务端打开系统原生目录选择器，确认后返回绝对路径，取消时返回 `{ path: null }`。浏览器不能可靠获取本机绝对路径，因此所有需要本机目录的路径控件只读显示，并通过该端点选择；mock 模式返回明确不可用错误，不伪造目录。
 

@@ -93,7 +93,11 @@ Agent 是 OrnnLab 保存的可复用运行配置，组合 Harness、可选模型
 
 Leaderboard 一次只展示一个 Dataset，支持搜索并切换 Dataset。排名展示 Agent Name、Harness、模型、得分、Trial、成本、Token、时长和 Job ID。移除操作将 Job 的 `includeInLeaderboard` 设为 false；跳过验证的 Job 不可重新加入。
 
-System 展示 OrnnLab Service、Harbor CLI、Docker、Storage、CPU、GPU 与可用存储。OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重启并查看状态；服务异常退出后可由应用级守护进程按退避策略重启。该能力只管理当前用户会话中的 OrnnLab 前后端进程，不安装系统服务，也不做开机或登录自启动。
+System 使用分组健康看板展示 OrnnLab Service、Harbor CLI、Docker、Harbor Cache、CPU、GPU 与可用存储，不再把差异较大的系统组件塞入通用表格。看板分为“服务与依赖”“存储”“主机资源”；卡片直接展示核心状态、关键值、路径、错误原因和操作，不增加详情抽屉。
+
+每类组件使用专属状态语义：OrnnLab Service 区分运行、启动、重启、降级、停止和错误；Harbor CLI 区分已安装与未安装；Docker 区分运行中、未启动、未安装和连接异常；CPU/GPU 使用负载等级，未检测到 GPU 不得显示为笼统的 unavailable；可用存储区分充足、偏低和严重不足。Docker CLI 已安装不代表 daemon 正常，只有实际连接成功才能显示“运行中”。
+
+OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重启并查看状态；服务异常退出后可由应用级守护进程按退避策略重启。该能力只管理当前用户会话中的 OrnnLab 前后端进程，不安装系统服务，也不做开机或登录自启动。
 
 系统操作有明确后果与二次确认：Docker 缓存清理只作用于 Harbor 规则匹配的资源；Storage 清理作用于 `~/.cache/harbor`；检查更新与安装更新对应 OrnnLab npm 发行包。
 
@@ -130,5 +134,6 @@ System 展示 OrnnLab Service、Harbor CLI、Docker、Storage、CPU、GPU 与可
 - Given 已下载 Dataset 迁移位置, when 新目标中不存在同名子目录且移动成功, then 旧路径消失、新路径成为唯一受管理副本；移动失败时旧路径和登记保持不变。
 - Given 用户导入已有本地 Dataset, when 移除登记, then OrnnLab 仅删除自身记录，不删除用户原始目录。
 - Given OrnnLab dev service 已启动, when 后端或前端子进程异常退出, then 应用级守护进程按退避策略重启对应服务，并在 System 页和日志中展示真实状态。
+- Given Docker CLI 已安装但 daemon 未启动, when 用户查看 System, then Docker 卡片显示“未启动”和连接原因，且清理 Docker 缓存不可用；不得显示 Available 或 Healthy。
 - Given 用户主动停止 OrnnLab dev service, when 停止完成, then 前后端端口释放且服务不会自动复活。
 - Storybook、前端单元测试、前端生产构建与后端 API 集成测试通过；完整命令与当前进度见工程计划。

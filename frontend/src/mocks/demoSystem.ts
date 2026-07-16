@@ -91,96 +91,71 @@ export const leaderboardRows: LeaderboardRow[] = [
 export const systemRows: SystemRow[] = [
   {
     kind: 'ornnlab-service',
-    component: 'OrnnLab Service',
-    status: 'healthy',
-    value: 'running http://127.0.0.1:5173',
-    path: '~/.ornnlab/dev-service/logs',
+    state: 'running', endpoint: 'http://127.0.0.1:5173',
+    logsPath: '~/.ornnlab/dev-service/logs', error: null,
+    actions: ['check-update', 'restart-service'],
   },
   {
     kind: 'harbor-cli',
-    component: 'Harbor CLI',
-    status: 'healthy',
-    value: '0.13.x available',
-    path: '~/.ornnlab/HarnessLab/bin/harbor',
+    state: 'installed', version: '0.13.2',
+    executablePath: '~/.ornnlab/HarnessLab/bin/harbor', actions: [],
   },
   {
     kind: 'docker',
-    component: 'Docker',
-    status: 'running',
-    value: 'context colima',
-    path: 'docker context: colima',
+    state: 'running', context: 'colima', executablePath: 'docker', error: null,
+    actions: ['clean-docker-cache'],
   },
   {
     kind: 'storage',
-    component: 'Storage',
-    status: 'completed',
-    value: '0.01 MB cache',
-    path: '~/.cache/harbor',
+    state: 'available', sizeBytes: 10_486, path: '~/.cache/harbor', error: null,
+    actions: ['clean-storage-cache'],
   },
   {
     kind: 'resource-cpu',
-    component: 'CPU Usage',
-    status: 'running',
-    value: '12%',
-    path: 'system monitor: cpu',
+    state: 'normal', usagePercent: 12, logicalCores: 12, actions: [],
   },
   {
     kind: 'resource-gpu',
-    component: 'GPU Usage',
-    status: 'running',
-    value: '0%',
-    path: 'system monitor: gpu',
+    state: 'not-detected', usagePercent: null, deviceCount: 0, actions: [],
   },
   {
     kind: 'resource-storage',
-    component: 'Available Storage',
-    status: 'healthy',
-    value: '48Gi available',
-    path: '/Volumes/XU-1TB-NPM',
+    state: 'normal', availableBytes: 48 * 1024 ** 3, totalBytes: 1024 * 1024 ** 3,
+    path: '/Volumes/XU-1TB-NPM', actions: [],
   },
 ]
 
 export const degradedSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'unavailable',
-      value: 'degraded frontend exited',
-      path: '~/.ornnlab/dev-service/logs',
+      state: 'degraded', error: 'frontend exited',
   }
   : row)
 
 export const startingSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'unavailable',
-      value: 'starting http://127.0.0.1:5173',
-      path: '~/.ornnlab/dev-service/logs',
+      state: 'starting',
     }
   : row)
 
 export const restartingSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'unavailable',
-      value: 'restarting http://127.0.0.1:5173',
-      path: '~/.ornnlab/dev-service/logs',
+      state: 'restarting',
     }
   : row)
 
 export const stoppedSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'unavailable',
-      value: 'stopped',
-      path: '~/.ornnlab/dev-service/logs',
+      state: 'stopped', endpoint: null,
   }
   : row)
 
 export const errorSystemRows: SystemRow[] = systemRows.map((row) => row.kind === 'ornnlab-service'
   ? {
       ...row,
-      status: 'unavailable',
-      value: 'error frontend exceeded restart limit',
-      path: '~/.ornnlab/dev-service/logs',
+      state: 'error', error: 'frontend exceeded restart limit',
     }
   : row)

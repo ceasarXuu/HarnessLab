@@ -16,6 +16,7 @@
 | 5 | 发布前硬化 | Done | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归、两轮独立 Codex 审查均已闭环 |
 | 6 | Dataset 存储位置管理 | In progress | S6-01 至 S6-05 已完成并通过前后端门禁；S6-06 等待对抗性审查结论 |
 | 7 | 应用级守护进程 | Done | 应用级 daemon、CLI 生命周期、崩溃重启、System 状态接入与 hardening 测试已落地；全量门禁通过，最终 subagent 复审 APPROVED |
+| 8 | System 健康看板 | Done | 判别联合契约、真实 Docker daemon 状态、分组卡片、Storybook 状态矩阵及前后端全量门禁均已完成 |
 
 ## 2. Stage 3 验收矩阵
 

@@ -91,7 +91,7 @@ describe('WebUI MSW handlers', () => {
     expect(hubConnection.data).toMatchObject({ status: 'connected' })
     expect(leaderboardDatasets.data.items.map((item: { ref: string }) => item.ref)).toContain('terminal-bench@2.0')
     expect(leaderboard.data.items[0]).toMatchObject({ datasetRef: 'terminal-bench@2.0', jobId: 'job_91a7' })
-    expect(system.data.items[0]).toMatchObject({ component: 'OrnnLab Service', kind: 'ornnlab-service' })
+    expect(system.data.items[0]).toMatchObject({ kind: 'ornnlab-service', state: 'running' })
   })
 
   it('preserves structured Agent and Environment query filters through HTTP', async () => {
