@@ -41,6 +41,18 @@ export interface WebUiOperation {
   ) => Promise<boolean>
 }
 
+export function usePollingRefresh(
+  refresh: () => Promise<void>,
+  enabled: boolean,
+  intervalMs = 1_000,
+) {
+  useEffect(() => {
+    if (!enabled) return undefined
+    const timer = window.setInterval(() => void refresh(), intervalMs)
+    return () => window.clearInterval(timer)
+  }, [enabled, intervalMs, refresh])
+}
+
 export function useWebUiResource<T>(
   load: () => Promise<ApiResponse<T | null>>,
   dependencies: readonly unknown[],

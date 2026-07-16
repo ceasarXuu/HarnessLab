@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockWebUiClient } from '../api/mockClient'
 import { createUnavailableWebUiClient } from '../api/unavailableClient'
@@ -109,6 +109,42 @@ describe('App API mode', () => {
     fireEvent.click(runJob)
     await waitFor(() => expect(createJob).toHaveBeenCalledOnce())
     expect(createJob.mock.calls[0][0].config.modelName).toBe('claude-haiku-4-5')
+    await waitFor(() => expect(window.location.hash).toBe('#jobs'))
+    const drawer = await screen.findByRole('dialog', { name: 'Selected job' })
+    expect(within(drawer).getByRole('heading', { name: 'new-job' })).toBeInTheDocument()
+    expect(within(drawer).getByText('Queued')).toBeInTheDocument()
+  })
+
+  it('keeps an active Job status synchronized between its list row and detail drawer', async () => {
+    const client = createMockWebUiClient()
+    const listJobs = client.listJobs.bind(client)
+    let status: 'running' | 'completed' = 'running'
+    vi.spyOn(client, 'listJobs').mockImplementation(async (query) => {
+      const response = await listJobs(query)
+      if (!response.data) return response
+      return {
+        ...response,
+        data: {
+          ...response.data,
+          items: response.data.items.map((job, index) => index === 0 ? { ...job, status } : job),
+        },
+      }
+    })
+    render(<App client={client} dataMode="api" />)
+
+    const jobButton = await screen.findByRole('button', { name: 'terminal-bench-smoke' })
+    fireEvent.click(jobButton)
+    const selectedRow = jobButton.closest('tr')
+    expect(selectedRow).not.toBeNull()
+    const drawer = await screen.findByRole('dialog', { name: 'Selected job' })
+    await waitFor(() => expect(within(selectedRow as HTMLElement).getByText('Running')).toBeInTheDocument())
+    expect(within(drawer).getByText('Running')).toBeInTheDocument()
+
+    status = 'completed'
+    await waitFor(() => expect(within(selectedRow as HTMLElement).getByText('Completed')).toBeInTheDocument(), { timeout: 2_500 })
+    expect(within(drawer).getByText('Completed')).toBeInTheDocument()
+    expect(within(selectedRow as HTMLElement).queryByText('Running')).not.toBeInTheDocument()
+    expect(within(drawer).queryByText('Running')).not.toBeInTheDocument()
   })
 
   it('keeps defined write actions available in API mode', async () => {

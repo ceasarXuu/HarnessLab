@@ -360,7 +360,11 @@ describe('App', () => {
 
     await waitFor(() => expect(runButton).toBeEnabled())
     expect(screen.queryByText(/Operation (queued|running|completed)/)).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'New Job' })).toBeInTheDocument()
+    await waitFor(() => expect(window.location.hash).toBe('#jobs'))
+    expect(screen.getByRole('heading', { name: 'Job registry' })).toBeInTheDocument()
+    const createdJobDrawer = screen.getByRole('dialog', { name: 'Selected job' })
+    expect(within(createdJobDrawer).getByRole('heading', { name: 'new-job' })).toBeInTheDocument()
+    expect(within(createdJobDrawer).getByText('Queued')).toBeInTheDocument()
   })
 
   it('shows Harbor maintenance operations in system', async () => {

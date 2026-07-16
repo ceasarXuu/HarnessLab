@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useJob, useJobEvents, useJobTrials } from '../api/hooks'
+import { useJob, useJobEvents, useJobTrials, usePollingRefresh } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { DetailRail } from '../ui/components/DetailRail'
@@ -46,10 +46,18 @@ export function JobsPage({
   const detailResource = useJob(client, selected?.id)
   const eventsResource = useJobEvents(client, selected?.id)
   const trialsResource = useJobTrials(client, selected?.id)
-  const detailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
+  const loadedDetailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
+  const detailJob = loadedDetailJob && selected
+    ? { ...loadedDetailJob, status: selected.status }
+    : loadedDetailJob
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
   const pagination = usePaginatedItems({ items: jobs, resetKey: search })
+  const live = open && (selected?.status === 'queued' || selected?.status === 'running')
+
+  usePollingRefresh(detailResource.refresh, live)
+  usePollingRefresh(eventsResource.refresh, live)
+  usePollingRefresh(trialsResource.refresh, live)
 
   const requestJobAction = (jobId: string, action: 'cancel' | 'resume') => {
     if (action !== 'cancel') {
@@ -94,7 +102,11 @@ export function JobsPage({
             />
             <ResourceStatus
               error={detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
-              loading={detailResource.loading || eventsResource.loading || trialsResource.loading}
+              loading={
+                (detailResource.loading && !detailResource.data)
+                || (eventsResource.loading && !eventsResource.data)
+                || (trialsResource.loading && !trialsResource.data)
+              }
               loadingLabel={t('loadingJobs')}
             />
           </>

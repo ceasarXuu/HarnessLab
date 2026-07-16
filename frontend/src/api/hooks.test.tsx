@@ -1,10 +1,30 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiResponse } from './contract'
-import { useCachedServerSearch, useOperation, useWebUiResource } from './hooks'
+import { useCachedServerSearch, useOperation, usePollingRefresh, useWebUiResource } from './hooks'
 import { createMockWebUiClient } from './mockClient'
 
 describe('useWebUiResource', () => {
+  it('polls an enabled live resource and stops when disabled', async () => {
+    vi.useFakeTimers()
+    try {
+      const refresh = vi.fn().mockResolvedValue(undefined)
+      const { rerender } = renderHook(
+        ({ enabled }) => usePollingRefresh(refresh, enabled, 1_000),
+        { initialProps: { enabled: true } },
+      )
+
+      await act(async () => vi.advanceTimersByTimeAsync(1_000))
+      expect(refresh).toHaveBeenCalledTimes(1)
+
+      rerender({ enabled: false })
+      await act(async () => vi.advanceTimersByTimeAsync(2_000))
+      expect(refresh).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('exposes successful API data after loading completes', async () => {
     const load = vi.fn<() => Promise<ApiResponse<string | null>>>().mockResolvedValue({
       data: 'loaded',

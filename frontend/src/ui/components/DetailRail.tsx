@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { JobStatusBadge } from './JobStatusBadge'
 import { Metric } from './Metric'
 import { SwitchControl } from './SwitchControl'
 
@@ -29,7 +30,7 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
             <p>{job.dataset}</p>
           </div>
           <div className="rail-heading-actions">
-            <span className={`status-dot ${job.status}`}>{job.status}</span>
+            <JobStatusBadge status={job.status} t={t} />
             {primaryJobAction && (
               <button
                 className="secondary-button compact-button"

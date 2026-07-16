@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHarnesses, useHubConnection, useJobs, useLeaderboard, useOperation, useSystemHealth } from '../api/hooks'
+import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHarnesses, useHubConnection, useJobs, useLeaderboard, useOperation, usePollingRefresh, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
@@ -116,6 +116,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     [environmentsResource.data],
   )
   const jobs = useMemo(() => jobsResource.data?.items.map(jobDtoToHarborJob) ?? [], [jobsResource.data])
+  const selectedJob = useMemo(
+    () => selected ? jobs.find((job) => job.id === selected.id) ?? selected : null,
+    [jobs, selected],
+  )
   const leaderboardEntries = useMemo(
     () => leaderboardResource.data?.items.map(leaderboardEntryDtoToRow) ?? [],
     [leaderboardResource.data],
@@ -123,6 +127,11 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const hubConnection = hubConnectionResource.loading
     ? 'loading'
     : hubConnectionResource.data?.status ?? 'unavailable'
+  const hasLiveJob = jobs.some((job) => job.status === 'queued' || job.status === 'running')
+    || selectedJob?.status === 'queued'
+    || selectedJob?.status === 'running'
+
+  usePollingRefresh(jobsResource.refresh, route.page === 'jobs' && route.jobView === 'list' && hasLiveJob)
 
   useEffect(() => {
     if (agentsResource.loading || datasetsResource.loading || environmentsResource.loading) return
@@ -243,10 +252,16 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
 
   async function launchDraft() {
     if (!writesEnabled) return
-    await jobOperation.submit(
-      () => client.createJob(runDraftToCreateJobRequest(draft)),
+    const response = await client.createJob(runDraftToCreateJobRequest(draft))
+    const created = await jobOperation.submit(
+      () => Promise.resolve(response),
       ({ operation }) => operation,
     )
+    if (!created || !response.data) return
+    setSelected(jobDtoToHarborJob(response.data.job))
+    setJobDrawerOpen(true)
+    navigate('jobs', 'list')
+    void jobsResource.refresh()
   }
 
   function copyJobConfig() {
@@ -379,7 +394,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             jobs={filteredJobs}
             open={jobDrawerOpen}
             search={search}
-            selected={selected}
+            selected={selectedJob}
             t={t}
             onClose={() => setJobDrawerOpen(false)}
             onLeaderboardChange={updateJobLeaderboardInclusion}

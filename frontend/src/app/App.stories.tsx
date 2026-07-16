@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { createUnavailableWebUiClient } from '../api/unavailableClient'
 import { createMockWebUiClient } from '../api/mockClient'
 import type { WebUiClient } from '../api/webUiClient'
@@ -57,6 +58,18 @@ export const LightChinese: Story = {
 
 export const NewJobRoute: Story = {
   render: () => <AppFixture hash="#jobs/new" />,
+}
+
+export const RunJobOpensDetail: Story = {
+  render: () => <AppFixture hash="#jobs/new" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const runButton = await canvas.findByRole('button', { name: 'Run job' })
+    await userEvent.click(runButton)
+    const drawer = await canvas.findByRole('dialog', { name: 'Selected job' })
+    await expect(within(drawer).getByRole('heading', { name: 'new-job' })).toBeVisible()
+    await expect(within(drawer).getByText('Queued')).toBeVisible()
+  },
 }
 
 export const EnvironmentsRoute: Story = {

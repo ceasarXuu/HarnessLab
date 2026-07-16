@@ -1,7 +1,8 @@
 import { Search } from 'lucide-react'
-import type { HarborJob, JobStatus } from '../../domain/harbor'
+import type { HarborJob } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import type { PaginationState } from '../pagination'
+import { JobStatusBadge } from './JobStatusBadge'
 import { Pagination } from './Pagination'
 
 interface JobsTableProps {
@@ -16,15 +17,6 @@ interface JobsTableProps {
 }
 
 export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, onSearch, onSelect }: JobsTableProps) {
-  const statusLabels: Record<JobStatus, string> = {
-    completed: t('statusCompleted'),
-    cancelled: t('statusCancelled'),
-    draft: t('statusDraft'),
-    failed: t('statusFailed'),
-    interrupted: t('statusInterrupted'),
-    queued: t('statusQueued'),
-    running: t('statusRunning'),
-  }
   return (
     <section className="surface jobs-surface" id="jobs">
       <div className="section-header">
@@ -77,7 +69,7 @@ export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, o
                   </span>
                 </td>
                 <td>
-                  <span className={`status-dot ${job.status}`}>{statusLabels[job.status]}</span>
+                  <JobStatusBadge status={job.status} t={t} />
                 </td>
                 <td>{job.dataset}</td>
                 <td>{job.agent}</td>
