@@ -11,6 +11,7 @@ import { KeyValueControl } from './KeyValueControl'
 import { Metric } from './Metric'
 import { McpServersControl } from './McpServersControl'
 import { ReadonlyKeyValueList, ReadonlyMcpServers, ReadonlyStringList } from './ReadonlyDisplay'
+import { FieldError } from './FormValidationSummary'
 
 type AgentTab = 'base' | 'skills' | 'mcps' | 'advanced'
 
@@ -20,6 +21,7 @@ interface AgentProfileEditorProps {
   value: AgentRow
   t: Translate
   onChange: (value: AgentRow) => void
+  fieldErrors?: Record<string, string | undefined>
 }
 
 export function AgentProfileEditor({
@@ -28,6 +30,7 @@ export function AgentProfileEditor({
   value,
   t,
   onChange,
+  fieldErrors = {},
 }: AgentProfileEditorProps) {
   const [activeTab, setActiveTab] = useState<AgentTab>('base')
   const capabilities = value.capabilities ?? agentCapabilitiesForHarness(value.harness, capabilitiesByHarness)
@@ -75,6 +78,7 @@ export function AgentProfileEditor({
                     onChange={(nextValue) => setField('models', nextValue)}
                   />
                 )}
+                <FieldError id="agent-models-error" message={fieldErrors.models} />
               </div>
             </section>
           )}
@@ -197,6 +201,7 @@ export function AgentIdentityEditor({
   value,
   t,
   onChange,
+  fieldErrors = {},
 }: AgentProfileEditorProps & { harnesses?: HarnessTemplate[]; lockHarness?: boolean }) {
   const usesCustomHarness = value.harness === 'custom-harness'
   const setField = (field: keyof AgentRow, nextValue: string) => onChange({ ...value, [field]: nextValue })
@@ -218,9 +223,16 @@ export function AgentIdentityEditor({
 
   return (
     <div className="agent-form-grid">
-      <label>
+      <label htmlFor="agent-name">
         {t('agentName')}
-        <input value={value.agentName} onChange={(event) => setField('agentName', event.target.value)} />
+        <input
+          id="agent-name"
+          aria-describedby={fieldErrors.agentName ? 'agent-name-error' : undefined}
+          aria-invalid={Boolean(fieldErrors.agentName) || undefined}
+          value={value.agentName}
+          onChange={(event) => setField('agentName', event.target.value)}
+        />
+        <FieldError id="agent-name-error" message={fieldErrors.agentName} />
       </label>
       {lockHarness ? (
         <Metric label={t('harness')} value={value.harness} variant="plain" />
@@ -229,6 +241,9 @@ export function AgentIdentityEditor({
           {t('harness')}
           <CustomSelect
             ariaLabel={t('harness')}
+            describedBy={fieldErrors.harness ? 'agent-harness-error' : undefined}
+            id="agent-harness"
+            invalid={Boolean(fieldErrors.harness)}
             options={harnesses.map((harness) => ({ label: harness.name, value: harness.name }))}
             searchAriaLabel={t('searchHarnesses')}
             searchPlaceholder={t('searchHarnesses')}
@@ -236,12 +251,20 @@ export function AgentIdentityEditor({
             value={value.harness}
             onChange={setHarness}
           />
+          <FieldError id="agent-harness-error" message={fieldErrors.harness} />
         </label>
       )}
       {usesCustomHarness && (
-        <label>
+        <label htmlFor="agent-import-path">
           {t('customImportPath')}
-          <input value={value.adapter} onChange={(event) => setField('adapter', event.target.value)} />
+          <input
+            id="agent-import-path"
+            aria-describedby={fieldErrors.importPath ? 'agent-import-path-error' : undefined}
+            aria-invalid={Boolean(fieldErrors.importPath) || undefined}
+            value={value.adapter}
+            onChange={(event) => setField('adapter', event.target.value)}
+          />
+          <FieldError id="agent-import-path-error" message={fieldErrors.importPath} />
         </label>
       )}
     </div>
@@ -413,17 +436,19 @@ function ModelListControl({
     onChange(formatModelNames(nextModels))
   }
   return (
-    <EditableStringList
-      addLabel={addLabel}
-      className="model-list-control field-wide"
-      deleteLabel={deleteLabel}
-      itemAriaLabel={() => itemLabel}
-      label={label}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      values={models}
-      onChange={commit}
-    />
+    <div id="agent-models" tabIndex={-1} className="field-wide">
+      <EditableStringList
+        addLabel={addLabel}
+        className="model-list-control"
+        deleteLabel={deleteLabel}
+        itemAriaLabel={() => itemLabel}
+        label={label}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        values={models}
+        onChange={commit}
+      />
+    </div>
   )
 }
 

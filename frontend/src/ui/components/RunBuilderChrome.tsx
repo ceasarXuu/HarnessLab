@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { FieldError } from './FormValidationSummary'
 
 export function TabPanel({ active, children, title }: { active: boolean; children: ReactNode; title: string }) {
   if (!active) {
@@ -14,11 +15,12 @@ export function TabPanel({ active, children, title }: { active: boolean; childre
   )
 }
 
-export function Field({ children, label, wide = false }: { children: ReactNode; label: string; wide?: boolean }) {
+export function Field({ children, error, errorId, label, wide = false }: { children: ReactNode; error?: string; errorId?: string; label: string; wide?: boolean }) {
   return (
     <label className={wide ? 'field-wide' : undefined}>
       {label}
       {children}
+      {errorId && <FieldError id={errorId} message={error} />}
     </label>
   )
 }

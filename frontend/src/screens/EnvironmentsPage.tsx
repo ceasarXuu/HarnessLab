@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../ui/components/ConfirmDialog'
 import { EnvironmentProfileEditor } from '../ui/components/EnvironmentProfileEditor'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { FormValidationSummary, issuesByField, type FormIssue } from '../ui/components/FormValidationSummary'
 import { usePaginatedItems } from '../ui/pagination'
 
 type EnvironmentView = 'list' | 'new' | 'copy'
@@ -113,12 +114,12 @@ export function EnvironmentsPage({ writesEnabled = true, client, environmentId, 
           key={`${view}-${environmentId ?? 'new'}`}
           initialValue={initialValue}
           canSave={writesEnabled && !isOperationRunning(environmentOperation.operation?.status)}
+          serverError={environmentOperation.error?.message}
           title={view === 'copy' ? t('copyEnvironment') : t('newEnvironment')}
           t={t}
           onCancel={() => onView('list')}
           onSave={saveNewTemplate}
         />
-        <ResourceStatus error={environmentOperation.error?.message ?? null} />
       </>
     )
   }
@@ -251,6 +252,7 @@ function EnvironmentFormPage({
   t,
   onCancel,
   onSave,
+  serverError,
 }: {
   initialValue: EnvironmentRow
   canSave: boolean
@@ -258,8 +260,21 @@ function EnvironmentFormPage({
   t: Translate
   onCancel: () => void
   onSave: (value: EnvironmentRow) => void
+  serverError?: string | null
 }) {
   const [draft, setDraft] = useState(initialValue)
+  const [validationAttempted, setValidationAttempted] = useState(false)
+  const allIssues = validateEnvironment(draft, t)
+  const issues = validationAttempted ? allIssues : []
+  const fieldErrors = issuesByField(issues)
+  const submit = () => {
+    setValidationAttempted(true)
+    if (allIssues.length) {
+      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      return
+    }
+    onSave(draft)
+  }
   return (
     <main className="workspace single-page">
       <div className="content-column">
@@ -279,17 +294,30 @@ function EnvironmentFormPage({
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" disabled={!canSave} onClick={() => onSave(draft)}>
+              <button className="primary-button" disabled={!canSave} onClick={submit}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>
             </div>
           </div>
-          <EnvironmentProfileEditor value={draft} t={t} onChange={setDraft} />
+          <FormValidationSummary
+            issues={issues}
+            serverError={serverError}
+            title={t('formValidationTitle')}
+            onIssue={(field) => document.getElementById(`environment-${field}`)?.focus()}
+          />
+          <EnvironmentProfileEditor fieldErrors={fieldErrors} value={draft} t={t} onChange={setDraft} />
         </section>
       </div>
     </main>
   )
+}
+
+function validateEnvironment(draft: EnvironmentRow, t: Translate): FormIssue[] {
+  const issues: FormIssue[] = []
+  if (!draft.name.trim()) issues.push({ field: 'name', message: t('environmentNameRequired') })
+  if (!draft.environmentType.trim()) issues.push({ field: 'environmentType', message: t('environmentTypeRequired') })
+  return issues
 }
 
 function EnvironmentActions({

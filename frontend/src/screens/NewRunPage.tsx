@@ -8,6 +8,7 @@ import type { Translate } from '../i18n'
 
 interface NewRunPageProps {
   canLaunch: boolean
+  submitError?: string | null
   agents: AgentRow[]
   client: WebUiClient
   datasets: DatasetRow[]
@@ -21,7 +22,7 @@ interface NewRunPageProps {
   onReset: () => void
 }
 
-export function NewRunPage({ canLaunch, agents, client, datasets, draft, environments, t, onDraft, onJobs, onCopyJobConfig, onLaunch, onReset }: NewRunPageProps) {
+export function NewRunPage({ canLaunch, submitError, agents, client, datasets, draft, environments, t, onDraft, onJobs, onCopyJobConfig, onLaunch, onReset }: NewRunPageProps) {
   const tasksResource = useDatasetTasks(client, draft.source)
   const taskRows = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
   const chooseDirectory = async (): Promise<FolderPathSelection> => {
@@ -39,6 +40,7 @@ export function NewRunPage({ canLaunch, agents, client, datasets, draft, environ
         </nav>
         <RunBuilder
           canLaunch={canLaunch}
+          submitError={submitError}
           agents={agents}
           datasets={datasets}
           draft={draft}

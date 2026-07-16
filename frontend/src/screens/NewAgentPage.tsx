@@ -7,7 +7,7 @@ import type { WebUiClient } from '../api/webUiClient'
 import type { AgentCapabilities, AgentRow, HarnessTemplate } from '../domain/harbor'
 import type { Translate } from '../i18n'
 import { AgentIdentityEditor, AgentProfileEditor } from '../ui/components/AgentProfileEditor'
-import { ResourceStatus } from '../ui/components/ResourceStatus'
+import { FormValidationSummary, issuesByField, type FormIssue } from '../ui/components/FormValidationSummary'
 
 interface NewAgentPageProps {
   canSave?: boolean
@@ -25,7 +25,11 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
     [harnesses],
   )
   const [draft, setDraft] = useState(() => buildNewAgent(capabilitiesByHarness))
+  const [validationAttempted, setValidationAttempted] = useState(false)
   const agentOperation = useOperation(client)
+  const allIssues = validateNewAgent(draft, t)
+  const issues = validationAttempted ? allIssues : []
+  const fieldErrors = issuesByField(issues)
 
   useEffect(() => {
     if (!draft.harness) return
@@ -44,7 +48,12 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
   }, [agentOperation.operation?.id, agentOperation.operation?.status, onAgents, onRefresh])
 
   const save = async () => {
-    if (!canSave || !draft.harness || !draft.agentName.trim()) return
+    if (!canSave || isOperationRunning(agentOperation.operation?.status)) return
+    setValidationAttempted(true)
+    if (allIssues.length) {
+      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      return
+    }
     const agent = normalizeNewAgent(rows, draft)
     await agentOperation.submit(() => client.createAgent(agentRowToDto(agent)), ({ operation }) => operation)
   }
@@ -68,23 +77,51 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" disabled={!canSave || !draft.harness || !draft.agentName.trim() || isOperationRunning(agentOperation.operation?.status)} onClick={save}>
+              <button className="primary-button" disabled={!canSave || isOperationRunning(agentOperation.operation?.status)} onClick={save}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>
             </div>
           </div>
+          <FormValidationSummary
+            issues={issues}
+            serverError={agentOperation.error?.message}
+            title={t('formValidationTitle')}
+            onIssue={focusAgentField}
+          />
           <section className="surface rail-card">
-            <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} harnesses={harnesses} value={draft} t={t} onChange={setDraft} />
+            <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} harnesses={harnesses} value={draft} t={t} onChange={setDraft} />
           </section>
           {draft.harness && (
-            <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
+            <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} value={draft} t={t} onChange={setDraft} />
           )}
         </section>
       </div>
-      <ResourceStatus error={agentOperation.error?.message ?? null} />
     </main>
   )
+}
+
+function validateNewAgent(draft: AgentRow, t: Translate): FormIssue[] {
+  const issues: FormIssue[] = []
+  if (!draft.agentName.trim()) issues.push({ field: 'agentName', message: t('agentNameRequired') })
+  if (!draft.harness) issues.push({ field: 'harness', message: t('harnessRequired') })
+  if (draft.harness === 'custom-harness' && (!draft.adapter || draft.adapter === 'none')) {
+    issues.push({ field: 'importPath', message: t('customImportPathRequired') })
+  }
+  if (draft.harness && draft.capabilities?.supportedFields.includes('modelName') && !draft.models.trim()) {
+    issues.push({ field: 'models', message: t('agentModelsValidationRequired') })
+  }
+  return issues
+}
+
+function focusAgentField(field: string) {
+  const target = document.getElementById({
+    agentName: 'agent-name',
+    harness: 'agent-harness',
+    importPath: 'agent-import-path',
+    models: 'agent-models',
+  }[field] ?? '')
+  target?.focus()
 }
 
 function isOperationRunning(status: string | undefined) {

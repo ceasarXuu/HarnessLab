@@ -34,6 +34,8 @@ describe('App agents and leaderboard', () => {
     fireEvent.click(screen.getByRole('option', { name: 'claude-code' }))
     expect(screen.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Regression custom agent' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add' })[0])
+    fireEvent.change(screen.getByLabelText('Model name'), { target: { value: 'claude-sonnet-4-5' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
     expect(screen.getByText('Skills sources')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'MCPs' }))

@@ -8,6 +8,19 @@ describe('Environment templates', () => {
     window.location.hash = ''
   })
 
+  it('shows field errors when a new Environment is submitted without a name', async () => {
+    window.location.hash = '#environments/new'
+    render(<App />)
+
+    const name = await screen.findByLabelText('Environment Name')
+    fireEvent.change(name, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert', { name: 'Check required fields' })).toBeInTheDocument()
+    expect(screen.getAllByText('Enter an Environment name.')).toHaveLength(2)
+    expect(name).toHaveAttribute('aria-invalid', 'true')
+  })
+
   it('manages OrnnLab-local templates using real Harbor EnvironmentConfig fields', async () => {
     render(<App />)
 

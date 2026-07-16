@@ -6,6 +6,7 @@ import { EditableStringList } from './EditableStringList'
 import { KeyValueControl } from './KeyValueControl'
 import { SwitchControl } from './SwitchControl'
 import { TpuSpecControl } from './TpuSpecControl'
+import { FieldError } from './FormValidationSummary'
 
 type EnvironmentTab = 'base' | 'network' | 'advanced'
 type FieldKind = 'number' | 'select' | 'switch' | 'text' | 'tpu'
@@ -42,10 +43,12 @@ const advancedFields: Field[] = [
 ]
 
 export function EnvironmentProfileEditor({
+  fieldErrors = {},
   value,
   t,
   onChange,
 }: {
+  fieldErrors?: Record<string, string | undefined>
   value: EnvironmentRow
   t: Translate
   onChange: (value: EnvironmentRow) => void
@@ -77,7 +80,7 @@ export function EnvironmentProfileEditor({
       {activeTab === 'base' && (
         <section className="run-config-group">
           <div className="run-grid">
-            {baseFields.map((field) => <EnvironmentFieldControl field={field} key={field.key} t={t} value={value} onChange={setField} />)}
+            {baseFields.map((field) => <EnvironmentFieldControl error={fieldErrors[field.key]} field={field} key={field.key} t={t} value={value} onChange={setField} />)}
             <KeyValueControl
               className="field-wide"
               label={t('environmentVariables')}
@@ -137,11 +140,13 @@ export function EnvironmentProfileEditor({
 }
 
 function EnvironmentFieldControl({
+  error,
   field,
   t,
   value,
   onChange,
 }: {
+  error?: string
   field: Field
   t: Translate
   value: EnvironmentRow
@@ -150,16 +155,18 @@ function EnvironmentFieldControl({
   const current = value[field.key]
   const label = t(field.labelKey)
   const className = field.wide ? 'field-wide' : undefined
+  const controlId = `environment-${field.key}`
+  const errorId = `${controlId}-error`
   if (field.kind === 'switch') {
     return <SwitchControl checked={Boolean(current)} className={className} label={label} onChange={(checked) => onChange(field.key, checked)} />
   }
   if (field.kind === 'select') {
-    return <label className={className}>{label}<CustomSelect ariaLabel={label} value={String(current)} options={(field.options ?? []).map((item) => ({ label: item, value: item }))} onChange={(nextValue) => onChange(field.key, nextValue)} /></label>
+    return <label className={className}>{label}<CustomSelect ariaLabel={label} describedBy={error ? errorId : undefined} id={controlId} invalid={Boolean(error)} value={String(current)} options={(field.options ?? []).map((item) => ({ label: item, value: item }))} onChange={(nextValue) => onChange(field.key, nextValue)} /><FieldError id={errorId} message={error} /></label>
   }
   if (field.kind === 'tpu') {
     return <TpuSpecControl className={className} label={label} labels={{ notConfigured: t('notConfigured'), topologyX: t('topologyX'), topologyY: t('topologyY'), topologyZ: t('topologyZ'), type: t('tpuType') }} value={String(current)} onChange={(nextValue) => onChange(field.key, nextValue)} />
   }
-  return <label className={className}>{label}<input inputMode={field.kind === 'number' ? 'numeric' : undefined} type={field.kind === 'number' ? 'number' : 'text'} value={normaliseInput(current)} onChange={(event) => onChange(field.key, event.target.value)} /></label>
+  return <label className={className} htmlFor={controlId}>{label}<input id={controlId} aria-describedby={error ? errorId : undefined} aria-invalid={Boolean(error) || undefined} inputMode={field.kind === 'number' ? 'numeric' : undefined} type={field.kind === 'number' ? 'number' : 'text'} value={normaliseInput(current)} onChange={(event) => onChange(field.key, event.target.value)} /><FieldError id={errorId} message={error} /></label>
 }
 
 function parseList(value: string) {

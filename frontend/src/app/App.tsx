@@ -5,7 +5,6 @@ import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from 
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, reconcileRunDraftResources } from '../domain/defaults'
-import { agentModelNames } from '../domain/agentModels'
 import type { HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
@@ -403,13 +402,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           <NewRunPage
             canLaunch={
               writesEnabled
-              && draft.jobName.trim().length > 0
-              && draft.source.length > 0
-              && draft.environment.length > 0
-              && configuredAgents.some((agent) =>
-                agent.agentName === draft.agent && agentModelNames(agent).includes(draft.model),
-              )
+              && jobOperation.operation?.status !== 'queued'
+              && jobOperation.operation?.status !== 'running'
             }
+            submitError={jobOperation.error?.message}
             agents={configuredAgents}
             datasets={datasets}
             client={client}
@@ -422,7 +418,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onLaunch={launchDraft}
             onReset={() => setDraft(defaultRunDraft)}
           />
-          <ResourceStatus error={jobOperation.error?.message ?? null} />
         </>
       )}
       {route.page === 'system' && (

@@ -8,9 +8,11 @@ import { CustomSelect } from './CustomSelect'
 import { FolderPathInput, type FolderPathSelection } from './FolderPathInput'
 import { Field, TabPanel } from './RunBuilderChrome'
 import { RunBuilderRuntimePanel } from './RunBuilderRuntimePanel'
+import { FieldError, FormValidationSummary, issuesByField, type FormIssue } from './FormValidationSummary'
 
 interface RunBuilderProps {
   canLaunch?: boolean
+  submitError?: string | null
   agents: AgentRow[]
   datasets: DatasetRow[]
   draft: RunDraft
@@ -29,8 +31,9 @@ type RunBuilderTab = 'core' | 'tasks' | 'verifier' | 'runtime'
 
 type VerifierMode = 'dataset-default' | 'skip'
 
-export function RunBuilder({ canLaunch = true, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onChooseDirectory, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
+export function RunBuilder({ canLaunch = true, submitError, agents, datasets, draft, environments, taskRows, t, onDraft, onCancel, onChooseDirectory, onCopyJobConfig, onLaunch, onReset }: RunBuilderProps) {
   const [activeTab, setActiveTab] = useState<RunBuilderTab>('core')
+  const [validationAttempted, setValidationAttempted] = useState(false)
   const [taskSearch, setTaskSearch] = useState('')
   const datasetOptions = datasetSelectOptions(datasets, t)
   const agentOptions = agents
@@ -51,6 +54,18 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
   const selectedTaskCount = selectedTaskNames.length
   const verifierMode: VerifierMode = draft.verifierMode
   const leaderboardLockedByVerifier = verifierMode === 'skip'
+  const allIssues = validateRunDraft(draft, t)
+  const issues = validationAttempted ? allIssues : []
+  const fieldErrors = issuesByField(issues)
+  const launch = () => {
+    setValidationAttempted(true)
+    if (allIssues.length) {
+      setActiveTab('core')
+      window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.form-validation-summary')?.focus())
+      return
+    }
+    onLaunch()
+  }
   const setVerifierMode = (mode: VerifierMode) => {
     if (mode === 'dataset-default') {
       onDraft({ ...draft, verifierMode: mode })
@@ -100,7 +115,7 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
             <RotateCcw aria-hidden="true" />
             {t('reset')}
           </button>
-          <button className="primary-button" disabled={!canLaunch} onClick={onLaunch}>
+          <button className="primary-button" disabled={!canLaunch} onClick={launch}>
             <Play aria-hidden="true" />
             {t('runJob')}
           </button>
@@ -110,6 +125,15 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
           </button>
         </div>
       </div>
+      <FormValidationSummary
+        issues={issues}
+        serverError={submitError}
+        title={t('formValidationTitle')}
+        onIssue={(field) => {
+          setActiveTab('core')
+          window.requestAnimationFrame(() => document.getElementById(`job-${field}`)?.focus())
+        }}
+      />
       <div className="run-tabs" role="tablist" aria-label={t('jobConfig')}>
         {tabs.map((tab) => (
           <button
@@ -126,33 +150,36 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
       </div>
       <TabPanel active={activeTab === 'core'} title={t('runTabCore')}>
         <div className="run-grid">
-          <Field label={t('jobName')}>
-            <input value={draft.jobName} onChange={(event) => onDraft({ ...draft, jobName: event.target.value })} />
+          <Field error={fieldErrors.jobName} errorId="job-jobName-error" label={t('jobName')}>
+            <input id="job-jobName" aria-describedby={fieldErrors.jobName ? 'job-jobName-error' : undefined} aria-invalid={Boolean(fieldErrors.jobName) || undefined} value={draft.jobName} onChange={(event) => onDraft({ ...draft, jobName: event.target.value })} />
           </Field>
-          <Field label={t('jobsDir')}>
-            <FolderPathInput
-              chooseLabel={t('chooseFolder')}
-              label={t('jobsDirFolderPicker')}
-              value={draft.jobsDir}
-              onChange={(value) => onDraft({ ...draft, jobsDir: value })}
-              onChoose={onChooseDirectory}
-            />
+          <Field error={fieldErrors.jobsDir} errorId="job-jobsDir-error" label={t('jobsDir')}>
+            <div id="job-jobsDir" tabIndex={-1} aria-describedby={fieldErrors.jobsDir ? 'job-jobsDir-error' : undefined}>
+              <FolderPathInput chooseLabel={t('chooseFolder')} label={t('jobsDirFolderPicker')} value={draft.jobsDir} onChange={(value) => onDraft({ ...draft, jobsDir: value })} onChoose={onChooseDirectory} />
+            </div>
           </Field>
           <label>
             {t('jobDataset')}
             <CustomSelect
               ariaLabel={t('jobDataset')}
+              describedBy={fieldErrors.source ? 'job-source-error' : undefined}
+              id="job-source"
+              invalid={Boolean(fieldErrors.source)}
               value={draft.source}
               options={datasetOptions}
               onChange={(value) => {
                 onDraft({ ...draft, selectedTaskNames: null, source: value })
               }}
             />
+            <FieldError id="job-source-error" message={fieldErrors.source} />
           </label>
           <label>
             {t('agent')}
             <CustomSelect
               ariaLabel={t('agent')}
+              describedBy={fieldErrors.agent ? 'job-agent-error' : undefined}
+              id="job-agent"
+              invalid={Boolean(fieldErrors.agent)}
               value={draft.agent}
               options={agentOptions}
               onChange={(value) => {
@@ -160,11 +187,15 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
                 onDraft({ ...draft, agent: value, model: reconcileAgentModel(draft.model, agent) })
               }}
             />
+            <FieldError id="job-agent-error" message={fieldErrors.agent} />
           </label>
           <label>
             {t('jobModel')}
             <CustomSelect
               ariaLabel={t('jobModel')}
+              describedBy={fieldErrors.model ? 'job-model-error' : undefined}
+              id="job-model"
+              invalid={Boolean(fieldErrors.model)}
               value={draft.model}
               options={modelOptions}
               disabled={modelOptions.length === 0}
@@ -174,26 +205,37 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
               searchPlaceholder={t('searchModels')}
               onChange={(value) => onDraft({ ...draft, model: value })}
             />
+            <FieldError id="job-model-error" message={fieldErrors.model} />
           </label>
           <label>
             {t('environment')}
             <CustomSelect
               ariaLabel={t('environment')}
+              describedBy={fieldErrors.environment ? 'job-environment-error' : undefined}
+              id="job-environment"
+              invalid={Boolean(fieldErrors.environment)}
               value={draft.environment}
               options={environmentOptions}
               onChange={(value) => onDraft({ ...draft, environment: value })}
             />
+            <FieldError id="job-environment-error" message={fieldErrors.environment} />
           </label>
-          <Field label={t('concurrency')}>
+          <Field error={fieldErrors.concurrency} errorId="job-concurrency-error" label={t('concurrency')}>
             <input
+              id="job-concurrency"
+              aria-describedby={fieldErrors.concurrency ? 'job-concurrency-error' : undefined}
+              aria-invalid={Boolean(fieldErrors.concurrency) || undefined}
               type="number"
               min="1"
               value={draft.concurrency}
               onChange={(event) => onDraft({ ...draft, concurrency: Number(event.target.value) })}
             />
           </Field>
-          <Field label={t('attempts')}>
+          <Field error={fieldErrors.attempts} errorId="job-attempts-error" label={t('attempts')}>
             <input
+              id="job-attempts"
+              aria-describedby={fieldErrors.attempts ? 'job-attempts-error' : undefined}
+              aria-invalid={Boolean(fieldErrors.attempts) || undefined}
               type="number"
               min="1"
               value={draft.attempts}
@@ -319,4 +361,17 @@ export function RunBuilder({ canLaunch = true, agents, datasets, draft, environm
       </TabPanel>
     </section>
   )
+}
+
+function validateRunDraft(draft: RunDraft, t: Translate): FormIssue[] {
+  const issues: FormIssue[] = []
+  if (!draft.jobName.trim()) issues.push({ field: 'jobName', message: t('jobNameRequired') })
+  if (!draft.jobsDir.trim()) issues.push({ field: 'jobsDir', message: t('jobsDirRequired') })
+  if (!draft.source) issues.push({ field: 'source', message: t('jobDatasetRequired') })
+  if (!draft.agent) issues.push({ field: 'agent', message: t('jobAgentRequired') })
+  if (!draft.model) issues.push({ field: 'model', message: t('jobModelRequired') })
+  if (!draft.environment) issues.push({ field: 'environment', message: t('jobEnvironmentRequired') })
+  if (!Number.isInteger(draft.concurrency) || draft.concurrency < 1) issues.push({ field: 'concurrency', message: t('concurrencyInvalid') })
+  if (!Number.isInteger(draft.attempts) || draft.attempts < 1) issues.push({ field: 'attempts', message: t('attemptsInvalid') })
+  return issues
 }

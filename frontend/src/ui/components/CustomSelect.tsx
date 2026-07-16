@@ -17,6 +17,9 @@ interface CustomSelectProps {
   busy?: boolean
   className?: string
   disabled?: boolean
+  describedBy?: string
+  id?: string
+  invalid?: boolean
   leadingIcon?: ReactNode
   placeholder?: string
   searchPlaceholder?: string
@@ -33,6 +36,9 @@ export function CustomSelect({
   busy = false,
   className,
   disabled = false,
+  describedBy,
+  id,
+  invalid = false,
   leadingIcon,
   options,
   placeholder,
@@ -90,12 +96,15 @@ export function CustomSelect({
       {leadingIcon}
       {visibleLabel && <span>{visibleLabel}</span>}
       <button
+        id={id}
         type="button"
         className="select-trigger"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         aria-busy={busy}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >

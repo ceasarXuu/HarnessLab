@@ -39,3 +39,14 @@ export const HarnessCatalog: Story = {
     await expect(canvas.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
   },
 }
+
+export const ValidationErrors: Story = {
+  args: baseArgs,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
+    await expect(canvas.getByRole('alert', { name: 'Check required fields' })).toBeVisible()
+    await expect(canvas.getAllByText('Enter Agent Name.')).toHaveLength(2)
+    await expect(canvas.getAllByText('Select a Harness.')).toHaveLength(2)
+  },
+}
