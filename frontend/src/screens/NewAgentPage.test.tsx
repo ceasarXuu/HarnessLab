@@ -6,7 +6,7 @@ import { harnessTemplates } from '../mocks/demoCatalog'
 import { NewAgentPage } from './NewAgentPage'
 
 describe('NewAgentPage', () => {
-  it('selects a searchable Harbor Harness template before creating an Agent', () => {
+  it('starts empty and requires the user to choose a searchable Harbor Harness', () => {
     render(
       <NewAgentPage
         client={createMockWebUiClient()}
@@ -18,19 +18,24 @@ describe('NewAgentPage', () => {
       />,
     )
 
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Acp Agent')
-    expect(screen.getByLabelText('Harness')).toHaveTextContent('acp')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('Select Harness')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
 
     fireEvent.click(screen.getByLabelText('Harness'))
     fireEvent.change(screen.getByLabelText('Search Harnesses'), { target: { value: 'claude' } })
     fireEvent.click(screen.getByRole('option', { name: 'claude-code' }))
 
     expect(screen.getByLabelText('Harness')).toHaveTextContent('claude-code')
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
     expect(screen.getByText('Authentication method')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Claude DeepSeek' } })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 
-  it('applies the first Harness template after the catalog loads asynchronously', () => {
+  it('keeps the draft empty after the Harness catalog loads asynchronously', () => {
     const props = {
       client: createMockWebUiClient(),
       rows: [],
@@ -40,13 +45,13 @@ describe('NewAgentPage', () => {
     }
     const { rerender } = render(<NewAgentPage {...props} harnesses={[]} />)
 
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('New Agent')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
 
     rerender(<NewAgentPage {...props} harnesses={harnessTemplates} />)
 
-    expect(screen.getByLabelText('Harness')).toHaveTextContent('acp')
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Acp Agent')
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('Select Harness')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 })

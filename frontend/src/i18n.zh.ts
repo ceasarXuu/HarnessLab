@@ -103,6 +103,7 @@ export const zhMessages = {
     searchAgents: '搜索 Agents',
     searchAgentsPlaceholder: '搜索 agents、adapters、models',
     searchHarnesses: '搜索 Harness',
+    selectHarness: '选择 Harness',
     newAgent: '新建 Agent',
     environmentsCatalog: 'Environment 目录',
     searchEnvironments: '搜索 Environments',

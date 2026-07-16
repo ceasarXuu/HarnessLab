@@ -24,7 +24,6 @@ type EnvironmentView = 'list' | 'new' | 'copy'
 type AgentView = 'list' | 'new'
 
 interface RouteState {
-  agentHarness?: string
   agentView: AgentView
   environmentId?: string
   environmentView: EnvironmentView
@@ -45,9 +44,7 @@ function readRouteFromHash(): RouteState {
     return { page: 'jobs', jobView: 'new', agentView: 'list', environmentView: 'list' }
   }
   if (hash.startsWith('agents/new')) {
-    const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : ''
-    const agentHarness = new URLSearchParams(query).get('harness') ?? undefined
-    return { page: 'agents', jobView: 'list', agentView: 'new', agentHarness, environmentView: 'list' }
+    return { page: 'agents', jobView: 'list', agentView: 'new', environmentView: 'list' }
   }
   if (hash === 'environments/new') {
     return { page: 'environments', jobView: 'list', agentView: 'list', environmentView: 'new' }
@@ -222,11 +219,9 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     }
   }, [])
 
-  const navigateAgent = useCallback((agentView: AgentView, agentHarness?: string) => {
-    const nextRoute: RouteState = { page: 'agents', jobView: 'list', agentView, agentHarness, environmentView: 'list' }
-    const nextHash = agentView === 'new'
-      ? `#agents/new${agentHarness ? `?harness=${encodeURIComponent(agentHarness)}` : ''}`
-      : '#agents'
+  const navigateAgent = useCallback((agentView: AgentView) => {
+    const nextRoute: RouteState = { page: 'agents', jobView: 'list', agentView, environmentView: 'list' }
+    const nextHash = agentView === 'new' ? '#agents/new' : '#agents'
     setRoute(nextRoute)
     if (window.location.hash !== nextHash) {
       window.history.pushState(null, '', nextHash)
@@ -318,7 +313,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             client={client}
             rows={agents}
             t={t}
-            onNewAgent={(harness) => navigateAgent('new', harness)}
+            onNewAgent={() => navigateAgent('new')}
             onRefresh={agentsResource.refresh}
           />
           <ResourceStatus
@@ -331,7 +326,6 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           canSave={writesEnabled}
           client={client}
           harnesses={harnesses}
-          initialHarness={route.agentHarness}
           rows={agents}
           t={t}
           onAgents={() => navigateAgent('list')}

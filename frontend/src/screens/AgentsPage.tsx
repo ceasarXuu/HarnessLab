@@ -18,7 +18,7 @@ interface AgentsPageProps {
   client: WebUiClient
   rows: AgentRow[]
   t: Translate
-  onNewAgent: (harness?: string) => void
+  onNewAgent: () => void
   onRefresh: () => Promise<void>
 }
 

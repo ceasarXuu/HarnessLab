@@ -12,7 +12,6 @@ import { ResourceStatus } from '../ui/components/ResourceStatus'
 interface NewAgentPageProps {
   canSave?: boolean
   client: WebUiClient
-  initialHarness?: string
   harnesses: HarnessTemplate[]
   rows: AgentRow[]
   t: Translate
@@ -20,33 +19,24 @@ interface NewAgentPageProps {
   onRefresh: () => Promise<void>
 }
 
-export function NewAgentPage({ canSave = true, client, harnesses, initialHarness, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
+export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
   const capabilitiesByHarness = useMemo(
     () => Object.fromEntries(harnesses.map((harness) => [harness.name, harness.capabilities])),
     [harnesses],
   )
-  const [draft, setDraft] = useState(() => buildNewAgent(rows, capabilitiesByHarness, initialHarness ?? harnesses[0]?.name))
+  const [draft, setDraft] = useState(() => buildNewAgent(capabilitiesByHarness))
   const agentOperation = useOperation(client)
 
   useEffect(() => {
+    if (!draft.harness) return
     if (harnesses.length && !harnesses.some((harness) => harness.name === draft.harness)) {
-      const harness = initialHarness && harnesses.some((item) => item.name === initialHarness)
-        ? initialHarness
-        : harnesses[0].name
-      setDraft((current) => ({
-        ...current,
-        agentName: current.agentName === 'New Agent'
-          ? buildUniqueAgentName(rows, `${formatHarnessName(harness)} Agent`)
-          : current.agentName,
-        capabilities: capabilitiesByHarness[harness],
-        harness,
-      }))
+      setDraft((current) => ({ ...current, harness: '' }))
       return
     }
     const capabilities = capabilitiesByHarness[draft.harness]
     if (!capabilities) return
     setDraft((current) => current.capabilities === capabilities ? current : { ...current, capabilities })
-  }, [capabilitiesByHarness, draft.harness, harnesses, initialHarness, rows])
+  }, [capabilitiesByHarness, draft.harness, harnesses])
 
   useEffect(() => {
     if (agentOperation.operation?.status !== 'completed') return
@@ -54,7 +44,7 @@ export function NewAgentPage({ canSave = true, client, harnesses, initialHarness
   }, [agentOperation.operation?.id, agentOperation.operation?.status, onAgents, onRefresh])
 
   const save = async () => {
-    if (!canSave) return
+    if (!canSave || !draft.harness || !draft.agentName.trim()) return
     const agent = normalizeNewAgent(rows, draft)
     await agentOperation.submit(() => client.createAgent(agentRowToDto(agent)), ({ operation }) => operation)
   }
@@ -78,7 +68,7 @@ export function NewAgentPage({ canSave = true, client, harnesses, initialHarness
                 <X aria-hidden="true" />
                 {t('cancel')}
               </button>
-              <button className="primary-button" disabled={!canSave || !draft.harness || isOperationRunning(agentOperation.operation?.status)} onClick={save}>
+              <button className="primary-button" disabled={!canSave || !draft.harness || !draft.agentName.trim() || isOperationRunning(agentOperation.operation?.status)} onClick={save}>
                 <Save aria-hidden="true" />
                 {t('save')}
               </button>
@@ -87,7 +77,9 @@ export function NewAgentPage({ canSave = true, client, harnesses, initialHarness
           <section className="surface rail-card">
             <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} harnesses={harnesses} value={draft} t={t} onChange={setDraft} />
           </section>
-          <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
+          {draft.harness && (
+            <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} value={draft} t={t} onChange={setDraft} />
+          )}
         </section>
       </div>
       <ResourceStatus error={agentOperation.error?.message ?? null} />
@@ -100,20 +92,17 @@ function isOperationRunning(status: string | undefined) {
 }
 
 function buildNewAgent(
-  rows: AgentRow[],
   capabilitiesByHarness: Record<string, AgentCapabilities>,
-  initialHarness?: string,
 ): AgentRow {
-  const harness = initialHarness || ''
-  const baseName = harness ? `${formatHarnessName(harness)} Agent` : 'New Agent'
+  const harness = ''
   return {
-    id: buildAgentId(rows, baseName),
-    agentName: buildUniqueAgentName(rows, baseName),
+    id: '',
+    agentName: '',
     harness,
-    adapter: harness === 'custom-harness' ? 'agents.custom:Agent' : 'none',
+    adapter: 'none',
     models: '',
     status: 'configured',
-    source: '~/.ornnlab/agents/custom-agent.toml',
+    source: '',
     updated: 'just now',
     env: 'none',
     kwargs: 'none',
@@ -126,12 +115,8 @@ function buildNewAgent(
   }
 }
 
-function formatHarnessName(harness: string) {
-  return harness.split('-').map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part).join(' ')
-}
-
 function normalizeNewAgent(rows: AgentRow[], draft: AgentRow): AgentRow {
-  const agentName = draft.agentName.trim() || buildUniqueAgentName(rows, 'Custom Agent')
+  const agentName = draft.agentName.trim()
   return {
     ...draft,
     id: buildAgentId(rows, agentName),
@@ -150,18 +135,6 @@ function buildAgentId(rows: AgentRow[], agentName: string) {
   while (existing.has(candidate)) {
     index += 1
     candidate = `${base}-${index}`
-  }
-  return candidate
-}
-
-function buildUniqueAgentName(rows: AgentRow[], baseName: string) {
-  const existing = new Set(rows.map((row) => row.agentName))
-  if (!existing.has(baseName)) return baseName
-  let index = 2
-  let candidate = `${baseName} ${index}`
-  while (existing.has(candidate)) {
-    index += 1
-    candidate = `${baseName} ${index}`
   }
   return candidate
 }

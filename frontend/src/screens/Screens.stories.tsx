@@ -271,13 +271,11 @@ export const AgentDrawer: Story = {
 
 function AgentsFixture() {
   const [view, setView] = useState<'list' | 'new'>('list')
-  const [initialHarness, setInitialHarness] = useState<string | undefined>()
   if (view === 'new') {
     return (
       <NewAgentPage
         client={client}
         harnesses={harnessTemplates}
-        initialHarness={initialHarness}
         rows={agentRows}
         t={t}
         onAgents={() => setView('list')}
@@ -290,10 +288,7 @@ function AgentsFixture() {
       client={client}
       rows={agentRows}
       t={t}
-      onNewAgent={(harness) => {
-        setInitialHarness(harness)
-        setView('new')
-      }}
+      onNewAgent={() => setView('new')}
       onRefresh={async () => undefined}
     />
   )

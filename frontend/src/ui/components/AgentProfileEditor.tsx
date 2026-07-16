@@ -204,9 +204,6 @@ export function AgentIdentityEditor({
     const capabilities = agentCapabilitiesForHarness(harness, capabilitiesByHarness)
     onChange({
       ...value,
-      agentName: value.agentName === defaultAgentName(value.harness)
-        ? defaultAgentName(harness)
-        : value.agentName,
       adapter: 'none',
       authenticationMode: capabilities.authenticationModes[0]?.value,
       capabilities,
@@ -235,6 +232,7 @@ export function AgentIdentityEditor({
             options={harnesses.map((harness) => ({ label: harness.name, value: harness.name }))}
             searchAriaLabel={t('searchHarnesses')}
             searchPlaceholder={t('searchHarnesses')}
+            placeholder={t('selectHarness')}
             value={value.harness}
             onChange={setHarness}
           />
@@ -248,14 +246,6 @@ export function AgentIdentityEditor({
       )}
     </div>
   )
-}
-
-function defaultAgentName(harness: string) {
-  const displayName = harness
-    .split('-')
-    .map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part)
-    .join(' ')
-  return `${displayName} Agent`
 }
 
 function mcpLabels(t: Translate) {

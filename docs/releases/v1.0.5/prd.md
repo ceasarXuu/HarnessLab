@@ -66,7 +66,7 @@ Dataset 详情抽屉展示来源、本地路径、大小、Registry 与 Task 列
 
 Agent = Harness x 用户配置。Agent Name 是用户命名，Harness 是 Harbor AgentName 或 custom import path。
 
-Harbor 内置的 30 种 `AgentName` 在 OrnnLab 中只作为 Harness 模板目录，不作为已配置 Agent 展示，也不自动写入 Agent 存储。首次初始化时 Agent 目录为空；用户进入“新建 Agent”二级页面，选择 Harness、填写该 Harness 支持的配置并保存成功后，才产生可供 Job 复用的 Agent。
+Harbor 内置的 30 种 `AgentName` 在 OrnnLab 中只作为 Harness 模板目录，不作为已配置 Agent 展示，也不自动写入 Agent 存储。首次初始化时 Agent 目录为空；用户进入“新建 Agent”二级页面时，Agent Name 与 Harness 均为空，不做默认选择或自动命名。用户主动选择 Harness、填写名称及该 Harness 支持的配置并保存成功后，才产生可供 Job 复用的 Agent。
 
 Agent 详情抽屉不设置独立保存按钮。用户修改配置后由前端短暂防抖并自动保存；连续修改必须串行提交最新值，旧请求不得覆盖较新的本地编辑。保存失败继续通过统一 Operation 错误反馈展示，失败值不得被标记为已保存。
 

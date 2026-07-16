@@ -28,8 +28,10 @@ describe('App agents and leaderboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'New Agent' }))
     expect(screen.getByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Acp Agent')
-    expect(screen.getByLabelText('Harness')).toHaveTextContent('acp')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('Select Harness')
+    fireEvent.click(screen.getByLabelText('Harness'))
+    fireEvent.click(screen.getByRole('option', { name: 'claude-code' }))
     expect(screen.getByRole('tab', { name: 'Basic' })).toHaveAttribute('aria-selected', 'true')
     fireEvent.change(screen.getByLabelText('Agent Name'), { target: { value: 'Regression custom agent' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
@@ -167,12 +169,13 @@ describe('App agents and leaderboard', () => {
     await waitFor(() => expect(screen.getByText('Claude reusable profile')).toBeInTheDocument())
   })
 
-  it('preserves the selected Harness when the new Agent route is opened directly', async () => {
+  it('does not restore a Harness from a legacy new Agent query parameter', async () => {
     window.location.hash = '#agents/new?harness=claude-code'
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Harness')).toHaveTextContent('claude-code')
-    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code Agent')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('Select Harness')
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('')
+    expect(screen.queryByRole('tab', { name: 'Basic' })).not.toBeInTheDocument()
   })
 })
