@@ -102,7 +102,26 @@ export interface DatasetDto {
 export interface DatasetTaskDto {
   datasetRef: string
   description: string
+  environment: DatasetTaskEnvironmentDto | null
   name: string
+}
+
+export interface DatasetTaskEnvironmentDto {
+  allowedHosts: string[]
+  buildTimeoutSeconds: number
+  definitions: Array<'docker-image' | 'dockerfile' | 'docker-compose'>
+  dockerImage: string | null
+  networkMode: 'no-network' | 'public' | 'allowlist'
+  os: 'linux' | 'windows'
+  resources: {
+    cpus: number | null
+    gpuTypes: string[]
+    gpus: number | null
+    memoryMb: number | null
+    storageMb: number | null
+    tpu: { topology: string; type: string } | null
+  }
+  workdir: string | null
 }
 
 export interface DirectoryPickerResultDto {

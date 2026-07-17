@@ -59,7 +59,7 @@ export function datasetDtoToRow(dataset: DatasetDto): DatasetRow {
 }
 
 export function datasetTaskDtoToDatasetTask(task: DatasetTaskDto): DatasetTask {
-  return { datasetRef: task.datasetRef, description: task.description, name: task.name }
+  return { datasetRef: task.datasetRef, description: task.description, environment: task.environment, name: task.name }
 }
 
 export function agentDtoToRow(agent: AgentDto): AgentRow {

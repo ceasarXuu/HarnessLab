@@ -2,6 +2,7 @@ import { Box, Download, FolderInput, MapPin, Search, Trash2, Unlink, X } from 'l
 import type { Dispatch, SetStateAction } from 'react'
 import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
+import { DatasetTaskEnvironment } from './DatasetTaskEnvironment'
 import { Metric } from './Metric'
 
 type DatasetDownloadState =
@@ -167,8 +168,13 @@ export function DatasetDetail({
               </div>
               {expandedTaskName === row.name && (
                 <div className="task-expanded">
-                  <span>{t('description')}</span>
-                  <p>{row.description}</p>
+                  {row.description && (
+                    <div className="task-description">
+                      <span>{t('description')}</span>
+                      <p>{row.description}</p>
+                    </div>
+                  )}
+                  <DatasetTaskEnvironment environment={row.environment} t={t} />
                 </div>
               )}
             </div>

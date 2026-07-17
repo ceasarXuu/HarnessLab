@@ -54,7 +54,21 @@ export function toEnvironmentDto(environment: EnvironmentRow): EnvironmentDto {
 
 export function toDatasetTaskDto(task: TaskRow): DatasetTaskDto {
   const dataset = datasetRows.find((row) => row.name === task.dataset)
-  return { datasetRef: dataset ? `${dataset.name}@${dataset.version}` : task.dataset, description: task.description, name: task.name }
+  return {
+    datasetRef: dataset ? `${dataset.name}@${dataset.version}` : task.dataset,
+    description: task.description,
+    environment: {
+      allowedHosts: [],
+      buildTimeoutSeconds: 600,
+      definitions: ['docker-image', 'dockerfile'],
+      dockerImage: task.environment.replace(/^docker:/, ''),
+      networkMode: 'public',
+      os: task.os === 'windows' ? 'windows' : 'linux',
+      resources: { cpus: 2, gpuTypes: [], gpus: null, memoryMb: 4096, storageMb: null, tpu: null },
+      workdir: '/app',
+    },
+    name: task.name,
+  }
 }
 
 export function toJobEventDto(event: typeof events[number]): JobEventDto {

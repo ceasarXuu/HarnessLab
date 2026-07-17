@@ -180,6 +180,16 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
   return {
     datasetRef: dataset?.ref ?? task.dataset,
     description: task.description,
+    environment: {
+      allowedHosts: [],
+      buildTimeoutSeconds: 600,
+      definitions: ['docker-image', 'dockerfile'],
+      dockerImage: task.environment.replace(/^docker:/, ''),
+      networkMode: 'public',
+      os: task.os === 'windows' ? 'windows' : 'linux',
+      resources: { cpus: 2, gpuTypes: [], gpus: null, memoryMb: 4096, storageMb: null, tpu: null },
+      workdir: '/app',
+    },
     name: task.name,
   }
 })

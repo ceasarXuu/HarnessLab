@@ -314,7 +314,30 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
     datasets = client.get(f"{API}/datasets?q=local/demo").json()["data"]
     assert datasets["items"][0]["download"]["path"] == str(dataset)
     tasks = client.get(f"{API}/datasets/local%2Fdemo%40v1/tasks").json()["data"]
-    assert tasks["items"] == [{"datasetRef": "local/demo@v1", "description": "", "name": "hello"}]
+    assert tasks["items"] == [
+        {
+            "datasetRef": "local/demo@v1",
+            "description": "",
+            "environment": {
+                "allowedHosts": [],
+                "buildTimeoutSeconds": 600.0,
+                "definitions": [],
+                "dockerImage": None,
+                "networkMode": "public",
+                "os": "linux",
+                "resources": {
+                    "cpus": None,
+                    "gpuTypes": [],
+                    "gpus": None,
+                    "memoryMb": None,
+                    "storageMb": None,
+                    "tpu": None,
+                },
+                "workdir": None,
+            },
+            "name": "hello",
+        }
+    ]
 
     cancel = client.post(f"{API}/datasets/local%2Fdemo%40v1/download/cancel")
     assert cancel.status_code == 422

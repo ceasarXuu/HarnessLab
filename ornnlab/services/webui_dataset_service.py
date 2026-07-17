@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
+from ornnlab.services.dataset_environment import parse_local_tasks
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
@@ -80,7 +81,12 @@ class WebUiDatasetService:
                 _join_ref(name, version)
             )
             tasks = [
-                {"datasetRef": ref, "description": "", "name": task_id.get_name()}
+                {
+                    "datasetRef": ref,
+                    "description": "",
+                    "environment": None,
+                    "name": task_id.get_name(),
+                }
                 for task_id in metadata.task_ids
             ]
         if query:
@@ -415,15 +421,7 @@ def _stored_dto(row: dict) -> dict:
 
 
 def _local_tasks(path: Path, ref: str) -> list[dict]:
-    if not path.is_dir():
-        return []
-    from harbor.models.task.task import Task
-
-    return [
-        {"datasetRef": ref, "description": "", "name": child.name}
-        for child in sorted(path.iterdir())
-        if child.is_dir() and Task.is_valid_dir(child, disable_verification=True)
-    ]
+    return parse_local_tasks(path, ref)
 
 
 def _registry_client_factory():

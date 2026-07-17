@@ -32,6 +32,7 @@ export interface EventLog {
 export interface DatasetTask {
   datasetRef: string
   description: string
+  environment: import('../api/contract').DatasetTaskEnvironmentDto | null
   name: string
 }
 
