@@ -172,7 +172,15 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
     const response = await client.getDatasetTaskEnvironment(selectedRef, taskName)
     const currentEnvironment = selectedTasks.find((task) => task.name === taskName)?.environment ?? null
     const resolvedEnvironment = response.data ?? (
-      currentEnvironment ? { ...currentEnvironment, imagePlatforms: [] } : null
+      currentEnvironment
+        ? {
+            ...currentEnvironment,
+            containerImages: currentEnvironment.containerImages.map((image) => ({
+              ...image,
+              platforms: [],
+            })),
+          }
+        : null
     )
     setTaskEnvironmentOverrides((current) => ({ ...current, [key]: resolvedEnvironment }))
   }

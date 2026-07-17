@@ -61,9 +61,12 @@ export function toDatasetTaskDto(task: TaskRow): DatasetTaskDto {
     environment: {
       allowedHosts: [],
       buildTimeoutSeconds: 600,
+      containerImages: [{
+        platforms: ['linux/amd64'],
+        reference: task.environment.replace(/^docker:/, ''),
+        source: 'environment-config',
+      }],
       definitions: ['docker-image', 'dockerfile'],
-      dockerImage: task.environment.replace(/^docker:/, ''),
-      imagePlatforms: ['linux/amd64'],
       networkMode: 'public',
       os: task.os === 'windows' ? 'windows' : 'linux',
       resources: { cpus: 2, gpuTypes: [], gpus: null, memoryMb: 4096, storageMb: null, tpu: null },

@@ -30,16 +30,18 @@ class ContainerImagePlatformResolver:
 
     async def enrich_tasks(self, tasks: list[dict]) -> list[dict]:
         images = {
-            environment["dockerImage"]
+            image["reference"]
             for task in tasks
-            if (environment := task.get("environment")) and environment.get("dockerImage")
+            if (environment := task.get("environment"))
+            for image in environment.get("containerImages", [])
         }
         platform_lists = await asyncio.gather(*(self.resolve(image) for image in images))
         resolved = dict(zip(images, platform_lists, strict=True))
         for task in tasks:
             environment = task.get("environment")
             if environment is not None:
-                environment["imagePlatforms"] = resolved.get(environment.get("dockerImage"), [])
+                for image in environment.get("containerImages", []):
+                    image["platforms"] = resolved.get(image["reference"], [])
         return tasks
 
     async def resolve(self, image: str) -> list[str]:

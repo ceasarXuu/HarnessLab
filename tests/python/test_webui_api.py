@@ -359,9 +359,8 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
             "environment": {
                 "allowedHosts": [],
                 "buildTimeoutSeconds": 600.0,
+                "containerImages": [],
                 "definitions": [],
-                "dockerImage": None,
-                "imagePlatforms": None,
                 "networkMode": "public",
                 "os": "linux",
                 "resources": {
@@ -380,7 +379,7 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
     environment = client.get(
         f"{API}/datasets/local%2Fdemo%40v1/task-environment?task=hello"
     ).json()["data"]
-    assert environment["imagePlatforms"] == []
+    assert environment["containerImages"] == []
 
     cancel = client.post(f"{API}/datasets/local%2Fdemo%40v1/download/cancel")
     assert cancel.status_code == 422

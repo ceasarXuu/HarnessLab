@@ -16,10 +16,10 @@ export function DatasetTaskEnvironment({ environment, t }: DatasetTaskEnvironmen
       <dl className="task-environment-grid">
         <EnvironmentValue label={t('operatingSystem')} value={environment.os} />
         <EnvironmentValue label={t('environmentDefinition')} value={environment.definitions.map((item) => t(definitionLabels[item])).join(', ') || '-'} />
-        <EnvironmentValue wide label={t('dockerImage')} value={environment.dockerImage ?? '-'} />
-        {environment.dockerImage && environment.imagePlatforms !== null && (
-          <EnvironmentValue wide label={t('imagePlatforms')} value={environment.imagePlatforms.join(', ') || t('unknown')} />
-        )}
+        {environment.containerImages.length === 0 && <EnvironmentValue wide label={t('containerImages')} value="-" />}
+        {environment.containerImages.map((image) => (
+          <ContainerImage key={`${image.source}:${image.reference}`} image={image} t={t} />
+        ))}
         <EnvironmentValue label={t('buildTimeout')} value={`${environment.buildTimeoutSeconds}s`} />
         <EnvironmentValue label={t('networkMode')} value={t(networkLabels[environment.networkMode])} />
         {environment.allowedHosts.length > 0 && <EnvironmentValue wide label={t('environmentAllowedHosts')} value={environment.allowedHosts.join(', ')} />}
@@ -27,6 +27,21 @@ export function DatasetTaskEnvironment({ environment, t }: DatasetTaskEnvironmen
         <EnvironmentValue label={t('workingDirectory')} value={environment.workdir ?? '-'} />
       </dl>
     </div>
+  )
+}
+
+function ContainerImage({ image, t }: {
+  image: DatasetTaskEnvironmentDto['containerImages'][number]
+  t: Translate
+}) {
+  const label = image.source === 'dockerfile-base' ? t('dockerfileBaseImage') : t('prebuiltEnvironmentImage')
+  return (
+    <>
+      <EnvironmentValue wide label={label} value={image.reference} />
+      {image.platforms !== null && (
+        <EnvironmentValue wide label={t('imagePlatforms')} value={image.platforms.join(', ') || t('unknown')} />
+      )}
+    </>
   )
 }
 

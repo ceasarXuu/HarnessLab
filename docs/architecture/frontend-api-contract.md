@@ -219,8 +219,22 @@ interface Dataset {
   }
 }
 
-interface DatasetTask { datasetRef: string; name: string; description: string }
+interface DatasetTask {
+  datasetRef: string
+  name: string
+  description: string
+  environment: {
+    containerImages: Array<{
+      reference: string
+      source: 'environment-config' | 'dockerfile-base'
+      platforms: string[] | null
+    }>
+    // 其余字段为 Harbor TaskConfig.environment 的只读摘要
+  } | null
+}
 ```
+
+`containerImages` 统一描述 `EnvironmentConfig.docker_image` 提供的预构建环境镜像和 Dockerfile 外部 `FROM` 提供的基础镜像。多阶段 Dockerfile 中引用前序 stage alias 的 `FROM` 不作为外部镜像重复展示。用户展开 Task 时，后端按 OCI Distribution API 读取每个公开镜像 Registry 声明的 `os/architecture/variant`，按镜像引用去重并在服务进程内缓存；失败返回空平台集合，前端显示“未知”。该 DTO 不包含主机兼容性状态或 OrnnLab 推断结论。
 
 `POST /datasets/import` 接受 `{ name, version, path, taskCount }`，把现有本地目录登记为 `external` Dataset；不会上传、复制、移动或删除该目录。Dataset/Task 不接受通用 `split` 字段或 query。
 

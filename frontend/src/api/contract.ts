@@ -110,9 +110,12 @@ export interface DatasetTaskDto {
 export interface DatasetTaskEnvironmentDto {
   allowedHosts: string[]
   buildTimeoutSeconds: number
+  containerImages: Array<{
+    platforms: string[] | null
+    reference: string
+    source: 'dockerfile-base' | 'environment-config'
+  }>
   definitions: Array<'docker-image' | 'dockerfile' | 'docker-compose'>
-  dockerImage: string | null
-  imagePlatforms: string[] | null
   networkMode: 'no-network' | 'public' | 'allowlist'
   os: 'linux' | 'windows'
   resources: {

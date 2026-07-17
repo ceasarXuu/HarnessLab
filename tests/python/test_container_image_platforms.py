@@ -45,10 +45,11 @@ def test_resolver_enriches_tasks_and_caches_by_image(monkeypatch):
 
     monkeypatch.setattr(container_image_platforms, "_inspect_image", inspect)
     resolver = ContainerImagePlatformResolver()
+    unresolved_image = {"reference": "example/task:1.0", "platforms": None}
     tasks = [
-        {"environment": {"dockerImage": "example/task:1.0"}},
-        {"environment": {"dockerImage": "example/task:1.0"}},
-        {"environment": {"dockerImage": None}},
+        {"environment": {"containerImages": [{**unresolved_image}]}},
+        {"environment": {"containerImages": [{**unresolved_image}]}},
+        {"environment": {"containerImages": []}},
         {"environment": None},
     ]
 
@@ -56,9 +57,9 @@ def test_resolver_enriches_tasks_and_caches_by_image(monkeypatch):
     asyncio.run(resolver.enrich_tasks(tasks))
 
     assert calls == ["example/task:1.0"]
-    assert tasks[0]["environment"]["imagePlatforms"] == ["linux/amd64"]
-    assert tasks[1]["environment"]["imagePlatforms"] == ["linux/amd64"]
-    assert tasks[2]["environment"]["imagePlatforms"] == []
+    assert tasks[0]["environment"]["containerImages"][0]["platforms"] == ["linux/amd64"]
+    assert tasks[1]["environment"]["containerImages"][0]["platforms"] == ["linux/amd64"]
+    assert tasks[2]["environment"]["containerImages"] == []
 
 
 def test_fetches_single_architecture_image_config_after_bearer_authentication():

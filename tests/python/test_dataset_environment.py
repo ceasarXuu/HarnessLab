@@ -42,8 +42,14 @@ workdir = "/workspace"
             "allowedHosts": ["example.com"],
             "buildTimeoutSeconds": 900.0,
             "definitions": ["docker-image", "dockerfile", "docker-compose"],
-            "dockerImage": "example/task:1.0",
-            "imagePlatforms": None,
+            "containerImages": [
+                {
+                    "platforms": None,
+                    "reference": "example/task:1.0",
+                    "source": "environment-config",
+                },
+                {"platforms": None, "reference": "python:3.13-slim", "source": "dockerfile-base"},
+            ],
             "networkMode": "allowlist",
             "os": "linux",
             "resources": {
@@ -58,3 +64,27 @@ workdir = "/workspace"
         },
         "name": "task-one",
     }
+
+
+def test_task_environment_summary_extracts_external_dockerfile_base_images(tmp_path: Path):
+    task = tmp_path / "task-one"
+    environment = task / "environment"
+    tests = task / "tests"
+    environment.mkdir(parents=True)
+    tests.mkdir()
+    (task / "instruction.md").write_text("Run the task.", encoding="utf-8")
+    (tests / "test.sh").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (environment / "Dockerfile").write_text(
+        "FROM --platform=linux/amd64 example/builder:1 AS builder\n"
+        "FROM builder AS runtime\n"
+        "FROM example/runtime:2\n",
+        encoding="utf-8",
+    )
+    (task / "task.toml").write_text('schema_version = "1.3"\n', encoding="utf-8")
+
+    summary = parse_task_summary(task, "team/eval@1.0")
+
+    assert summary["environment"]["containerImages"] == [
+        {"platforms": None, "reference": "example/builder:1", "source": "dockerfile-base"},
+        {"platforms": None, "reference": "example/runtime:2", "source": "dockerfile-base"},
+    ]
