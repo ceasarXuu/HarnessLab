@@ -111,6 +111,7 @@ export interface DatasetTaskEnvironmentDto {
   buildTimeoutSeconds: number
   definitions: Array<'docker-image' | 'dockerfile' | 'docker-compose'>
   dockerImage: string | null
+  imagePlatforms: string[] | null
   networkMode: 'no-network' | 'public' | 'allowlist'
   os: 'linux' | 'windows'
   resources: {

@@ -47,7 +47,7 @@ flowchart LR
 
 后端返回的 Job、Dataset、Trial、Agent、Environment、Leaderboard、System DTO 均保持结构化值：金额为数字、Token 为百万数量、时长为秒、得分为结构化分数。`frontend/src/api/viewModels.ts` 是唯一的展示格式化层；页面不得把格式化字符串回传给 API。
 
-`DatasetTaskDto.environment` 是 Harbor `TaskConfig.environment` 的只读结构化摘要，仅对本地可解析的 Task 返回。字段保留 OS、镜像、环境定义来源、构建超时、网络模式、资源要求和工作目录等原始配置值；未下载的远程 Task 返回 `null`。该 DTO 不包含镜像平台探测、主机兼容性状态或 OrnnLab 推断结论。
+`DatasetTaskDto.environment` 是 Harbor `TaskConfig.environment` 的只读结构化摘要，仅对本地可解析的 Task 返回。字段保留 OS、镜像、环境定义来源、构建超时、网络模式、资源要求和工作目录等原始配置值。用户展开 Task 时，后端按 OCI Distribution API 读取公开 Registry 声明的 `os/architecture/variant`，按镜像引用去重并在服务进程内缓存；失败返回空平台集合，前端显示“未知”。未下载的远程 Task 返回 `null`。该 DTO 不包含主机兼容性状态或 OrnnLab 推断结论。
 
 `RunDraft` 是 UI 草稿，`runDraftToCreateJobRequest` 将其映射到真实 Harbor `JobConfig` 可接受的运行级字段。Agent 保存可选模型集合，New Job 的 `modelName` 是本次运行的唯一选择；凭证、Skills、MCP 和 kwargs 从 Agent 配置映射，环境细节从 Environment 模板映射。
 

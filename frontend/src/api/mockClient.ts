@@ -237,6 +237,9 @@ export function createMockWebUiClient(): WebUiClient {
     async listDatasetTasks(ref, query) {
       return success(page(filterDatasetTasks(taskDtos, ref, query)))
     },
+    async getDatasetTaskEnvironment(ref, task) {
+      return success(taskDtos.find((item) => item.datasetRef === ref && item.name === task)?.environment ?? null)
+    },
     async listDatasets(query) {
       return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source])))
     },

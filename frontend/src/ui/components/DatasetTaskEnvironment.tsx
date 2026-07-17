@@ -17,6 +17,9 @@ export function DatasetTaskEnvironment({ environment, t }: DatasetTaskEnvironmen
         <EnvironmentValue label={t('operatingSystem')} value={environment.os} />
         <EnvironmentValue label={t('environmentDefinition')} value={environment.definitions.map((item) => t(definitionLabels[item])).join(', ') || '-'} />
         <EnvironmentValue wide label={t('dockerImage')} value={environment.dockerImage ?? '-'} />
+        {environment.dockerImage && environment.imagePlatforms !== null && (
+          <EnvironmentValue wide label={t('imagePlatforms')} value={environment.imagePlatforms.join(', ') || t('unknown')} />
+        )}
         <EnvironmentValue label={t('buildTimeout')} value={`${environment.buildTimeoutSeconds}s`} />
         <EnvironmentValue label={t('networkMode')} value={t(networkLabels[environment.networkMode])} />
         {environment.allowedHosts.length > 0 && <EnvironmentValue wide label={t('environmentAllowedHosts')} value={environment.allowedHosts.join(', ')} />}

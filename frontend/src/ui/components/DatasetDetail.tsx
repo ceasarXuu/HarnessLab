@@ -1,5 +1,4 @@
 import { Box, Download, FolderInput, MapPin, Search, Trash2, Unlink, X } from 'lucide-react'
-import type { Dispatch, SetStateAction } from 'react'
 import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { DatasetTaskEnvironment } from './DatasetTaskEnvironment'
@@ -22,7 +21,7 @@ interface DatasetDetailProps {
   writeDisabled?: boolean
   onCancelDownload: (row: DatasetRow) => void
   onDelete: (row: DatasetRow) => void
-  onExpandedTaskName: Dispatch<SetStateAction<string | null>>
+  onExpandedTaskName: (taskName: string) => void
   onMove: (row: DatasetRow) => void
   onRelocate: (row: DatasetRow) => void
   onRemoveRegistration: (row: DatasetRow) => void
@@ -145,11 +144,11 @@ export function DatasetDetail({
                 role="button"
                 tabIndex={0}
                 aria-expanded={expandedTaskName === row.name}
-                onClick={() => onExpandedTaskName((current) => (current === row.name ? null : row.name))}
+                onClick={() => onExpandedTaskName(row.name)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return
                   event.preventDefault()
-                  onExpandedTaskName((current) => (current === row.name ? null : row.name))
+                  onExpandedTaskName(row.name)
                 }}
               >
                 <span>{row.name}</span>

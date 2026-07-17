@@ -11,12 +11,12 @@ from pathlib import Path
 
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
+from ornnlab.services.container_image_platforms import resolve_local_task_environment
 from ornnlab.services.dataset_environment import parse_local_tasks
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
 logger = logging.getLogger(__name__)
-
 _MARKER_FILE = ".ornnlab-dataset.json"
 _LAST_PARENT_KEY = "last_dataset_parent_path"
 _REGISTRY_CACHE_TTL_SECONDS = 60
@@ -95,6 +95,9 @@ class WebUiDatasetService:
                 item for item in tasks if needle in f"{item['name']} {item['description']}".lower()
             ]
         return tasks
+
+    async def get_task_environment(self, ref: str, task_name: str) -> dict | None:
+        return await resolve_local_task_environment(self._local_dataset(ref), ref, task_name)
 
     async def download(self, ref: str, parent_path: str, progress) -> None:
         if self._dataset_row(ref):

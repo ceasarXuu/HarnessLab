@@ -11,7 +11,7 @@ import { FolderPathInput, type FolderPathSelection } from '../ui/components/Fold
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { usePaginatedItems } from '../ui/pagination'
-import type { DatasetRow } from '../domain/harbor'
+import type { DatasetRow, DatasetTask } from '../domain/harbor'
 import type { Translate } from '../i18n'
 
 interface DatasetsPageProps {
@@ -57,6 +57,7 @@ const defaultImportDraft = {
 export function DatasetsPage({ writesEnabled = true, client, rows, search, t, onRefresh, onPrepareTaskRun, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
+  const [taskEnvironmentOverrides, setTaskEnvironmentOverrides] = useState<Record<string, DatasetTask['environment']>>({})
   const [taskSearch, setTaskSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
@@ -76,15 +77,28 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   )
   const taskSearchResource = useCachedServerSearch(selectedRef, taskSearchQuery, loadTaskSearch)
   const detailRow = detailResource.data ? datasetDtoToRow(detailResource.data) : selected
-  const selectedTasks = tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []
+  const applyTaskEnvironmentOverride = useCallback((task: DatasetTask) => {
+    const key = `${task.datasetRef}:${task.name}`
+    return Object.hasOwn(taskEnvironmentOverrides, key)
+      ? { ...task, environment: taskEnvironmentOverrides[key] }
+      : task
+  }, [taskEnvironmentOverrides])
+  const selectedTasks = useMemo(
+    () => (tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []).map(applyTaskEnvironmentOverride),
+    [applyTaskEnvironmentOverride, tasksResource.data],
+  )
   const visibleSelectedTasks = useMemo(() => {
     if (!taskSearchQuery) return selectedTasks
-    if (taskSearchResource.data) return taskSearchResource.data.items.map(datasetTaskDtoToDatasetTask)
+    if (taskSearchResource.data) {
+      return taskSearchResource.data.items
+        .map(datasetTaskDtoToDatasetTask)
+        .map(applyTaskEnvironmentOverride)
+    }
     const query = taskSearchQuery.toLowerCase()
     return selectedTasks.filter((row) =>
       [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
     )
-  }, [selectedTasks, taskSearchQuery, taskSearchResource.data])
+  }, [applyTaskEnvironmentOverride, selectedTasks, taskSearchQuery, taskSearchResource.data])
   const orderedRows = useMemo(() => orderDatasetCatalog(rows), [rows])
   const pagination = usePaginatedItems({ items: orderedRows, resetKey: search })
 
@@ -142,6 +156,22 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const runTask = async (row: DatasetRow, taskName: string) => {
     if (!writesEnabled) return
     onPrepareTaskRun?.(datasetKey(row), taskName)
+  }
+  const expandTask = async (taskName: string) => {
+    if (expandedTaskName === taskName) {
+      setExpandedTaskName(null)
+      return
+    }
+    setExpandedTaskName(taskName)
+    if (!selectedRef) return
+    const key = `${selectedRef}:${taskName}`
+    if (Object.hasOwn(taskEnvironmentOverrides, key)) return
+    const response = await client.getDatasetTaskEnvironment(selectedRef, taskName)
+    const currentEnvironment = selectedTasks.find((task) => task.name === taskName)?.environment ?? null
+    const resolvedEnvironment = response.data ?? (
+      currentEnvironment ? { ...currentEnvironment, imagePlatforms: [] } : null
+    )
+    setTaskEnvironmentOverrides((current) => ({ ...current, [key]: resolvedEnvironment }))
   }
   const confirmDelete = async () => {
     if (!writesEnabled) return
@@ -344,7 +374,7 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               writeDisabled={!writesEnabled || isOperationRunning(datasetOperation.operation?.status)}
               onCancelDownload={cancelDownload}
               onDelete={setDeleteTarget}
-              onExpandedTaskName={setExpandedTaskName}
+              onExpandedTaskName={(taskName) => void expandTask(taskName)}
               onStartDownload={(row) => void openLocationAction('download', row)}
               onMove={(row) => void openLocationAction('move', row)}
               onRelocate={(row) => void openLocationAction('relocate', row)}

@@ -18,6 +18,7 @@ export const ParsedEnvironment: Story = {
       buildTimeoutSeconds: 900,
       definitions: ['docker-image', 'dockerfile'],
       dockerImage: 'ghcr.io/example/task:2.0',
+      imagePlatforms: ['linux/amd64'],
       networkMode: 'allowlist',
       os: 'linux',
       resources: { cpus: 4, gpuTypes: ['A100'], gpus: 1, memoryMb: 8192, storageMb: 20480, tpu: null },

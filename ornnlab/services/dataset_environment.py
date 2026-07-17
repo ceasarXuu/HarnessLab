@@ -36,6 +36,7 @@ def parse_task_summary(task_dir: Path, dataset_ref: str) -> dict:
             "buildTimeoutSeconds": config.build_timeout_sec,
             "definitions": definitions,
             "dockerImage": config.docker_image,
+            "imagePlatforms": None,
             "networkMode": config.network_mode.value,
             "os": config.os.value,
             "resources": {

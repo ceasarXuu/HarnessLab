@@ -185,6 +185,7 @@ export const datasetTaskRows: DatasetTask[] = taskRows.map((task) => {
       buildTimeoutSeconds: 600,
       definitions: ['docker-image', 'dockerfile'],
       dockerImage: task.environment.replace(/^docker:/, ''),
+      imagePlatforms: ['linux/amd64'],
       networkMode: 'public',
       os: task.os === 'windows' ? 'windows' : 'linux',
       resources: { cpus: 2, gpuTypes: [], gpus: null, memoryMb: 4096, storageMb: null, tpu: null },

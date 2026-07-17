@@ -43,6 +43,7 @@ workdir = "/workspace"
             "buildTimeoutSeconds": 900.0,
             "definitions": ["docker-image", "dockerfile", "docker-compose"],
             "dockerImage": "example/task:1.0",
+            "imagePlatforms": None,
             "networkMode": "allowlist",
             "os": "linux",
             "resources": {

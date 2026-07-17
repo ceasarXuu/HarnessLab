@@ -230,6 +230,12 @@ async def list_dataset_tasks(
     return _page(request, await _datasets(request).list_tasks(dataset_ref, q), cursor, limit)
 
 
+@router.get("/datasets/{dataset_ref:path}/task-environment")
+async def get_dataset_task_environment(dataset_ref: str, task: str, request: Request) -> dict:
+    _require_query(request, {"task"})
+    return _data(request, await _datasets(request).get_task_environment(dataset_ref, task))
+
+
 @router.post("/datasets/import")
 async def import_dataset(payload: DatasetImportInput, request: Request) -> dict:
     _require_query(request, set())
