@@ -44,6 +44,8 @@ const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
         size: row.size ?? 'unknown',
         status: 'downloaded',
       }
+    : row.downloadStatus === 'downloading'
+      ? { progress: row.downloadProgress ?? 0, status: 'downloading' }
     : row.downloadStatus === 'path-unavailable'
       ? { path: row.downloadPath ?? row.path ?? '', status: 'path-unavailable' }
     : { status: 'not-downloaded' }
@@ -103,10 +105,11 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const pagination = usePaginatedItems({ items: orderedRows, resetKey: search })
 
   useEffect(() => {
-    if (datasetOperation.operation?.status !== 'completed') return
+    const status = datasetOperation.operation?.status
+    if (status !== 'completed' && status !== 'failed' && status !== 'cancelled') return
     void onRefresh()
     void detailResource.refresh()
-    void tasksResource.refresh()
+    if (status === 'completed') void tasksResource.refresh()
   }, [datasetOperation.operation?.id, datasetOperation.operation?.status, detailResource.refresh, onRefresh, tasksResource.refresh])
 
   const downloadStateFor = (row: DatasetRow): DatasetDownloadState => {

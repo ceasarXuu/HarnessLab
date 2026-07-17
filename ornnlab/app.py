@@ -15,6 +15,7 @@ from ornnlab.api import webui
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_dataset_service import WebUiDatasetService
+from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.worker_service import QueueWorkerService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -27,6 +28,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     active_settings.ensure_dirs()
     sqlite.initialize(active_settings)
     startup_recovery = RunRecoveryService(active_settings).reconcile_startup()
+    operation_tasks: dict[str, asyncio.Task[None]] = {}
+    interrupted_operations = WebUiOperationService(
+        active_settings, operation_tasks
+    ).reconcile_interrupted()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -42,9 +47,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="OrnnLab", version="0.3.0", lifespan=lifespan)
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
+    app.state.interrupted_operations = interrupted_operations
     app.state.worker = QueueWorkerService(active_settings)
     app.state.dataset_service = WebUiDatasetService(active_settings)
-    app.state.operation_tasks = {}
+    app.state.operation_tasks = operation_tasks
 
     @app.middleware("http")
     async def add_request_id(request, call_next):

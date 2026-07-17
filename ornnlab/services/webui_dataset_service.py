@@ -12,6 +12,11 @@ from pathlib import Path
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
 from ornnlab.services.container_image_platforms import resolve_local_task_environment
+from ornnlab.services.dataset_download_state import (
+    merge_active_downloads,
+    remote_dataset_dto,
+    stored_dataset_dto,
+)
 from ornnlab.services.dataset_environment import parse_local_tasks
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -48,17 +53,20 @@ class WebUiDatasetService:
                 for item in result
                 if needle in " ".join(str(value) for value in item.values()).lower()
             ]
-        return sorted(result, key=lambda item: item["ref"].lower())
+        return merge_active_downloads(
+            self.settings, sorted(result, key=lambda item: item["ref"].lower())
+        )
 
     async def get_dataset(self, ref: str) -> dict:
         local = self._local_dataset(ref)
         if local:
-            return local
+            return merge_active_downloads(self.settings, [local])[0]
         name, version = _split_ref(ref)
         metadata = await _registry_client_factory().create().get_dataset_metadata(
             _join_ref(name, version)
         )
-        return _remote_dto(metadata.name, metadata.version, len(metadata.task_ids))
+        remote = remote_dataset_dto(metadata.name, metadata.version, len(metadata.task_ids))
+        return merge_active_downloads(self.settings, [remote])[0]
 
     def default_download_parent(self) -> dict:
         with sqlite.connect(self.settings) as conn:
@@ -260,11 +268,11 @@ class WebUiDatasetService:
     def _local_datasets(self) -> list[dict]:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(conn, "SELECT * FROM webui_datasets WHERE deleted_at IS NULL")
-        return [_stored_dto(row) for row in rows]
+        return [stored_dataset_dto(row) for row in rows]
 
     def _local_dataset(self, ref: str) -> dict | None:
         row = self._dataset_row(ref)
-        return _stored_dto(row) if row else None
+        return stored_dataset_dto(row) if row else None
 
     def _dataset_row(self, ref: str) -> dict | None:
         with sqlite.connect(self.settings) as conn:
@@ -290,7 +298,8 @@ class WebUiDatasetService:
                 return list(self._registry_cache or [])
             summaries = await _registry_client_factory().create().list_datasets()
             self._registry_cache = [
-                _remote_dto(item.name, item.version, item.task_count) for item in summaries
+                remote_dataset_dto(item.name, item.version, item.task_count)
+                for item in summaries
             ]
             self._registry_cache_updated_at = time.monotonic()
             logger.info(
@@ -379,50 +388,6 @@ class WebUiDatasetService:
             )
 
 
-def _remote_dto(name: str, version: str | None, task_count: int) -> dict:
-    resolved_version = version or "latest"
-    return {
-        "ref": _join_ref(name, resolved_version),
-        "name": name,
-        "version": resolved_version,
-        "visibility": "public",
-        "taskCount": task_count,
-        "source": "harbor registry",
-        "download": {"status": "not-downloaded"},
-        "registryUrl": "https://hub.harborframework.com",
-    }
-
-
-def _stored_dto(row: dict) -> dict:
-    local_path = row.get("local_path")
-    storage_kind = row.get("storage_kind") or (
-        "external" if row.get("source") == "local" else "managed"
-    )
-    path = Path(local_path) if isinstance(local_path, str) else None
-    if path and path.is_dir():
-        download = {
-            "path": local_path,
-            "sizeBytes": _directory_size(path),
-            "status": "downloaded",
-            "storageKind": storage_kind,
-            "updatedAt": row.get("updated_at"),
-        }
-    elif path:
-        download = {"path": local_path, "status": "path-unavailable", "storageKind": storage_kind}
-    else:
-        download = {"status": "not-downloaded"}
-    return {
-        "ref": row["ref"],
-        "name": row["name"],
-        "version": row["version"],
-        "visibility": row["visibility"],
-        "taskCount": row["task_count"],
-        "source": row["source"],
-        "download": download,
-        "registryUrl": row.get("registry_url"),
-    }
-
-
 def _local_tasks(path: Path, ref: str) -> list[dict]:
     return parse_local_tasks(path, ref)
 
@@ -487,8 +452,6 @@ def _remove_marked_directory(
     shutil.rmtree(path)
 
 
-def _directory_size(path: Path) -> int:
-    return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
 def _split_ref(ref: str) -> tuple[str, str | None]:

@@ -55,6 +55,26 @@ class WebUiOperationService:
             )
         return operation
 
+    def reconcile_interrupted(self) -> int:
+        """Fail persisted operations that no longer have an in-process task."""
+        completed_at = now_iso()
+        with sqlite.connect(self.settings) as conn:
+            cursor = conn.execute(
+                "UPDATE webui_operations SET status = 'failed', message = ?, "
+                "completed_at = ?, error_code = ?, error_message = ? "
+                "WHERE status IN ('queued', 'running')",
+                (
+                    "Interrupted by service restart",
+                    completed_at,
+                    "OPERATION_INTERRUPTED",
+                    "The operation was interrupted by a service restart",
+                ),
+            )
+        reconciled = cursor.rowcount
+        if reconciled:
+            logger.warning("Reconciled interrupted WebUI operations count=%s", reconciled)
+        return reconciled
+
     def get(self, operation_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
             rows = sqlite.rows(conn, "SELECT * FROM webui_operations WHERE id = ?", (operation_id,))

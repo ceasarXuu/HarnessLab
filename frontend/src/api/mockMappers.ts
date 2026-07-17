@@ -31,6 +31,7 @@ export function toDatasetDto(dataset: DatasetRow): DatasetDto {
     taskCount: dataset.tasks, source: dataset.source,
     download: {
       status: dataset.downloadStatus,
+      progress: dataset.downloadProgress,
       path: dataset.downloadPath ?? dataset.path ?? dataset.downloadDir,
       sizeBytes: parseSizeBytes(dataset.size),
       storageKind: dataset.storageKind ?? (dataset.source === 'local package' ? 'external' : 'managed'),

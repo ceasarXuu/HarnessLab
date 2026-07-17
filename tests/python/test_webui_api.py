@@ -6,10 +6,10 @@ import time
 from pathlib import Path
 
 from ornnlab.services.agent_config_service import AgentConfigService
+from ornnlab.services.dataset_download_state import stored_dataset_dto
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_engine import _resolve_env
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
-from ornnlab.services.webui_dataset_service import _stored_dto
 from ornnlab.services.webui_job_service import _job_score, _trial_dto
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
@@ -42,7 +42,7 @@ def test_webui_live_endpoint_is_lightweight(client):
 
 
 def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
-    dataset = _stored_dto(
+    dataset = stored_dataset_dto(
         {
             "ref": "example@1.0",
             "name": "example",
@@ -56,6 +56,44 @@ def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
     )
 
     assert dataset["download"] == {"status": "not-downloaded"}
+
+
+def test_dataset_catalog_exposes_active_download_progress(client, settings, monkeypatch):
+    async def remote_datasets():
+        return [
+            {
+                "ref": "example@1.0",
+                "name": "example",
+                "version": "1.0",
+                "visibility": "public",
+                "taskCount": 1,
+                "source": "harbor registry",
+                "download": {"status": "not-downloaded"},
+                "registryUrl": "https://hub.harborframework.com",
+            }
+        ]
+
+    monkeypatch.setattr(client.app.state.dataset_service, "_remote_datasets", remote_datasets)
+    operations = WebUiOperationService(settings, client.app.state.operation_tasks)
+    operation = operations.create("download-dataset", "dataset", "example@1.0")
+    operations._set_status(operation["id"], "running", progress=37, message="Downloading")
+
+    dataset = client.get(f"{API}/datasets").json()["data"]["items"][0]
+
+    assert dataset["download"] == {"status": "downloading", "progress": 37}
+
+
+def test_startup_reconciles_interrupted_webui_operations(settings):
+    operations = WebUiOperationService(settings, {})
+    operation = operations.create("download-dataset", "dataset", "example@1.0")
+    operations._set_status(operation["id"], "running", progress=37, message="Downloading")
+
+    assert operations.reconcile_interrupted() == 1
+
+    recovered = operations.get(operation["id"])
+    assert recovered["status"] == "failed"
+    assert recovered["progress"] == 37
+    assert recovered["error"]["code"] == "OPERATION_INTERRUPTED"
 
 
 def test_webui_agent_and_environment_crud(client):

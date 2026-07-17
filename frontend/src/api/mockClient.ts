@@ -49,6 +49,9 @@ export function createMockWebUiClient(): WebUiClient {
       const operation = operations.cancelActive('download-dataset', ref)
       if (!operation) return failure('INVALID_REQUEST', 'No active dataset download')
       operationEffects.delete(operation.id)
+      datasetDtos = datasetDtos.map((item) => item.ref === ref
+        ? { ...item, download: { status: 'not-downloaded' } }
+        : item)
       return operationResult(operation)
     },
     async cancelOperation(id) {
@@ -127,7 +130,7 @@ export function createMockWebUiClient(): WebUiClient {
       const parentPath = request.parentPath.trim()
       if (!parentPath) return failure('INVALID_REQUEST', 'Dataset parent directory is required')
       lastDatasetParent = parentPath
-      return operationResult(submitOperation('download-dataset', 'dataset', ref, {
+      const operation = submitOperation('download-dataset', 'dataset', ref, {
         onCompleted: () => {
           datasetDtos = datasetDtos.map((item) => item.ref === ref ? {
             ...item,
@@ -140,7 +143,11 @@ export function createMockWebUiClient(): WebUiClient {
             },
           } : item)
         },
-      }))
+      })
+      datasetDtos = datasetDtos.map((item) => item.ref === ref
+        ? { ...item, download: { status: 'downloading', progress: operation.progress ?? 0 } }
+        : item)
+      return operationResult(operation)
     },
     async getAgent(id) {
       return findById(agentDtos, id, 'AGENT_NOT_FOUND', 'Agent not found', 'id')
@@ -241,6 +248,10 @@ export function createMockWebUiClient(): WebUiClient {
       return success(taskDtos.find((item) => item.datasetRef === ref && item.name === task)?.environment ?? null)
     },
     async listDatasets(query) {
+      for (const active of operations.active('download-dataset')) {
+        const operation = operations.get(active.id)
+        if (operation) applyOperationEffects(operation)
+      }
       return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source])))
     },
     async listEnvironments(query) {
@@ -343,7 +354,14 @@ export function createMockWebUiClient(): WebUiClient {
   function applyOperationEffects(operation: OperationResultDto['operation']) {
     const effects = operationEffects.get(operation.id)
     if (!effects) return
-    if (operation.status === 'running') effects.onRunning?.()
+    if (operation.status === 'running') {
+      effects.onRunning?.()
+      if (operation.type === 'download-dataset') {
+        datasetDtos = datasetDtos.map((item) => item.ref === operation.resourceId
+          ? { ...item, download: { status: 'downloading', progress: operation.progress ?? 0 } }
+          : item)
+      }
+    }
     if (operation.status === 'completed') {
       effects.onCompleted?.()
       operationEffects.delete(operation.id)

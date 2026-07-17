@@ -25,6 +25,8 @@ flowchart LR
 
 前端通过 `VITE_ORNNLAB_DATA_MODE` 选择运行模式：直接运行 `npm run dev` 时默认 `mock`，值为 `api` 时调用 `/api/webui/v1`。`run_dev.sh` 是全栈联调入口，默认以 `api` 启动并通过 `ORNNLAB_API_TARGET` 配置 Vite proxy；两种模式共享 DTO、ViewModel、页面和 Operation 状态流，API 模式不得回退到 mock。mock 与后端执行相同的 Agent 来源和删除约束。
 
+异步操作状态持久化在 `webui_operations`。资源读取模型负责合并活动 operation，使下载进度能够跨列表刷新、搜索刷新和前端重挂载恢复；服务启动时会把失去进程内执行任务的 `queued/running` operation 对账为 `OPERATION_INTERRUPTED`，避免显示永久的伪活动状态。
+
 后端只注册 `ornnlab.api.webui`。旧的 experiments、runs、benchmarks、leaderboard、system、agents、templates 产品路由已删除，不提供兼容入口。
 
 ## 3. 前端分层
@@ -87,7 +89,7 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 
 所有 API 都使用 `/api/webui/v1`、`ApiResponse<T>` 和 request id。错误通过 FastAPI 统一转为 `VALIDATION_ERROR`、`INVALID_REQUEST`、`RESOURCE_NOT_FOUND`、`RESOURCE_IMMUTABLE`、`OPERATION_CONFLICT` 或 `INTERNAL_ERROR`。
 
-耗时操作使用持久化 `Operation`：创建后为 `queued`，后台执行为 `running`，终态为 `completed`、`failed` 或 `cancelled`。前端 `useOperation` 按状态轮询 `GET /operations/{id}`；Job 事件通过 `GET /jobs/{jobId}/events` 拉取。SSE 不属于 v1.0.5 Stage 3 的实现范围。
+耗时操作使用持久化 `Operation`：创建后为 `queued`，后台执行为 `running`，终态为 `completed`、`failed` 或 `cancelled`。前端 `useOperation` 按状态轮询 `GET /operations/{id}`；可刷新资源的瞬时状态不得仅依赖该组件内 operation ID。Dataset 读模型会把活动下载 Operation 合并为 `download.status = downloading` 和持久化进度，页面重新挂载后通过资源轮询继续恢复状态。Job 事件通过 `GET /jobs/{jobId}/events` 拉取。SSE 不属于 v1.0.5 Stage 3 的实现范围。
 
 同步完成的 CRUD 仍返回 completed Operation，以保持所有写操作的统一状态模型。Operation 取消会取消已登记的 asyncio task，并把持久化状态写为 `cancelled`。
 

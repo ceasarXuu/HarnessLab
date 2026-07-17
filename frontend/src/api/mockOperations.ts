@@ -6,6 +6,7 @@ interface MockOperationRecord {
 }
 
 export interface MockOperationStore {
+  active: (type: string) => Operation[]
   cancel: (id: string) => Operation | undefined
   cancelActive: (type: string, resourceId: string) => Operation | undefined
   complete: (type: string, resourceType: Operation['resourceType'], resourceId?: string, message?: string) => Operation
@@ -30,6 +31,12 @@ export function createMockOperationStore(): MockOperationStore {
   }
 
   return {
+    active(type) {
+      return [...operations.values()]
+        .map(({ operation }) => operation)
+        .filter((operation) => operation.type === type && !isTerminal(operation.status))
+        .map((operation) => ({ ...operation }))
+    },
     cancel,
     cancelActive(type, resourceId) {
       const record = [...operations.values()].reverse().find(({ operation }) =>

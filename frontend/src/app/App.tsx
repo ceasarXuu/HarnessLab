@@ -200,6 +200,13 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     },
     [datasetSearchQuery, datasetSearchResource.refresh, datasetsResource.refresh],
   )
+  const hasActiveDatasetDownload = filteredDatasets.some(
+    (dataset) => dataset.downloadStatus === 'downloading',
+  )
+  usePollingRefresh(
+    refreshDatasets,
+    route.page === 'datasets' && hasActiveDatasetDownload,
+  )
 
   const filteredLeaderboard = useMemo(() => {
     const excludedJobIds = new Set(jobs.filter((job) => !job.includeInLeaderboard).map((job) => job.id))

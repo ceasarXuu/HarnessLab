@@ -46,14 +46,14 @@ describe('MockWebUiClient', () => {
     expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup'])
   })
 
-  it('does not expose a downloaded Dataset until its asynchronous Operation completes', async () => {
+  it('exposes persistent download progress until its asynchronous Operation completes', async () => {
     const client = createMockWebUiClient()
 
     const submitted = await client.downloadDataset('swebench-verified@1.0', { parentPath: '/tmp/datasets' })
     const operationId = submitted.data?.operation.id ?? ''
 
-    expect((await client.getDataset('swebench-verified@1.0')).data?.download.status).toBe('not-downloaded')
-    expect((await client.getOperation(operationId)).data?.status).toBe('running')
+    expect((await client.getDataset('swebench-verified@1.0')).data?.download).toEqual({ status: 'downloading', progress: 0 })
+    expect((await client.listDatasets({})).data?.items.find((item) => item.ref === 'swebench-verified@1.0')?.download).toEqual({ status: 'downloading', progress: 50 })
     expect((await client.getOperation(operationId)).data?.status).toBe('completed')
     expect((await client.getDataset('swebench-verified@1.0')).data?.download.status).toBe('downloaded')
     expect((await client.removeDatasetRegistration('swebench-verified@1.0')).error?.code).toBe(

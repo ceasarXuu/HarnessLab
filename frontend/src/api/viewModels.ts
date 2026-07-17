@@ -48,6 +48,7 @@ export function datasetDtoToRow(dataset: DatasetDto): DatasetRow {
     tasks: dataset.taskCount,
     source: dataset.source,
     downloadStatus: dataset.download.status,
+    downloadProgress: dataset.download.progress,
     downloadPath: dataset.download.path,
     downloadedAt: dataset.download.updatedAt,
     storageKind: dataset.download.storageKind,

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import { useState } from 'react'
 import { createMockWebUiClient } from '../api/mockClient'
+import type { DatasetRow } from '../domain/harbor'
 import { datasetRows } from '../mocks/demoCatalog'
 import { getTranslator } from '../i18n'
 import { DatasetsPage } from './DatasetsPage'
@@ -17,18 +18,33 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-function Fixture() {
+function Fixture({ rows = datasetRows }: { rows?: DatasetRow[] }) {
   const [search, setSearch] = useState('')
   return (
     <DatasetsPage
       client={client}
-      rows={datasetRows}
+      rows={rows}
       search={search}
       t={t}
       onRefresh={async () => undefined}
       onSearch={setSearch}
     />
   )
+}
+
+export const ActiveDownload: Story = {
+  render: () => (
+    <Fixture rows={datasetRows.map((row) => row.name === 'swebench-verified'
+      ? { ...row, downloadProgress: 42, downloadStatus: 'downloading' }
+      : row)} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const row = canvas.getByText('swebench-verified').closest('tr')
+    if (!row) throw new Error('Dataset row was not found')
+    await expect(within(row).getByText('42%')).toBeVisible()
+    await expect(within(row).getByRole('button', { name: 'Cancel download' })).toBeVisible()
+  },
 }
 
 export const DownloadDialogAboveDrawer: Story = {

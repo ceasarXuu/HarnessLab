@@ -211,7 +211,8 @@ interface Dataset {
   source: string
   registryUrl?: string
   download: {
-    status: 'downloaded' | 'not-downloaded' | 'path-unavailable'
+    status: 'downloaded' | 'downloading' | 'not-downloaded' | 'path-unavailable'
+    progress?: number
     path?: string
     sizeBytes?: number
     storageKind?: 'managed' | 'external'
@@ -226,6 +227,8 @@ interface DatasetTask { datasetRef: string; name: string; description: string }
 Registry Dataset 下载和移动都接受 `{ parentPath }`：该值是父目录，OrnnLab 使用不可编辑的 `Dataset name + version` 目录名在其下创建唯一子目录，并将最近一次成功选择记为 `GET /datasets/storage/default-parent` 的 `parentPath`。目标子目录已存在时返回 `INVALID_REQUEST`，不会覆盖目录。
 
 下载后的 Registry Dataset 为 `managed`，目录中有 `.ornnlab-dataset.json` 标记。只有 `managed` Dataset 可以通过 `POST /datasets/{ref}/move` 移动、通过 `DELETE /datasets/{ref}/local` 删除文件；移动失败时保留原目录。存在的 `managed` Dataset 不能直接移除登记，必须先删除其目录；若其路径已失效，则可移除失效记录。`external` Dataset 永远不能由 OrnnLab 删除，用户只能使用 `POST /datasets/{ref}/relocate` 提供当前实际目录，或 `DELETE /datasets/{ref}/registration` 移除 OrnnLab 注册。路径不再存在时读取返回 `download.status = 'path-unavailable'`，保留原路径以便重新定位。
+
+Dataset 下载 operation 处于 `queued` 或 `running` 时，列表与详情 DTO 必须返回 `download.status = 'downloading'` 和持久化进度。该状态由后端资源读模型合并 `webui_operations`，不能只保存在发起下载的前端组件中；因此列表刷新、搜索刷新和页面重新挂载后仍可恢复下载状态。前端在存在活动下载时轮询当前 Dataset 资源，终态后停止。
 
 ### Agent 与 MCP
 
