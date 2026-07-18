@@ -8,6 +8,7 @@
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked operations guidance to document version governance. |
 | 1.2 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-27 | Recorded Colima startup check before real Harbor Docker smoke. |
 | 1.3 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 记录 macOS 到 Ubuntu 的数据恢复与验证经验。 |
+| 1.4 | npm launcher `0.1.3`; Vite `8.x` | 2026-07-19 | 记录 Ubuntu inotify 限额导致前端启动失败的诊断和部署方案。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -79,3 +80,40 @@ tar -xzf payload/external-data.tar.gz \
 2. 搜索 `/Users/` 与旧 `/Volumes/` 数据路径，确认没有可识别文本残留。
 3. 确认 `terminal-bench@2.0`、`swebenchpro@1.0` 和 Job 目录存在。
 4. 执行 `ORNNLAB_HOME=~/.ornnlab/data uv run ornnlab doctor`，确认 Docker、Harbor、数据库 schema 与孤儿容器检查均正常。
+
+## 2026-07-19 Ubuntu Vite watcher 限额
+
+如果 `ornnlab dev start` 报 `frontend exited before becoming ready`，且
+`~/.ornnlab/dev-service/logs/frontend.log` 包含以下错误：
+
+```text
+ENOSPC: System limit for number of file watchers reached
+```
+
+先检查 inotify 限额和当前占用，不要把该错误误判成磁盘空间不足：
+
+```bash
+sysctl fs.inotify.max_user_watches fs.inotify.max_user_instances
+```
+
+有 sudo 权限时，推荐提高开发机的 watch 限额并持久化：
+
+```bash
+sudo tee /etc/sysctl.d/99-ornnlab-inotify.conf >/dev/null <<'EOF'
+fs.inotify.max_user_watches=524288
+fs.inotify.max_user_instances=512
+EOF
+sudo sysctl --system
+```
+
+暂时不能修改内核参数时，只对 OrnnLab launcher 启用 polling，避免影响其他
+Node 项目：
+
+```bash
+CHOKIDAR_USEPOLLING=true CHOKIDAR_INTERVAL=500 ornnlab dev start
+```
+
+部署到固定源码目录时，可用用户级 wrapper 固化 `ORNNLAB_SOURCE`、
+`ORNNLAB_HOME` 和上述 polling 环境。wrapper 应放在用户自己的 `~/.local/bin`
+下，不提交硬编码的本机路径到仓库。完成后必须执行 `dev stop`、`dev start`、
+`dev status --json` 生命周期回归，并验证后端与前端代理的 `/api/webui/v1/system/live`。
