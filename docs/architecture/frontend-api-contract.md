@@ -99,7 +99,7 @@ interface Operation {
 | Job | `POST /jobs/{id}/cancel`、`resume` | `{ operation }` |
 | Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
 | Job | `PATCH /jobs/{id}/leaderboard` | `{ job, leaderboard, operation }` |
-| Dataset | `GET /datasets`、`GET /datasets/{ref}`、`GET /datasets/{ref}/tasks` | `Page<Dataset>`、`Dataset`、`Page<DatasetTask>` |
+| Dataset | `GET /datasets`、`GET /datasets/{ref}`、`GET /datasets/{ref}/tasks`、`GET /datasets/{ref}/task-detail?task=` | `Page<Dataset>`、`Dataset`、`Page<DatasetTask>`、`DatasetTask` |
 | Dataset | `GET /datasets/storage/default-parent` | `{ parentPath }` |
 | Dataset | `POST /datasets/import`、`POST /datasets/{ref}/download`、`POST /datasets/{ref}/download/cancel`、`POST /datasets/{ref}/move`、`POST /datasets/{ref}/relocate`、`POST /datasets/{ref}/sync`、`DELETE /datasets/{ref}/local`、`DELETE /datasets/{ref}/registration` | `{ operation }` |
 | Leaderboard | `GET /leaderboard/datasets`、`GET /leaderboard` | `Page<LeaderboardDataset>`、`Page<LeaderboardEntry>` |
@@ -110,6 +110,8 @@ interface Operation {
 | System | `PUT /system/docker/start-command`、`POST /system/docker/start` | `{ command }`、`{ operation }` |
 
 路径中的 Dataset ref 采用 URL encoding，例如 `terminal-bench%402.0`。
+
+`GET /datasets/{ref}/tasks` 使用统一 `q`、`cursor`、`limit` 分页契约，默认 `limit=20`，最大 100。`q` 只匹配 Task 名称；列表项的 `description` 为空且 `environment` 为 `null`，后端禁止解析完整本地 Dataset 后再截断。前端切换 Dataset 或搜索条件时将 cursor 重置为首页。用户展开一项时调用 `GET /datasets/{ref}/task-detail?task=`，按需加载该 Task 的描述与环境摘要。
 
 ## 4. 资源 DTO
 

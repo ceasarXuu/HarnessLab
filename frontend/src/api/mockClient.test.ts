@@ -46,6 +46,21 @@ describe('MockWebUiClient', () => {
     expect(response.data.items.map((task) => task.name)).toEqual(['apt-setup'])
   })
 
+  it('applies Dataset Task pagination after search', async () => {
+    const client = createMockWebUiClient()
+
+    const first = await client.listDatasetTasks('terminal-bench@2.0', { limit: 1 })
+    const second = await client.listDatasetTasks('terminal-bench@2.0', {
+      cursor: first.data?.nextCursor,
+      limit: 1,
+    })
+
+    expect(first.data).toEqual(expect.objectContaining({ total: 4, nextCursor: '1' }))
+    expect(first.data?.items).toHaveLength(1)
+    expect(second.data?.items).toHaveLength(1)
+    expect(second.data?.items[0].name).not.toBe(first.data?.items[0].name)
+  })
+
   it('exposes persistent download progress until its asynchronous Operation completes', async () => {
     const client = createMockWebUiClient()
 

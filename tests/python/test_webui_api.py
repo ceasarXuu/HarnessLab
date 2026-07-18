@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from ornnlab.services.agent_config_service import AgentConfigService
-from ornnlab.services.dataset_download_state import stored_dataset_dto
+from ornnlab.services.dataset_download_state import stored_dataset_dto, stored_dataset_runtime
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_engine import _resolve_env
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
@@ -56,6 +56,25 @@ def test_stored_dataset_without_a_local_path_is_not_marked_downloaded():
     )
 
     assert dataset["download"] == {"status": "not-downloaded"}
+
+
+def test_dataset_task_runtime_location_does_not_scan_directory_size(tmp_path, monkeypatch):
+    dataset_path = tmp_path / "dataset"
+    dataset_path.mkdir()
+
+    def fail_size_scan(*_args, **_kwargs):
+        raise AssertionError("Task reads must not recursively scan Dataset size")
+
+    monkeypatch.setattr(Path, "rglob", fail_size_scan)
+
+    runtime = stored_dataset_runtime(
+        {"local_path": str(dataset_path), "source": "harbor registry"}
+    )
+
+    assert runtime == {
+        "download": {"path": str(dataset_path), "status": "downloaded"},
+        "source": "harbor registry",
+    }
 
 
 def test_dataset_catalog_exposes_active_download_progress(client, settings, monkeypatch):
@@ -356,30 +375,15 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
         {
             "datasetRef": "local/demo@v1",
             "description": "",
-            "environment": {
-                "allowedHosts": [],
-                "buildTimeoutSeconds": 600.0,
-                "containerImages": [],
-                "definitions": [],
-                "networkMode": "public",
-                "os": "linux",
-                "resources": {
-                    "cpus": None,
-                    "gpuTypes": [],
-                    "gpus": None,
-                    "memoryMb": None,
-                    "storageMb": None,
-                    "tpu": None,
-                },
-                "workdir": None,
-            },
+            "environment": None,
             "name": "hello",
         }
     ]
-    environment = client.get(
-        f"{API}/datasets/local%2Fdemo%40v1/task-environment?task=hello"
+    task_detail = client.get(
+        f"{API}/datasets/local%2Fdemo%40v1/task-detail?task=hello"
     ).json()["data"]
-    assert environment["containerImages"] == []
+    assert task_detail["name"] == "hello"
+    assert task_detail["environment"]["containerImages"] == []
 
     cancel = client.post(f"{API}/datasets/local%2Fdemo%40v1/download/cancel")
     assert cancel.status_code == 422

@@ -5,7 +5,6 @@ import type {
   ApiError,
   ApiResponse,
   DatasetDto,
-  DatasetTaskEnvironmentDto,
   DatasetTaskDto,
   DatasetTaskQuery,
   EnvironmentDto,
@@ -55,7 +54,7 @@ export interface WebUiClient {
   downloadDataset(ref: string, request: DatasetParentPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   getAgent(id: string): Promise<ApiResponse<AgentDto | null>>
   getDataset(ref: string): Promise<ApiResponse<DatasetDto | null>>
-  getDatasetTaskEnvironment(ref: string, task: string): Promise<ApiResponse<DatasetTaskEnvironmentDto | null>>
+  getDatasetTask(ref: string, task: string): Promise<ApiResponse<DatasetTaskDto | null>>
   getDatasetDefaultParent(): Promise<ApiResponse<DatasetStoragePreferenceDto | null>>
   getEnvironment(id: string): Promise<ApiResponse<EnvironmentDto | null>>
   getHubConnection(): Promise<ApiResponse<HubConnectionDto | null>>
@@ -107,8 +106,8 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     downloadDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/download`, body),
     getAgent: (id) => requestJson<AgentDto | null>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`),
     getDataset: (ref) => requestJson<DatasetDto | null>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}`),
-    getDatasetTaskEnvironment: (ref, task) =>
-      requestJson<DatasetTaskEnvironmentDto | null>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/task-environment?task=${encodeURIComponent(task)}`),
+    getDatasetTask: (ref, task) =>
+      requestJson<DatasetTaskDto | null>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/task-detail?task=${encodeURIComponent(task)}`),
     getDatasetDefaultParent: () => requestJson<DatasetStoragePreferenceDto | null>(request, `${baseUrl}/datasets/storage/default-parent`),
     getEnvironment: (id) => requestJson<EnvironmentDto | null>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`),
     getHubConnection: () => requestJson<HubConnectionDto | null>(request, `${baseUrl}/system/hub-connection`),

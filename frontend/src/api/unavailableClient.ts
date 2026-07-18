@@ -26,7 +26,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     downloadDataset: unavailable,
     getAgent: unavailable,
     getDataset: unavailable,
-    getDatasetTaskEnvironment: unavailable,
+    getDatasetTask: unavailable,
     getDatasetDefaultParent: unavailable,
     getEnvironment: unavailable,
     getHubConnection: unavailable,

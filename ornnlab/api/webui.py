@@ -224,16 +224,17 @@ async def list_dataset_tasks(
     request: Request,
     q: str | None = None,
     cursor: str | None = None,
-    limit: int = 50,
+    limit: int = 20,
 ) -> dict:
     _require_query(request, {"q", "cursor", "limit"})
-    return _page(request, await _datasets(request).list_tasks(dataset_ref, q), cursor, limit)
+    page = await _datasets(request).list_tasks(dataset_ref, q, cursor, limit)
+    return _page_data(request, page)
 
 
-@router.get("/datasets/{dataset_ref:path}/task-environment")
-async def get_dataset_task_environment(dataset_ref: str, task: str, request: Request) -> dict:
+@router.get("/datasets/{dataset_ref:path}/task-detail")
+async def get_dataset_task(dataset_ref: str, task: str, request: Request) -> dict:
     _require_query(request, {"task"})
-    return _data(request, await _datasets(request).get_task_environment(dataset_ref, task))
+    return _data(request, await _datasets(request).get_task(dataset_ref, task))
 
 
 @router.post("/datasets/import")
@@ -476,6 +477,13 @@ def _page(request: Request, items: list[dict], cursor: str | None, limit: int) -
         "error": None,
         "meta": meta,
     }
+
+
+def _page_data(request: Request, page: dict) -> dict:
+    meta = {"requestId": _request_id(request), "total": page["total"]}
+    if page.get("nextCursor"):
+        meta["nextCursor"] = page["nextCursor"]
+    return {"data": page, "error": None, "meta": meta}
 
 
 def _require_query(request: Request, allowed: set[str]) -> None:

@@ -1,6 +1,6 @@
 import { Database, Download, FolderInput, MapPin, Plus, Search, Trash2, Unlink, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useCachedServerSearch, useDataset, useDatasetTasks, useOperation } from '../api/hooks'
+import { useDataset, useDatasetTasks, useOperation } from '../api/hooks'
 import { datasetDtoToRow, datasetTaskDtoToDatasetTask } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { orderDatasetCatalog } from '../domain/datasetOrdering'
@@ -31,12 +31,10 @@ type DatasetDownloadState =
   | { path: string; size: string; status: 'downloaded' }
   | { path: string; status: 'path-unavailable' }
 
-type LocationAction = {
-  mode: 'download' | 'move' | 'relocate'
-  row: DatasetRow
-}
+type LocationAction = { mode: 'download' | 'move' | 'relocate'; row: DatasetRow }
 
 const datasetKey = (row: DatasetRow) => `${row.name}@${row.version}`
+const TASK_PAGE_SIZE = 20
 const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
   row.downloadStatus === 'downloaded'
     ? {
@@ -49,18 +47,14 @@ const initialDownloadState = (row: DatasetRow): DatasetDownloadState =>
     : row.downloadStatus === 'path-unavailable'
       ? { path: row.downloadPath ?? row.path ?? '', status: 'path-unavailable' }
     : { status: 'not-downloaded' }
-const defaultImportDraft = {
-  name: 'local/custom-dataset',
-  path: './datasets/custom-dataset',
-  tasks: '12',
-  version: 'local',
-}
+const defaultImportDraft = { name: 'local/custom-dataset', path: './datasets/custom-dataset', tasks: '12', version: 'local' }
 
 export function DatasetsPage({ writesEnabled = true, client, rows, search, t, onRefresh, onPrepareTaskRun, onSearch }: DatasetsPageProps) {
   const [selected, setSelected] = useState<DatasetRow | null>(null)
   const [expandedTaskName, setExpandedTaskName] = useState<string | null>(null)
-  const [taskEnvironmentOverrides, setTaskEnvironmentOverrides] = useState<Record<string, DatasetTask['environment']>>({})
+  const [taskOverrides, setTaskOverrides] = useState<Record<string, DatasetTask>>({})
   const [taskSearch, setTaskSearch] = useState('')
+  const [taskPageState, setTaskPageState] = useState({ key: '', page: 1 })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DatasetRow | null>(null)
   const [locationAction, setLocationAction] = useState<LocationAction | null>(null)
@@ -70,39 +64,36 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
   const [importDraft, setImportDraft] = useState(defaultImportDraft)
   const datasetOperation = useOperation(client)
   const selectedRef = selected?.ref ?? (selected ? datasetKey(selected) : undefined)
-  const detailResource = useDataset(client, selectedRef)
-  const tasksResource = useDatasetTasks(client, selectedRef, { limit: 100 })
   const taskSearchQuery = taskSearch.trim() || undefined
-  const loadTaskSearch = useCallback(
-    (query: string) => client.listDatasetTasks(selectedRef ?? '', { limit: 100, q: query }),
-    [client, selectedRef],
-  )
-  const taskSearchResource = useCachedServerSearch(selectedRef, taskSearchQuery, loadTaskSearch)
+  const taskPageKey = `${selectedRef ?? ''}:${taskSearchQuery?.toLowerCase() ?? ''}`
+  const taskPage = taskPageState.key === taskPageKey ? taskPageState.page : 1
+  const detailResource = useDataset(client, selectedRef)
+  const tasksResource = useDatasetTasks(client, selectedRef, {
+    cursor: taskPage > 1 ? String((taskPage - 1) * TASK_PAGE_SIZE) : undefined,
+    limit: TASK_PAGE_SIZE,
+    q: taskSearchQuery,
+  })
   const detailRow = detailResource.data ? datasetDtoToRow(detailResource.data) : selected
-  const applyTaskEnvironmentOverride = useCallback((task: DatasetTask) => {
+  const applyTaskOverride = useCallback((task: DatasetTask) => {
     const key = `${task.datasetRef}:${task.name}`
-    return Object.hasOwn(taskEnvironmentOverrides, key)
-      ? { ...task, environment: taskEnvironmentOverrides[key] }
-      : task
-  }, [taskEnvironmentOverrides])
+    return taskOverrides[key] ?? task
+  }, [taskOverrides])
   const selectedTasks = useMemo(
-    () => (tasksResource.data?.items.map(datasetTaskDtoToDatasetTask) ?? []).map(applyTaskEnvironmentOverride),
-    [applyTaskEnvironmentOverride, tasksResource.data],
+    () => (tasksResource.data?.items ?? [])
+      .filter((task) => task.datasetRef === selectedRef && (!taskSearchQuery || task.name.toLowerCase().includes(taskSearchQuery.toLowerCase())))
+      .map(datasetTaskDtoToDatasetTask)
+      .map(applyTaskOverride),
+    [applyTaskOverride, selectedRef, taskSearchQuery, tasksResource.data],
   )
-  const visibleSelectedTasks = useMemo(() => {
-    if (!taskSearchQuery) return selectedTasks
-    if (taskSearchResource.data) {
-      return taskSearchResource.data.items
-        .map(datasetTaskDtoToDatasetTask)
-        .map(applyTaskEnvironmentOverride)
-    }
-    const query = taskSearchQuery.toLowerCase()
-    return selectedTasks.filter((row) =>
-      [row.name, row.description].some((value) => value.toLowerCase().includes(query)),
-    )
-  }, [applyTaskEnvironmentOverride, selectedTasks, taskSearchQuery, taskSearchResource.data])
   const orderedRows = useMemo(() => orderDatasetCatalog(rows), [rows])
   const pagination = usePaginatedItems({ items: orderedRows, resetKey: search })
+
+  useEffect(() => {
+    if (taskPageState.key !== taskPageKey) {
+      setTaskPageState({ key: taskPageKey, page: 1 })
+      setExpandedTaskName(null)
+    }
+  }, [taskPageKey, taskPageState.key])
 
   useEffect(() => {
     const status = datasetOperation.operation?.status
@@ -168,21 +159,14 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
     setExpandedTaskName(taskName)
     if (!selectedRef) return
     const key = `${selectedRef}:${taskName}`
-    if (Object.hasOwn(taskEnvironmentOverrides, key)) return
-    const response = await client.getDatasetTaskEnvironment(selectedRef, taskName)
-    const currentEnvironment = selectedTasks.find((task) => task.name === taskName)?.environment ?? null
-    const resolvedEnvironment = response.data ?? (
-      currentEnvironment
-        ? {
-            ...currentEnvironment,
-            containerImages: currentEnvironment.containerImages.map((image) => ({
-              ...image,
-              platforms: [],
-            })),
-          }
-        : null
-    )
-    setTaskEnvironmentOverrides((current) => ({ ...current, [key]: resolvedEnvironment }))
+    if (Object.hasOwn(taskOverrides, key)) return
+    const response = await client.getDatasetTask(selectedRef, taskName)
+    const taskData = response.data
+    if (!taskData) return
+    setTaskOverrides((current) => ({
+      ...current,
+      [key]: datasetTaskDtoToDatasetTask(taskData),
+    }))
   }
   const confirmDelete = async () => {
     if (!writesEnabled) return
@@ -380,7 +364,10 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               isRegistryDataset={selectedIsRegistryDataset}
               selected={detailRow}
               taskSearch={taskSearch}
-              tasks={visibleSelectedTasks}
+              taskPage={taskPage}
+              taskPageSize={TASK_PAGE_SIZE}
+              taskTotal={tasksResource.data?.total ?? 0}
+              tasks={selectedTasks}
               t={t}
               writeDisabled={!writesEnabled || isOperationRunning(datasetOperation.operation?.status)}
               onCancelDownload={cancelDownload}
@@ -391,12 +378,20 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
               onRelocate={(row) => void openLocationAction('relocate', row)}
               onRemoveRegistration={setRegistrationTarget}
               onSync={syncDataset}
-              onTaskSearch={setTaskSearch}
+              onTaskSearch={(value) => {
+                setExpandedTaskName(null)
+                setTaskSearch(value)
+                setTaskPageState({ key: `${selectedRef ?? ''}:${value.trim().toLowerCase()}`, page: 1 })
+              }}
+              onTaskPage={(page) => {
+                setExpandedTaskName(null)
+                setTaskPageState({ key: taskPageKey, page })
+              }}
               onRunTask={runTask}
             />
             <ResourceStatus
-              error={detailResource.error?.message ?? tasksResource.error?.message ?? taskSearchResource.error?.message ?? null}
-              loading={detailResource.loading || tasksResource.loading || taskSearchResource.loading}
+              error={detailResource.error?.message ?? tasksResource.error?.message ?? null}
+              loading={detailResource.loading || tasksResource.loading}
               loadingLabel={t('loadingDatasets')}
             />
           </>

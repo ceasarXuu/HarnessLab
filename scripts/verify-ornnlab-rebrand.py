@@ -54,6 +54,8 @@ DOC_INVENTORY = {
     "docs/releases/v1.0.5/dev-daemon/implementation-design.md": "rename-now",
     "docs/releases/v1.0.5/engineering-plan.md": "rename-now",
     "docs/releases/v1.0.5/prd.md": "rename-now",
+    "docs/releases/v1.0.5/system-health/README.md": "rename-now",
+    "docs/releases/v1.0.5/system-health/implementation-design.md": "rename-now",
     "docs/releases/v1.0.5/technical-design.md": "rename-now",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",

@@ -63,32 +63,52 @@ export const CustomAgent: Story = {
 }
 
 export const Dataset: Story = {
-  render: () => {
-    const dataset = datasetRows[0]
-    return (
-      <main className="workspace single-page">
-        <DatasetDetail
-          downloadState={{ path: dataset.downloadPath ?? '', size: dataset.size ?? '', status: 'downloaded' }}
-          expandedTaskName={null}
-          isRegistryDataset
-          selected={dataset}
-          taskSearch=""
-          tasks={datasetTaskRows.filter((row) => row.datasetRef === dataset.ref)}
-          t={t}
-          onCancelDownload={() => undefined}
-          onDelete={() => undefined}
-          onExpandedTaskName={() => undefined}
-          onMove={() => undefined}
-          onRelocate={() => undefined}
-          onRemoveRegistration={() => undefined}
-          onStartDownload={() => undefined}
-          onSync={() => undefined}
-          onTaskSearch={() => undefined}
-          onRunTask={() => undefined}
-        />
-      </main>
-    )
+  render: () => <DatasetDetailFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('task-001')).toBeVisible()
+    await expect(canvas.queryByText('task-021')).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Next page' }))
+    await expect(canvas.getByText('task-021')).toBeVisible()
   },
+}
+
+function DatasetDetailFixture() {
+  const dataset = datasetRows[0]
+  const datasetRef = dataset.ref ?? `${dataset.name}@${dataset.version}`
+  const [page, setPage] = useState(1)
+  const tasks = Array.from({ length: 45 }, (_, index) => ({
+    ...(datasetTaskRows[0] ?? { datasetRef, description: '', environment: null }),
+    datasetRef,
+    name: `task-${String(index + 1).padStart(3, '0')}`,
+  }))
+  return (
+    <main className="workspace single-page">
+      <DatasetDetail
+        downloadState={{ path: dataset.downloadPath ?? '', size: dataset.size ?? '', status: 'downloaded' }}
+        expandedTaskName={null}
+        isRegistryDataset
+        selected={dataset}
+        taskPage={page}
+        taskPageSize={20}
+        taskSearch=""
+        taskTotal={tasks.length}
+        tasks={tasks.slice((page - 1) * 20, page * 20)}
+        t={t}
+        onCancelDownload={() => undefined}
+        onDelete={() => undefined}
+        onExpandedTaskName={() => undefined}
+        onMove={() => undefined}
+        onRelocate={() => undefined}
+        onRemoveRegistration={() => undefined}
+        onStartDownload={() => undefined}
+        onSync={() => undefined}
+        onTaskPage={setPage}
+        onTaskSearch={() => undefined}
+        onRunTask={() => undefined}
+      />
+    </main>
+  )
 }
 
 export const ExternalDataset: Story = {
@@ -106,7 +126,10 @@ export const ExternalDataset: Story = {
           expandedTaskName={null}
           isRegistryDataset={false}
           selected={dataset}
+          taskPage={1}
+          taskPageSize={20}
           taskSearch=""
+          taskTotal={0}
           tasks={[]}
           t={t}
           onCancelDownload={() => undefined}
@@ -117,6 +140,7 @@ export const ExternalDataset: Story = {
           onRemoveRegistration={() => undefined}
           onStartDownload={() => undefined}
           onSync={() => undefined}
+          onTaskPage={() => undefined}
           onTaskSearch={() => undefined}
           onRunTask={() => undefined}
         />
@@ -139,7 +163,10 @@ export const DatasetPathUnavailable: Story = {
           expandedTaskName={null}
           isRegistryDataset
           selected={dataset}
+          taskPage={1}
+          taskPageSize={20}
           taskSearch=""
+          taskTotal={0}
           tasks={[]}
           t={t}
           onCancelDownload={() => undefined}
@@ -150,6 +177,7 @@ export const DatasetPathUnavailable: Story = {
           onRemoveRegistration={() => undefined}
           onStartDownload={() => undefined}
           onSync={() => undefined}
+          onTaskPage={() => undefined}
           onTaskSearch={() => undefined}
           onRunTask={() => undefined}
         />

@@ -7,18 +7,16 @@ import type {
   ApiError,
   ApiResponse,
   DatasetDto,
-  DatasetTaskDto,
   CreateJobRequestDto,
   CreateJobResponseDto,
   JobDto,
-  Page,
   OperationResultDto,
   UpdateCheckResultDto,
   UpdateJobLeaderboardResponseDto,
 } from './contract'
-import type { AgentQuery, DatasetTaskQuery, EnvironmentQuery, ListQuery } from './contract'
 import { buildLeaderboardDatasets, toAgentDto, toDatasetDto, toDatasetTaskDto, toEnvironmentDto, toJobDto, toJobEventDto, toLeaderboardEntryDto, toSystemComponentDto, toTrialDto } from './mockMappers'
 import { createMockOperationStore } from './mockOperations'
+import { filterAgents, filterByQuery, filterDatasetTasks, filterEnvironments, page } from './mockQueries'
 import type { WebUiClient } from './webUiClient'
 
 const requestMeta = { requestId: 'mock-webui-client' }
@@ -236,26 +234,26 @@ export function createMockWebUiClient(): WebUiClient {
       return operationResult(operations.complete('remove-dataset-registration', 'dataset', ref, 'Dataset registration removed'))
     },
     async listAgents(query) {
-      return success(page(filterAgents(agentDtos, query)))
+      return success(page(filterAgents(agentDtos, query), query))
     },
     async listHarnesses(query) {
-      return success(page(filterByQuery(harnessTemplates, query, (harness) => [harness.name])))
+      return success(page(filterByQuery(harnessTemplates, query, (harness) => [harness.name]), query))
     },
     async listDatasetTasks(ref, query) {
-      return success(page(filterDatasetTasks(taskDtos, ref, query)))
+      return success(page(filterDatasetTasks(taskDtos, ref, query), query))
     },
-    async getDatasetTaskEnvironment(ref, task) {
-      return success(taskDtos.find((item) => item.datasetRef === ref && item.name === task)?.environment ?? null)
+    async getDatasetTask(ref, task) {
+      return success(taskDtos.find((item) => item.datasetRef === ref && item.name === task) ?? null)
     },
     async listDatasets(query) {
       for (const active of operations.active('download-dataset')) {
         const operation = operations.get(active.id)
         if (operation) applyOperationEffects(operation)
       }
-      return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source])))
+      return success(page(filterByQuery(datasetDtos, query, (dataset) => [dataset.name, dataset.version, dataset.source]), query))
     },
     async listEnvironments(query) {
-      return success(page(filterEnvironments(environmentDtos, query)))
+      return success(page(filterEnvironments(environmentDtos, query), query))
     },
     async listJobEvents(id) {
       return success(eventDtos.filter((entry) => entry.jobId === id).map((entry) => entry.event))
@@ -264,15 +262,15 @@ export function createMockWebUiClient(): WebUiClient {
       return success(trialDtos.filter((trial) => trial.jobId === id))
     },
     async listJobs(query) {
-      return success(page(filterByQuery(jobDtos, query, (job) => [job.name, job.datasetRef, job.agentName, job.harness, job.model, job.status])))
+      return success(page(filterByQuery(jobDtos, query, (job) => [job.name, job.datasetRef, job.agentName, job.harness, job.model, job.status]), query))
     },
     async listLeaderboard(query) {
       const byDataset = leaderboardDtos.filter((entry) => entry.datasetRef === query.dataset)
-      return success(page(filterByQuery(byDataset, query, (entry) => [entry.agentName, entry.harness, entry.model, entry.metric])))
+      return success(page(filterByQuery(byDataset, query, (entry) => [entry.agentName, entry.harness, entry.model, entry.metric]), query))
     },
     async listLeaderboardDatasets(query) {
       const leaderboardDatasets = buildLeaderboardDatasets(leaderboardDtos)
-      return success(page(filterByQuery(leaderboardDatasets, query, (dataset) => [dataset.ref, dataset.name, dataset.version])))
+      return success(page(filterByQuery(leaderboardDatasets, query, (dataset) => [dataset.ref, dataset.name, dataset.version]), query))
     },
     async listSystemHealth() {
       return success(page(systemDtos))
@@ -378,10 +376,6 @@ function failure(code: string, message: string): ApiResponse<null> {
   return { data: null, error, meta: requestMeta }
 }
 
-function page<T>(items: T[]): Page<T> {
-  return { items, total: items.length }
-}
-
 function operationResult(operation: OperationResultDto['operation']): ApiResponse<OperationResultDto> {
   return success({ operation })
 }
@@ -473,27 +467,6 @@ function findById<T, K extends keyof T>(
 ): ApiResponse<T | null> {
   const item = items.find((candidate) => candidate[key] === id)
   return item ? success(item) : failure(code, message)
-}
-
-function filterByQuery<T>(items: T[], query: ListQuery | undefined, fields: (item: T) => string[]): T[] {
-  const needle = query?.q?.trim().toLowerCase()
-  if (!needle) return items
-  return items.filter((item) => fields(item).some((field) => field.toLowerCase().includes(needle)))
-}
-
-function filterAgents(items: import('./contract').AgentDto[], query: AgentQuery | undefined) {
-  const textMatched = filterByQuery(items, query, (agent) => [agent.agentName, agent.harness, agent.status])
-  return textMatched.filter((agent) => !query?.status || agent.status === query.status)
-}
-
-function filterEnvironments(items: import('./contract').EnvironmentDto[], query: EnvironmentQuery | undefined) {
-  const textMatched = filterByQuery(items, query, (environment) => [environment.name, environment.environmentType, environment.profileType])
-  return textMatched.filter((environment) => !query?.type || environment.profileType === query.type)
-}
-
-function filterDatasetTasks(tasks: DatasetTaskDto[], ref: string, query: DatasetTaskQuery | undefined): DatasetTaskDto[] {
-  const byDataset = tasks.filter((task) => task.datasetRef === ref)
-  return filterByQuery(byDataset, query, (task) => [task.name, task.description])
 }
 
 function isTerminalJob(status: JobDto['status']) {

@@ -3,6 +3,7 @@ import type { DatasetRow, DatasetTask } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { DatasetTaskEnvironment } from './DatasetTaskEnvironment'
 import { Metric } from './Metric'
+import { Pagination } from './Pagination'
 
 type DatasetDownloadState =
   | { status: 'not-downloaded' }
@@ -16,6 +17,9 @@ interface DatasetDetailProps {
   isRegistryDataset: boolean
   selected: DatasetRow
   taskSearch: string
+  taskPage: number
+  taskPageSize: number
+  taskTotal: number
   tasks: DatasetTask[]
   t: Translate
   writeDisabled?: boolean
@@ -29,6 +33,7 @@ interface DatasetDetailProps {
   onSync: (row: DatasetRow) => void
   onRunTask: (row: DatasetRow, taskName: string) => void
   onTaskSearch: (value: string) => void
+  onTaskPage: (page: number) => void
 }
 
 export function DatasetDetail({
@@ -44,13 +49,20 @@ export function DatasetDetail({
   onStartDownload,
   onSync,
   onTaskSearch,
+  onTaskPage,
   onRunTask,
   selected,
   taskSearch,
+  taskPage,
+  taskPageSize,
+  taskTotal,
   tasks,
   t,
   writeDisabled = false,
 }: DatasetDetailProps) {
+  const totalPages = Math.max(1, Math.ceil(taskTotal / taskPageSize))
+  const startItem = taskTotal === 0 ? 0 : (taskPage - 1) * taskPageSize + 1
+  const endItem = Math.min(taskPage * taskPageSize, taskTotal)
   return (
     <aside className="detail-rail dataset-detail">
       <section className="surface rail-card">
@@ -180,6 +192,15 @@ export function DatasetDetail({
           ))}
           {tasks.length === 0 && <div className="empty-row">{t('noTasksAvailable')}</div>}
         </div>
+        <Pagination
+          endItem={endItem}
+          page={taskPage}
+          startItem={startItem}
+          t={t}
+          totalItems={taskTotal}
+          totalPages={totalPages}
+          onPage={onTaskPage}
+        />
       </section>
     </aside>
   )

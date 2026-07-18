@@ -49,7 +49,7 @@ flowchart LR
 
 后端返回的 Job、Dataset、Trial、Agent、Environment、Leaderboard、System DTO 均保持结构化值：金额为数字、Token 为百万数量、时长为秒、得分为结构化分数。`frontend/src/api/viewModels.ts` 是唯一的展示格式化层；页面不得把格式化字符串回传给 API。
 
-`DatasetTaskDto.environment` 是 Harbor `TaskConfig.environment` 的只读结构化摘要，仅对本地可解析的 Task 返回。`containerImages` 同时解析 Harbor `docker_image` 和 Dockerfile 外部 `FROM`，区分预构建环境镜像与 Dockerfile 基础镜像；用户展开 Task 时，后端按 OCI Distribution API 读取公开 Registry 声明的 `os/architecture/variant`，按镜像引用去重并在服务进程内缓存。失败返回空平台集合，前端显示“未知”。未下载的远程 Task 返回 `null`，且 UI 不推断主机兼容性。
+`DatasetTaskDto.environment` 是 Harbor `TaskConfig.environment` 的只读结构化摘要，仅对本地可解析的单项详情返回。Task 目录先建立只包含目录标识的轻量索引，`GET /datasets/{ref}/tasks` 只读取轻量路径状态、做名称过滤和分页，默认每页 20 条；不得为 Task 请求递归统计 Dataset 大小，也不导入 Harbor Task 模型或解析 Task 配置。目录索引按 Dataset 根目录修改时间在服务进程内缓存。用户展开 Task 时，`GET /datasets/{ref}/task-detail?task=` 才解析一个完整 `DatasetTaskDto`。`containerImages` 同时解析 Harbor `docker_image` 和 Dockerfile 外部 `FROM`，区分预构建环境镜像与 Dockerfile 基础镜像，并按 OCI Distribution API 读取公开 Registry 声明的 `os/architecture/variant`，按镜像引用去重并在服务进程内缓存。失败返回空平台集合，前端显示“未知”。未下载的远程 Task 详情返回 `null`，且 UI 不推断主机兼容性。
 
 `RunDraft` 是 UI 草稿，`runDraftToCreateJobRequest` 将其映射到真实 Harbor `JobConfig` 可接受的运行级字段。Agent 保存可选模型集合，New Job 的 `modelName` 是本次运行的唯一选择；凭证、Skills、MCP 和 kwargs 从 Agent 配置映射，环境细节从 Environment 模板映射。
 

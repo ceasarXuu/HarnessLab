@@ -73,6 +73,21 @@ def stored_dataset_dto(row: dict) -> dict:
     }
 
 
+def stored_dataset_runtime(row: dict | None) -> dict | None:
+    """Return only the local-path state needed by Task reads, without a size scan."""
+    if row is None:
+        return None
+    local_path = row.get("local_path")
+    path = Path(local_path) if isinstance(local_path, str) else None
+    if path and path.is_dir():
+        download = {"path": local_path, "status": "downloaded"}
+    elif path:
+        download = {"path": local_path, "status": "path-unavailable"}
+    else:
+        download = {"status": "not-downloaded"}
+    return {"download": download, "source": row["source"]}
+
+
 def _active_downloads(settings: Settings) -> dict[str, dict]:
     with sqlite.connect(settings) as conn:
         rows = sqlite.rows(

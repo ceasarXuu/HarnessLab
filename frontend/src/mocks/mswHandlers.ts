@@ -95,6 +95,12 @@ export const webuiHandlers = [
   http.get(`${webui}/datasets/:datasetRef/tasks`, async ({ params, request }) =>
     HttpResponse.json(await client.listDatasetTasks(String(params.datasetRef), listQuery(request))),
   ),
+  http.get(`${webui}/datasets/:datasetRef/task-detail`, async ({ params, request }) =>
+    HttpResponse.json(await client.getDatasetTask(
+      String(params.datasetRef),
+      new URL(request.url).searchParams.get('task') ?? '',
+    )),
+  ),
   http.post(`${webui}/datasets/import`, async ({ request }) =>
     HttpResponse.json(await client.importDataset(await jsonBody<DatasetImportRequestDto>(request))),
   ),

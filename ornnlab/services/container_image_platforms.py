@@ -56,7 +56,7 @@ class ContainerImagePlatformResolver:
 _resolver = ContainerImagePlatformResolver()
 
 
-async def resolve_local_task_environment(
+async def resolve_local_task(
     local_dataset: dict | None, dataset_ref: str, task_name: str
 ) -> dict | None:
     if not local_dataset or local_dataset["download"]["status"] != "downloaded":
@@ -74,7 +74,7 @@ async def resolve_local_task_environment(
         raise ValueError("Dataset Task not found")
     task = parse_task_summary(task_path, dataset_ref)
     await _resolver.enrich_tasks([task])
-    return task["environment"]
+    return task
 
 
 async def _inspect_image(image: str) -> list[str]:
