@@ -7,6 +7,7 @@
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Recorded operational lessons for the Harbor WebUI rewrite. |
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked operations guidance to document version governance. |
 | 1.2 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-27 | Recorded Colima startup check before real Harbor Docker smoke. |
+| 1.3 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 记录 macOS 到 Ubuntu 的数据恢复与验证经验。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -47,3 +48,34 @@ ORNNLAB_REAL_HARBOR=1 uv run pytest -m docker tests/python/test_harbor_real_smok
 
 2026-06-27 验证结果：`colima start` 后 Docker ServerVersion 为 `29.2.1`，
 真实 Harbor Docker smoke `3 passed`，耗时约 3 分 58 秒。
+
+## 2026-07-19 Ubuntu 数据恢复
+
+恢复包的外层 `.sha256` 使用相对文件名，必须在归档所在目录执行校验：
+
+```bash
+cd /path/to/backup
+sha256sum -c ornnlab-ubuntu-backup-20260719.tar.gz.sha256
+```
+
+恢复前还要在解包目录执行 `sha256sum -c SHA256SUMS`，并通过
+`git bundle verify payload/HarnessLab.bundle` 校验源码历史。如果当前仓库 HEAD
+与 manifest 的 `gitCommit` 一致且工作区干净，可保留当前仓库，仅恢复
+`~/.ornnlab/data` 与 `~/ornnlab-data`，避免恢复脚本因源码目录非空而停止。
+
+macOS 创建的归档可能包含 `LIBARCHIVE.xattr.*` 扩展头和 `._*` AppleDouble
+文件。扩展头警告不代表内容损坏；解压外置数据时应过滤 AppleDouble 文件：
+
+```bash
+tar -xzf payload/external-data.tar.gz \
+  -C ~/ornnlab-data \
+  --exclude='._*' \
+  --exclude='*/._*'
+```
+
+完成主数据导入和 `rebase_paths.py` 路径重映射后，至少执行以下验证：
+
+1. 对 `~/.ornnlab/data/*.sqlite` 执行 `PRAGMA integrity_check`。
+2. 搜索 `/Users/` 与旧 `/Volumes/` 数据路径，确认没有可识别文本残留。
+3. 确认 `terminal-bench@2.0`、`swebenchpro@1.0` 和 Job 目录存在。
+4. 执行 `ORNNLAB_HOME=~/.ornnlab/data uv run ornnlab doctor`，确认 Docker、Harbor、数据库 schema 与孤儿容器检查均正常。
