@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import json
+import logging
 import os
 import shutil
 import signal
@@ -17,6 +19,7 @@ from ornnlab.storage.paths import atomic_write_text, ensure_parent
 JOB_LOG_NAME = "job.log"
 CLEANUP_FILE_NAME = "harbor.cleanup.json"
 CONFIG_FILE_NAME = "harbor.config.json"
+logger = logging.getLogger(__name__)
 
 
 class ManagedSubprocessHarborRunner:
@@ -25,7 +28,9 @@ class ManagedSubprocessHarborRunner:
         command: list[str] | None = None,
         terminate_grace_sec: float = 2.0,
     ):
-        self.command = command or _command_from_env()
+        self.command = command if command is not None else _command_from_env()
+        if not self.command:
+            raise ValueError("Harbor subprocess command cannot be empty")
         self.terminate_grace_sec = terminate_grace_sec
 
     async def run(self, config: HarborJobConfigView) -> dict:
@@ -33,14 +38,35 @@ class ManagedSubprocessHarborRunner:
         job_dir.mkdir(parents=True, exist_ok=True)
         log_path = job_dir / JOB_LOG_NAME
         config_path = job_dir / CONFIG_FILE_NAME
-        process = await asyncio.create_subprocess_exec(
-            *self.command,
-            "--config",
-            str(config_path),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True,
+        executable = self.command[0]
+        logger.info(
+            "harbor_subprocess.start executable=%s job_name=%s jobs_dir=%s",
+            executable,
+            config.job_name,
+            config.jobs_dir,
         )
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *self.command,
+                "--config",
+                str(config_path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True,
+            )
+        except FileNotFoundError as error:
+            logger.error(
+                "harbor_subprocess.spawn_failed executable=%s job_name=%s jobs_dir=%s error=%s",
+                executable,
+                config.job_name,
+                config.jobs_dir,
+                error,
+            )
+            raise FileNotFoundError(
+                errno.ENOENT,
+                f"Harbor CLI executable not found: {executable}",
+                executable,
+            ) from error
         output_task = asyncio.create_task(_mirror_stdout(process, log_path))
         try:
             return_code = await process.wait()
@@ -70,7 +96,9 @@ class ManagedSubprocessHarborRunner:
 
 
 def _command_from_env() -> list[str]:
-    raw = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", "harbor run")
+    raw = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND")
+    if raw is None:
+        return [harbor_cli_executable(), "run"]
     try:
         return split_command(raw)
     except ValueError as error:

@@ -1,8 +1,10 @@
 import asyncio
 import json
+import logging
 import os
 import signal
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +13,7 @@ from ornnlab.services.harbor_subprocess import ManagedSubprocessHarborRunner
 from ornnlab.settings import Settings
 
 
-def test_managed_subprocess_runner_uses_harbor_config(tmp_path):
+def test_managed_subprocess_runner_uses_harbor_config(tmp_path, caplog):
     script = tmp_path / "fake_harbor_cli.py"
     script.write_text(
         "\n".join(
@@ -45,6 +47,7 @@ def test_managed_subprocess_runner_uses_harbor_config(tmp_path):
     )
     builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
 
+    caplog.set_level(logging.INFO)
     result = asyncio.run(
         ManagedSubprocessHarborRunner(command=[sys.executable, str(script)]).run(config)
     )
@@ -52,6 +55,34 @@ def test_managed_subprocess_runner_uses_harbor_config(tmp_path):
     assert result["status"] == "completed"
     assert result["score"] == 0.42
     assert (tmp_path / "harbor-job" / "job.log").read_text() == "fake harbor completed\n"
+    assert "harbor_subprocess.start" in caplog.text
+    assert f"executable={sys.executable}" in caplog.text
+    assert "job_name=subprocess-success" in caplog.text
+
+
+def test_managed_subprocess_runner_reports_missing_executable(tmp_path, caplog):
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "terminal-bench",
+        "2.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        "missing-cli",
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+    missing = tmp_path / "missing" / "harbor"
+
+    caplog.set_level(logging.INFO)
+    with pytest.raises(FileNotFoundError, match="Harbor CLI executable not found") as error:
+        asyncio.run(ManagedSubprocessHarborRunner(command=[str(missing), "run"]).run(config))
+
+    assert error.value.filename == str(missing)
+    assert "harbor_subprocess.spawn_failed" in caplog.text
+    assert f"executable={missing}" in caplog.text
 
 
 def test_managed_subprocess_runner_reads_harbor_native_result_layout(tmp_path):
@@ -212,16 +243,42 @@ def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):
     assert runner.command == ["new-harbor", "run"]
 
 
-def test_subprocess_command_env_ignores_legacy_harnesslab_variable(monkeypatch):
-    # Regression guard: HARNESSLAB_HARBOR_SUBPROCESS_COMMAND was a legacy
-    # compatibility fallback retired in v0.1.4. Production code in
-    # ornnlab/services/harbor_subprocess.py must NOT read it. This test will
-    # fail if anyone accidentally reintroduces a HARNESSLAB_* env fallback.
-    # AC1 grep exempts this file via scripts/verify-ornnlab-rebrand.py guard
-    # exemptions; see harnesslab-shim-retirement-prd.md SC-5 follow-up.
+def test_subprocess_constructor_rejects_empty_command():
+    with pytest.raises(ValueError, match="Harbor subprocess command cannot be empty"):
+        ManagedSubprocessHarborRunner(command=[])
+
+
+def test_subprocess_default_command_resolves_harbor_next_to_python(monkeypatch):
     monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
-    monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
+    monkeypatch.delenv("ORNNLAB_HARBOR_CLI", raising=False)
+    monkeypatch.setattr("ornnlab.services.harbor_subprocess.shutil.which", lambda _: None)
 
     runner = ManagedSubprocessHarborRunner()
 
-    assert runner.command == ["harbor", "run"]
+    assert runner.command == [str(Path(sys.executable).parent / "harbor"), "run"]
+
+
+def test_subprocess_default_command_prefers_ornnlab_harbor_cli(monkeypatch):
+    monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
+    monkeypatch.setenv("ORNNLAB_HARBOR_CLI", "/opt/ornnlab/bin/harbor")
+    monkeypatch.setattr(
+        "ornnlab.services.harbor_subprocess.shutil.which", lambda _: "/usr/bin/harbor"
+    )
+
+    runner = ManagedSubprocessHarborRunner()
+
+    assert runner.command == ["/opt/ornnlab/bin/harbor", "run"]
+
+
+def test_subprocess_command_ignores_legacy_harnesslab_variable(monkeypatch):
+    # Regression guard: the HARNESSLAB_* fallback was retired in v0.1.4.
+    monkeypatch.delenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", raising=False)
+    monkeypatch.setenv("HARNESSLAB_HARBOR_SUBPROCESS_COMMAND", "old-harbor run")
+    monkeypatch.setattr(
+        "ornnlab.services.harbor_subprocess.harbor_cli_executable",
+        lambda: "/resolved/harbor",
+    )
+
+    runner = ManagedSubprocessHarborRunner()
+
+    assert runner.command == ["/resolved/harbor", "run"]

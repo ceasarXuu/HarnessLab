@@ -8,6 +8,7 @@
 | 1.1 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-16 | Linked technology decisions to document version governance. |
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue demo frontend decision with the v1.0.5 Harbor official Viewer-aligned React/Vite demo. |
 | 1.3 | v1.0.5 | 2026-07-10 | Upgraded the backend directly to the WebUI contract and retired Playwright from the active gate. |
+| 1.4 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 统一新建与恢复 Job 的 Harbor CLI 可执行文件解析。 |
 
 The previous Rust single-binary technology decision record was archived on
 2026-06-15.
@@ -57,7 +58,11 @@ product architecture tracks Harbor `apps/viewer`.
 - `python-api`: direct `Job.create(...).run()` integration;
 
 `ORNNLAB_HARBOR_SUBPROCESS_COMMAND` can override the subprocess command. The
-default is `harbor run`.
+default arguments are `run`, while the `harbor` executable is resolved through
+the shared CLI resolver: `ORNNLAB_HARBOR_CLI`, then `PATH`, then the executable
+next to the active Python interpreter. New Job and resume flows must use the
+same resolver so a project-local virtual environment does not depend on the
+daemon's inherited `PATH`.
 
 The subprocess boundary is preferred for real cancellation because the app owns
 the process group and can write `harbor.cleanup.json` after termination. Direct

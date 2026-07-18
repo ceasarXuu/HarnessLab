@@ -1,7 +1,7 @@
 # Problem P-001: 最新 Job 创建后立即 FileNotFoundError
-- Status: diagnosed
+- Status: fixed
 - Created: 2026-07-19 06:34
-- Updated: 2026-07-19 06:41
+- Updated: 2026-07-19 07:14
 - Objective: 确认最新创建 Job `run-549da9f6acf8` 的失败根因并给出证据充分的处理方向。
 - Symptoms:
   - Job `claude-code-ds-test-copy-copy` 创建约 1 秒后失败。
@@ -20,18 +20,19 @@
   - job_dir=`/home/zhangxu/ornnlab-data/jobs/test`，result_path 为空。
   - failure_summary=`[Errno 2] No such file or directory`。
   - 新 Harbor 配置与能力文件已写入，但 job.log 仍是 2026-07-17 的旧文件。
+  - 新建与 resume 现已共用 `harbor_cli_executable()` 解析 Harbor CLI。
 - Ruled out:
   - 将同一分钟更新的旧 resume run 误认为最新创建 Job。
 - Fix criteria:
   - 从事件、配置、日志或代码路径确认具体缺失对象及触发机制，并排除主要替代原因。
-- Current conclusion: 高置信确认 backend PATH 无法解析 runner 默认裸命令 `harbor`，subprocess 在创建阶段抛出 FileNotFoundError；生产事件缺少 traceback/filename 是剩余证据缺口。
+- Current conclusion: 根因已修复；默认 runner 在 backend PATH 不含 `.venv/bin` 时仍解析到当前 Python 同目录的绝对 Harbor CLI，并通过真实 Harbor/Docker 生命周期验证。
 - Related hypotheses:
   - H-001
   - H-002
 - Resolution basis:
-  - 诊断完成：H-002；E-002、E-003、E-004、E-005。未实施修复，不能标记 fixed。
+  - H-002；E-002、E-003、E-004、E-005、E-006、E-007、E-008、E-009。
 - Close reason:
-  - not closed
+  - 修复与回归证据满足 P-001 fix criteria；未自动重跑包含外部模型成本的原 Job。
 
 ## Hypothesis H-001: Job 配置引用的迁移前输入路径不存在
 - Status: refuted
@@ -74,7 +75,7 @@
 - Blocker:
   - none
 - Close reason:
-  - not closed
+  - H-001 已被运行时路径、产物与独立审计证据否定。
 
 ## Hypothesis H-002: Harbor 启动链引用不存在的可执行文件或工作目录
 - Status: confirmed
@@ -113,13 +114,17 @@
   - E-003
   - E-004
   - E-005
+  - E-006
+  - E-007
+  - E-008
+  - E-009
 - Conclusion: `ManagedSubprocessHarborRunner` 默认执行 `harbor run`，但 daemon/backend PATH 中没有任何可执行的 `harbor`；真实 CLI 仅存在于仓库 `.venv/bin/harbor`。
-- Repair design readiness: ready；应让 runner 使用 `harbor_cli_executable()` 的绝对路径，或在 daemon backend PATH 中显式加入当前源码 `.venv/bin`。
-- Next step: 等待独立证据路径复核并向用户报告。
+- Repair design readiness: implemented；runner 已统一使用 `harbor_cli_executable()` 绝对路径并保留显式命令覆盖。
+- Next step: closed
 - Blocker:
   - none
 - Close reason:
-  - not closed
+  - E-006 至 E-009 已完成失败复现、实现回归、真实 Harbor/Docker 和部署重载验证。
 
 ## Evidence E-001: 最新创建 run 的结构化失败记录
 - Related hypotheses:
@@ -219,6 +224,92 @@
   ```
 - Interpretation: 两条独立证据路径一致支持 spawn executable 缺失，并排除 Dataset、Job 输出根目录和 Docker 作为本次直接原因。
 - Time: 2026-07-19 06:40
+
+## Evidence E-006: 修复前失败测试固定三个契约缺口
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: test
+- Source: `tests/python/test_harbor_subprocess.py`
+- Prediction or plan link:
+  - H-002 修复验证必须覆盖绝对 resolver、spawn 诊断和启动日志
+- Matched signal:
+  - 修复前 3 failed：默认裸 harbor、缺少可操作异常、缺少结构化日志
+- Correlation keys:
+  - pre-fix targeted test run
+- Raw content:
+  ```text
+  3 failed, 4 passed
+  expected .venv/bin/harbor, actual harbor
+  expected Harbor CLI executable not found, actual No such file or directory
+  expected harbor_subprocess.start, caplog empty
+  ```
+- Interpretation: 测试在实现前确定性捕获生产根因和可观测性缺口，避免先改后解释。
+- Time: 2026-07-19 07:03
+
+## Evidence E-007: resolver 与日志实现通过针对性回归
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: fix-validation
+- Source: `ornnlab/services/harbor_subprocess.py` 与 Harbor 相关测试
+- Prediction or plan link:
+  - H-002 修复后默认命令应为绝对 CLI，显式 override 保持兼容，空命令拒绝
+- Matched signal:
+  - 16 个 Harbor/Experiment 针对性测试通过，ruff/format 通过
+- Correlation keys:
+  - post-fix targeted test run
+- Raw content:
+  ```text
+  16 passed
+  All checks passed
+  default resolver: ORNNLAB_HARBOR_CLI -> PATH -> sys.executable sibling
+  ```
+- Interpretation: 修复统一了新建与 resume 的 executable 解析，并增加 start/spawn_failed 稳定日志且不记录 env/PATH。
+- Time: 2026-07-19 07:06
+
+## Evidence E-008: 全量质量门和真实 Harbor/Docker 测试通过
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: fix-validation
+- Source: `scripts/test-after-change-web.sh` 主体门禁、全量 Python、真实 Harbor cancel-recovery
+- Prediction or plan link:
+  - H-002 修复不得破坏 Python、前端、launcher 或真实 Harbor 生命周期
+- Matched signal:
+  - Python 124 passed；前端 108 passed；launcher 27 passed；真实 Harbor 2 passed
+- Correlation keys:
+  - 2026-07-19 post-fix quality gate
+- Raw content:
+  ```text
+  Python: 124 passed, 3 skipped
+  Frontend: 108 passed
+  Launcher: 27 passed
+  Real Harbor/Docker: 2 passed in 196.27s
+  ```
+- Interpretation: 真实 Harbor 已越过原 spawn 边界并完成执行与取消恢复，原 FileNotFoundError 机制不再出现。全栈 shell 脚本的随机端口释放超时为已知独立环境问题。
+- Time: 2026-07-19 07:13
+
+## Evidence E-009: 本机 daemon 重载后解析绝对 Harbor CLI
+- Related hypotheses:
+  - H-002
+- Direction: supports
+- Type: fix-validation
+- Source: `ornnlab dev restart`、backend 实际 PATH 探针与前端代理 live
+- Prediction or plan link:
+  - P-001 修复必须进入实际本机开发服务
+- Matched signal:
+  - 服务全健康；backend PATH 环境下默认 command 为 `.venv/bin/harbor run`；live=ok
+- Correlation keys:
+  - 2026-07-19 07:14 daemon reload
+- Raw content:
+  ```text
+  dev service reload: ok
+  default command: ['/home/zhangxu/HarnessLab/.venv/bin/harbor', 'run']
+  frontend proxy live: ok
+  ```
+- Interpretation: 实际部署的 backend 已加载修复，不依赖 daemon PATH 中存在裸 harbor。
+- Time: 2026-07-19 07:14
 
 ## Evidence E-003: backend PATH 无法解析默认 Harbor 命令
 - Related hypotheses:
