@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+from ornnlab.services.container_proxy_runtime import ProxyConfigurationError
+
 
 def classify_exception(exc: BaseException) -> dict[str, str]:
+    if isinstance(exc, ProxyConfigurationError):
+        return {
+            "failure_class": "proxy_configuration_failure",
+            "failure_code": "docker_proxy_unavailable",
+            "failure_summary": str(exc),
+        }
     message = str(exc).lower()
     if "docker" in message:
         return {

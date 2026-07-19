@@ -33,8 +33,16 @@ class HarborConfigBuilder:
         jobs_dir: str,
         job_name: str | None = None,
         overrides: dict[str, Any] | None = None,
+        runtime_agent_env_defaults: dict[str, str] | None = None,
     ) -> HarborJobConfigView:
         overrides = overrides or {}
+        normalized_agent = _normalize_agent_view(agent_config)
+        if _is_docker_environment(overrides):
+            normalized_agent = _merge_agent_env_defaults(
+                normalized_agent,
+                runtime_agent_env_defaults or {},
+                _environment_env(overrides),
+            )
         dataset_name = (
             f"{benchmark_name}@{benchmark_version}" if benchmark_version else benchmark_name
         )
@@ -46,7 +54,7 @@ class HarborConfigBuilder:
         }
         return HarborJobConfigView(
             job_name=job_name or f"ornnlab-{_slug(dataset_name)}",
-            agent=_normalize_agent_view(agent_config),
+            agent=normalized_agent,
             dataset=_without_empty_values(dataset),
             n_tasks=overrides.get("n_tasks", n_tasks),
             n_attempts=n_attempts,
@@ -135,10 +143,18 @@ class HarborEngine:
             supports_cancel=self.mode == "subprocess",
         )
 
-    async def run(self, config: HarborJobConfigView) -> dict:
+    async def run(
+        self,
+        config: HarborJobConfigView,
+        runtime_env: dict[str, str] | None = None,
+    ) -> dict:
         if self.mode == "subprocess":
-            return await ManagedSubprocessHarborRunner().run(config)
+            return await ManagedSubprocessHarborRunner().run(config, extra_env=runtime_env)
         if self.mode == "python-api":
+            if runtime_env:
+                raise RuntimeError(
+                    "automatic Docker proxy inheritance requires the subprocess Harbor engine"
+                )
             return await PythonApiHarborRunner().run(config)
         raise ValueError(f"unsupported Harbor engine mode: {self.mode}")
 
@@ -193,6 +209,46 @@ def _normalize_agent_view(agent_config: dict[str, Any]) -> dict[str, Any]:
     if "setup_timeout_sec" in result and "override_setup_timeout_sec" not in result:
         result["override_setup_timeout_sec"] = result.pop("setup_timeout_sec")
     return result
+
+
+def _is_docker_environment(overrides: dict[str, Any]) -> bool:
+    environment = overrides.get("environment", {"type": "docker"})
+    if not isinstance(environment, dict):
+        return False
+    return environment.get("type", "docker") == "docker"
+
+
+def _environment_env(overrides: dict[str, Any]) -> dict[str, Any]:
+    environment = overrides.get("environment", {})
+    if not isinstance(environment, dict) or not isinstance(environment.get("env"), dict):
+        return {}
+    return environment["env"]
+
+
+def _merge_agent_env_defaults(
+    agent_config: dict[str, Any],
+    defaults: dict[str, str],
+    environment_env: dict[str, Any],
+) -> dict[str, Any]:
+    if not defaults:
+        return agent_config
+    merged = dict(agent_config)
+    env = dict(merged.get("env", {}))
+    explicit_keys = set(env) | set(environment_env)
+    blocked_keys: set[str] = set()
+    for group in (
+        {"HTTP_PROXY", "http_proxy"},
+        {"HTTPS_PROXY", "https_proxy"},
+        {"ALL_PROXY", "all_proxy"},
+        {"NO_PROXY", "no_proxy"},
+    ):
+        if explicit_keys & group:
+            blocked_keys.update(group)
+    for key, value in defaults.items():
+        if key not in blocked_keys:
+            env.setdefault(key, value)
+    merged["env"] = env
+    return merged
 
 
 def _agent_config_payload(agent: dict[str, Any]) -> dict[str, Any]:

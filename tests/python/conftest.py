@@ -17,6 +17,8 @@ from ornnlab.storage import sqlite
 def default_harbor_subprocess_simulator() -> Iterator[None]:
     old_engine = os.environ.get("ORNNLAB_HARBOR_ENGINE")
     old_command = os.environ.get("ORNNLAB_HARBOR_SUBPROCESS_COMMAND")
+    old_proxy_mode = os.environ.get("ORNNLAB_DOCKER_PROXY_MODE")
+    os.environ["ORNNLAB_DOCKER_PROXY_MODE"] = "off"
     if os.environ.get("ORNNLAB_REAL_HARBOR") != "1":
         simulator = Path(__file__).with_name("harbor_cli_simulator.py")
         os.environ["ORNNLAB_HARBOR_ENGINE"] = "subprocess"
@@ -24,6 +26,7 @@ def default_harbor_subprocess_simulator() -> Iterator[None]:
     yield
     _restore_env("ORNNLAB_HARBOR_ENGINE", old_engine)
     _restore_env("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", old_command)
+    _restore_env("ORNNLAB_DOCKER_PROXY_MODE", old_proxy_mode)
 
 
 @pytest.fixture

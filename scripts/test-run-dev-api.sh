@@ -37,7 +37,8 @@ import socket
 import sys
 
 with socket.socket() as sock:
-    sock.bind(("127.0.0.1", int(sys.argv[1])))
+    sock.settimeout(0.2)
+    raise SystemExit(1 if sock.connect_ex(("127.0.0.1", int(sys.argv[1]))) == 0 else 0)
 PY
     then
       return

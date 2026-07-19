@@ -33,7 +33,11 @@ class ManagedSubprocessHarborRunner:
             raise ValueError("Harbor subprocess command cannot be empty")
         self.terminate_grace_sec = terminate_grace_sec
 
-    async def run(self, config: HarborJobConfigView) -> dict:
+    async def run(
+        self,
+        config: HarborJobConfigView,
+        extra_env: dict[str, str] | None = None,
+    ) -> dict:
         job_dir = Path(config.jobs_dir)
         job_dir.mkdir(parents=True, exist_ok=True)
         log_path = job_dir / JOB_LOG_NAME
@@ -53,6 +57,7 @@ class ManagedSubprocessHarborRunner:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 start_new_session=True,
+                env=_subprocess_env(extra_env),
             )
         except FileNotFoundError as error:
             logger.error(
@@ -105,6 +110,12 @@ def _command_from_env() -> list[str]:
         if str(error) != "command cannot be empty":
             raise
         raise ValueError("ORNNLAB_HARBOR_SUBPROCESS_COMMAND cannot be empty") from None
+
+
+def _subprocess_env(extra_env: dict[str, str] | None) -> dict[str, str]:
+    child_env = os.environ.copy()
+    child_env.update(extra_env or {})
+    return child_env
 
 
 def harbor_cli_executable() -> str:

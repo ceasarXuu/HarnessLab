@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import asyncio
 
+from ornnlab.services.container_proxy_runtime import ContainerProxyRuntime
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.settings import Settings
 
 
 class QueueWorkerService:
-    def __init__(self, settings: Settings):
+    def __init__(
+        self,
+        settings: Settings,
+        container_proxy: ContainerProxyRuntime | None = None,
+    ):
         self.settings = settings
+        self.container_proxy = container_proxy or ContainerProxyRuntime()
         self._task: asyncio.Task[None] | None = None
         self._active_runs: dict[str, asyncio.Task[None]] = {}
         self._lock: asyncio.Lock | None = None
@@ -39,6 +45,16 @@ class QueueWorkerService:
             await task
             return
         await self._drain()
+
+    async def close(self) -> None:
+        tasks = [task for task in self._active_runs.values() if not task.done()]
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+            tasks.append(self._task)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def wait_experiment_terminal(
         self,
@@ -111,7 +127,7 @@ class QueueWorkerService:
             pending.add(task)
 
     async def _execute_run(self, run: dict) -> None:
-        service = ExperimentService(self.settings)
+        service = ExperimentService(self.settings, self.container_proxy)
         await service.execute_dequeued_run(run)
 
     def _consume_task_result(self, task: asyncio.Task[None]) -> None:

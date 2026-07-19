@@ -1,7 +1,7 @@
 # v1.0.5 技术设计
 
 - 状态：Active
-- 更新：2026-07-11
+- 更新：2026-07-19
 - 范围：Harbor WebUI、`/api/webui/v1`、mock/API 双模式与前后端联调边界
 
 ## 1. 权威关系
@@ -84,6 +84,32 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - Harness 通用能力全集包括 model、env、kwargs、Skills、MCP servers、执行/启动/最大超时；Harness 专属参数通过结构化 capability 定义选择框、数字、开关或文本交互。网络访问继续归 Environment 管理，MCP 不承担安装或容器部署编排。
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。
+
+### 4.4 宿主代理到 Docker Agent 的运行时适配
+
+`ContainerProxyRuntime` 是应用级瞬态服务，由 FastAPI lifespan 启动，并在 worker
+停止后关闭。它只读取 OrnnLab 进程的标准代理变量，不修改全局 `os.environ`，
+也不把自动发现结果写回 Agent、Environment 或 `webui_job_configs`。
+
+真正的代理 policy 在 `ExperimentService._run_one()` 执行期、Harbor config 构建前
+生成。这样排队 Job 在服务重启后使用当前宿主配置，动态 relay 端口也不会污染可复制
+的用户配置。`HarborConfigBuilder` 只把 `${ORNNLAB_CONTAINER_*_PROXY}` 模板作为
+Agent env 默认值写入 artifact；实际派生 URL 只通过受管 Harbor 子进程的 `env` 传递。
+用户在 Agent 或 Environment 中显式声明任一大小写代理变量时，对应自动变量组整体
+让位，避免不同客户端采用不同优先级。
+
+本地 rootful Linux 的回环 HTTP/SOCKS 代理使用 Docker 默认 bridge gateway 上的
+随机高位 TCP relay。relay 不监听 `0.0.0.0`，日志只记录变量名、scheme、绑定地址、
+端口和稳定事件名，不记录原始 URL。带认证信息或使用 HTTPS TLS 的回环代理当前快速
+失败，因为 Harbor artifact 的现有敏感字段规则和 TLS hostname 约束不足以安全保存
+派生值。`python-api` Harbor engine 同样拒绝需要 runtime env 的自动代理；默认
+`subprocess` engine 支持该能力。`ORNNLAB_DOCKER_PROXY_MODE=off` 是显式退出开关。
+
+稳定日志事件包括 `docker_proxy_detection`、`docker_proxy_bridge_started`、
+`docker_proxy_policy_prepared`、`docker.proxy.injected`、
+`docker_proxy_upstream_failed` 和 `docker_proxy_runtime_stopped`。Job 事件只保存代理
+变量名和 relay 数量。代理准备失败统一分类为 `proxy_configuration_failure` /
+`docker_proxy_unavailable`，不得退化成 Claude curl 超时。
 
 ## 5. API 与异步操作
 

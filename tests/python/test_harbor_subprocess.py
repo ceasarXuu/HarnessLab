@@ -60,6 +60,53 @@ def test_managed_subprocess_runner_uses_harbor_config(tmp_path, caplog):
     assert "job_name=subprocess-success" in caplog.text
 
 
+def test_managed_subprocess_runner_resolves_proxy_only_in_child_environment(tmp_path):
+    script = tmp_path / "fake_harbor_proxy_cli.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json",
+                "import os",
+                "import pathlib",
+                "import sys",
+                "config_path = pathlib.Path(sys.argv[sys.argv.index('--config') + 1])",
+                "config = json.loads(config_path.read_text())",
+                "assert config['agents'][0]['env']['HTTPS_PROXY'] "
+                "== '${ORNNLAB_CONTAINER_HTTPS_PROXY}'",
+                "assert os.environ['ORNNLAB_CONTAINER_HTTPS_PROXY'] == 'http://172.17.0.1:32123'",
+                "job_dir = pathlib.Path(config['jobs_dir'])",
+                "job_dir.mkdir(parents=True, exist_ok=True)",
+                "(job_dir / 'result.json').write_text(json.dumps({'status': 'completed'}))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "terminal-bench",
+        "2.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        runtime_agent_env_defaults={"HTTPS_PROXY": "${ORNNLAB_CONTAINER_HTTPS_PROXY}"},
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+
+    result = asyncio.run(
+        ManagedSubprocessHarborRunner(command=[sys.executable, str(script)]).run(
+            config,
+            extra_env={"ORNNLAB_CONTAINER_HTTPS_PROXY": "http://172.17.0.1:32123"},
+        )
+    )
+
+    assert result["status"] == "completed"
+    artifact = (tmp_path / "harbor-job" / "harbor.config.json").read_text()
+    assert "172.17.0.1:32123" not in artifact
+
+
 def test_managed_subprocess_runner_reports_missing_executable(tmp_path, caplog):
     settings = Settings(home=tmp_path)
     builder = HarborConfigBuilder(settings)

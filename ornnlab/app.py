@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHttpException
 
 from ornnlab.api import webui
+from ornnlab.services.container_proxy_runtime import ContainerProxyRuntime
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_dataset_service import WebUiDatasetService
@@ -32,9 +33,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     interrupted_operations = WebUiOperationService(
         active_settings, operation_tasks
     ).reconcile_interrupted()
+    container_proxy = ContainerProxyRuntime()
+    worker = QueueWorkerService(active_settings, container_proxy)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        await app.state.container_proxy.start()
         if QueueService(active_settings).queued_count() > 0:
             app.state.worker.start()
         yield
@@ -43,12 +47,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        await app.state.worker.close()
+        await app.state.container_proxy.close()
 
     app = FastAPI(title="OrnnLab", version="0.3.0", lifespan=lifespan)
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
     app.state.interrupted_operations = interrupted_operations
-    app.state.worker = QueueWorkerService(active_settings)
+    app.state.container_proxy = container_proxy
+    app.state.worker = worker
     app.state.dataset_service = WebUiDatasetService(active_settings)
     app.state.operation_tasks = operation_tasks
 

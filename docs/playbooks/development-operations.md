@@ -10,6 +10,7 @@
 | 1.3 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 记录 macOS 到 Ubuntu 的数据恢复与验证经验。 |
 | 1.4 | npm launcher `0.1.3`; Vite `8.x` | 2026-07-19 | 记录 Ubuntu inotify 限额导致前端启动失败的诊断和部署方案。 |
 | 1.5 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | 记录 Clash 回环代理无法被 Harbor trial 容器访问的诊断和安全转发方案。 |
+| 1.6 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | OrnnLab 自动发现宿主代理并为 Docker Agent 托管临时 relay。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -126,8 +127,17 @@ CHOKIDAR_USEPOLLING=true CHOKIDAR_INTERVAL=500 ornnlab dev start
 也不会自动把宿主的代理变量注入 Agent。因此应分别验证宿主经代理请求、容器
 代理变量和容器到宿主代理入口三层，不要只用宿主 curl 判断。
 
-开发机可用 `socat` 建立仅绑定 Docker 接口的转发，避免开启 Clash 的全局
-`allow-lan`：
+当前 OrnnLab 默认自动读取标准代理变量。回环 HTTP/SOCKS 代理会在 Job 执行期建立
+只绑定 Docker bridge 的随机端口 relay，并以运行时模板注入 Agent；无需修改 Clash
+`allow-lan`、逐个编辑 Agent Profile 或安装 systemd service。可通过日志确认：
+
+```text
+docker_proxy_detection
+docker_proxy_bridge_started
+docker.proxy.injected
+```
+
+临时排障或旧版本仍可用 `socat` 建立仅绑定 Docker 接口的转发：
 
 ```ini
 [Service]
@@ -137,7 +147,8 @@ Restart=always
 RestartSec=3
 ```
 
-把该命令保存为用户级 systemd service 后，在需要联网的 Agent Profile 中配置：
+旧版本把该命令保存为用户级 systemd service 后，还需在需要联网的 Agent Profile
+中配置：
 
 ```text
 HTTP_PROXY=http://172.17.0.1:17890
@@ -166,3 +177,14 @@ docker run --rm \
 Agent Profile 是 Job 创建时的快照。修改 Profile 只影响后续新建或重跑的 Job，
 不会修复已经运行中的 Harbor 进程；旧 Job 应在确认成本后取消，再基于更新后的
 Profile 重跑。
+
+自动继承模式在 Job 执行期读取当前宿主代理，不受上述 Profile 快照限制。需要排除
+代理问题或使用自管网络策略时，启动 OrnnLab 前设置：
+
+```bash
+ORNNLAB_DOCKER_PROXY_MODE=off ornnlab dev start
+```
+
+启停回归判断端口是否仍被服务占用时，应实际尝试 TCP connect，不应立即重新 bind
+同一端口。刚关闭的健康检查连接可能处于 `TIME_WAIT`，此时没有监听进程，但 bind
+仍会短暂返回 `EADDRINUSE`，从而产生“服务未退出”的假失败。

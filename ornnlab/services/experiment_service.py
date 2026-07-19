@@ -8,6 +8,10 @@ from uuid import uuid4
 from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.services.agent_config_service import AgentConfigService
 from ornnlab.services.clock import now_iso
+from ornnlab.services.container_proxy_runtime import (
+    ContainerProxyRuntime,
+    RuntimeProxyPolicy,
+)
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_utils import (
     derive_experiment_status,
@@ -15,18 +19,22 @@ from ornnlab.services.experiment_utils import (
     stable_hash,
     unique_preserving_order,
 )
-from ornnlab.services.failure_classifier import classify_exception
 from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.report_service import ReportService
 from ornnlab.services.run_cancellation_service import RunCancellationService
+from ornnlab.services.run_failure_service import RunFailureService
 from ornnlab.services.template_service import TemplateService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
 
 class ExperimentService:
-    def __init__(self, settings: Settings):
+    def __init__(
+        self,
+        settings: Settings,
+        container_proxy: ContainerProxyRuntime | None = None,
+    ):
         self.settings = settings
         self.events = EventService(settings)
         self.builder = HarborConfigBuilder(settings)
@@ -35,7 +43,9 @@ class ExperimentService:
         self.queue = QueueService(settings)
         self.reports = ReportService(settings)
         self.cancellations = RunCancellationService(settings, self.events, self.reports)
+        self.failures = RunFailureService(settings, self.events, self.queue, self.reports)
         self.templates = TemplateService(settings)
+        self.container_proxy = container_proxy or ContainerProxyRuntime()
 
     def create(self, request: ExperimentCreate) -> dict:
         experiment_id = f"exp-{uuid4().hex[:12]}"
@@ -268,6 +278,20 @@ class ExperimentService:
             webui_config.get("jobs_dir"), self.settings.experiments_dir / run["id"] / "harbor-job"
         )
         try:
+            overrides = webui_config.get("harbor_overrides") or {}
+            proxy_policy = RuntimeProxyPolicy({}, {}, 0)
+            if _uses_docker_environment(overrides):
+                proxy_policy = await self.container_proxy.prepare_policy()
+            if proxy_policy.agent_env_defaults:
+                self.events.append(
+                    "run",
+                    run["id"],
+                    "docker.proxy.injected",
+                    {
+                        "variable_names": sorted(proxy_policy.agent_env_defaults),
+                        "relay_count": proxy_policy.relay_count,
+                    },
+                )
             agent_config = self.agent_configs.config(run["agent_id"], webui_config.get("model"))
             if agent_config.get("import_path"):
                 agent_config.pop("name", None)
@@ -280,12 +304,13 @@ class ExperimentService:
                 run["n_concurrent"],
                 job_dir,
                 job_name=webui_config.get("job_name", run["id"]),
-                overrides=webui_config.get("harbor_overrides"),
+                overrides=overrides,
+                runtime_agent_env_defaults=proxy_policy.agent_env_defaults,
             )
             snapshot = self.engine.capability_snapshot()
             artifact_paths = self.builder.write_run_artifacts(config, snapshot)
         except Exception as exc:
-            await self._mark_run_failed(run, job_dir, exc)
+            await self.failures.mark_failed(run, job_dir, exc)
             return
         if not self._mark_run_running(run, job_dir, config.job_name, now):
             self.events.append(
@@ -307,7 +332,7 @@ class ExperimentService:
             },
         )
         try:
-            result = await self.engine.run(config)
+            result = await self.engine.run(config, runtime_env=proxy_policy.subprocess_env)
         except asyncio.CancelledError:
             if self._is_run_cancelled(run["id"]):
                 self.events.append(
@@ -317,7 +342,7 @@ class ExperimentService:
                     {"source": "cancelled_during_engine_task_cancel"},
                 )
                 return
-            await self._mark_run_interrupted(
+            await self.failures.mark_interrupted(
                 run,
                 job_dir,
                 "worker_task_cancelled",
@@ -333,7 +358,7 @@ class ExperimentService:
                     {"source": "cancelled_during_engine_failure"},
                 )
                 return
-            await self._mark_run_failed(run, job_dir, exc)
+            await self.failures.mark_failed(run, job_dir, exc)
             return
         report_path = self.reports.write_summary(
             run["id"],
@@ -406,79 +431,6 @@ class ExperimentService:
             )
             return True
 
-    async def _mark_run_failed(self, run: dict, job_dir: str, exc: Exception) -> None:
-        failure = classify_exception(exc)
-        report_path = self.reports.write_summary(
-            run["id"],
-            "failed",
-            job_dir,
-            None,
-            failure["failure_class"],
-            failure["failure_code"],
-        )
-        now = now_iso()
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, job_dir = ?, report_path = ?, "
-                "failure_class = ?, failure_code = ?, failure_summary = ?, updated_at = ? "
-                "WHERE id = ?",
-                (
-                    "failed",
-                    now,
-                    job_dir,
-                    report_path,
-                    failure["failure_class"],
-                    failure["failure_code"],
-                    failure["failure_summary"],
-                    now,
-                    run["id"],
-                ),
-            )
-        self.queue.finish(run["id"], "failed")
-        self.events.append("run", run["id"], "harbor.job.failed", failure, severity="error")
-
-    async def _mark_run_interrupted(
-        self,
-        run: dict,
-        job_dir: str,
-        failure_code: str,
-        summary: str,
-    ) -> None:
-        report_path = self.reports.write_summary(
-            run["id"],
-            "interrupted",
-            job_dir,
-            None,
-            "worker_lifecycle",
-            failure_code,
-        )
-        now = now_iso()
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, job_dir = ?, report_path = ?, "
-                "failure_class = ?, failure_code = ?, failure_summary = ?, updated_at = ? "
-                "WHERE id = ?",
-                (
-                    "interrupted",
-                    now,
-                    job_dir,
-                    report_path,
-                    "worker_lifecycle",
-                    failure_code,
-                    summary,
-                    now,
-                    run["id"],
-                ),
-            )
-        self.queue.finish(run["id"], "interrupted")
-        self.events.append(
-            "run",
-            run["id"],
-            "experiment.interrupted",
-            {"failure_code": failure_code, "failure_summary": summary},
-            severity="warning",
-        )
-
     def _is_run_cancelled(self, run_id: str) -> bool:
         return self.get_run(run_id)["status"] == "cancelled"
 
@@ -496,3 +448,8 @@ def _resolve_job_dir(configured_path: str | None, default_path) -> str:
     if not configured_path:
         return str(default_path)
     return str(Path(configured_path).expanduser().resolve())
+
+
+def _uses_docker_environment(overrides: dict) -> bool:
+    environment = overrides.get("environment", {"type": "docker"})
+    return isinstance(environment, dict) and environment.get("type", "docker") == "docker"
