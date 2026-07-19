@@ -2,7 +2,7 @@
 
 - Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 22:51
+- Updated: 2026-07-19 23:50
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -21,17 +21,19 @@
   - Docker 专用 TCP relay 加代理注入可使原 Claude setup 成功。
   - 自动代理必须进入 Harbor Environment，才能覆盖 setup、Agent 和 Verifier。
   - Clash 对 Ubuntu archive/security 存在间歇性 502；同 URL 宿主直连成功。
+  - Ubuntu 502 已定位为当前 `🇭🇰 香港Z02 | IEPL` 节点的目标特异性上游失败；直连及香港 Z01、日本/美国 IEPL 节点访问相同 URL 成功。
 - Ruled out:
   - Claude/npm 服务故障；原始 Claude 超时不是 Clash 目标规则故障。
 - Fix criteria:
   - 自动发现标准代理变量；非回环代理直接继承；回环代理经 Docker 专用受限 relay 转换；setup、Agent、Verifier 全生命周期继承；可显式关闭；不得泄露代理凭据；有结构化日志、单元测试和真实 Docker 冒烟。
-- Current conclusion: H-004/H-005 已确认并完成 capability-driven、Environment-lifecycle 修复；原失败任务等价复跑 10/10 终态，其中 5 个 Verifier 通过，剩余 5 个隔离为 Clash Ubuntu 上游 502/超时。
+- Current conclusion: H-004/H-005 已确认并完成 capability-driven、Environment-lifecycle 修复；H-006 确认剩余 Ubuntu 502 是香港 Z02 远端节点到 Canonical 三组目标地址的连接失败，Mihomo 本地 HTTP 入站在上游隧道断开后合成空 502。
 - Related hypotheses:
   - H-001
   - H-002
   - H-003
   - H-004
   - H-005
+  - H-006
 - Resolution basis:
   - H-001/H-002/H-003/H-004/H-005 evidence gates satisfied；自动代理真实容器 HTTP 200；四轮 fresh architecture review 最终 PASS WITH FOLLOW-UPS；最终等价 Job 的 setup、Agent、Verifier 均有真实成功证据。
 - Close reason:
@@ -269,6 +271,51 @@
   - none
 - Close reason:
   - fixed
+
+## Hypothesis H-006: 当前 Clash 出口到 Canonical 镜像的上游连接失败
+
+- Status: confirmed
+- Parent: P-001
+- Claim: Ubuntu mirror 请求被兜底规则送入当前 `🇭🇰 香港Z02 | IEPL` 节点后，该节点或其上游出口无法在约 15 秒内建立到 Canonical 镜像的连接；Mihomo 对普通 HTTP 代理请求返回空 502，对 HTTPS CONNECT 隧道直接断开。
+- Layer: external-dependency
+- Factor relation: all_of
+- Depends on:
+  - none
+- Falsifiable predictions:
+  - If true: 同一 Ubuntu URL 直连成功、当前节点失败；中性站点经当前节点成功；至少一个其他可用节点访问 Ubuntu URL 成功，或所有同供应商节点呈现相同失败。
+  - If false: 不同节点均以相同方式失败，或 Ubuntu 源站直连也失败，或请求没有经过当前节点。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 对比直连、当前节点和其他节点访问 Ubuntu mirror 与中性探测 URL。
+  - Signal: Mihomo 单节点 delay API、curl HTTP 状态/耗时、sidecar 规则与节点日志。
+  - Capture method: Mihomo Unix 控制接口、宿主 curl、sidecar 日志。
+  - Event name or marker:
+    - none
+  - Correlation keys:
+    - `archive.ubuntu.com`
+    - `security.ubuntu.com`
+    - `🇭🇰 香港Z02 | IEPL`
+  - Differentiates from:
+    - Ubuntu 源站故障；OrnnLab relay 故障；DNS 故障；所有 Clash 节点共同故障。
+  - Supports if:
+    - 当前节点稳定失败且直连或其他节点成功，并且日志确认请求由该节点承载。
+  - Refutes if:
+    - 当前节点访问 Ubuntu URL 成功，或失败与节点选择无关。
+  - Instrumentation status: existing
+  - Instrumentation lifecycle:
+    - Mihomo 控制接口与 sidecar 日志，不新增常驻埋点。
+- Evidence gate: satisfied
+- Related evidence:
+  - E-027
+  - E-032
+  - E-033
+  - E-034
+- Conclusion: confirmed
+- Repair design readiness: ready
+- Next step: 若授权修复，在 Clash 侧更换健康节点或为 Ubuntu/Canonical 镜像配置可移植的健康策略；不得在 OrnnLab 内加入设备特判。
+- Blocker:
+  - none
+- Close reason:
+  - not closed
 
 ## Evidence E-001: 原 Job 的 Claude bootstrap 连接超时
 
@@ -672,3 +719,42 @@
 - Raw content: `mean=0.3; runtime=2472s; 5 apt failures; qemu-startup/fix-code/log-summary reward=1`
 - Interpretation: 标准 inotify 重启未改变代理链路；与前次分数差异来自 Agent 解题结果（Cython 2 个断言失败、SSH Agent timeout/Verifier 255）及 Clash Ubuntu mirror 502，而非 OrnnLab 自动代理回归。
 - Time: 2026-07-19 22:51
+
+## Evidence E-032: 单节点探测隔离出香港 Z02
+
+- Related hypotheses: H-006
+- Direction: supports
+- Type: reproduction
+- Source: Mihomo Unix 控制接口 `/proxies/{name}/delay`
+- Prediction or plan link: 在不切换当前选择器的前提下，对比同一 URL 的不同出口节点。
+- Matched signal: 香港 Z02 对 Google 204 探测成功，但对 Ubuntu InRelease 在 10 秒后失败；DIRECT、香港 Z01、日本 Z01 IEPL、美国 Z01 IEPL 对相同 Ubuntu URL 均成功。
+- Correlation keys: `🇭🇰 香港Z02 | IEPL`; `archive.ubuntu.com`
+- Raw content: `HK-Z02 gstatic=47ms; HK-Z02 ubuntu=503/error; DIRECT=310ms; HK-Z01=277ms; JP-Z01=327ms; US-Z01=260ms`
+- Interpretation: Clash 核心、宿主网络、Ubuntu 源站和所有订阅节点共同故障均被排除；问题绑定当前节点与 Canonical 目标的组合。
+- Time: 2026-07-19 23:40
+
+## Evidence E-033: DNS 与单个镜像 IP 被排除
+
+- Related hypotheses: H-006
+- Direction: supports
+- Type: runtime-diagnostic
+- Source: Mihomo 临时 debug 日志与 Host 固定 IP 对照探测
+- Prediction or plan link: 区分 DNS/IPv6 错误和远端出口到目标网段的连接失败。
+- Matched signal: Mihomo 解析到有效 Canonical IPv4/IPv6 并选择 IPv4 `91.189.92.24`；固定访问三组不同 Canonical IPv4 时，直连均约 0.55–0.63 秒返回 200，香港 Z02 均约 15.39 秒返回空 502。
+- Correlation keys: `91.189.92.24`; `91.189.91.83`; `185.125.190.81`
+- Raw content: `direct=200; HK-Z02=502; total≈15.4s for all three IPs`
+- Interpretation: 不是错误 DNS、IPv6 优先或单台 Ubuntu 镜像宕机；香港 Z02 的远端出口对 Canonical 多个目标网段发生一致连接超时/断开。
+- Time: 2026-07-19 23:47
+
+## Evidence E-034: 502 由 Mihomo HTTP 入站合成
+
+- Related hypotheses: H-006
+- Direction: supports
+- Type: source-analysis
+- Source: Mihomo v1.19.18 `listener/http/proxy.go` 与 `hub/route/proxies.go`
+- Prediction or plan link: 判定 502 的生成位置和控制接口 503 的含义。
+- Matched signal: HTTP 入站的 `client.Do(request)` 出错时调用 `responseWith(..., http.StatusBadGateway)`，并设置与现场完全一致的 keep-alive 响应头；单节点 URLTest 出错时控制接口返回 503。
+- Correlation keys: tag `v1.19.18`; commit `5585304d6885cd623426df7d363df93d06a45556`
+- Raw content: `if err != nil { resp = responseWith(request, http.StatusBadGateway) }`
+- Interpretation: 空 502 不是 Canonical/Ubuntu 的 HTTP 响应，而是 Mihomo 在远端代理隧道未能提供有效响应后给本地客户端生成的网关错误。
+- Time: 2026-07-19 23:49
