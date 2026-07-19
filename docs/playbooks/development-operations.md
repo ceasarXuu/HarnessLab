@@ -9,6 +9,7 @@
 | 1.2 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-27 | Recorded Colima startup check before real Harbor Docker smoke. |
 | 1.3 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 记录 macOS 到 Ubuntu 的数据恢复与验证经验。 |
 | 1.4 | npm launcher `0.1.3`; Vite `8.x` | 2026-07-19 | 记录 Ubuntu inotify 限额导致前端启动失败的诊断和部署方案。 |
+| 1.5 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | 记录 Clash 回环代理无法被 Harbor trial 容器访问的诊断和安全转发方案。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -117,3 +118,51 @@ CHOKIDAR_USEPOLLING=true CHOKIDAR_INTERVAL=500 ornnlab dev start
 `ORNNLAB_HOME` 和上述 polling 环境。wrapper 应放在用户自己的 `~/.local/bin`
 下，不提交硬编码的本机路径到仓库。完成后必须执行 `dev stop`、`dev start`、
 `dev status --json` 生命周期回归，并验证后端与前端代理的 `/api/webui/v1/system/live`。
+
+## 2026-07-19 Docker 容器访问 Clash
+
+宿主机能访问 Claude 或 npm，不代表 Harbor trial 容器也能访问。Clash Verge
+常见配置是只监听 `127.0.0.1:7890`；该地址进入容器后指向容器自身。Harbor
+也不会自动把宿主的代理变量注入 Agent。因此应分别验证宿主经代理请求、容器
+代理变量和容器到宿主代理入口三层，不要只用宿主 curl 判断。
+
+开发机可用 `socat` 建立仅绑定 Docker 接口的转发，避免开启 Clash 的全局
+`allow-lan`：
+
+```ini
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:17890,bind=172.17.0.1,fork,reuseaddr TCP:127.0.0.1:7890
+SuccessExitStatus=143
+Restart=always
+RestartSec=3
+```
+
+把该命令保存为用户级 systemd service 后，在需要联网的 Agent Profile 中配置：
+
+```text
+HTTP_PROXY=http://172.17.0.1:17890
+HTTPS_PROXY=http://172.17.0.1:17890
+http_proxy=http://172.17.0.1:17890
+https_proxy=http://172.17.0.1:17890
+NO_PROXY=localhost,127.0.0.1,::1
+no_proxy=localhost,127.0.0.1,::1
+```
+
+`172.17.0.1` 是宿主默认 `docker0` 地址，即使 trial 位于其他 Compose bridge，
+通常仍可路由到该地址。部署前必须用 `ip -4 addr show docker0` 确认实际地址；
+转发端口只能监听 Docker 接口，不能监听 `0.0.0.0`，否则可能向局域网暴露代理。
+
+验证时从临时 Docker 容器发起真实请求，并检查 systemd 监听范围：
+
+```bash
+systemctl --user status ornnlab-clash-docker-proxy.service
+ss -ltnp 'sport = :17890'
+docker run --rm \
+  -e HTTPS_PROXY=http://172.17.0.1:17890 \
+  curlimages/curl:8.10.1 \
+  -fsS -o /dev/null https://downloads.claude.ai/claude-code-releases/bootstrap.sh
+```
+
+Agent Profile 是 Job 创建时的快照。修改 Profile 只影响后续新建或重跑的 Job，
+不会修复已经运行中的 Harbor 进程；旧 Job 应在确认成本后取消，再基于更新后的
+Profile 重跑。
