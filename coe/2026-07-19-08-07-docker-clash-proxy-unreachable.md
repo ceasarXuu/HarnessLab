@@ -2,7 +2,7 @@
 
 - Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 23:50
+- Updated: 2026-07-19 23:56
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -309,6 +309,7 @@
   - E-032
   - E-033
   - E-034
+  - E-035
 - Conclusion: confirmed
 - Repair design readiness: ready
 - Next step: 若授权修复，在 Clash 侧更换健康节点或为 Ubuntu/Canonical 镜像配置可移植的健康策略；不得在 OrnnLab 内加入设备特判。
@@ -758,3 +759,16 @@
 - Raw content: `if err != nil { resp = responseWith(request, http.StatusBadGateway) }`
 - Interpretation: 空 502 不是 Canonical/Ubuntu 的 HTTP 响应，而是 Mihomo 在远端代理隧道未能提供有效响应后给本地客户端生成的网关错误。
 - Time: 2026-07-19 23:49
+
+## Evidence E-035: 切换日本 Z02 后真实 Job 越过 apt 502
+
+- Related hypotheses: H-006
+- Direction: supports
+- Type: fix-validation
+- Source: Clash 节点状态、宿主镜像探测与 `run-371699db5dee` trial 日志
+- Prediction or plan link: H-006 预测切换健康节点后相同 Ubuntu URL 与真实 trial 的 apt 阶段应恢复。
+- Matched signal: 当前节点变为日本 Z02 IEPL；archive/security 宿主代理探测均返回 200；新 Job 前两条并发 trial 均完成 apt 命令并进入 Claude Code 安装或 Agent 阶段，未出现 502。
+- Correlation keys: `🇯🇵 日本Z02 | IEPL`; `run-371699db5dee`
+- Raw content: `archive=200; security=200; Command outputs captured; n_running_trials=2; n_pending_trials=8`
+- Interpretation: 用户切换出口节点已经改变原始失败结果，进一步确认 502 绑定香港 Z02 到 Canonical 的出口链路；完整 Job 尚在运行，最终任务结果需继续观察。
+- Time: 2026-07-19 23:56
