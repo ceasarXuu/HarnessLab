@@ -2,7 +2,7 @@
 
 - Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 18:05
+- Updated: 2026-07-19 19:36
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -19,18 +19,21 @@
 - Known facts:
   - 宿主经 Clash 请求 Claude/npm 返回 200；容器无代理变量且直连超时。
   - Docker 专用 TCP relay 加代理注入可使原 Claude setup 成功。
+  - 自动代理必须进入 Harbor Environment，才能覆盖 setup、Agent 和 Verifier。
+  - Clash 对 Ubuntu archive/security 存在间歇性 502；同 URL 宿主直连成功。
 - Ruled out:
-  - Claude/npm 服务故障；Clash 规则故障。
+  - Claude/npm 服务故障；原始 Claude 超时不是 Clash 目标规则故障。
 - Fix criteria:
-  - 自动发现标准代理变量；非回环代理直接继承；回环代理经 Docker 专用受限 relay 转换；可显式关闭；不得泄露代理凭据；有结构化日志、单元测试和真实 Docker 冒烟。
-- Current conclusion: H-004 已确认并完成 capability-driven 修复；第四轮 fresh closure review 通过。
+  - 自动发现标准代理变量；非回环代理直接继承；回环代理经 Docker 专用受限 relay 转换；setup、Agent、Verifier 全生命周期继承；可显式关闭；不得泄露代理凭据；有结构化日志、单元测试和真实 Docker 冒烟。
+- Current conclusion: H-004/H-005 已确认并完成 capability-driven、Environment-lifecycle 修复；原失败任务等价复跑 10/10 终态，其中 5 个 Verifier 通过，剩余 5 个隔离为 Clash Ubuntu 上游 502/超时。
 - Related hypotheses:
   - H-001
   - H-002
   - H-003
   - H-004
+  - H-005
 - Resolution basis:
-  - H-001/H-002/H-003/H-004 evidence gates satisfied；自动代理真实容器 HTTP 200；四轮 fresh architecture review 最终 PASS WITH FOLLOW-UPS。
+  - H-001/H-002/H-003/H-004/H-005 evidence gates satisfied；自动代理真实容器 HTTP 200；四轮 fresh architecture review 最终 PASS WITH FOLLOW-UPS；最终等价 Job 的 setup、Agent、Verifier 均有真实成功证据。
 - Close reason:
   - fixed
 
@@ -217,6 +220,51 @@
 - Conclusion: confirmed
 - Repair design readiness: implemented and validated
 - Next step: 将完整 Profile→Job→Queue→Experiment reviewer harness 固化为后续自动化增强。
+- Blocker:
+  - none
+- Close reason:
+  - fixed
+
+## Hypothesis H-005: 只向 Agent 注入代理会遗漏 Verifier 网络
+
+- Status: confirmed
+- Parent: P-001
+- Claim: `AgentConfig.env` 只能覆盖 Agent setup/运行；Verifier 通过 Environment 执行，因而仍会在下载验证依赖时直连失败。
+- Layer: integration
+- Factor relation: all_of
+- Depends on:
+  - H-003
+- Falsifiable predictions:
+  - If true: Claude 安装和模型调用成功，但 Verifier 下载 `uv` 失败；将模板移到 Environment 后 setup、Agent、Verifier 均获得同一代理。
+  - If false: 只配置 Agent env 时 Verifier 也能稳定下载依赖，或 Environment 注入不改变结果。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 等价复跑并分别观察 Agent setup、模型调用和 Verifier 下载。
+  - Signal: Claude bootstrap、trajectory、Verifier `uv`/CPython/PyPI 下载和 reward。
+  - Capture method: WebUI Job copy、Harbor trial log、Verifier stdout、原生 result.json。
+  - Event name or marker:
+    - harbor_subprocess.runtime_config_prepared
+  - Correlation keys:
+    - run-d20feca1d748
+    - run-7d456ad95206
+  - Differentiates from:
+    - Clash 对单个 Ubuntu mirror 的选择性 502
+  - Supports if:
+    - Agent 成功而 Verifier 直连失败；Environment 注入后相同 Verifier 下载成功。
+  - Refutes if:
+    - Verifier 在 Agent-only 配置下已继承代理，或 Environment 修复后仍以相同方式失败。
+  - Instrumentation status: permanent
+  - Instrumentation lifecycle:
+    - retained
+- Evidence gate: satisfied
+- Related evidence:
+  - E-025
+  - E-026
+  - E-028
+  - E-029
+  - E-030
+- Conclusion: confirmed
+- Repair design readiness: implemented and validated
+- Next step: none
 - Blocker:
   - none
 - Close reason:
@@ -533,3 +581,81 @@
 - Raw content: `PASS WITH FOLLOW-UPS; Python 156 passed/3 skipped; no blocking/important`
 - Interpretation: 所有 accepted blocking 已闭环；剩余项仅为把 reviewer 的完整跨 service harness 固化为长期测试。
 - Time: 2026-07-19 18:05
+
+## Evidence E-025: 原 Job resume 被 Harbor lock 一致性保护拒绝
+
+- Related hypotheses: H-005
+- Direction: neutral
+- Type: reproduction
+- Source: `run-f41a9d84f101` resume operation
+- Prediction or plan link: 不修改旧 lock/artifact，改用等价 copy 复跑。
+- Matched signal: Harbor 报现有 `lock.json` 与 resolved job lock 不一致。
+- Correlation keys: `op-6711b9870952`
+- Raw content: `FileExistsError: Job directory ... already has a lock.json that does not match`
+- Interpretation: 原目录不可安全原地 resume；唯一名称的等价 Job 是非破坏性验证路径。
+- Time: 2026-07-19 18:49
+
+## Evidence E-026: Agent-only 复跑越过原故障但 Verifier 仍直连失败
+
+- Related hypotheses: H-005
+- Direction: supports
+- Type: reproduction
+- Source: `run-d20feca1d748`
+- Prediction or plan link: H-005 的分层差异。
+- Matched signal: Claude 安装、DeepSeek 模型调用和 trajectory 成功；QEMU Verifier 请求 `astral.sh` 时 `curl: (7)`，进程环境无代理。
+- Correlation keys: `qemu-startup__8j6ze95`
+- Raw content: `Claude trajectory written; verifier: curl: (7) Couldn't connect to server`
+- Interpretation: 原始网络问题已在 Agent 层修复，但容器全生命周期语义尚未闭环。
+- Time: 2026-07-19 19:06
+
+## Evidence E-027: Clash 对 Ubuntu mirror 返回选择性 502
+
+- Related hypotheses: H-001; H-005
+- Direction: neutral
+- Type: external-evidence
+- Source: 宿主 curl direct/proxy 对照与 trial apt 输出
+- Prediction or plan link: 区分 OrnnLab relay 故障和代理上游规则/节点故障。
+- Matched signal: 同一宿主上 `archive.ubuntu.com` 经 Clash 502、直连 200；Claude/GitHub 经 Clash 200。
+- Correlation keys: `127.0.0.1:7890`; Ubuntu archive
+- Raw content: `proxy archive=502; direct archive=200; proxy downloads.claude.ai=200`
+- Interpretation: relay 正确转发了 Clash 响应；不得在 OrnnLab 中加入 Ubuntu 域名或本机直连特判。
+- Time: 2026-07-19 18:56
+
+## Evidence E-028: Environment 模板需要运行期临时解析
+
+- Related hypotheses: H-005
+- Direction: supports
+- Type: implementation-diagnostic
+- Source: `run-cec9f06c9c70` 与 ManagedSubprocessHarborRunner
+- Prediction or plan link: Environment 负责全生命周期，但 Harbor 不会替其展开 OrnnLab 模板。
+- Matched signal: 未解析时 curl 报 `${ORNNLAB_CONTAINER_HTTPS_PROXY}` 为坏主机；临时解析后 setup 使用实际 relay。
+- Correlation keys: `harbor_subprocess.runtime_config_prepared`
+- Raw content: `curl: (5) Unsupported proxy syntax; fixed setup relay=172.17.0.1:<ephemeral>`
+- Interpretation: OrnnLab artifact 保留模板，runner 只为本次 Harbor 子进程生成并清理已解析临时配置。
+- Time: 2026-07-19 19:13
+
+## Evidence E-029: Environment 生命周期实现通过全量门禁
+
+- Related hypotheses: H-005
+- Direction: refutes
+- Type: regression
+- Source: `test-after-change-web.sh` 与 targeted proxy tests
+- Prediction or plan link: 显式配置优先、临时配置清理、缺失 runtime 值失败、全栈不回归。
+- Matched signal: Python、前端、launcher、类型、lint、构建和 Storybook 均通过。
+- Correlation keys: commit `a150e6a`
+- Raw content: `157 passed/3 skipped; frontend 108; launcher 27; pyright 0; targeted subprocess 12 passed`
+- Interpretation: 修复使用 Harbor 标准 EnvironmentConfig，不依赖 Clash、固定地址、路径或设备。
+- Time: 2026-07-19 19:21
+
+## Evidence E-030: 最终等价 Job 证明 setup、Agent、Verifier 全生命周期可用
+
+- Related hypotheses: H-001; H-003; H-004; H-005
+- Direction: refutes
+- Type: fix-validation
+- Source: `run-7d456ad95206` 原生 Harbor result 与 trial logs
+- Prediction or plan link: 最终真实任务验收。
+- Matched signal: 10/10 终态；5 个 reward=1；Claude/DeepSeek 成功；多个 Verifier 成功下载 uv、33.8 MiB CPython、PyPI 包并通过测试。
+- Correlation keys: Harbor job `b6bf26c8-8b6f-4b74-98cc-8a1eb53dada0`
+- Raw content: `n_completed_trials=10; n_errored_trials=5; mean=0.5; runtime=1366s`
+- Interpretation: 原始 Claude 网络故障及 Verifier 漏注入均已修复；剩余 5 个失败隔离为 4 个 Ubuntu 502 和 1 个 apt setup 300 秒超时。
+- Time: 2026-07-19 19:36
