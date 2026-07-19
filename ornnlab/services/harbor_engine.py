@@ -33,15 +33,16 @@ class HarborConfigBuilder:
         jobs_dir: str,
         job_name: str | None = None,
         overrides: dict[str, Any] | None = None,
-        runtime_agent_env_defaults: dict[str, str] | None = None,
+        runtime_container_env_defaults: dict[str, str] | None = None,
     ) -> HarborJobConfigView:
         overrides = overrides or {}
         normalized_agent = _normalize_agent_view(agent_config)
+        environment = overrides.get("environment", {"type": "docker", "delete": True})
         if _is_docker_environment(overrides):
-            normalized_agent = _merge_agent_env_defaults(
-                normalized_agent,
-                runtime_agent_env_defaults or {},
-                _environment_env(overrides),
+            environment = _merge_environment_env_defaults(
+                environment,
+                runtime_container_env_defaults or {},
+                normalized_agent.get("env", {}),
             )
         dataset_name = (
             f"{benchmark_name}@{benchmark_version}" if benchmark_version else benchmark_name
@@ -74,7 +75,7 @@ class HarborConfigBuilder:
             retry=overrides.get("retry", {}),
             verifier=overrides.get("verifier", {}),
             metrics=overrides.get("metrics", []),
-            environment=overrides.get("environment", {"type": "docker", "delete": True}),
+            environment=environment,
         )
 
     def write_run_artifacts(
@@ -218,23 +219,17 @@ def _is_docker_environment(overrides: dict[str, Any]) -> bool:
     return environment.get("type", "docker") == "docker"
 
 
-def _environment_env(overrides: dict[str, Any]) -> dict[str, Any]:
-    environment = overrides.get("environment", {})
-    if not isinstance(environment, dict) or not isinstance(environment.get("env"), dict):
-        return {}
-    return environment["env"]
-
-
-def _merge_agent_env_defaults(
-    agent_config: dict[str, Any],
+def _merge_environment_env_defaults(
+    environment_config: dict[str, Any],
     defaults: dict[str, str],
-    environment_env: dict[str, Any],
+    agent_env: dict[str, Any],
 ) -> dict[str, Any]:
     if not defaults:
-        return agent_config
-    merged = dict(agent_config)
-    env = dict(merged.get("env", {}))
-    explicit_keys = set(env) | set(environment_env)
+        return environment_config
+    merged = dict(environment_config)
+    environment_env = merged.get("env", {})
+    env = dict(environment_env) if isinstance(environment_env, dict) else {}
+    explicit_keys = set(env) | set(agent_env)
     blocked_keys: set[str] = set()
     for group in (
         {"HTTP_PROXY", "http_proxy"},

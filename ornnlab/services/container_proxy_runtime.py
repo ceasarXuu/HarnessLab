@@ -40,7 +40,7 @@ class ProxyConfigurationError(RuntimeError):
 
 @dataclass
 class RuntimeProxyPolicy:
-    agent_env_defaults: dict[str, str]
+    container_env_defaults: dict[str, str]
     subprocess_env: dict[str, str]
     relay_count: int
     strategy: str = "none"
@@ -119,7 +119,7 @@ class ContainerProxyRuntime:
 
         async with self._lock:
             explicit_names = set(explicit_proxy_names)
-            agent_defaults: dict[str, str] = {}
+            container_defaults: dict[str, str] = {}
             subprocess_env: dict[str, str] = {}
             relays: dict[tuple[str, str, int], tuple[asyncio.Server, str]] = {}
             connection_tasks: set[asyncio.Task[None]] = set()
@@ -140,8 +140,8 @@ class ContainerProxyRuntime:
                         runtime_value = await self._loopback_relay_url(
                             endpoint, source_name, target, relays, connection_tasks
                         )
-                    agent_defaults[upper] = f"${{{runtime_name}}}"
-                    agent_defaults[lower] = f"${{{runtime_name}}}"
+                    container_defaults[upper] = f"${{{runtime_name}}}"
+                    container_defaults[lower] = f"${{{runtime_name}}}"
                     subprocess_env[runtime_name] = runtime_value
 
                 no_proxy_source = None
@@ -151,8 +151,8 @@ class ContainerProxyRuntime:
                     )
                     if no_proxy is not None:
                         runtime_name = _NO_PROXY_GROUP[2]
-                        agent_defaults["NO_PROXY"] = f"${{{runtime_name}}}"
-                        agent_defaults["no_proxy"] = f"${{{runtime_name}}}"
+                        container_defaults["NO_PROXY"] = f"${{{runtime_name}}}"
+                        container_defaults["no_proxy"] = f"${{{runtime_name}}}"
                         subprocess_env[runtime_name] = no_proxy
             except asyncio.CancelledError:
                 await self._release_policy(
@@ -166,15 +166,15 @@ class ContainerProxyRuntime:
                 raise
 
             servers = tuple(server for server, _ in relays.values())
-            strategy = "host-relay" if servers else ("direct" if agent_defaults else "none")
+            strategy = "host-relay" if servers else ("direct" if container_defaults else "none")
 
             logger.info(
                 "docker_proxy_policy_prepared variables=%s relay_count=%s",
-                ",".join(sorted(agent_defaults)),
+                ",".join(sorted(container_defaults)),
                 len(servers),
                 extra={
                     "event": "docker_proxy_policy_prepared",
-                    "variable_names": sorted(agent_defaults),
+                    "variable_names": sorted(container_defaults),
                     "relay_count": len(servers),
                     "no_proxy_source": no_proxy_source,
                     "strategy": strategy,
@@ -182,7 +182,7 @@ class ContainerProxyRuntime:
                 },
             )
             return RuntimeProxyPolicy(
-                agent_defaults,
+                container_defaults,
                 subprocess_env,
                 len(servers),
                 strategy,

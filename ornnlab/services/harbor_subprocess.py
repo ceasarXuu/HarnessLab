@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import errno
 import json
 import logging
 import os
+import re
 import shutil
 import signal
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +23,7 @@ JOB_LOG_NAME = "job.log"
 CLEANUP_FILE_NAME = "harbor.cleanup.json"
 CONFIG_FILE_NAME = "harbor.config.json"
 logger = logging.getLogger(__name__)
+_RUNTIME_ENV_TEMPLATE = re.compile(r"^\$\{(ORNNLAB_CONTAINER_[A-Z_]+)\}$")
 
 
 class ManagedSubprocessHarborRunner:
@@ -49,44 +53,46 @@ class ManagedSubprocessHarborRunner:
             config.job_name,
             config.jobs_dir,
         )
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *self.command,
-                "--config",
-                str(config_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                start_new_session=True,
-                env=_subprocess_env(extra_env),
-            )
-        except FileNotFoundError as error:
-            logger.error(
-                "harbor_subprocess.spawn_failed executable=%s job_name=%s jobs_dir=%s error=%s",
-                executable,
-                config.job_name,
-                config.jobs_dir,
-                error,
-            )
-            raise FileNotFoundError(
-                errno.ENOENT,
-                f"Harbor CLI executable not found: {executable}",
-                executable,
-            ) from error
-        output_task = asyncio.create_task(_mirror_stdout(process, log_path))
-        try:
-            return_code = await process.wait()
-            output = await output_task
-        except asyncio.CancelledError:
-            cleanup = await _terminate_process_group(process, self.terminate_grace_sec)
-            cleanup["reason"] = "task_cancelled"
-            cleanup["command"] = self.command
-            atomic_write_text(
-                job_dir / CLEANUP_FILE_NAME,
-                json.dumps(cleanup, indent=2, sort_keys=True),
-            )
-            output_task.cancel()
-            await _ignore_cancelled(output_task)
-            raise
+        with _runtime_config(config_path, extra_env) as runtime_config_path:
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *self.command,
+                    "--config",
+                    str(runtime_config_path),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    start_new_session=True,
+                    env=_subprocess_env(extra_env),
+                )
+            except FileNotFoundError as error:
+                logger.error(
+                    "harbor_subprocess.spawn_failed executable=%s job_name=%s "
+                    "jobs_dir=%s error=%s",
+                    executable,
+                    config.job_name,
+                    config.jobs_dir,
+                    error,
+                )
+                raise FileNotFoundError(
+                    errno.ENOENT,
+                    f"Harbor CLI executable not found: {executable}",
+                    executable,
+                ) from error
+            output_task = asyncio.create_task(_mirror_stdout(process, log_path))
+            try:
+                return_code = await process.wait()
+                output = await output_task
+            except asyncio.CancelledError:
+                cleanup = await _terminate_process_group(process, self.terminate_grace_sec)
+                cleanup["reason"] = "task_cancelled"
+                cleanup["command"] = self.command
+                atomic_write_text(
+                    job_dir / CLEANUP_FILE_NAME,
+                    json.dumps(cleanup, indent=2, sort_keys=True),
+                )
+                output_task.cancel()
+                await _ignore_cancelled(output_task)
+                raise
         if return_code != 0:
             raise RuntimeError(f"harbor subprocess exited with {return_code}: {output[-400:]}")
         result_path = resolve_harbor_result_path(job_dir, config.job_name)
@@ -116,6 +122,42 @@ def _subprocess_env(extra_env: dict[str, str] | None) -> dict[str, str]:
     child_env = os.environ.copy()
     child_env.update(extra_env or {})
     return child_env
+
+
+@contextlib.contextmanager
+def _runtime_config(config_path: Path, runtime_env: dict[str, str] | None):
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    environment = payload.get("environment")
+    environment_env = environment.get("env") if isinstance(environment, dict) else None
+    resolved_count = 0
+    if isinstance(environment_env, dict):
+        for name, value in environment_env.items():
+            match = _RUNTIME_ENV_TEMPLATE.fullmatch(value) if isinstance(value, str) else None
+            if match is None:
+                continue
+            runtime_name = match.group(1)
+            resolved = (runtime_env or {}).get(runtime_name)
+            if resolved is None:
+                raise RuntimeError(
+                    f"runtime container environment variable is unavailable: {runtime_name}"
+                )
+            environment_env[name] = resolved
+            resolved_count += 1
+    if resolved_count == 0:
+        yield config_path
+        return
+    logger.info(
+        "harbor_subprocess.runtime_config_prepared variable_count=%s",
+        resolved_count,
+        extra={
+            "event": "harbor_subprocess.runtime_config_prepared",
+            "variable_count": resolved_count,
+        },
+    )
+    with tempfile.TemporaryDirectory(prefix="ornnlab-harbor-runtime-") as temp_dir:
+        runtime_path = Path(temp_dir) / ".harbor.runtime.config.json"
+        runtime_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        yield runtime_path
 
 
 def harbor_cli_executable() -> str:

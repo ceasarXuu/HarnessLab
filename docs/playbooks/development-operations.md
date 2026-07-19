@@ -132,7 +132,7 @@ Clash、Docker Desktop、Colima 等具体产品，也不假定固定安装位置
 
 | Docker target / 代理地址 | 自动策略 |
 |---|---|
-| 任意 target + 非回环代理 URL | 直接注入 Agent；容器网络负责 DNS 与路由可达性 |
+| 任意 target + 非回环代理 URL | 直接注入 Environment；容器网络负责 DNS 与路由可达性 |
 | 同主机 rootful Linux + 回环 HTTP/SOCKS | bind host gateway 后创建仅限当前 Job 的 relay |
 | Docker Desktop、rootless、远程/虚拟化 daemon + 回环代理 | 启动 Harbor 前明确失败；改用容器可达的 Profile 代理 |
 | Agent/Environment 已显式配置某代理组 | 跳过该组的自动读取和 target relay |
@@ -147,7 +147,15 @@ docker_proxy_bridge_started
 docker_proxy_policy_skipped
 docker.proxy.injected
 docker_proxy_policy_released
+harbor_subprocess.runtime_config_prepared
 ```
+
+自动代理模板写入 Harbor Environment，因此 setup、Agent 和 Verifier 使用同一策略。
+OrnnLab 生成的 `harbor.config.json` 只保存 `${ORNNLAB_CONTAINER_*}` 模板；subprocess runner
+在受限临时目录生成已解析配置供本次 Harbor 进程读取，结束或取消后自动清理。日志只记录
+解析变量数量，不记录代理 endpoint。Harbor 为恢复 Job 生成的 `lock.json` 和 trial
+`config.json` 会按其原生协议快照已解析的 relay 地址；自动模式拒绝带凭据的回环代理，
+因此该快照不包含代理认证信息。
 
 临时排障或旧版本仍可用 `socat` 建立仅绑定 Docker 接口的转发：
 

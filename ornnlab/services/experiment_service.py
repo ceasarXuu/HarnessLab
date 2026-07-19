@@ -288,13 +288,13 @@ class ExperimentService:
                         agent_config, overrides
                     ),
                 )
-            if proxy_policy.agent_env_defaults:
+            if proxy_policy.container_env_defaults:
                 self.events.append(
                     "run",
                     run["id"],
                     "docker.proxy.injected",
                     {
-                        "variable_names": sorted(proxy_policy.agent_env_defaults),
+                        "variable_names": sorted(proxy_policy.container_env_defaults),
                         "relay_count": proxy_policy.relay_count,
                         "strategy": proxy_policy.strategy,
                         "target_kind": proxy_policy.target_kind,
@@ -312,7 +312,7 @@ class ExperimentService:
                 job_dir,
                 job_name=webui_config.get("job_name", run["id"]),
                 overrides=overrides,
-                runtime_agent_env_defaults=proxy_policy.agent_env_defaults,
+                runtime_container_env_defaults=proxy_policy.container_env_defaults,
             )
             snapshot = self.engine.capability_snapshot()
             artifact_paths = self.builder.write_run_artifacts(config, snapshot)

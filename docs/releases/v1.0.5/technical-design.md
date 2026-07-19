@@ -85,7 +85,7 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。
 
-### 4.4 宿主代理到 Docker Agent 的运行时适配
+### 4.4 宿主代理到 Docker Environment 的运行时适配
 
 `ContainerProxyRuntime` 是应用级瞬态服务，由 FastAPI lifespan 启动，并在 worker
 停止后关闭。它只读取 OrnnLab 进程的标准代理变量，不修改全局 `os.environ`，
@@ -97,8 +97,12 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 自动组的情况下恢复运行。若 Agent 或 Environment 声明 `extra_allowed_hosts`，runtime 默认整体跳过
 自动代理并记录 `docker_proxy_policy_skipped`；显式 Profile proxy 仍由用户配置直接进入
 Harbor。`HarborConfigBuilder` 只把
-`${ORNNLAB_CONTAINER_*_PROXY}` 模板作为 Agent env 默认值写入 artifact；实际派生 URL
-只通过受管 Harbor 子进程的 `env` 传递。
+`${ORNNLAB_CONTAINER_*_PROXY}` 模板作为 Environment env 默认值写入 artifact，使 setup、
+Agent 与 Verifier 共享同一代理策略。实际派生 URL 只通过受管 Harbor 子进程的 `env`
+传递；`ManagedSubprocessHarborRunner` 在受限临时目录解析 Environment 模板，Harbor
+退出或取消后删除临时配置。OrnnLab 自有 artifact 和结构化日志不保存 endpoint；Harbor
+原生恢复所需的 Job lock 与 trial config 会快照已解析 relay 地址。自动模式已拒绝带凭据
+的回环代理，避免认证信息进入这类 Harbor 原生文件。
 
 `docker_proxy_target` 是独立能力层。`DOCKER_CONTEXT` 存在时覆盖 `DOCKER_HOST`；否则
 `DOCKER_HOST` 覆盖当前默认 Context。provider 通过显式 CLI `--context` / `--host` 保证
@@ -125,6 +129,8 @@ runtime env 的自动代理；默认 `subprocess` engine 支持该能力。
 变量名、strategy、target kind 和 relay 数量，不保存 endpoint 或原始 URL。Docker
 target 发现、unsupported target 与 bind 失败统一分类为
 `proxy_configuration_failure` / `docker_proxy_unavailable`。
+`harbor_subprocess.runtime_config_prepared` 只记录本次解析的变量数量，用于确认
+Environment 全生命周期注入已生效。
 
 ## 5. API 与异步操作
 

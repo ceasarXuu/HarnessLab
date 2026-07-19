@@ -33,7 +33,7 @@ async def test_non_loopback_proxy_is_inherited_without_relay() -> None:
     policy = await runtime.prepare_policy()
 
     assert policy.relay_count == 0
-    assert policy.agent_env_defaults == {
+    assert policy.container_env_defaults == {
         "HTTPS_PROXY": "${ORNNLAB_CONTAINER_HTTPS_PROXY}",
         "https_proxy": "${ORNNLAB_CONTAINER_HTTPS_PROXY}",
         "NO_PROXY": "${ORNNLAB_CONTAINER_NO_PROXY}",
@@ -92,7 +92,9 @@ async def test_loopback_proxy_is_relayed_on_docker_reachable_address() -> None:
 
     assert await reader.read(1024) == b"proxy-smoke"
     assert received == b"proxy-smoke"
-    assert policy.agent_env_defaults["https_proxy"] == ("${ORNNLAB_CONTAINER_HTTPS_PROXY}")
+    assert policy.container_env_defaults["https_proxy"] == (
+        "${ORNNLAB_CONTAINER_HTTPS_PROXY}"
+    )
     assert policy.relay_count == 1
 
     writer.close()
@@ -129,7 +131,7 @@ async def test_proxy_auto_detection_can_be_disabled() -> None:
 
     policy = await runtime.prepare_policy()
 
-    assert policy.agent_env_defaults == {}
+    assert policy.container_env_defaults == {}
     assert policy.subprocess_env == {}
     assert policy.relay_count == 0
     await runtime.close()
@@ -185,7 +187,7 @@ async def test_explicit_proxy_group_skips_conflicting_automatic_discovery() -> N
 
     policy = await runtime.prepare_policy({"HTTPS_PROXY"})
 
-    assert policy.agent_env_defaults == {}
+    assert policy.container_env_defaults == {}
     assert policy.subprocess_env == {}
     assert resolver_called is False
 
@@ -206,7 +208,7 @@ async def test_network_allowlist_disables_default_automatic_proxy() -> None:
 
     policy = await runtime.prepare_policy(automatic_proxy_allowed=False)
 
-    assert policy.agent_env_defaults == {}
+    assert policy.container_env_defaults == {}
     assert resolver_called is False
 
 
@@ -425,7 +427,7 @@ def test_proxy_configuration_failure_has_stable_classification() -> None:
     }
 
 
-def test_harbor_builder_merges_runtime_proxy_as_agent_defaults(settings) -> None:
+def test_harbor_builder_merges_runtime_proxy_as_container_defaults(settings) -> None:
     builder = HarborConfigBuilder(settings)
 
     config = builder.build(
@@ -442,17 +444,42 @@ def test_harbor_builder_merges_runtime_proxy_as_agent_defaults(settings) -> None
                 "env": {"HTTPS_PROXY": "http://profile-proxy:9000"},
             }
         },
-        runtime_agent_env_defaults={
+        runtime_container_env_defaults={
             "HTTP_PROXY": "http://172.17.0.1:32000",
             "HTTPS_PROXY": "http://172.17.0.1:32000",
             "https_proxy": "http://172.17.0.1:32000",
         },
     )
 
-    assert config.agent["env"] == {
+    assert "env" not in config.agent
+    assert config.environment["env"] == {
         "HTTP_PROXY": "http://172.17.0.1:32000",
+        "HTTPS_PROXY": "http://profile-proxy:9000",
     }
-    assert config.environment["env"]["HTTPS_PROXY"] == "http://profile-proxy:9000"
+
+
+def test_harbor_builder_preserves_explicit_agent_proxy_over_container_default(settings) -> None:
+    builder = HarborConfigBuilder(settings)
+
+    config = builder.build(
+        {"name": "nop", "env": {"HTTPS_PROXY": "http://agent-proxy:9000"}},
+        "terminal-bench",
+        "2.0",
+        1,
+        1,
+        1,
+        str(settings.home / "jobs"),
+        runtime_container_env_defaults={
+            "HTTPS_PROXY": "http://172.17.0.1:32000",
+            "https_proxy": "http://172.17.0.1:32000",
+            "HTTP_PROXY": "http://172.17.0.1:32000",
+        },
+    )
+
+    assert config.agent["env"] == {"HTTPS_PROXY": "http://agent-proxy:9000"}
+    assert config.environment["env"] == {
+        "HTTP_PROXY": "http://172.17.0.1:32000"
+    }
 
 
 def test_harbor_builder_does_not_inject_proxy_into_non_docker_environment(settings) -> None:
@@ -467,7 +494,7 @@ def test_harbor_builder_does_not_inject_proxy_into_non_docker_environment(settin
         1,
         str(settings.home / "jobs"),
         overrides={"environment": {"type": "local"}},
-        runtime_agent_env_defaults={"HTTPS_PROXY": "http://172.17.0.1:32000"},
+        runtime_container_env_defaults={"HTTPS_PROXY": "http://172.17.0.1:32000"},
     )
 
     assert "env" not in config.agent

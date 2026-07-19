@@ -71,9 +71,11 @@ def test_managed_subprocess_runner_resolves_proxy_only_in_child_environment(tmp_
                 "import sys",
                 "config_path = pathlib.Path(sys.argv[sys.argv.index('--config') + 1])",
                 "config = json.loads(config_path.read_text())",
-                "assert config['agents'][0]['env']['HTTPS_PROXY'] "
-                "== '${ORNNLAB_CONTAINER_HTTPS_PROXY}'",
+                "assert config['environment']['env']['HTTPS_PROXY'] "
+                "== 'http://172.17.0.1:32123'",
+                "assert 'env' not in config['agents'][0]",
                 "assert os.environ['ORNNLAB_CONTAINER_HTTPS_PROXY'] == 'http://172.17.0.1:32123'",
+                "assert config_path.name != 'harbor.config.json'",
                 "job_dir = pathlib.Path(config['jobs_dir'])",
                 "job_dir.mkdir(parents=True, exist_ok=True)",
                 "(job_dir / 'result.json').write_text(json.dumps({'status': 'completed'}))",
@@ -91,7 +93,7 @@ def test_managed_subprocess_runner_resolves_proxy_only_in_child_environment(tmp_
         1,
         1,
         str(tmp_path / "harbor-job"),
-        runtime_agent_env_defaults={"HTTPS_PROXY": "${ORNNLAB_CONTAINER_HTTPS_PROXY}"},
+        runtime_container_env_defaults={"HTTPS_PROXY": "${ORNNLAB_CONTAINER_HTTPS_PROXY}"},
     )
     builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
 
@@ -104,7 +106,38 @@ def test_managed_subprocess_runner_resolves_proxy_only_in_child_environment(tmp_
 
     assert result["status"] == "completed"
     artifact = (tmp_path / "harbor-job" / "harbor.config.json").read_text()
+    assert "${ORNNLAB_CONTAINER_HTTPS_PROXY}" in artifact
     assert "172.17.0.1:32123" not in artifact
+    assert list(tmp_path.glob("**/.harbor.runtime.*")) == []
+
+
+def test_managed_subprocess_runner_rejects_missing_runtime_container_value(tmp_path):
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "terminal-bench",
+        "2.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        runtime_container_env_defaults={
+            "HTTPS_PROXY": "${ORNNLAB_CONTAINER_HTTPS_PROXY}"
+        },
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+
+    with pytest.raises(
+        RuntimeError,
+        match="runtime container environment variable is unavailable: "
+        "ORNNLAB_CONTAINER_HTTPS_PROXY",
+    ):
+        asyncio.run(
+            ManagedSubprocessHarborRunner(
+                command=[sys.executable, str(tmp_path / "must-not-run.py")]
+            ).run(config)
+        )
 
 
 def test_managed_subprocess_runner_reports_missing_executable(tmp_path, caplog):
