@@ -277,11 +277,17 @@ class ExperimentService:
         job_dir = _resolve_job_dir(
             webui_config.get("jobs_dir"), self.settings.experiments_dir / run["id"] / "harbor-job"
         )
+        proxy_policy = RuntimeProxyPolicy({}, {}, 0)
         try:
             overrides = webui_config.get("harbor_overrides") or {}
-            proxy_policy = RuntimeProxyPolicy({}, {}, 0)
+            agent_config = self.agent_configs.config(run["agent_id"], webui_config.get("model"))
             if _uses_docker_environment(overrides):
-                proxy_policy = await self.container_proxy.prepare_policy()
+                proxy_policy = await self.container_proxy.prepare_policy(
+                    _explicit_proxy_names(agent_config, overrides),
+                    automatic_proxy_allowed=_automatic_proxy_allowed(
+                        agent_config, overrides
+                    ),
+                )
             if proxy_policy.agent_env_defaults:
                 self.events.append(
                     "run",
@@ -290,9 +296,10 @@ class ExperimentService:
                     {
                         "variable_names": sorted(proxy_policy.agent_env_defaults),
                         "relay_count": proxy_policy.relay_count,
+                        "strategy": proxy_policy.strategy,
+                        "target_kind": proxy_policy.target_kind,
                     },
                 )
-            agent_config = self.agent_configs.config(run["agent_id"], webui_config.get("model"))
             if agent_config.get("import_path"):
                 agent_config.pop("name", None)
             config = self.builder.build(
@@ -310,9 +317,11 @@ class ExperimentService:
             snapshot = self.engine.capability_snapshot()
             artifact_paths = self.builder.write_run_artifacts(config, snapshot)
         except Exception as exc:
+            await proxy_policy.close()
             await self.failures.mark_failed(run, job_dir, exc)
             return
         if not self._mark_run_running(run, job_dir, config.job_name, now):
+            await proxy_policy.close()
             self.events.append(
                 "run",
                 run["id"],
@@ -360,6 +369,8 @@ class ExperimentService:
                 return
             await self.failures.mark_failed(run, job_dir, exc)
             return
+        finally:
+            await proxy_policy.close()
         report_path = self.reports.write_summary(
             run["id"],
             result["status"],
@@ -453,3 +464,23 @@ def _resolve_job_dir(configured_path: str | None, default_path) -> str:
 def _uses_docker_environment(overrides: dict) -> bool:
     environment = overrides.get("environment", {"type": "docker"})
     return isinstance(environment, dict) and environment.get("type", "docker") == "docker"
+
+
+def _explicit_proxy_names(agent_config: dict, overrides: dict) -> set[str]:
+    names: set[str] = set()
+    agent_env = agent_config.get("env")
+    if isinstance(agent_env, dict):
+        names.update(str(name) for name in agent_env)
+    environment = overrides.get("environment")
+    if isinstance(environment, dict) and isinstance(environment.get("env"), dict):
+        names.update(str(name) for name in environment["env"])
+    return names
+
+
+def _automatic_proxy_allowed(agent_config: dict, overrides: dict) -> bool:
+    if agent_config.get("extra_allowed_hosts"):
+        return False
+    environment = overrides.get("environment")
+    return not (
+        isinstance(environment, dict) and environment.get("extra_allowed_hosts")
+    )

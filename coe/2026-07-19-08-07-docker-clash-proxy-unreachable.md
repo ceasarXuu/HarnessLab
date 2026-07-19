@@ -1,8 +1,8 @@
 # Problem P-001: Docker 任务容器无法自动使用宿主代理
 
-- Status: fixed
+- Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 09:01
+- Updated: 2026-07-19 18:05
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -23,15 +23,16 @@
   - Claude/npm 服务故障；Clash 规则故障。
 - Fix criteria:
   - 自动发现标准代理变量；非回环代理直接继承；回环代理经 Docker 专用受限 relay 转换；可显式关闭；不得泄露代理凭据；有结构化日志、单元测试和真实 Docker 冒烟。
-- Current conclusion: OrnnLab 已自动发现宿主代理，在执行期托管 Docker bridge relay，并通过受管 Harbor 子进程安全注入 Agent。
+- Current conclusion: H-004 已确认并完成 capability-driven 修复；第四轮 fresh closure review 通过。
 - Related hypotheses:
   - H-001
   - H-002
   - H-003
+  - H-004
 - Resolution basis:
-  - H-001、H-002、H-003；E-006、E-009、E-011、E-012、E-013、E-014。
+  - H-001/H-002/H-003/H-004 evidence gates satisfied；自动代理真实容器 HTTP 200；四轮 fresh architecture review 最终 PASS WITH FOLLOW-UPS。
 - Close reason:
-  - not closed
+  - fixed
 
 ## Hypothesis H-001: Harbor trial 缺少可用代理是原始故障根因
 
@@ -166,6 +167,56 @@
 - Conclusion: confirmed
 - Repair design readiness: implemented and validated
 - Next step: none
+- Blocker:
+  - none
+- Close reason:
+  - fixed
+
+## Hypothesis H-004: 当前实现错误地把本地 rootful Linux 当作通用 Docker 部署
+
+- Status: confirmed
+- Parent: P-001
+- Claim: 默认 `docker network inspect bridge`、绑定该 gateway、只支持 Harbor subprocess 等实现假设不能覆盖 Docker Desktop、rootless、远程 context 或非默认 daemon，因而当前“自动继承”可能是本机特有 feature。
+- Layer: environment
+- Factor relation: any_of
+- Depends on:
+  - H-003
+- Falsifiable predictions:
+  - If true: 代码没有 daemon locality/capability 分类；非本地 rootful 场景仍进入同一 gateway relay 路径；测试仅用 127.0.0.1 fake gateway 和本机 Docker。
+  - If false: 生产代码已按 daemon 类型选择 portable 策略，并对不支持场景清晰降级，测试覆盖各能力分支。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 审计代理发现、Docker target 检测、relay bind、Harbor engine 与测试矩阵。
+  - Signal: 代码分支、Docker context/daemon 检测、官方能力约束、独立 reviewer 反例。
+  - Capture method: 静态审计、官方文档核对、纯单元能力矩阵和 fresh adversarial review。
+  - Event name or marker:
+    - docker_proxy_target_detected
+  - Correlation keys:
+    - Docker context
+    - daemon endpoint
+  - Differentiates from:
+    - 仅本机配置错误
+  - Supports if:
+    - 非本地场景被错误映射到默认 bridge relay，或缺少明确支持/拒绝路径。
+  - Refutes if:
+    - capability-driven strategy 对所有声明场景都有正确行为和测试。
+  - Instrumentation status: permanent-observability-candidate
+  - Instrumentation lifecycle:
+    - promote after repair if confirmed
+- Evidence gate: satisfied
+- Related evidence:
+  - E-015
+  - E-016
+  - E-017
+  - E-018
+  - E-019
+  - E-020
+  - E-021
+  - E-022
+  - E-023
+  - E-024
+- Conclusion: confirmed
+- Repair design readiness: implemented and validated
+- Next step: 将完整 Profile→Job→Queue→Experiment reviewer harness 固化为后续自动化增强。
 - Blocker:
   - none
 - Close reason:
@@ -352,3 +403,133 @@
 - Raw content: `133 passed; 108 passed; 27 passed; test-run-dev-api exit 0`
 - Interpretation: 代理生命周期与 worker 关闭没有引入全栈回归；端口门禁的 TIME_WAIT 假失败也已改为真实 connect 探针。
 - Time: 2026-07-19 09:01
+
+## Evidence E-015: 用户拒绝本机特有实现作为完成标准
+
+- Related hypotheses: H-004
+- Direction: supports
+- Type: user-feedback
+- Source: 2026-07-19 用户反馈
+- Prediction or plan link: H-004 的跨设备部署目标。
+- Matched signal: 用户明确要求适应 OrnnLab 在其他位置和设备上的部署。
+- Correlation keys: portability review
+- Raw content: `不要做成本机特有feature,要适应ornnlab在其他位置设备上的部署`
+- Interpretation: 本机 rootful Linux 的 HTTP 200 只能证明一个平台分支，不能关闭产品问题。
+- Time: 2026-07-19 09:10
+
+## Evidence E-016: fresh 架构审查复现跨 daemon 网络边界错误
+
+- Related hypotheses: H-004
+- Direction: supports
+- Type: independent-review
+- Source: `/root/proxy_portability_arch_review`
+- Prediction or plan link: H-004 daemon locality 与 gateway bind 假设。
+- Matched signal: remote、Desktop、rootless 的 gateway 位于 daemon/VM/namespace，而 listener 在 OrnnLab OS bind；显式 Profile 也在自动探测之后才生效。
+- Correlation keys: architecture-adversary round 1
+- Raw content: `FAIL / BLOCK`
+- Interpretation: 旧实现是本地 rootful Linux 默认 bridge 专用策略，H-004 确认。
+- Time: 2026-07-19 17:10
+
+## Evidence E-017: Docker 官方边界支持 capability 分类
+
+- Related hypotheses: H-004
+- Direction: supports
+- Type: external-evidence
+- Source: Docker Context、Rootless、Desktop host networking 与 dockerd host-gateway 官方文档
+- Prediction or plan link: target discovery repair design。
+- Matched signal: Context endpoint 可以指向远程 daemon；rootless daemon 在 user namespace；Desktop 使用 VM/专用 host DNS；host-gateway 默认来自 daemon default bridge。
+- Correlation keys: Docker target capability
+- Raw content: `context endpoint; SecurityOptions=rootless; host.docker.internal; host-gateway`
+- Interpretation: 必须先识别 daemon locality/runtime，不能把 daemon gateway 直接等同 OrnnLab 本机接口。
+- Time: 2026-07-19 17:14
+
+## Evidence E-018: capability 与生命周期矩阵测试通过
+
+- Related hypotheses: H-004
+- Direction: refutes
+- Type: fix-validation
+- Source: `test_docker_proxy_target.py`、`test_container_proxy_runtime.py`、`test_experiment_service.py`
+- Prediction or plan link: H-004 修复后的反证条件。
+- Matched signal: DOCKER_HOST/context、local rootful、Desktop、rootless、remote、显式配置优先、不可 bind、policy 回收均有稳定分支。
+- Correlation keys: portability unit matrix
+- Raw content: `144 passed, 3 skipped; pyright 0; scoped ruff pass`
+- Interpretation: 生产策略按能力选择；不支持的 loopback target 在 Harbor 前给可恢复错误。
+- Time: 2026-07-19 17:31
+
+## Evidence E-019: 当前设备仍通过新 target 策略完成真实容器请求
+
+- Related hypotheses: H-003; H-004
+- Direction: refutes
+- Type: fix-validation
+- Source: ContainerProxyRuntime + disposable curl container
+- Prediction or plan link: 重构不能破坏已确认的本地分支。
+- Matched signal: target 分类为 local-rootful-linux，单 Job relay 请求 Claude bootstrap HTTP 200，退出后 policy 回收。
+- Correlation keys: real Docker portability baseline
+- Raw content: `strategy=host-relay target=local-rootful-linux relays=1; docker_http_status=200`
+- Interpretation: capability 重构保持当前环境可用，不依赖固定 IP 或 Clash 产品识别。
+- Time: 2026-07-19 17:33
+
+## Evidence E-020: 全栈回归与 watcher 环境故障隔离
+
+- Related hypotheses: H-004
+- Direction: refutes
+- Type: regression
+- Source: `test-after-change-web.sh` 与 polling Storybook smoke
+- Prediction or plan link: 跨设备改造不得破坏其他系统边界。
+- Matched signal: Python 144/3、前端 108、类型、lint、build 通过；Storybook 初次被设备 inotify 配额阻断，polling 模式通过。
+- Correlation keys: full quality gate
+- Raw content: `144 passed; 108 passed; build pass; Smoke tests passed`
+- Interpretation: 代码门禁通过；ENOSPC 属于宿主 watcher 配额且已形成可移植排障记录。
+- Time: 2026-07-19 17:38
+
+## Evidence E-021: 第二轮 closure 发现 daemon 混用与取消泄漏
+
+- Related hypotheses: H-004
+- Direction: supports
+- Type: independent-review
+- Source: `/root/proxy_portability_closure_review`
+- Prediction or plan link: capability 与生命周期 closure。
+- Matched signal: `DOCKER_CONTEXT`/`DOCKER_HOST` 优先级混用；prepare 第二个 relay 时取消可遗留第一个 listener；默认 auto 与 `extra_allowed_hosts` 白名单冲突。
+- Correlation keys: architecture-adversary round 2
+- Raw content: `FAIL-BLOCK; active_server_count_after_cancel=1`
+- Interpretation: 第一轮修复仍有可复现缺口，必须继续修而不能按本机 HTTP 200 关闭。
+- Time: 2026-07-19 17:45
+
+## Evidence E-022: 第二轮反例修复与全量门禁通过
+
+- Related hypotheses: H-004
+- Direction: refutes
+- Type: fix-validation
+- Source: target/runtime/Experiment 矩阵、`test-after-change-web.sh`、真实 Docker custom network
+- Prediction or plan link: Round 3 required closure checks。
+- Matched signal: Context 覆盖 Host 且所有 daemon 查询显式锁定同一 target；取消事务回收；allow-host 跳过 auto；direct 不依赖 discovery；并发 policy 互不关闭。
+- Correlation keys: portability closure regression
+- Raw content: `Python 153 passed/3 skipped; frontend 108; launcher 27; pyright 0; Docker HTTP 200`
+- Interpretation: 第二轮所有 accepted blocking 均有生产代码、回归和真实当前平台证据；等待第三轮 fresh reviewer。
+- Time: 2026-07-19 17:56
+
+## Evidence E-023: 第三轮发现 Environment 白名单漏接
+
+- Related hypotheses: H-004
+- Direction: supports
+- Type: independent-review
+- Source: `/root/proxy_portability_final_closure`
+- Prediction or plan link: allowlist 默认安全语义。
+- Matched signal: Environment Profile 把白名单编译到 override，但运行路径只检查 Agent，生产 harness 观察到 auto 仍注入。
+- Correlation keys: architecture-adversary round 3
+- Raw content: `FAIL-BLOCK; automatic_proxy_allowed=True`
+- Interpretation: 网络策略有两个模型来源，必须统一判定，不能只修一个表面字段。
+- Time: 2026-07-19 17:59
+
+## Evidence E-024: 第四轮完整数据流闭环通过
+
+- Related hypotheses: H-004
+- Direction: refutes
+- Type: independent-fix-validation
+- Source: `/root/proxy_allowlist_final_review`、full quality gate
+- Prediction or plan link: Round 4 five closure checks。
+- Matched signal: Agent/Environment allowlist 均跳过 auto；空白名单保留 auto；显式 Environment proxy 保留；Profile→Job→Queue→Experiment 临时数据库链路完成。
+- Correlation keys: architecture-adversary round 4
+- Raw content: `PASS WITH FOLLOW-UPS; Python 156 passed/3 skipped; no blocking/important`
+- Interpretation: 所有 accepted blocking 已闭环；剩余项仅为把 reviewer 的完整跨 service harness 固化为长期测试。
+- Time: 2026-07-19 18:05

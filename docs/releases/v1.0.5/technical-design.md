@@ -92,24 +92,39 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 也不把自动发现结果写回 Agent、Environment 或 `webui_job_configs`。
 
 真正的代理 policy 在 `ExperimentService._run_one()` 执行期、Harbor config 构建前
-生成。这样排队 Job 在服务重启后使用当前宿主配置，动态 relay 端口也不会污染可复制
-的用户配置。`HarborConfigBuilder` 只把 `${ORNNLAB_CONTAINER_*_PROXY}` 模板作为
-Agent env 默认值写入 artifact；实际派生 URL 只通过受管 Harbor 子进程的 `env` 传递。
-用户在 Agent 或 Environment 中显式声明任一大小写代理变量时，对应自动变量组整体
-让位，避免不同客户端采用不同优先级。
+生成。Agent 与 Environment 的显式 env 先合并成变量名集合；某一代理大小写组被显式
+声明后，runtime 不再读取、校验或转换该组的宿主值。这样显式配置可以在不关闭其他
+自动组的情况下恢复运行。若 Agent 或 Environment 声明 `extra_allowed_hosts`，runtime 默认整体跳过
+自动代理并记录 `docker_proxy_policy_skipped`；显式 Profile proxy 仍由用户配置直接进入
+Harbor。`HarborConfigBuilder` 只把
+`${ORNNLAB_CONTAINER_*_PROXY}` 模板作为 Agent env 默认值写入 artifact；实际派生 URL
+只通过受管 Harbor 子进程的 `env` 传递。
 
-本地 rootful Linux 的回环 HTTP/SOCKS 代理使用 Docker 默认 bridge gateway 上的
-随机高位 TCP relay。relay 不监听 `0.0.0.0`，日志只记录变量名、scheme、绑定地址、
-端口和稳定事件名，不记录原始 URL。带认证信息或使用 HTTPS TLS 的回环代理当前快速
-失败，因为 Harbor artifact 的现有敏感字段规则和 TLS hostname 约束不足以安全保存
-派生值。`python-api` Harbor engine 同样拒绝需要 runtime env 的自动代理；默认
-`subprocess` engine 支持该能力。`ORNNLAB_DOCKER_PROXY_MODE=off` 是显式退出开关。
+`docker_proxy_target` 是独立能力层。`DOCKER_CONTEXT` 存在时覆盖 `DOCKER_HOST`；否则
+`DOCKER_HOST` 覆盖当前默认 Context。provider 通过显式 CLI `--context` / `--host` 保证
+endpoint、`docker info` 与 `network inspect` 始终查询同一 daemon，再读取 OS 与 security
+options，将目标分类为本地 rootful Linux、Docker Desktop、rootless、远程/虚拟化或
+不支持的本地目标。只有本地 rootful Linux 才继续读取默认 host gateway，并以“实际
+可以 bind”作为最终能力检查；不按设备路径、用户名、固定网段或代理产品名分支。
+非回环代理不需要宿主 relay，也不依赖 Docker discovery，可直接注入；其 DNS 与路由
+仍必须由目标容器网络保证。
 
-稳定日志事件包括 `docker_proxy_detection`、`docker_proxy_bridge_started`、
-`docker_proxy_policy_prepared`、`docker.proxy.injected`、
-`docker_proxy_upstream_failed` 和 `docker_proxy_runtime_stopped`。Job 事件只保存代理
-变量名和 relay 数量。代理准备失败统一分类为 `proxy_configuration_failure` /
-`docker_proxy_unavailable`，不得退化成 Claude curl 超时。
+回环 HTTP/SOCKS 代理使用 host gateway 上的随机高位 TCP relay。每次 Job 创建独立
+policy，policy 准备中途取消、Job 启动失败、取消或 Harbor 结束时立即关闭 listener 与
+现有转发连接；应用 shutdown 只负责回收异常遗留资源。relay 不监听 `0.0.0.0`。
+自动代理属于默认出网便利能力，不能与目标白名单同时启用；存在白名单或同一 daemon
+运行互不信任容器时，应使用显式受控代理。带认证信息或 HTTPS TLS 的回环代理仍快速失败，
+因为 artifact 敏感字段和 TLS hostname 约束不足。`python-api` engine 同样拒绝需要
+runtime env 的自动代理；默认 `subprocess` engine 支持该能力。
+`ORNNLAB_DOCKER_PROXY_MODE=off` 是显式退出开关。
+
+稳定日志事件包括 `docker_proxy_detection`、`docker_proxy_target_classified`、
+`docker_proxy_bridge_started`、`docker_proxy_policy_prepared`、
+`docker_proxy_policy_skipped`、`docker_proxy_policy_released`、`docker.proxy.injected`、
+`docker_proxy_upstream_failed` 和 `docker_proxy_runtime_stopped`。Job 事件保存代理
+变量名、strategy、target kind 和 relay 数量，不保存 endpoint 或原始 URL。Docker
+target 发现、unsupported target 与 bind 失败统一分类为
+`proxy_configuration_failure` / `docker_proxy_unavailable`。
 
 ## 5. API 与异步操作
 

@@ -2,10 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Collection
 from pathlib import Path
 
 from ornnlab.models.experiment import ExperimentCreate
-from ornnlab.services.experiment_service import ExperimentService
+from ornnlab.services.container_proxy_runtime import (
+    ContainerProxyRuntime,
+    RuntimeProxyPolicy,
+)
+from ornnlab.services.experiment_service import (
+    ExperimentService,
+    _automatic_proxy_allowed,
+    _explicit_proxy_names,
+)
 from ornnlab.services.leaderboard_service import LeaderboardService
 from ornnlab.services.template_service import TemplateService
 from tests.python.support import create_test_agent
@@ -13,7 +22,8 @@ from tests.python.support import create_test_agent
 
 def test_experiment_create_and_run_through_harbor_subprocess(settings):
     _create_agent(settings)
-    service = ExperimentService(settings)
+    proxy = RecordingProxyRuntime()
+    service = ExperimentService(settings, proxy)
     created = service.create(_request("Smoke", ["terminal-bench"], n_tasks=1))
 
     state = asyncio.run(service.run(created["experiment"]["id"]))
@@ -32,6 +42,54 @@ def test_experiment_create_and_run_through_harbor_subprocess(settings):
     assert harbor_config["datasets"][0]["name"] == "terminal-bench"
     assert capability["lifecycle_mode"] == "subprocess"
     assert result["status"] == "completed"
+    assert proxy.policy_close_count == 1
+
+
+def test_proxy_policy_closes_when_config_build_fails(settings, monkeypatch):
+    _create_agent(settings)
+    proxy = RecordingProxyRuntime()
+    service = ExperimentService(settings, proxy)
+    created = service.create(_request("Build failure", ["terminal-bench"], n_tasks=1))
+    monkeypatch.setattr(
+        service.builder,
+        "build",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("config failed")),
+    )
+
+    state = asyncio.run(service.run(created["experiment"]["id"]))
+
+    assert state["runs"][0]["status"] == "failed"
+    assert proxy.policy_close_count == 1
+
+
+def test_environment_allowlist_disables_auto_proxy_in_run_path(settings, monkeypatch):
+    _create_agent(settings)
+    proxy = RecordingProxyRuntime()
+    service = ExperimentService(settings, proxy)
+    created = service.create(_request("Allowlist", ["terminal-bench"], n_tasks=1))
+    monkeypatch.setattr(
+        service,
+        "_webui_run_config",
+        lambda _run_id: {
+            "harbor_overrides": {
+                "environment": {
+                    "type": "docker",
+                    "extra_allowed_hosts": ["pypi.org"],
+                    "env": {"HTTPS_PROXY": "http://profile-proxy:8080"},
+                }
+            }
+        },
+    )
+
+    state = asyncio.run(service.run(created["experiment"]["id"]))
+
+    assert state["runs"][0]["status"] == "completed"
+    assert proxy.automatic_proxy_allowed_values == [False]
+    config = json.loads(
+        (Path(state["runs"][0]["job_dir"]) / "harbor.config.json").read_text()
+    )
+    assert config["environment"]["env"]["HTTPS_PROXY"] == "http://profile-proxy:8080"
+    assert "env" not in config["agents"][0]
 
 
 def test_experiment_run_uses_persisted_queue(settings):
@@ -108,6 +166,26 @@ def test_events_delete_clone_and_template_services(settings):
     assert removed["experiment"]["id"] == experiment_id
 
 
+def test_explicit_proxy_names_include_agent_and_environment_groups():
+    names = _explicit_proxy_names(
+        {"env": {"HTTPS_PROXY": "http://agent-proxy:8080"}},
+        {"environment": {"env": {"NO_PROXY": "internal.example"}}},
+    )
+
+    assert names == {"HTTPS_PROXY", "NO_PROXY"}
+
+
+def test_agent_or_environment_allowlist_disables_automatic_proxy():
+    assert _automatic_proxy_allowed({"extra_allowed_hosts": ["pypi.org"]}, {}) is False
+    assert (
+        _automatic_proxy_allowed(
+            {}, {"environment": {"extra_allowed_hosts": ["pypi.org"]}}
+        )
+        is False
+    )
+    assert _automatic_proxy_allowed({}, {"environment": {"type": "docker"}}) is True
+
+
 def _create_agent(settings) -> None:
     create_test_agent(settings)
 
@@ -120,3 +198,22 @@ def _request(name: str, benchmarks: list[str], n_tasks: int | None = None) -> Ex
         benchmark_version="2.0",
         n_tasks=n_tasks,
     )
+
+
+class RecordingProxyRuntime(ContainerProxyRuntime):
+    def __init__(self) -> None:
+        self.policy_close_count = 0
+        self.automatic_proxy_allowed_values: list[bool] = []
+
+    async def prepare_policy(
+        self,
+        explicit_proxy_names: Collection[str] = (),
+        *,
+        automatic_proxy_allowed: bool = True,
+    ) -> RuntimeProxyPolicy:
+        self.automatic_proxy_allowed_values.append(automatic_proxy_allowed)
+
+        async def release() -> None:
+            self.policy_close_count += 1
+
+        return RuntimeProxyPolicy({}, {}, 0, _release=release)

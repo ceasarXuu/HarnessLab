@@ -127,14 +127,26 @@ CHOKIDAR_USEPOLLING=true CHOKIDAR_INTERVAL=500 ornnlab dev start
 也不会自动把宿主的代理变量注入 Agent。因此应分别验证宿主经代理请求、容器
 代理变量和容器到宿主代理入口三层，不要只用宿主 curl 判断。
 
-当前 OrnnLab 默认自动读取标准代理变量。回环 HTTP/SOCKS 代理会在 Job 执行期建立
-只绑定 Docker bridge 的随机端口 relay，并以运行时模板注入 Agent；无需修改 Clash
-`allow-lan`、逐个编辑 Agent Profile 或安装 systemd service。可通过日志确认：
+当前 OrnnLab 默认自动读取标准代理变量，并先识别有效 Docker target。实现不识别
+Clash、Docker Desktop、Colima 等具体产品，也不假定固定安装位置或网段。策略矩阵：
+
+| Docker target / 代理地址 | 自动策略 |
+|---|---|
+| 任意 target + 非回环代理 URL | 直接注入 Agent；容器网络负责 DNS 与路由可达性 |
+| 同主机 rootful Linux + 回环 HTTP/SOCKS | bind host gateway 后创建仅限当前 Job 的 relay |
+| Docker Desktop、rootless、远程/虚拟化 daemon + 回环代理 | 启动 Harbor 前明确失败；改用容器可达的 Profile 代理 |
+| Agent/Environment 已显式配置某代理组 | 跳过该组的自动读取和 target relay |
+| Agent/Environment 配置 `extra_allowed_hosts` | 整体跳过默认自动代理；如确需代理，在 Profile 中显式配置 |
+
+能力选择可通过日志确认：
 
 ```text
 docker_proxy_detection
+docker_proxy_target_classified
 docker_proxy_bridge_started
+docker_proxy_policy_skipped
 docker.proxy.injected
+docker_proxy_policy_released
 ```
 
 临时排障或旧版本仍可用 `socat` 建立仅绑定 Docker 接口的转发：
@@ -159,9 +171,9 @@ NO_PROXY=localhost,127.0.0.1,::1
 no_proxy=localhost,127.0.0.1,::1
 ```
 
-`172.17.0.1` 是宿主默认 `docker0` 地址，即使 trial 位于其他 Compose bridge，
-通常仍可路由到该地址。部署前必须用 `ip -4 addr show docker0` 确认实际地址；
-转发端口只能监听 Docker 接口，不能监听 `0.0.0.0`，否则可能向局域网暴露代理。
+上述 `172.17.0.1` 只是一种旧版、本地 rootful Linux 的示例，不能复制到其他设备
+作为默认配置。部署前必须从有效 Docker Context 重新确认 gateway 属于运行 OrnnLab
+的主机；转发端口只能监听 Docker host gateway，不能监听 `0.0.0.0`。
 
 验证时从临时 Docker 容器发起真实请求，并检查 systemd 监听范围：
 
@@ -188,3 +200,13 @@ ORNNLAB_DOCKER_PROXY_MODE=off ornnlab dev start
 启停回归判断端口是否仍被服务占用时，应实际尝试 TCP connect，不应立即重新 bind
 同一端口。刚关闭的健康检查连接可能处于 `TIME_WAIT`，此时没有监听进程，但 bind
 仍会短暂返回 `EADDRINUSE`，从而产生“服务未退出”的假失败。
+
+Storybook 启动时报 `ENOSPC: System limit for number of file watchers reached` 表示当前
+用户的 inotify 配额被 IDE、开发服务器等进程共同耗尽，不是前端构建失败。先用
+`fs.inotify.max_user_instances`、`fs.inotify.max_user_watches` 和 `/proc/*/fd` 定位，
+不要直接终止不属于当前任务的进程。一次性 CI 冒烟可改用 polling，避免修改设备级
+sysctl：
+
+```bash
+CHOKIDAR_USEPOLLING=true WATCHPACK_POLLING=true npm run storybook:test --prefix frontend
+```
