@@ -2,7 +2,7 @@
 
 - Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 19:36
+- Updated: 2026-07-19 22:51
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -659,3 +659,16 @@
 - Raw content: `n_completed_trials=10; n_errored_trials=5; mean=0.5; runtime=1366s`
 - Interpretation: 原始 Claude 网络故障及 Verifier 漏注入均已修复；剩余 5 个失败隔离为 4 个 Ubuntu 502 和 1 个 apt setup 300 秒超时。
 - Time: 2026-07-19 19:36
+
+## Evidence E-031: 标准 inotify 模式下再次复跑保持同一网络结论
+
+- Related hypotheses: H-001; H-005
+- Direction: refutes
+- Type: repeated-fix-validation
+- Source: `run-f04a824f91ae` 原生 Harbor result 与 trial logs
+- Prediction or plan link: 排除 polling/inotify 启动模式影响代理行为，并验证修复可重复。
+- Matched signal: 10/10 终态；3 个 reward=1；setup、Claude、Verifier 网络仍成功；5 个 Ubuntu 样例再次在 apt mirror 502 失败。
+- Correlation keys: Harbor job `7c5ce2a7-8755-41a2-8d1e-939e66822b66`
+- Raw content: `mean=0.3; runtime=2472s; 5 apt failures; qemu-startup/fix-code/log-summary reward=1`
+- Interpretation: 标准 inotify 重启未改变代理链路；与前次分数差异来自 Agent 解题结果（Cython 2 个断言失败、SSH Agent timeout/Verifier 255）及 Clash Ubuntu mirror 502，而非 OrnnLab 自动代理回归。
+- Time: 2026-07-19 22:51
