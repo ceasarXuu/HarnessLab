@@ -2,7 +2,7 @@
 
 - Status: resolved
 - Created: 2026-07-19 08:07
-- Updated: 2026-07-19 23:56
+- Updated: 2026-07-21 03:33
 - Objective: OrnnLab 自动发现宿主标准代理配置，为 Docker trial 提供受限且可达的代理入口，并注入后续 Job。
 - Symptoms:
   - 宿主机通过 Clash 可访问 Claude、npm，Harbor trial 下载 Claude Code 时连接超时。
@@ -26,7 +26,7 @@
   - Claude/npm 服务故障；原始 Claude 超时不是 Clash 目标规则故障。
 - Fix criteria:
   - 自动发现标准代理变量；非回环代理直接继承；回环代理经 Docker 专用受限 relay 转换；setup、Agent、Verifier 全生命周期继承；可显式关闭；不得泄露代理凭据；有结构化日志、单元测试和真实 Docker 冒烟。
-- Current conclusion: H-004/H-005 已确认并完成 capability-driven、Environment-lifecycle 修复；H-006 确认剩余 Ubuntu 502 是香港 Z02 远端节点到 Canonical 三组目标地址的连接失败，Mihomo 本地 HTTP 入站在上游隧道断开后合成空 502。
+- Current conclusion: H-004/H-005 已确认并完成 capability-driven、Environment-lifecycle 修复；H-006 确认 Ubuntu 502 绑定香港 Z02 出口，切换日本 Z02 后大部分 trial 恢复；H-007 确认新 Job 因 10 条终态中仍有 2 条 Agent setup 异常，按状态契约聚合为 failed。
 - Related hypotheses:
   - H-001
   - H-002
@@ -34,6 +34,7 @@
   - H-004
   - H-005
   - H-006
+  - H-007
 - Resolution basis:
   - H-001/H-002/H-003/H-004/H-005 evidence gates satisfied；自动代理真实容器 HTTP 200；四轮 fresh architecture review 最终 PASS WITH FOLLOW-UPS；最终等价 Job 的 setup、Agent、Verifier 均有真实成功证据。
 - Close reason:
@@ -317,6 +318,46 @@
   - none
 - Close reason:
   - not closed
+
+## Hypothesis H-007: 任一 trial 异常会把完整 Job 聚合为 failed
+
+- Status: confirmed
+- Parent: P-001
+- Claim: `run-371699db5dee` 虽然 10 条 trial 均已到达终态，但其中 2 条以异常结束；OrnnLab/Harbor 的状态契约将任何 `n_errored_trials > 0` 的 Job 标记为 `failed`。
+- Layer: state-derivation
+- Factor relation: all_of
+- Depends on:
+  - none
+- Falsifiable predictions:
+  - If true: result 应显示 10 completed、2 errored，代码应在 `n_errored_trials > 0` 时返回 failed，Job API 应显示 failed 且无 run-level failure code。
+  - If false: result 没有 errored trial，或状态派生允许含 errored trial 的 Job 显示 completed。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 对照 Job API、Harbor result、trial result 和状态派生代码。
+  - Signal: Job status、trial error count、exception type、状态映射条件。
+  - Capture method: WebUI API、`result.json`、trial `result.json`、OrnnLab 源码只读检查。
+  - Event name or marker:
+    - none
+  - Correlation keys:
+    - `run-371699db5dee`
+  - Differentiates from:
+    - UI 缓存误报；Job 进程整体崩溃；全部任务失败。
+  - Supports if:
+    - API、结果文件和代码三者一致满足上述状态规则。
+  - Refutes if:
+    - API 状态与结果或代码契约不一致。
+  - Instrumentation status: none
+  - Instrumentation lifecycle:
+    - none
+- Evidence gate: satisfied
+- Related evidence:
+  - E-036
+- Conclusion: confirmed
+- Repair design readiness: not-applicable
+- Next step: 若需继续诊断两条 apt exit 100，需要增强 Harbor 命令输出保留后重现；当前留存输出已截断末尾错误。
+- Blocker:
+  - 原始 apt 末尾错误被 Harbor 截断，Clash 对应时段日志已轮转。
+- Close reason:
+  - explained
 
 ## Evidence E-001: 原 Job 的 Claude bootstrap 连接超时
 
@@ -772,3 +813,16 @@
 - Raw content: `archive=200; security=200; Command outputs captured; n_running_trials=2; n_pending_trials=8`
 - Interpretation: 用户切换出口节点已经改变原始失败结果，进一步确认 502 绑定香港 Z02 到 Canonical 的出口链路；完整 Job 尚在运行，最终任务结果需继续观察。
 - Time: 2026-07-19 23:56
+
+## Evidence E-036: 新 Job 的两个 trial 异常触发 Job failed
+
+- Related hypotheses: H-006; H-007
+- Direction: supports
+- Type: runtime-diagnostic
+- Source: `run-371699db5dee` API、Harbor result/trial artifacts 与 OrnnLab 状态派生代码
+- Prediction or plan link: H-007 的 Job 聚合条件；H-006 切换节点后的完整运行结果。
+- Matched signal: Job 于 00:23 完成 10 条终态，其中 8 条可计分、2 条 `NonZeroAgentExitCodeError`；状态派生的三条路径均在 `n_errored_trials > 0` 时返回 failed。
+- Correlation keys: `run-371699db5dee`; `polyglot-c-py__2CDi9mP`; `log-summary-date-ranges__Xb6EALh`
+- Raw content: `n_completed_trials=10; n_errored_trials=2; status=failed; failureCode=null; mean=0.4`
+- Interpretation: 列表状态不是 UI 缓存或全部任务失败；4 条 reward=1、4 条 reward=0、2 条在 Agent setup 的 apt 命令 exit 100。保留日志没有出现明确 502，但异常消息在真正末尾前被截断，无法据此确认这两次 apt 失败的底层网络错误。
+- Time: 2026-07-21 03:33
