@@ -211,7 +211,7 @@ describe('App API mode', () => {
     await waitFor(() => expect(listJobs.mock.calls.length).toBeGreaterThan(1))
   })
 
-  it('keeps an active Job status synchronized between its list row and detail drawer', async () => {
+  it('refreshes an active Job every second and removes its loading indicator at completion', async () => {
     const client = createMockWebUiClient()
     const listJobs = client.listJobs.bind(client)
     let status: 'running' | 'completed' = 'running'
@@ -233,13 +233,12 @@ describe('App API mode', () => {
     const selectedRow = jobButton.closest('tr')
     expect(selectedRow).not.toBeNull()
     const drawer = await screen.findByRole('dialog', { name: 'Selected job' })
-    await waitFor(() => expect(within(selectedRow as HTMLElement).getByText('Running')).toBeInTheDocument())
+    await waitFor(() => expect(within(selectedRow as HTMLElement).getByLabelText('Running')).toBeInTheDocument())
     expect(within(drawer).getByText('Running')).toBeInTheDocument()
 
     status = 'completed'
-    await waitFor(() => expect(within(selectedRow as HTMLElement).getByText('Completed')).toBeInTheDocument(), { timeout: 2_500 })
+    await waitFor(() => expect(within(selectedRow as HTMLElement).queryByLabelText('Running')).not.toBeInTheDocument(), { timeout: 2_500 })
     expect(within(drawer).getByText('Completed')).toBeInTheDocument()
-    expect(within(selectedRow as HTMLElement).queryByText('Running')).not.toBeInTheDocument()
     expect(within(drawer).queryByText('Running')).not.toBeInTheDocument()
   })
 

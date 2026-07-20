@@ -423,7 +423,7 @@ function buildQueuedJob(existing: JobDto[], request: CreateJobRequestDto, agent:
     score: null,
     status: 'queued',
     tokenUsageM: 0,
-    trial: { completed: 0, total: selectedTaskCount },
+    trial: { completed: 0, errored: 0, notPassed: 0, passed: 0, total: selectedTaskCount },
   }
 }
 

@@ -13,7 +13,7 @@ describe('WebUI view model mappers', () => {
       harness: 'claude-code',
       model: 'claude-haiku-4-5',
       environmentName: 'docker',
-      trial: { completed: 64, total: 64 },
+      trial: { completed: 62, errored: 2, notPassed: 16, passed: 46, total: 64 },
       score: { kind: 'percentage', value: 72.5 },
       costUsd: 3.42,
       tokenUsageM: 0.0184,
@@ -25,10 +25,12 @@ describe('WebUI view model mappers', () => {
 
     expect(jobDtoToHarborJob(job)).toMatchObject({
       dataset: 'terminal-bench@2.0',
+      trial: { completed: 62, errored: 2, notPassed: 16, passed: 46, total: 64 },
       trials: '64 / 64',
       score: '72.5%',
       cost: '$3.42',
       tokenUsage: '0.0184M',
+      runtimeSeconds: 2538,
       runtimeDuration: '00:42:18',
     })
   })

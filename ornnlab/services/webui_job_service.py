@@ -23,6 +23,7 @@ from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_job_copy import load_job_copy_config
+from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
@@ -339,14 +340,15 @@ class WebUiJobService:
 def _job_dto(row: dict) -> dict:
     config = _config(row)
     result = _result_payload(row.get("result_path"))
-    stats = result.get("stats", {})
     status = str(row["status"])
     attempts = max(1, int(row["n_attempts"]))
     expected_total = (int(row["n_tasks"]) if row.get("n_tasks") is not None else 0) * attempts
-    total = int(result.get("n_total_trials", expected_total))
-    complete = int(stats.get("n_completed_trials", 0))
-    if not result and status in {"completed", "failed", "cancelled", "interrupted"}:
-        complete = total
+    stats = result.get("stats", {})
+    trial = job_trial_progress(
+        result,
+        expected_total=expected_total,
+        terminal_without_result=status in {"completed", "failed", "cancelled", "interrupted"},
+    )
     return {
         "id": row["id"],
         "name": config.get("job_name", row.get("experiment_name", row["id"])),
@@ -356,11 +358,11 @@ def _job_dto(row: dict) -> dict:
         "harness": config.get("agent_harness", row["agent_id"]),
         "model": config.get("model", ""),
         "environmentName": config.get("environment_name", config.get("environment_preset_id", "")),
-        "trial": {"completed": complete, "total": total},
+        "trial": trial,
         "score": _job_score(result),
         "costUsd": _number_or_none(stats.get("cost_usd")),
         "tokenUsageM": _token_usage_m(stats),
-        "runtimeSeconds": _duration_seconds(row.get("started_at"), row.get("finished_at")),
+        "runtimeSeconds": runtime_seconds(row.get("started_at"), row.get("finished_at")),
         "createdAt": row["created_at"],
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
         "canResume": _can_resume(row, status),
@@ -388,7 +390,7 @@ def _trial_dto(job_id: str, item: dict) -> dict:
         "status": "failed" if item.get("exception_info") else "passed",
         "score": _verifier_score(item.get("verifier_result")),
         "retryCount": None,
-        "runtimeSeconds": _duration_seconds(item.get("started_at"), item.get("finished_at")),
+        "runtimeSeconds": runtime_seconds(item.get("started_at"), item.get("finished_at")),
         "costUsd": _number_or_none(token_usage.get("cost_usd")),
         "tokenUsageM": _token_usage_m(token_usage),
         "logPath": trial_log_path(item),
@@ -441,14 +443,6 @@ def _verifier_score(value: object) -> dict | None:
 
 def _version_filter(version: str | None) -> str:
     return "runs.benchmark_version IS NULL" if version is None else "runs.benchmark_version = ?"
-
-
-def _duration_seconds(started: str | None, finished: str | None) -> int | None:
-    if not started or not finished:
-        return None
-    return max(
-        0, int((datetime.fromisoformat(finished) - datetime.fromisoformat(started)).total_seconds())
-    )
 
 
 def _artifacts(row: dict) -> list[str]:

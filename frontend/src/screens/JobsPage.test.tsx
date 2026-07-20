@@ -7,7 +7,7 @@ import { jobs } from '../mocks/demo'
 import { JobsPage } from './JobsPage'
 
 describe('JobsPage', () => {
-  it('uses the same localized Job status in the list and detail drawer', async () => {
+  it('keeps status in the detail drawer while removing the list status column', async () => {
     const job = { ...jobs[0], status: 'running' as const }
 
     render(
@@ -28,7 +28,8 @@ describe('JobsPage', () => {
       />,
     )
 
-    expect(screen.getAllByText('运行中')).toHaveLength(2)
+    expect(screen.getAllByText('运行中')).toHaveLength(1)
+    expect(screen.queryByRole('columnheader', { name: '状态' })).not.toBeInTheDocument()
     expect(screen.queryByText('running')).not.toBeInTheDocument()
   })
 

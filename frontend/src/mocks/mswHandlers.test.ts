@@ -19,7 +19,7 @@ describe('WebUI MSW handlers', () => {
       expect.objectContaining({
         datasetRef: 'terminal-bench@2.0',
         id: 'job_91a7',
-        trial: { completed: 18, total: 64 },
+        trial: { completed: 18, errored: 0, notPassed: 6, passed: 12, total: 64 },
       }),
     ]))
   })

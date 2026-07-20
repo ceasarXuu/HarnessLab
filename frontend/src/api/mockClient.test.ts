@@ -28,7 +28,7 @@ describe('MockWebUiClient', () => {
       expect.objectContaining({
       id: 'job_91a7',
       datasetRef: 'terminal-bench@2.0',
-      trial: { completed: 18, total: 64 },
+      trial: { completed: 18, errored: 0, notPassed: 6, passed: 12, total: 64 },
       tokenUsageM: 0.0184,
       }),
       expect.objectContaining({ id: 'job_64f2', datasetRef: 'terminal-bench@2.0' }),

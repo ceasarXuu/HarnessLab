@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, within } from 'storybook/test'
 import { getTranslator } from '../../i18n'
 import { jobs } from '../../mocks/demo'
 import { ResourceStatus } from './ResourceStatus'
@@ -25,6 +26,18 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Loaded: Story = {}
+
+export const RunningProgress: Story = {
+  args: { jobs: [jobs[0]] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument()
+    await expect(canvas.getByRole('columnheader', { name: 'Total tasks' })).toBeVisible()
+    await expect(canvas.getByText('Passed 12')).toBeVisible()
+    await expect(canvas.getByText('Not passed 6')).toBeVisible()
+    await expect(canvas.getByLabelText('Running')).toBeVisible()
+  },
+}
 
 export const FilteredEmpty: Story = {
   args: {

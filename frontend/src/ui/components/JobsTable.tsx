@@ -1,8 +1,7 @@
-import { Search } from 'lucide-react'
+import { LoaderCircle, Search } from 'lucide-react'
 import type { HarborJob } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import type { PaginationState } from '../pagination'
-import { JobStatusBadge } from './JobStatusBadge'
 import { Pagination } from './Pagination'
 
 interface JobsTableProps {
@@ -43,11 +42,12 @@ export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, o
           <thead>
             <tr>
               <th>{t('job')}</th>
-              <th>{t('status')}</th>
               <th>{t('dataset')}</th>
               <th>{t('agent')}</th>
               <th>{t('model')}</th>
-              <th>{t('trialCount')}</th>
+              <th>{t('taskTotal')}</th>
+              <th>{t('taskCompleted')}</th>
+              <th>{t('taskErrored')}</th>
               <th>{t('score')}</th>
               <th>{t('cost')}</th>
               <th>{t('tokenUsage')}</th>
@@ -64,17 +64,26 @@ export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, o
               >
                 <td>
                   <span className="job-identity">
-                    <button className="row-button" onClick={() => onSelect(job)}>{job.name}</button>
+                    <span className="job-name-line">
+                      {job.status === 'running' && (
+                        <LoaderCircle className="job-running-spinner" aria-label={t('statusRunning')} />
+                      )}
+                      <button className="row-button" onClick={() => onSelect(job)}>{job.name}</button>
+                    </span>
                     <small>{job.id}</small>
                   </span>
-                </td>
-                <td>
-                  <JobStatusBadge status={job.status} t={t} />
                 </td>
                 <td>{job.dataset}</td>
                 <td>{job.agent}</td>
                 <td>{job.model}</td>
-                <td>{job.trials}</td>
+                <td>{job.trial.total}</td>
+                <td>
+                  <span className="job-completed-counts">
+                    <span>{t('taskPassed')} {job.trial.passed}</span>
+                    <span>{t('taskNotPassed')} {job.trial.notPassed}</span>
+                  </span>
+                </td>
+                <td>{job.trial.errored}</td>
                 <td>{job.score}</td>
                 <td>{job.cost}</td>
                 <td>{job.tokenUsage}</td>
@@ -84,7 +93,7 @@ export function JobsTable({ jobs, pagination, selectedId, search, t, onNewJob, o
             ))}
             {jobs.length === 0 && (
               <tr>
-                <td className="empty-row" colSpan={11}>{t('noJobsAvailable')}</td>
+                <td className="empty-row" colSpan={12}>{t('noJobsAvailable')}</td>
               </tr>
             )}
           </tbody>

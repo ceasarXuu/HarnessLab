@@ -73,6 +73,27 @@ tbody tr:hover,
 .job-identity small {
   display: block;
 }
+.job-name-line,
+.job-completed-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.job-completed-counts {
+  gap: 10px;
+}
+.job-completed-counts span + span {
+  color: var(--muted);
+}
+.job-running-spinner {
+  color: var(--success);
+  animation: job-spinner-rotate 0.9s linear infinite;
+}
+@keyframes job-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .mini-table {
   display: grid;
   gap: 8px;

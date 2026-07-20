@@ -51,6 +51,12 @@ export interface TrialProgressDto {
   total: number
 }
 
+export interface JobTrialProgressDto extends TrialProgressDto {
+  errored: number
+  notPassed: number
+  passed: number
+}
+
 export type ScoreDto =
   | { kind: 'percentage'; value: number }
   | { kind: 'points'; maximum: number; value: number }
@@ -64,7 +70,7 @@ export interface JobDto {
   harness: string
   model: string
   environmentName: string
-  trial: TrialProgressDto
+  trial: JobTrialProgressDto
   score: ScoreDto | null
   costUsd: number | null
   tokenUsageM: number | null

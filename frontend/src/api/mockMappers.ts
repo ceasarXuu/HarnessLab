@@ -8,8 +8,8 @@ import { optional, parseKeyValues, parseMcpServers, seconds, splitList } from '.
 export function toJobDto(job: HarborJob): JobDto {
   return {
     id: job.id, name: job.name, status: job.status, datasetRef: job.dataset, agentName: job.agent, harness: job.agent,
-    model: job.model, environmentName: job.environment, trial: parseTrial(job.trials), score: parseScore(job.score),
-    costUsd: parseNumber(job.cost), tokenUsageM: parseNumber(job.tokenUsage), runtimeSeconds: parseDuration(job.runtimeDuration),
+    model: job.model, environmentName: job.environment, trial: job.trial, score: parseScore(job.score),
+    costUsd: parseNumber(job.cost), tokenUsageM: parseNumber(job.tokenUsage), runtimeSeconds: job.runtimeSeconds,
     createdAt: job.createdAt, includeInLeaderboard: job.includeInLeaderboard, canResume: job.canResume, jobDir: job.jobDir, eventLogPath: job.eventLogPath,
     artifactPaths: job.artifactPaths, failureCode: job.failureCode,
   }

@@ -1,5 +1,13 @@
 export type JobStatus = 'draft' | 'running' | 'queued' | 'completed' | 'failed' | 'cancelled' | 'interrupted'
 
+export interface JobTrialProgress {
+  completed: number
+  errored: number
+  notPassed: number
+  passed: number
+  total: number
+}
+
 export interface HarborJob {
   id: string
   name: string
@@ -8,11 +16,13 @@ export interface HarborJob {
   agent: string
   model: string
   environment: string
+  trial: JobTrialProgress
   trials: string
   score: string
   cost: string
   tokens: string
   tokenUsage: string
+  runtimeSeconds: number | null
   runtimeDuration: string
   createdAt: string
   includeInLeaderboard: boolean
