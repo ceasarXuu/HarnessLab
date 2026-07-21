@@ -318,6 +318,13 @@ class WebUiProfileService:
             raise ValueError(
                 f"authenticationMode must be one of {sorted(modes)} for {agent['harness']}"
             )
+        pricing_models = [item["modelName"] for item in agent.get("modelPricing", [])]
+        if len(pricing_models) != len(set(pricing_models)):
+            raise ValueError("modelPricing modelName values must be unique")
+        if set(pricing_models) != set(agent.get("models", [])):
+            raise ValueError(
+                "modelPricing must contain exactly one entry for each configured model"
+            )
         config = self.agent_harbor_config(agent)
         if "env" in config:
             config["env"] = {

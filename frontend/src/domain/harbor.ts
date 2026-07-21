@@ -175,7 +175,18 @@ export interface AgentRow {
   setupTimeout?: string
   timeout?: string
   maxTimeout?: string
+  modelPricing: ModelPricing[]
   capabilities?: AgentCapabilities
+}
+
+export type ModelPricingSource = 'reported' | 'litellm' | 'custom'
+
+export interface ModelPricing {
+  modelName: string
+  source: ModelPricingSource
+  inputCacheMissUsdPerMillion?: number
+  inputCacheHitUsdPerMillion?: number
+  outputUsdPerMillion?: number
 }
 
 export interface HarnessTemplate {

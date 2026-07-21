@@ -20,6 +20,7 @@ from ornnlab.services.harbor_results import (
 )
 from ornnlab.services.harbor_score import result_pass_at_one
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
+from ornnlab.services.model_pricing import calculate_cost, pricing_snapshot
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_job_copy import load_job_copy_config
@@ -78,6 +79,7 @@ class WebUiJobService:
         agent = self.profiles.resolve_agent(config.agent_name)
         if config.model_name not in agent["models"]:
             raise ValueError("selected model is not configured for this Agent")
+        pricing = pricing_snapshot(agent, config.model_name)
         environment = self.profiles.get_environment(config.environment_preset_id)
         benchmark_name, benchmark_version = _dataset_ref(config.dataset_ref)
         selected_tasks = config.selected_task_names
@@ -124,6 +126,7 @@ class WebUiJobService:
             "jobs_dir": config.jobs_dir,
             "harbor_overrides": overrides,
             "model": config.model_name,
+            "pricing": pricing,
         }
         with sqlite.connect(self.settings) as conn:
             conn.execute(
@@ -140,7 +143,11 @@ class WebUiJobService:
             "run",
             run["id"],
             "webui.job.configured",
-            {"agent_name": agent["agentName"], "model_name": config.model_name},
+            {
+                "agent_name": agent["agentName"],
+                "model_name": config.model_name,
+                "pricing_source": pricing["source"],
+            },
         )
         if request.run_immediately:
             QueueService(self.settings).enqueue_experiment(created["experiment"]["id"])
@@ -219,7 +226,7 @@ class WebUiJobService:
             run.get("result_path"),
         )
         return [
-            _trial_dto(job_id, item)
+            _trial_dto(job_id, item, config.get("pricing"))
             for item in results
         ]
 
@@ -360,7 +367,7 @@ def _job_dto(row: dict) -> dict:
         "environmentName": config.get("environment_name", config.get("environment_preset_id", "")),
         "trial": trial,
         "score": _job_score(result),
-        "costUsd": _number_or_none(stats.get("cost_usd")),
+        "costUsd": calculate_cost(stats, config.get("pricing")),
         "tokenUsageM": _token_usage_m(stats),
         "runtimeSeconds": runtime_seconds(row.get("started_at"), row.get("finished_at")),
         "createdAt": row["created_at"],
@@ -380,7 +387,7 @@ def _can_resume(row: dict, status: str) -> bool:
     return (job_path / "config.json").is_file()
 
 
-def _trial_dto(job_id: str, item: dict) -> dict:
+def _trial_dto(job_id: str, item: dict, pricing: dict | None = None) -> dict:
     agent_result = item.get("agent_result") or {}
     token_usage = _trial_token_usage(agent_result, item.get("step_results"))
     return {
@@ -391,7 +398,7 @@ def _trial_dto(job_id: str, item: dict) -> dict:
         "score": _verifier_score(item.get("verifier_result")),
         "retryCount": None,
         "runtimeSeconds": runtime_seconds(item.get("started_at"), item.get("finished_at")),
-        "costUsd": _number_or_none(token_usage.get("cost_usd")),
+        "costUsd": calculate_cost(token_usage, pricing),
         "tokenUsageM": _token_usage_m(token_usage),
         "logPath": trial_log_path(item),
     }
@@ -468,10 +475,6 @@ def _result_payload(result_path: str | None) -> dict:
     return load_result_payload(Path(result_path))
 
 
-def _number_or_none(value: object) -> float | None:
-    return float(value) if isinstance(value, int | float) else None
-
-
 def _token_usage_m(stats: dict) -> float | None:
     values = [stats.get("n_input_tokens"), stats.get("n_output_tokens")]
     if not any(isinstance(value, int | float) for value in values):
@@ -487,7 +490,7 @@ def _trial_token_usage(agent_result: object, step_results: object) -> dict:
     for context in contexts:
         if not isinstance(context, dict):
             continue
-        for key in ("n_input_tokens", "n_output_tokens", "cost_usd"):
+        for key in ("n_input_tokens", "n_cache_tokens", "n_output_tokens", "cost_usd"):
             value = context.get(key)
             if isinstance(value, int | float):
                 result[key] = result.get(key, 0.0) + float(value)

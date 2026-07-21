@@ -20,7 +20,7 @@ function AuthenticationModesFixture() {
   const [agent, setAgent] = useState<AgentRow>({
     adapter: 'none', agentName: 'Claude Code', authenticationMode: 'anthropic-api', capabilities,
     env: 'none', harness: 'claude-code', id: 'claude-code-profile', kwargs: 'none', maxTimeout: '-',
-    mcp: 'none', models: 'none', runtime: '-', setupTimeout: '-', skills: 'none', source: 'OrnnLab profile',
+    mcp: 'none', modelPricing: [], models: 'none', runtime: '-', setupTimeout: '-', skills: 'none', source: 'OrnnLab profile',
     status: 'configured', timeout: '-', updated: '-',
   })
   return <AgentEnvironmentVariables capabilities={capabilities} readOnly={false} t={getTranslator('en')} value={agent} onChange={setAgent} />

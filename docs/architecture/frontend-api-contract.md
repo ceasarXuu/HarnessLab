@@ -267,6 +267,13 @@ interface Agent {
   harness: string
   status: 'configured' | 'needs-token'
   models: string[]
+  modelPricing: Array<{
+    modelName: string
+    source: 'reported' | 'litellm' | 'custom'
+    inputCacheMissUsdPerMillion?: number
+    inputCacheHitUsdPerMillion?: number
+    outputUsdPerMillion?: number
+  }>
   importPath?: string
   env: Array<{ key: string; value: string }>
   kwargs: string
@@ -291,6 +298,8 @@ interface Harness {
 ```
 
 `Harness` 是从当前安装的 Harbor `AgentName` 和适配器 descriptor 动态生成的只读模板目录，不是 Agent，也不写入数据库。新建 Agent 必须先从该目录选择 Harness，再保存名称、模型集合及该 Harness 支持的参数；只有保存成功的配置才会出现在 `/agents`。Agent 创建后 Harness 不可更换，但 Agent 本身可编辑或删除。`stdio` MCP 必须提供 `command`；`sse`/`streamable-http` 必须提供 `url`。协议不包含启用开关、部署配置或 compose sidecar。
+
+`modelPricing` 必须与 `models` 一一对应。`custom` 必须提供三项非负价格，单位均为 USD / 1M Token；其他来源不要求价格字段。创建 Job 时后端选择与 `modelName` 对应的条目：`reported` 保存来源标记，`litellm` 保存解析后的目录价格，`custom` 保存用户价格。该快照只存于 Job 私有配置，不新增运行请求字段，也不随 Agent 后续编辑变化。
 
 Agent 的 `status` 是响应字段，不属于创建或更新请求。后端仅在 profile 通过 Harbor `AgentConfig` 校验并保存后返回 `configured`；未实现真实凭证可用性探针时不得由前端提交或伪造 `needs-token`。
 

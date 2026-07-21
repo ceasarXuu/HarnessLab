@@ -47,6 +47,7 @@ export function agentRowToDto(agent: AgentRow): AgentInputDto {
     kwargs: agent.kwargs ?? '',
     maxTimeoutSeconds: seconds(agent.maxTimeout),
     mcpServers: parseMcpServers(agent.mcp),
+    modelPricing: agent.modelPricing,
     models: splitList(agent.models),
     setupTimeoutSeconds: seconds(agent.setupTimeout),
     timeoutSeconds: seconds(agent.timeout),

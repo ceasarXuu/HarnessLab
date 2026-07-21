@@ -143,6 +143,10 @@ def test_webui_agent_and_environment_crud(client):
     assert agent["harness"] == "oracle"
     assert agent["status"] == "configured"
     assert agent["timeoutSeconds"] == 1200
+    assert agent["modelPricing"] == [
+        {"modelName": "oracle-primary", "source": "reported"},
+        {"modelName": "oracle-secondary", "source": "reported"},
+    ]
     assert set(agent["capabilities"]["supportedFields"]) == {"customKwargs", "env", "timeouts"}
 
     built_in_parameters = {item["key"] for item in claude_harness["capabilities"]["parameters"]}
@@ -325,6 +329,50 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     ).json()["data"]
     assert update["job"]["includeInLeaderboard"] is False
     assert update["operation"]["status"] == "completed"
+
+
+def test_webui_job_snapshots_selected_model_custom_pricing(client):
+    agent = _agent_payload()
+    agent["modelPricing"] = [
+        {"modelName": "oracle-primary", "source": "reported"},
+        {
+            "modelName": "oracle-secondary",
+            "source": "custom",
+            "inputCacheMissUsdPerMillion": 0.4,
+            "inputCacheHitUsdPerMillion": 0.04,
+            "outputUsdPerMillion": 1.2,
+        },
+    ]
+    assert client.post(f"{API}/agents", json=agent).status_code == 200
+    assert client.post(f"{API}/environments", json=_environment_payload()).status_code == 200
+
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+
+    with sqlite.connect(client.app.state.settings) as conn:
+        stored = sqlite.rows(
+            conn,
+            "SELECT config_json FROM webui_job_configs WHERE run_id = ?",
+            (created["id"],),
+        )[0]
+    assert json.loads(stored["config_json"])["pricing"] == agent["modelPricing"][1]
+
+
+def test_webui_agent_rejects_incomplete_custom_pricing(client):
+    agent = _agent_payload()
+    agent["modelPricing"] = [
+        {
+            "modelName": "oracle-primary",
+            "source": "custom",
+            "inputCacheMissUsdPerMillion": 0.4,
+        }
+    ]
+
+    response = client.post(f"{API}/agents", json=agent)
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_webui_job_rejects_model_outside_agent_template(client):

@@ -1,7 +1,7 @@
 # OrnnLab Harbor WebUI v1.0.5
 
 - 状态：Active
-- 更新：2026-07-13
+- 更新：2026-07-21
 
 v1.0.5 将 OrnnLab 建设为基于 Harbor 的本地实验控制台。当前前端默认保持 mock 模式；真实联调通过唯一 `/api/webui/v1` 契约进入 API 模式。后续运行体验工作聚焦应用级 dev service 守护，不做系统级开机自启动。
 

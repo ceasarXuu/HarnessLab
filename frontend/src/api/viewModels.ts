@@ -78,6 +78,7 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
     kwargs: agent.kwargs,
     maxTimeout: agent.maxTimeoutSeconds === undefined ? undefined : `${agent.maxTimeoutSeconds}s`,
     mcp: agent.mcpServers.length ? JSON.stringify(agent.mcpServers) : 'none',
+    modelPricing: agent.modelPricing,
     models: agent.models.length ? agent.models.join(', ') : '-',
     setupTimeout: agent.setupTimeoutSeconds === undefined ? undefined : `${agent.setupTimeoutSeconds}s`,
     timeout: agent.timeoutSeconds === undefined ? undefined : `${agent.timeoutSeconds}s`,

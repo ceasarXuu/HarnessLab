@@ -4,6 +4,7 @@ import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/ag
 import type { AgentCapabilities, AgentCapabilityField, AgentRow, HarnessTemplate } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { AgentHarnessParameters } from './AgentHarnessParameters'
+import { AgentModelSettings } from './AgentModelSettings'
 import { AgentEnvironmentVariables } from './AgentEnvironmentVariables'
 import { CustomSelect } from './CustomSelect'
 import { EditableStringList } from './EditableStringList'
@@ -65,19 +66,7 @@ export function AgentProfileEditor({
             <section className="surface rail-card">
               <SectionTitle>{t('modelSettings')}</SectionTitle>
               <div className="agent-form-grid">
-                {readOnly ? (
-                  <Metric label={t('supportedModels')} value={displayReadOnlyValue(value.models, t('configuredAtJobRun'))} />
-                ) : (
-                  <ModelListControl
-                    addLabel={t('add')}
-                    deleteLabel={t('delete')}
-                    itemLabel={t('modelName')}
-                    label={t('supportedModels')}
-                    placeholder={t('modelNamePlaceholder')}
-                    value={value.models}
-                    onChange={(nextValue) => setField('models', nextValue)}
-                  />
-                )}
+                <AgentModelSettings key={value.harness} readOnly={readOnly} t={t} value={value} onChange={onChange} />
                 <FieldError id="agent-models-error" message={fieldErrors.models} />
               </div>
             </section>
@@ -217,6 +206,7 @@ export function AgentIdentityEditor({
       kwargs: 'none',
       mcp: 'none',
       models: '',
+      modelPricing: [],
       skills: 'none',
     })
   }
@@ -339,11 +329,6 @@ function buildAgentTabs(visibleFields: AgentVisibleFields, t: Translate) {
   ].filter((tab): tab is { key: AgentTab; label: string } => tab !== null)
 }
 
-function displayReadOnlyValue(value: string | undefined, fallback: string) {
-  if (!hasConfiguredValue(value) || value === '-') return fallback
-  return value ?? fallback
-}
-
 function hasConfiguredValue(value: string | undefined) {
   return Boolean(value && value !== 'none' && value !== '-')
 }
@@ -409,62 +394,6 @@ export function DirectoryListControl({
 
 function SectionTitle({ children }: { children: string }) {
   return <div className="rail-title"><h3>{children}</h3></div>
-}
-
-function ModelListControl({
-  addLabel,
-  deleteLabel,
-  itemLabel,
-  label,
-  placeholder,
-  readOnly = false,
-  value,
-  onChange,
-}: {
-  addLabel: string
-  deleteLabel: string
-  itemLabel: string
-  label: string
-  placeholder: string
-  readOnly?: boolean
-  value: string
-  onChange: (value: string) => void
-}) {
-  const [models, setModels] = useState(() => parseModelNames(value))
-  const commit = (nextModels: string[]) => {
-    setModels(nextModels)
-    onChange(formatModelNames(nextModels))
-  }
-  return (
-    <div id="agent-models" tabIndex={-1} className="field-wide">
-      <EditableStringList
-        addLabel={addLabel}
-        className="model-list-control"
-        deleteLabel={deleteLabel}
-        itemAriaLabel={() => itemLabel}
-        label={label}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        values={models}
-        onChange={commit}
-      />
-    </div>
-  )
-}
-
-function parseModelNames(value: string) {
-  if (!value || value === '-') return []
-  const names = parseList(value)
-  return names
-}
-
-function parseList(value: string) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean)
-}
-
-function formatModelNames(models: string[]) {
-  const names = models.map((item) => item.trim()).filter(Boolean)
-  return names.join(', ')
 }
 
 function parseDirectoryPaths(value: string) {

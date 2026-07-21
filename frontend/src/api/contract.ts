@@ -226,11 +226,20 @@ export interface AgentInputDto {
   importPath?: string
   kwargs: string
   mcpServers: McpServerDto[]
+  modelPricing: ModelPricingDto[]
   models: string[]
   setupTimeoutSeconds?: number
   timeoutSeconds?: number
   skillSources: string[]
   maxTimeoutSeconds?: number
+}
+
+export interface ModelPricingDto {
+  modelName: string
+  source: 'reported' | 'litellm' | 'custom'
+  inputCacheMissUsdPerMillion?: number
+  inputCacheHitUsdPerMillion?: number
+  outputUsdPerMillion?: number
 }
 
 export interface AgentDto extends AgentInputDto {

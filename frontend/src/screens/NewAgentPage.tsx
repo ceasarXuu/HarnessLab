@@ -143,6 +143,7 @@ function buildNewAgent(
     setupTimeout: '300s',
     timeout: '1800s',
     maxTimeout: '3600s',
+    modelPricing: [],
     capabilities: agentCapabilitiesForHarness(harness, capabilitiesByHarness),
   }
 }

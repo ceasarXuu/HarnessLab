@@ -9,6 +9,16 @@ logger = logging.getLogger(__name__)
 
 def normalize_agent_profile(agent: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(agent)
+    models = [str(model) for model in normalized.get("models", [])]
+    configured_pricing = {
+        item.get("modelName"): item
+        for item in normalized.get("modelPricing", [])
+        if isinstance(item, dict) and item.get("modelName") in models
+    }
+    normalized["modelPricing"] = [
+        configured_pricing.get(model, {"modelName": model, "source": "reported"})
+        for model in models
+    ]
     if normalized.get("harness") != "claude-code":
         return normalized
 

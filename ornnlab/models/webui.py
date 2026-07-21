@@ -50,6 +50,33 @@ class McpServerInput(WebUiModel):
         return self
 
 
+class ModelPricingInput(WebUiModel):
+    model_name: str = Field(alias="modelName", min_length=1)
+    source: Literal["reported", "litellm", "custom"] = "reported"
+    input_cache_miss_usd_per_million: float | None = Field(
+        alias="inputCacheMissUsdPerMillion", default=None, ge=0
+    )
+    input_cache_hit_usd_per_million: float | None = Field(
+        alias="inputCacheHitUsdPerMillion", default=None, ge=0
+    )
+    output_usd_per_million: float | None = Field(
+        alias="outputUsdPerMillion", default=None, ge=0
+    )
+
+    @model_validator(mode="after")
+    def validate_custom_rates(self) -> ModelPricingInput:
+        rates = (
+            self.input_cache_miss_usd_per_million,
+            self.input_cache_hit_usd_per_million,
+            self.output_usd_per_million,
+        )
+        if self.source == "custom" and any(rate is None for rate in rates):
+            raise ValueError(
+                "custom model pricing requires input miss, input hit, and output rates"
+            )
+        return self
+
+
 class AgentInput(WebUiModel):
     agent_name: str = Field(alias="agentName", min_length=1)
     authentication_mode: str | None = Field(alias="authenticationMode", default=None)
@@ -59,6 +86,7 @@ class AgentInput(WebUiModel):
     import_path: str | None = Field(alias="importPath", default=None)
     kwargs: str = ""
     mcp_servers: list[McpServerInput] = Field(alias="mcpServers", default_factory=list)
+    model_pricing: list[ModelPricingInput] = Field(alias="modelPricing", default_factory=list)
     models: list[str] = Field(default_factory=list)
     setup_timeout_seconds: int | None = Field(alias="setupTimeoutSeconds", default=None, ge=1)
     timeout_seconds: int | None = Field(alias="timeoutSeconds", default=None, ge=1)

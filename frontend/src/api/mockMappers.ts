@@ -20,7 +20,7 @@ export function toAgentDto(agent: AgentRow): AgentDto {
     agentName: agent.agentName, authenticationMode: agent.authenticationMode,
     capabilities: agent.capabilities ?? fallbackAgentCapabilities(), env: parseKeyValues(agent.env), harness: agent.harness, id: agent.id,
     importPath: optional(agent.adapter), kwargs: agent.kwargs ?? '', maxTimeoutSeconds: seconds(agent.maxTimeout),
-    mcpServers: parseMcpServers(agent.mcp), models: splitList(agent.models), setupTimeoutSeconds: seconds(agent.setupTimeout), timeoutSeconds: seconds(agent.timeout),
+    mcpServers: parseMcpServers(agent.mcp), modelPricing: agent.modelPricing, models: splitList(agent.models), setupTimeoutSeconds: seconds(agent.setupTimeout), timeoutSeconds: seconds(agent.timeout),
     skillSources: splitList(agent.skills), status: agent.status,
   }
 }

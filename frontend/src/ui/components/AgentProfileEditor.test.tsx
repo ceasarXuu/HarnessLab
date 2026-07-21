@@ -66,7 +66,7 @@ function ClaudeEditorFixture() {
   const [value, setValue] = useState<AgentRow>({
     adapter: 'none', agentName: 'Claude Code', authenticationMode: 'anthropic-api',
     capabilities: claudeCapabilities, env: 'none', harness: 'claude-code', id: 'claude-code-profile',
-    kwargs: 'none', maxTimeout: '-', mcp: 'none', models: 'none', runtime: '-', setupTimeout: '-',
+    kwargs: 'none', maxTimeout: '-', mcp: 'none', modelPricing: [], models: 'none', runtime: '-', setupTimeout: '-',
     skills: 'none', source: 'OrnnLab profile', status: 'configured', timeout: '-', updated: '-',
   })
   return <AgentProfileEditor t={getTranslator('en')} value={value} onChange={setValue} />
