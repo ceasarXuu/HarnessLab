@@ -26,6 +26,7 @@ import type {
   LeaderboardEntryDto,
   LeaderboardQuery,
   ListQuery,
+  ModelPricingPreviewDto,
   Page,
   Operation,
   OperationResultDto,
@@ -60,6 +61,7 @@ export interface WebUiClient {
   getHubConnection(): Promise<ApiResponse<HubConnectionDto | null>>
   getJob(id: string): Promise<ApiResponse<JobDto | null>>
   getJobCopyConfig(id: string): Promise<ApiResponse<JobConfigDto | null>>
+  getModelPricing(modelName: string): Promise<ApiResponse<ModelPricingPreviewDto | null>>
   getOperation(id: string): Promise<ApiResponse<Operation | null>>
   importDataset(request: DatasetImportRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   installSystemUpdate(): Promise<ApiResponse<OperationResultDto | null>>
@@ -113,6 +115,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     getHubConnection: () => requestJson<HubConnectionDto | null>(request, `${baseUrl}/system/hub-connection`),
     getJob: (id) => requestJson<JobDto | null>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}`),
     getJobCopyConfig: (id) => requestJson<JobConfigDto | null>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/copy-config`),
+    getModelPricing: (modelName) => requestJson<ModelPricingPreviewDto | null>(request, `${baseUrl}/model-pricing/preview?modelName=${encodeURIComponent(modelName)}`),
     getOperation: (id) => requestJson<Operation | null>(request, `${baseUrl}/operations/${encodeURIComponent(id)}`),
     importDataset: (body) => post<OperationResultDto>(request, `${baseUrl}/datasets/import`, body),
     installSystemUpdate: () => post<OperationResultDto>(request, `${baseUrl}/system/service/update`),

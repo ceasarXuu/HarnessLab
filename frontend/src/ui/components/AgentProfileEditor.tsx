@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
+import type { WebUiClient } from '../../api/webUiClient'
 import { agentCapabilitiesForHarness, supportsAgentField } from '../../domain/agentCapabilities'
 import type { AgentCapabilities, AgentCapabilityField, AgentRow, HarnessTemplate } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
@@ -18,6 +19,7 @@ type AgentTab = 'base' | 'skills' | 'mcps' | 'advanced'
 
 interface AgentProfileEditorProps {
   capabilitiesByHarness?: Record<string, AgentCapabilities>
+  loadPricing?: WebUiClient['getModelPricing']
   readOnly?: boolean
   value: AgentRow
   t: Translate
@@ -27,6 +29,7 @@ interface AgentProfileEditorProps {
 
 export function AgentProfileEditor({
   capabilitiesByHarness,
+  loadPricing,
   readOnly = false,
   value,
   t,
@@ -66,7 +69,7 @@ export function AgentProfileEditor({
             <section className="surface rail-card">
               <SectionTitle>{t('modelSettings')}</SectionTitle>
               <div className="agent-form-grid">
-                <AgentModelSettings key={value.harness} readOnly={readOnly} t={t} value={value} onChange={onChange} />
+                <AgentModelSettings key={value.harness} loadPricing={loadPricing} readOnly={readOnly} t={t} value={value} onChange={onChange} />
                 <FieldError id="agent-models-error" message={fieldErrors.models} />
               </div>
             </section>

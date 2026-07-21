@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { AgentRow } from '../../domain/harbor'
@@ -35,6 +35,20 @@ describe('AgentModelSettings', () => {
     expect(screen.getByRole('option', { name: 'LiteLLM catalog' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Custom pricing' })).toBeInTheDocument()
   })
+
+  it('shows resolved rates for both Harness and LiteLLM sources', async () => {
+    render(<PricingFixture />)
+
+    await waitFor(() => expect(screen.getByText('$1.5')).toBeInTheDocument())
+    expect(screen.getByText('$0.15')).toBeInTheDocument()
+    expect(screen.getByText('$6')).toBeInTheDocument()
+    expect(screen.getByText(/actual cost uses the total reported by the Harness/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Pricing source: deepseek-v4-pro'))
+    fireEvent.click(screen.getByRole('option', { name: 'LiteLLM catalog' }))
+
+    expect(screen.getByText(/saved as an immutable billing snapshot/)).toBeInTheDocument()
+  })
 })
 
 function PricingFixture() {
@@ -44,5 +58,19 @@ function PricingFixture() {
     modelPricing: [{ modelName: 'deepseek-v4-pro', source: 'reported' }],
     skills: 'none', source: 'OrnnLab profile', status: 'configured', updated: '-',
   })
-  return <AgentModelSettings t={getTranslator('en')} value={value} onChange={setValue} />
+  return <AgentModelSettings loadPricing={loadPricing} t={getTranslator('en')} value={value} onChange={setValue} />
+}
+
+async function loadPricing(modelName: string) {
+  return {
+    data: {
+      catalogModelName: modelName,
+      inputCacheHitUsdPerMillion: 0.15,
+      inputCacheMissUsdPerMillion: 1.5,
+      modelName,
+      outputUsdPerMillion: 6,
+      source: 'litellm' as const,
+    },
+    error: null,
+  }
 }

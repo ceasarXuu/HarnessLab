@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { useState } from 'react'
+import { createMockWebUiClient } from '../../api/mockClient'
 import { getTranslator } from '../../i18n'
 import { agentRows, datasetRows, datasetTaskRows, environmentRows } from '../../mocks/demoCatalog'
 import { AgentDetail } from './AgentDetail'
@@ -8,6 +9,7 @@ import { DatasetDetail } from './DatasetDetail'
 import { EnvironmentProfileEditor } from './EnvironmentProfileEditor'
 
 const t = getTranslator('en')
+const client = createMockWebUiClient()
 const saveAgent = fn(async () => true)
 
 const meta = {
@@ -21,7 +23,7 @@ type Story = StoryObj<typeof meta>
 export const BuiltInAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows[0]} t={t} onSave={saveAgent} />
+      <AgentDetail agent={agentRows[0]} client={client} t={t} onSave={saveAgent} />
     </main>
   ),
   play: async ({ canvasElement }) => {
@@ -57,7 +59,7 @@ export const BuiltInAgent: Story = {
 export const CustomAgent: Story = {
   render: () => (
     <main className="workspace single-page">
-      <AgentDetail agent={agentRows.find((row) => row.id === 'local-repair-agent') ?? agentRows[0]} t={t} onSave={async () => true} />
+      <AgentDetail agent={agentRows.find((row) => row.id === 'local-repair-agent') ?? agentRows[0]} client={client} t={t} onSave={async () => true} />
     </main>
   ),
 }

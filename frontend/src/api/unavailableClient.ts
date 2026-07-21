@@ -32,6 +32,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     getHubConnection: unavailable,
     getJob: unavailable,
     getJobCopyConfig: unavailable,
+    getModelPricing: unavailable,
     getOperation: unavailable,
     importDataset: unavailable,
     installSystemUpdate: unavailable,

@@ -162,6 +162,29 @@ code {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
+.model-pricing-rates.readonly > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.model-pricing-rates.readonly span,
+.model-pricing-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.model-pricing-rates.readonly strong {
+  font-size: 14px;
+}
+.model-pricing-note {
+  margin: 0;
+}
+.model-pricing-note.warning-copy {
+  color: var(--warning);
+}
 .directory-list-control {
   display: grid;
   gap: 10px;

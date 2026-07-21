@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { ApiResponse, ModelPricingPreviewDto } from '../../api/contract'
 import type { AgentRow, ModelPricing, ModelPricingSource } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { CustomSelect } from './CustomSelect'
@@ -6,17 +7,31 @@ import { EditableStringList } from './EditableStringList'
 import { Metric } from './Metric'
 
 interface AgentModelSettingsProps {
+  loadPricing?: (modelName: string) => Promise<ApiResponse<ModelPricingPreviewDto | null>>
   readOnly?: boolean
   t: Translate
   value: AgentRow
   onChange: (value: AgentRow) => void
 }
 
-export function AgentModelSettings({ readOnly = false, t, value, onChange }: AgentModelSettingsProps) {
+export function AgentModelSettings({ loadPricing, readOnly = false, t, value, onChange }: AgentModelSettingsProps) {
   const [modelRows, setModelRows] = useState(() => parseModelNames(value.models))
+  const [previews, setPreviews] = useState<Record<string, ModelPricingPreviewDto | null>>({})
   const models = readOnly
     ? parseModelNames(value.models)
     : modelRows.map((model) => model.trim()).filter(Boolean)
+  const modelKey = models.join('\n')
+  useEffect(() => {
+    if (!loadPricing || !modelKey) return
+    let active = true
+    void Promise.all(models.map(async (model) => {
+      const response = await loadPricing(model)
+      return [model, response.data] as const
+    })).then((entries) => {
+      if (active) setPreviews(Object.fromEntries(entries))
+    })
+    return () => { active = false }
+  }, [loadPricing, modelKey])
   const updateModels = (nextModels: string[]) => {
     setModelRows(nextModels)
     const cleanModels = nextModels.map((model) => model.trim()).filter(Boolean)
@@ -39,9 +54,17 @@ export function AgentModelSettings({ readOnly = false, t, value, onChange }: Age
     return (
       <div className="model-settings field-wide">
         <Metric label={t('supportedModels')} value={models.length ? models.join(', ') : t('configuredAtJobRun')} />
-        {models.map((model) => (
-          <PricingSummary key={model} model={model} pricing={pricingForModel(model, value.modelPricing)} t={t} />
-        ))}
+        {models.map((model) => {
+          const pricing = pricingForModel(model, value.modelPricing)
+          return (
+            <div className="model-pricing-card" key={model}>
+              <PricingSummary model={model} pricing={pricing} t={t} />
+              {pricing.source !== 'custom' && (
+                <ResolvedPricing pricing={pricing} preview={loadPricing ? previews[model] : null} t={t} />
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -65,6 +88,7 @@ export function AgentModelSettings({ readOnly = false, t, value, onChange }: Age
           key={model}
           model={model}
           pricing={pricingForModel(model, value.modelPricing)}
+          preview={loadPricing ? previews[model] : null}
           t={t}
           onChange={(next) => updatePricing(model, next)}
         />
@@ -73,9 +97,10 @@ export function AgentModelSettings({ readOnly = false, t, value, onChange }: Age
   )
 }
 
-function ModelPricingEditor({ model, pricing, t, onChange }: {
+function ModelPricingEditor({ model, pricing, preview, t, onChange }: {
   model: string
   pricing: ModelPricing
+  preview?: ModelPricingPreviewDto | null
   t: Translate
   onChange: (value: ModelPricing) => void
 }) {
@@ -107,8 +132,36 @@ function ModelPricingEditor({ model, pricing, t, onChange }: {
           <PriceInput label={t('outputPrice')} value={pricing.outputUsdPerMillion} onChange={(raw) => setRate('outputUsdPerMillion', raw)} />
         </div>
       )}
+      {pricing.source !== 'custom' && (
+        <ResolvedPricing pricing={pricing} preview={preview} t={t} />
+      )}
     </div>
   )
+}
+
+function ResolvedPricing({ pricing, preview, t }: {
+  pricing: ModelPricing
+  preview?: ModelPricingPreviewDto | null
+  t: Translate
+}) {
+  if (preview === undefined) return <p className="model-pricing-note">{t('pricingLoading')}</p>
+  if (preview === null) return <p className="model-pricing-note warning-copy">{t('pricingUnavailable')}</p>
+  return (
+    <>
+      <div className="model-pricing-rates readonly">
+        <PriceValue label={t('inputCacheMissPrice')} value={preview.inputCacheMissUsdPerMillion} />
+        <PriceValue label={t('inputCacheHitPrice')} value={preview.inputCacheHitUsdPerMillion} />
+        <PriceValue label={t('outputPrice')} value={preview.outputUsdPerMillion} />
+      </div>
+      <p className="model-pricing-note">
+        {pricing.source === 'reported' ? t('pricingHarnessReferenceNote') : t('pricingLiteLlmNote')}
+      </p>
+    </>
+  )
+}
+
+function PriceValue({ label, value }: { label: string; value: number }) {
+  return <div><span>{label}</span><strong>{formatPrice(value)}</strong></div>
 }
 
 function PriceInput({ label, value, onChange }: { label: string; value?: number; onChange: (value: string) => void }) {
@@ -118,6 +171,10 @@ function PriceInput({ label, value, onChange }: { label: string; value?: number;
       <input min="0" step="any" type="number" value={value ?? ''} onChange={(event) => onChange(event.target.value)} />
     </label>
   )
+}
+
+function formatPrice(value: number) {
+  return `$${value.toLocaleString(undefined, { maximumFractionDigits: 12 })}`
 }
 
 function PricingSummary({ model, pricing, t }: { model: string; pricing: ModelPricing; t: Translate }) {

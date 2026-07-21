@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Request
 
+from ornnlab.api.webui_model_pricing import router as model_pricing_router
 from ornnlab.models.webui import (
     AgentInput,
     CreateJobInput,
@@ -22,6 +23,7 @@ from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.services.webui_system_service import WebUiSystemService
 
 router = APIRouter(prefix="/api/webui/v1", tags=["webui"])
+router.include_router(model_pricing_router)
 
 @router.get("/operations/{operation_id}")
 async def get_operation(operation_id: str, request: Request) -> dict:

@@ -88,7 +88,7 @@ export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAge
             <AgentIdentityEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} harnesses={harnesses} value={draft} t={t} onChange={setDraft} />
           </section>
           {draft.harness && (
-            <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} value={draft} t={t} onChange={setDraft} />
+            <AgentProfileEditor capabilitiesByHarness={capabilitiesByHarness} fieldErrors={fieldErrors} loadPricing={client.getModelPricing} value={draft} t={t} onChange={setDraft} />
           )}
         </section>
       </div>

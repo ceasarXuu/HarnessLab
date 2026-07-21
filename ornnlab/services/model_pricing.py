@@ -32,7 +32,7 @@ def pricing_snapshot(agent: dict[str, Any], model_name: str) -> dict[str, Any]:
         }
     if source != "litellm":
         raise ValueError(f"unsupported model pricing source: {source}")
-    return _litellm_snapshot(model_name)
+    return catalog_pricing(model_name)
 
 
 def calculate_cost(usage: dict[str, Any], snapshot: dict[str, Any] | None) -> float | None:
@@ -69,7 +69,8 @@ def calculate_cost(usage: dict[str, Any], snapshot: dict[str, Any] | None) -> fl
     ) / 1_000_000
 
 
-def _litellm_snapshot(model_name: str) -> dict[str, Any]:
+def catalog_pricing(model_name: str) -> dict[str, Any]:
+    """Resolve displayable per-token rates from Harbor's bundled LiteLLM catalog."""
     try:
         import litellm
     except ImportError as exc:
@@ -78,6 +79,10 @@ def _litellm_snapshot(model_name: str) -> dict[str, Any]:
     candidates = (model_name, model_name.split("/", 1)[-1])
     matched_name = next((name for name in candidates if litellm.model_cost.get(name)), None)
     if matched_name is None:
+        logger.warning(
+            "LiteLLM pricing preview unavailable",
+            extra={"model_name": model_name, "pricing_source": "litellm"},
+        )
         raise ValueError(f"LiteLLM has no pricing entry for model '{model_name}'")
     pricing = litellm.model_cost[matched_name]
     input_rate = _number_or_none(pricing.get("input_cost_per_token"))
@@ -100,7 +105,7 @@ def _litellm_snapshot(model_name: str) -> dict[str, Any]:
         "sourceUrl": pricing.get("source"),
     }
     logger.info(
-        "LiteLLM pricing snapshot resolved",
+        "LiteLLM pricing resolved",
         extra={
             "catalog_model_name": matched_name,
             "model_name": model_name,

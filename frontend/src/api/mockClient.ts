@@ -170,6 +170,17 @@ export function createMockWebUiClient(): WebUiClient {
     async getJob(id) {
       return findById(jobDtos, id, 'JOB_NOT_FOUND', 'Job not found', 'id')
     },
+    async getModelPricing(modelName) {
+      return success({
+        catalogModelName: modelName,
+        inputCacheHitUsdPerMillion: 0.15,
+        inputCacheMissUsdPerMillion: 1.5,
+        modelName,
+        outputUsdPerMillion: 6,
+        source: 'litellm' as const,
+        sourceUrl: 'https://example.test/pricing',
+      })
+    },
     async getOperation(id) {
       const operation = operations.get(id)
       if (operation) applyOperationEffects(operation)

@@ -19,7 +19,21 @@ function PricingFixture() {
     ],
     skills: 'none', source: 'OrnnLab profile', status: 'configured', updated: '-',
   })
-  return <AgentModelSettings t={getTranslator('en')} value={value} onChange={setValue} />
+  return <AgentModelSettings loadPricing={loadPricing} t={getTranslator('en')} value={value} onChange={setValue} />
+}
+
+async function loadPricing(modelName: string) {
+  return {
+    data: {
+      catalogModelName: modelName,
+      inputCacheHitUsdPerMillion: 0.02,
+      inputCacheMissUsdPerMillion: 0.2,
+      modelName,
+      outputUsdPerMillion: 0.6,
+      source: 'litellm' as const,
+    },
+    error: null,
+  }
 }
 
 const meta = {
@@ -36,6 +50,7 @@ export const MixedPricingSources: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByLabelText('Pricing source: deepseek-v4-pro')).toHaveTextContent('LiteLLM catalog')
+    await expect(await canvas.findByText('$0.2')).toBeVisible()
     await expect(canvas.getByLabelText('Pricing source: deepseek-v4-flash')).toHaveTextContent('Custom pricing')
     await userEvent.clear(canvas.getByLabelText('Output (USD / 1M tokens)'))
     await userEvent.type(canvas.getByLabelText('Output (USD / 1M tokens)'), '0.8')

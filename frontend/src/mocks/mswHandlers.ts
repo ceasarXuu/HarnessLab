@@ -59,6 +59,10 @@ export const webuiHandlers = [
   ),
   http.get(`${webui}/agents`, async ({ request }) => HttpResponse.json(await client.listAgents(agentQuery(request)))),
   http.get(`${webui}/harnesses`, async ({ request }) => HttpResponse.json(await client.listHarnesses(listQuery(request)))),
+  http.get(`${webui}/model-pricing/preview`, async ({ request }) => {
+    const modelName = new URL(request.url).searchParams.get('modelName') ?? ''
+    return HttpResponse.json(await client.getModelPricing(modelName))
+  }),
   http.get(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.getAgent(String(params.agentId))),
   ),

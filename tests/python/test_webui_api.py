@@ -375,6 +375,36 @@ def test_webui_agent_rejects_incomplete_custom_pricing(client):
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_webui_model_pricing_preview_uses_litellm_catalog(client, monkeypatch):
+    import litellm
+
+    monkeypatch.setitem(
+        litellm.model_cost,
+        "preview-model",
+        {
+            "input_cost_per_token": 2e-6,
+            "cache_read_input_token_cost": 0.2e-6,
+            "output_cost_per_token": 8e-6,
+            "source": "https://provider.example/pricing",
+        },
+    )
+
+    response = client.get(
+        "/api/webui/v1/model-pricing/preview", params={"modelName": "preview-model"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "modelName": "preview-model",
+        "source": "litellm",
+        "catalogModelName": "preview-model",
+        "inputCacheMissUsdPerMillion": 2.0,
+        "inputCacheHitUsdPerMillion": 0.2,
+        "outputUsdPerMillion": 8.0,
+        "sourceUrl": "https://provider.example/pricing",
+    }
+
+
 def test_webui_job_rejects_model_outside_agent_template(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()

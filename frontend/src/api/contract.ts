@@ -242,6 +242,16 @@ export interface ModelPricingDto {
   outputUsdPerMillion?: number
 }
 
+export interface ModelPricingPreviewDto {
+  catalogModelName: string
+  inputCacheHitUsdPerMillion: number
+  inputCacheMissUsdPerMillion: number
+  modelName: string
+  outputUsdPerMillion: number
+  source: 'litellm'
+  sourceUrl?: string
+}
+
 export interface AgentDto extends AgentInputDto {
   capabilities: AgentCapabilitiesDto
   status: AgentAvailability

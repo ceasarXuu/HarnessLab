@@ -53,6 +53,20 @@ describe('WebUiHttpClient', () => {
     expect(request).toHaveBeenCalledWith('/api/webui/v1/jobs/job%2F1/copy-config', undefined)
   })
 
+  it('loads model pricing with an encoded model name', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ data: {}, error: null }), { status: 200 }),
+    )
+    const client = createWebUiHttpClient('/api/webui/v1', request)
+
+    await client.getModelPricing('provider/model latest')
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/webui/v1/model-pricing/preview?modelName=provider%2Fmodel%20latest',
+      undefined,
+    )
+  })
+
   it('maps every visible write to a WebUI contract route rather than a legacy route', async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ data: { operation: {} }, error: null })))
     const client = createWebUiHttpClient('/api/webui/v1', request)

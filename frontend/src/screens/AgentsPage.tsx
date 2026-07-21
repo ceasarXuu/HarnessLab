@@ -154,6 +154,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               key={detailAgent.id}
               agent={detailAgent}
               canSave={writesEnabled && !isOperationRunning(agentOperation.operation?.status)}
+              client={client}
               t={t}
               onSave={saveAgent}
             />

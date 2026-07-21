@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { WebUiClient } from '../../api/webUiClient'
 import type { AgentRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { useDebouncedAutosave } from '../useDebouncedAutosave'
@@ -7,11 +8,12 @@ import { AgentIdentityEditor, AgentProfileEditor, getAgentStatusLabel } from './
 interface AgentDetailProps {
   agent: AgentRow
   canSave?: boolean
+  client: WebUiClient
   t: Translate
   onSave: (agent: AgentRow) => boolean | Promise<boolean>
 }
 
-export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailProps) {
+export function AgentDetail({ agent, canSave = true, client, t, onSave }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
@@ -32,7 +34,7 @@ export function AgentDetail({ agent, canSave = true, t, onSave }: AgentDetailPro
         </div>
         <AgentIdentityEditor lockHarness value={draft} t={t} onChange={setDraft} />
       </section>
-      <AgentProfileEditor value={draft} t={t} onChange={setDraft} />
+      <AgentProfileEditor loadPricing={client.getModelPricing} value={draft} t={t} onChange={setDraft} />
     </aside>
   )
 }
