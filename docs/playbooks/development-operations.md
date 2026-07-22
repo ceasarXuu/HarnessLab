@@ -11,6 +11,7 @@
 | 1.4 | npm launcher `0.1.3`; Vite `8.x` | 2026-07-19 | 记录 Ubuntu inotify 限额导致前端启动失败的诊断和部署方案。 |
 | 1.5 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | 记录 Clash 回环代理无法被 Harbor trial 容器访问的诊断和安全转发方案。 |
 | 1.6 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | OrnnLab 自动发现宿主代理并为 Docker Agent 托管临时 relay。 |
+| 1.7 | Harbor `0.13.x`; Docker Engine | 2026-07-23 | 记录历史 Harbor 容器归属确认、精确回收与跨项目保护流程。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -218,3 +219,42 @@ sysctl：
 ```bash
 CHOKIDAR_USEPOLLING=true WATCHPACK_POLLING=true npm run storybook:test --prefix frontend
 ```
+
+## 2026-07-23 历史 Harbor Docker 精确回收
+
+清理历史 Job 容器时禁止直接使用 `docker system prune` 或按通用 Task 名批量删除。
+同一 Docker daemon 可能同时服务 OrnnLab、WhaleCode 和其他项目，名称中出现
+`terminal-bench`、`regex-log` 等词不足以证明归属。
+
+归属应至少由以下一种强证据确认：
+
+1. 容器 bind mount 的 source 位于当前 OrnnLab 配置的 `jobsDir` 下；
+2. Compose 标签 `com.docker.compose.project.config_files` 指向当前 OrnnLab 环境安装的
+   Harbor compose 文件；
+3. Compose project 与上述 mount、Job 产物目录能够一一对应。
+
+先检查全部候选对象，确认容器均为 stopped/exited，并确认对应网络的容器数为 0：
+
+```bash
+docker ps -a --format '{{json .}}'
+docker inspect <explicit-container-id>...
+docker network inspect <explicit-network-name>...
+```
+
+删除时只传入检查过的显式容器 ID 和网络 ID：
+
+```bash
+docker rm <explicit-container-id>...
+docker network rm <explicit-network-id>...
+```
+
+任务镜像与容器是不同对象。`ghcr.io/laude-institute/terminal-bench/*` 镜像是后续 Job
+可复用的运行依赖，不能仅因当前没有容器就删除；BuildKit cache 也缺少可靠的 Job
+归属标签，不应混入容器回收。清理完成后再次用同一 mount/Compose 归属条件扫描，结果
+必须为 0，并用 `docker system df` 与 `df -h /` 记录当前空间，不把同时发生的其他清理
+全部归因于本次操作。
+
+2026-07-23 本机验证：精确删除 4 个确认属于 OrnnLab/HarnessLab 的 exited Harbor
+容器及 4 个空 Compose 网络，容器可写层约 916 MiB；其余 113 个 stopped 容器均挂载
+另一个项目目录，未删除。Terminal-Bench 镜像、跨项目容器和无法证明归属的 dangling
+镜像全部保留。
