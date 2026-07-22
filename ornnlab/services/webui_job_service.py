@@ -14,7 +14,6 @@ from ornnlab.services.harbor_paths import (
     resolve_harbor_log_path,
 )
 from ornnlab.services.harbor_results import (
-    load_result_payload,
     trial_log_path,
     trial_result_payloads,
 )
@@ -26,6 +25,7 @@ from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_job_copy import load_job_copy_config
 from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
+from ornnlab.services.webui_job_runtime import load_job_result
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.settings import Settings
@@ -346,7 +346,7 @@ class WebUiJobService:
 
 def _job_dto(row: dict) -> dict:
     config = _config(row)
-    result = _result_payload(row.get("result_path"))
+    result = load_job_result(row)
     status = str(row["status"])
     attempts = max(1, int(row["n_attempts"]))
     expected_total = (int(row["n_tasks"]) if row.get("n_tasks") is not None else 0) * attempts
@@ -467,12 +467,6 @@ def _event_log_path(row: dict, config: dict) -> str | None:
 
 def _now() -> str:
     return datetime.now().astimezone().isoformat()
-
-
-def _result_payload(result_path: str | None) -> dict:
-    if not result_path:
-        return {}
-    return load_result_payload(Path(result_path))
 
 
 def _token_usage_m(stats: dict) -> float | None:

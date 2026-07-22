@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHttpException
 
 from ornnlab.api import webui
 from ornnlab.services.container_proxy_runtime import ContainerProxyRuntime
+from ornnlab.services.event_history_redaction import redact_historical_event_payloads
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_dataset_service import WebUiDatasetService
@@ -28,6 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     active_settings = settings or Settings.from_env()
     active_settings.ensure_dirs()
     sqlite.initialize(active_settings)
+    redact_historical_event_payloads(active_settings)
     startup_recovery = RunRecoveryService(active_settings).reconcile_startup()
     operation_tasks: dict[str, asyncio.Task[None]] = {}
     interrupted_operations = WebUiOperationService(

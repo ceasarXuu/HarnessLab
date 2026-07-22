@@ -1,7 +1,7 @@
 # Problem P-001: 运行中 Job 的任务总数显示为 0
 - Status: open
 - Created: 2026-07-22 20:52
-- Updated: 2026-07-22 20:59
+- Updated: 2026-07-22 21:18
 - Objective: 以运行时、数据和代码证据确定当前 running Job 任务总数为 0 的根因。
 - Symptoms:
   - 用户观察到当前正在运行的 Job 在 Jobs 列表中任务总数显示为 0。
@@ -27,6 +27,7 @@
 - Related hypotheses:
   - H-001
   - H-002
+  - H-003
 - Resolution basis:
   - not satisfied
 - Close reason:
@@ -265,3 +266,66 @@
   ```
 - Interpretation: 症状在运行五分钟后稳定存在，排除仅发生于 Harbor 初始化前的短暂竞态。
 - Time: 2026-07-22 20:59
+
+## Hypothesis H-003: 安全读取原生运行结果可恢复实时计数
+- Status: unverified
+- Parent: P-001
+- Claim: 当 running Run 的数据库 `result_path` 为空时，仅从安全单层 `job_dir/harbor_job_name/result.json` 读取进度，可返回 Harbor 的真实任务计数且不会误读共享父目录旧结果。
+- Layer: fix-validation
+- Factor relation: all_of
+- Depends on:
+  - H-001
+- Rationale:
+  - H-001 已证明权威结果存在于当前 Harbor Job 原生子目录，问题仅在 DTO 未读取。
+- Falsifiable predictions:
+  - If true: 原生结果 total 10、父目录旧结果 total 99 时，API 返回 10；不安全 job name 不会越界读取。
+  - If false: API 仍返回 0/99，或路径穿越能够影响计数。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 定向 API 回归与本机当前 Job 重启后对照。
+  - Signal: API trial total/completed/errored 与同一原生 result.json 一致。
+  - Capture method: 隔离 TestClient 回归；部署后只读 curl 与 jq 对照。
+  - Event name or marker:
+    - job_progress.live_result_loaded
+  - Correlation keys:
+    - job_id
+  - Differentiates from:
+    - 共享父目录 fallback 或前端伪造计数
+  - Supports if:
+    - 定向回归和部署后当前 Job 均返回原生实时值。
+  - Refutes if:
+    - 任一验证返回 0、父目录旧值或越界值。
+  - Instrumentation status: permanent-observability-candidate
+  - Instrumentation lifecycle:
+    - retain as permanent observability
+- Evidence gate: pending
+- Related evidence:
+  - E-008
+- Conclusion: 隔离回归已通过，等待本机部署后当前 Job 验证。
+- Repair design readiness: implemented; runtime validation pending
+- Next step: 当前 Job 结束后重启服务，避免重启中断正在执行的 Harbor 子进程；随后对照 API 与原生 result.json。
+- Blocker:
+  - 当前 Job 仍在 running，立即重启可能中断用户任务。
+- Close reason:
+  - not closed
+
+## Evidence E-008: 修复回归与全量门禁通过
+- Related hypotheses:
+  - H-003
+- Direction: supports
+- Type: fix-validation
+- Source: `tests/python/test_webui_running_progress.py`、`tests/python/test_event_payload_security.py`、`scripts/test-after-change-web.sh`
+- Prediction or plan link:
+  - H-003 隔离 API 回归
+- Matched signal:
+  - native total 10 优先于共享父目录 stale total 99；不安全 job name 返回 0；事件数据库和镜像均无测试 secret
+- Correlation keys:
+  - isolated test jobs
+- Raw content:
+  ```text
+  Python: 176 passed, 3 skipped
+  Pyright: 0 errors, 0 warnings
+  Frontend: 32 files, 117 tests
+  Launcher: 27/27
+  ```
+- Interpretation: 代码级修复满足计数、路径隔离、事件脱敏和历史清理回归；仍需部署后验证用户当前 Job。
+- Time: 2026-07-22 21:18

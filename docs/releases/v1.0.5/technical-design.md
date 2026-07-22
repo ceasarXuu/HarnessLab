@@ -65,6 +65,8 @@ flowchart LR
 
 Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload、Environment `docker_image`/`network_mode`/`healthcheck`/`workdir` 字段，也没有可枚举的 GPU/TPU 型号。它们不出现在当前 contract。
 
+运行态 Job 的 `runs.result_path` 仅在 Harbor 进程返回后持久化。`WebUiJobService` 在该字段为空且状态为 running 时，使用经过单层子目录校验的 `job_dir/harbor_job_name/result.json` 读取当前 Job 的 `n_total_trials` 与 stats；禁止退回共享 `jobsDir/result.json`，避免把其他或历史 Job 的结果当成当前进度。显式任务数量仍以 `runs.n_tasks × n_attempts` 作为结果文件尚未出现时的计划回退。
+
 ### 4.3 Job 删除边界
 
 - `WebUiJobDeletionService` 只接受 `completed/failed/cancelled/interrupted`。queued/running 必须先通过现有取消流程收敛，禁止在 Worker 仍可能写入时删除。
@@ -141,6 +143,8 @@ target 发现、unsupported target 与 bind 失败统一分类为
 `proxy_configuration_failure` / `docker_proxy_unavailable`。
 `harbor_subprocess.runtime_config_prepared` 只记录本次解析的变量数量，用于确认
 Environment 全生命周期注入已生效。
+
+事件写入经过统一 payload 安全边界：`harbor.job.running` 只保存 Job、Agent、Environment 的非敏感摘要、能力快照和产物路径，不保存完整 Harbor config；通用脱敏器覆盖认证、密码、secret、API key 和单数 token 键，同时保留 `n_input_tokens` 等用量指标。migration `009_redact_harbor_running_events.sql` 清除数据库历史完整配置，应用启动时同步清理 `experiments/*/ornnlab-events.jsonl` 历史镜像，并以 `event_history.redacted` 记录清理数量。
 
 ## 5. API 与异步操作
 

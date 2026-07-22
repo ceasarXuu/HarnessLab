@@ -20,6 +20,7 @@ from ornnlab.services.experiment_utils import (
     unique_preserving_order,
 )
 from ornnlab.services.harbor_engine import HarborConfigBuilder, HarborEngine
+from ornnlab.services.harbor_event_payloads import harbor_running_event_payload
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.report_service import ReportService
 from ornnlab.services.run_cancellation_service import RunCancellationService
@@ -334,11 +335,7 @@ class ExperimentService:
             "run",
             run["id"],
             "harbor.job.running",
-            {
-                "config": config.model_dump(),
-                "capability": snapshot.model_dump(),
-                "artifacts": artifact_paths,
-            },
+            harbor_running_event_payload(config, snapshot, artifact_paths),
         )
         try:
             result = await self.engine.run(config, runtime_env=proxy_policy.subprocess_env)

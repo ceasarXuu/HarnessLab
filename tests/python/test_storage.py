@@ -10,8 +10,8 @@ def test_sqlite_initializes_idempotently(settings):
     first = sqlite.initialize(settings)
     second = sqlite.initialize(settings)
 
-    assert first == 8
-    assert second == 8
+    assert first == 9
+    assert second == 9
     assert settings.db_path.exists()
 
 
@@ -81,7 +81,7 @@ def test_agent_configuration_migration_preserves_profiles_and_drops_system_prese
             (preset["id"], json.dumps(preset)),
         )
 
-    assert sqlite.initialize(settings) == 8
+    assert sqlite.initialize(settings) == 9
     with sqlite3.connect(settings.db_path) as conn:
         stored = conn.execute(
             "SELECT config_json FROM agents WHERE id = ?", (existing["id"],)

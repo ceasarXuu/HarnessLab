@@ -4,6 +4,7 @@ import json
 
 from ornnlab.models.events import EventRecord
 from ornnlab.services.clock import now_iso
+from ornnlab.services.event_payload_security import sanitize_event_payload
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 from ornnlab.storage.paths import ensure_parent
@@ -22,7 +23,8 @@ class EventService:
         severity: str = "info",
     ) -> EventRecord:
         ts = now_iso()
-        body = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        safe_payload = sanitize_event_payload(event_type, payload)
+        body = json.dumps(safe_payload, sort_keys=True, separators=(",", ":"))
         with sqlite.connect(self.settings) as conn:
             cursor = conn.execute(
                 "INSERT INTO experiment_events("
@@ -33,7 +35,9 @@ class EventService:
             event_id = cursor.lastrowid
             if event_id is None:
                 raise RuntimeError("SQLite did not return an event id")
-        self._mirror(event_id, aggregate_type, aggregate_id, event_type, severity, ts, payload)
+        self._mirror(
+            event_id, aggregate_type, aggregate_id, event_type, severity, ts, safe_payload
+        )
         return EventRecord(
             id=event_id,
             aggregate_type=aggregate_type,
@@ -41,7 +45,7 @@ class EventService:
             ts=ts,
             event_type=event_type,
             severity=severity,
-            payload=payload,
+            payload=safe_payload,
         )
 
     def list_after(self, aggregate_id: str, after: int = 0) -> list[EventRecord]:
