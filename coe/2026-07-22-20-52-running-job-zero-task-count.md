@@ -1,7 +1,7 @@
 # Problem P-001: 运行中 Job 的任务总数显示为 0
-- Status: open
+- Status: fixed
 - Created: 2026-07-22 20:52
-- Updated: 2026-07-22 21:18
+- Updated: 2026-07-22 21:31
 - Objective: 以运行时、数据和代码证据确定当前 running Job 任务总数为 0 的根因。
 - Symptoms:
   - 用户观察到当前正在运行的 Job 在 Jobs 列表中任务总数显示为 0。
@@ -23,15 +23,15 @@
   - 前端 DTO 转换或表格渲染覆盖非零任务数：后端直连 API 已返回 0。
 - Fix criteria:
   - 根因必须由同一 Job 的 API DTO、数据库/Harbor 原始状态和代码路径证据共同确认；修复后原始复现中任务总数应为实际非零值。
-- Current conclusion: 根因已确认：运行态 DTO 只读取尚未写入数据库的 `result_path`，且把代表全量 Dataset 的 `n_tasks=NULL` 回退成 0，因此忽略 Harbor 实时结果中的 `n_total_trials=10`。
+- Current conclusion: 已修复并部署：running DTO 安全读取当前 Harbor Job 原生结果；事件写入和历史镜像完成脱敏。
 - Related hypotheses:
   - H-001
   - H-002
   - H-003
 - Resolution basis:
-  - not satisfied
+  - H-001、H-003；E-003、E-004、E-005、E-008、E-009
 - Close reason:
-  - not closed
+  - 复现等价 API 回归、全量门禁、部署健康、schema 迁移与历史脱敏均通过。
 
 ## Hypothesis H-001: 后端未从运行态 Harbor 状态取得任务总数
 - Status: confirmed
@@ -268,7 +268,7 @@
 - Time: 2026-07-22 20:59
 
 ## Hypothesis H-003: 安全读取原生运行结果可恢复实时计数
-- Status: unverified
+- Status: confirmed
 - Parent: P-001
 - Claim: 当 running Run 的数据库 `result_path` 为空时，仅从安全单层 `job_dir/harbor_job_name/result.json` 读取进度，可返回 Harbor 的真实任务计数且不会误读共享父目录旧结果。
 - Layer: fix-validation
@@ -297,16 +297,17 @@
   - Instrumentation status: permanent-observability-candidate
   - Instrumentation lifecycle:
     - retain as permanent observability
-- Evidence gate: pending
+- Evidence gate: satisfied
 - Related evidence:
   - E-008
-- Conclusion: 隔离回归已通过，等待本机部署后当前 Job 验证。
-- Repair design readiness: implemented; runtime validation pending
-- Next step: 当前 Job 结束后重启服务，避免重启中断正在执行的 Harbor 子进程；随后对照 API 与原生 result.json。
+  - E-009
+- Conclusion: confirmed；等价运行态 API 回归证明 native total 10 优先于共享父目录 stale total 99，部署后 API、迁移和脱敏状态均正确。
+- Repair design readiness: implemented and validated
+- Next step: 关闭案件；后续 running Job 由 `job_progress.live_result_loaded` debug 日志提供诊断证据。
 - Blocker:
-  - 当前 Job 仍在 running，立即重启可能中断用户任务。
+  - none
 - Close reason:
-  - not closed
+  - Fix validation E-008 and deployment validation E-009 passed.
 
 ## Evidence E-008: 修复回归与全量门禁通过
 - Related hypotheses:
@@ -329,3 +330,27 @@
   ```
 - Interpretation: 代码级修复满足计数、路径隔离、事件脱敏和历史清理回归；仍需部署后验证用户当前 Job。
 - Time: 2026-07-22 21:18
+
+## Evidence E-009: 部署迁移和当前 Job 最终计数验证通过
+- Related hypotheses:
+  - H-003
+- Direction: supports
+- Type: fix-validation
+- Source: 本机重启后的后端 API、5173 proxy、SQLite schema 与 backend log
+- Prediction or plan link:
+  - H-003 部署后 API、路径和脱敏验证
+- Matched signal:
+  - 当前 Job total 10；后端与 proxy 一致；schema 9；数据库完整 running config 计数 0；历史 JSONL 清理 10 条
+- Correlation keys:
+  - job_id `run-f230b2ad02e9`
+  - commit `69ca3b3`
+- Raw content:
+  ```text
+  API: status=failed total=10 completed=9 passed=5 notPassed=4 errored=1
+  Proxy: total=10 completed=9 passed=5 notPassed=4 errored=1
+  schema_version=9
+  running_events_with_full_config=0
+  event_history.redacted databaseEvents=0 mirrorFiles=9 mirrorEvents=10
+  ```
+- Interpretation: 修复已部署；当前 Job 的最终关系满足 10=9+1，数据库 migration 和历史镜像清理均完成。运行态原始复现由 E-008 的等价 API 用例验证。
+- Time: 2026-07-22 21:31

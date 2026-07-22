@@ -162,6 +162,10 @@ Pyright（0 error / 0 warning）、Python 176 passed / 3 skipped、前端
 smoke/static build 和 launcher 27/27。回归证明数据库 `result_path` 为空时只读取
 当前 Harbor Job 的原生运行结果，不误读共享父目录旧结果；事件服务、schema migration
 和 JSONL 历史清理均不再保留认证凭据，同时保留输入/输出 token 用量指标。
+本机部署后 schema 升级为 9，数据库中带完整 `harbor.job.running.config` 的事件为 0；
+启动清理处理 9 个历史 JSONL 文件中的 10 条事件。`run-f230b2ad02e9` 最终 API
+返回 `total=10, completed=9, passed=5, notPassed=4, errored=1`，后端直连与
+5173 proxy 一致。
 
 `pytest` 的 3 个 warning 来自 Starlette TestClient 和 Supabase 客户端的第三方 deprecation warning，不是测试失败。
 
