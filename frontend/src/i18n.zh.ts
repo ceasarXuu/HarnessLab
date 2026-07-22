@@ -192,7 +192,7 @@ export const zhMessages = {
     outputPrice: '输出（美元 / 百万 Token）',
     pricingLoading: '正在读取价格…',
     pricingUnavailable: '当前 LiteLLM 目录没有此模型的价格。',
-    pricingHarnessReferenceNote: '以上为 LiteLLM 目录参考单价；实际成本以 Harness 运行时上报为准。',
+    pricingHarnessTotalNote: 'Harness 不提供固定单价；任务完成后展示 Harness 上报的总价格。',
     pricingLiteLlmNote: '创建 Job 时会将以上 LiteLLM 单价固化为计费快照。',
     agentAdvancedTab: '高级',
     advancedAgentParams: '高级 Agent 参数',

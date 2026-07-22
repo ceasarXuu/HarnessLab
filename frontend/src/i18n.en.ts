@@ -190,7 +190,7 @@ export const enMessages = {
     outputPrice: 'Output (USD / 1M tokens)',
     pricingLoading: 'Loading pricing…',
     pricingUnavailable: 'The LiteLLM catalog has no pricing for this model.',
-    pricingHarnessReferenceNote: 'These are LiteLLM reference rates; actual cost uses the total reported by the Harness at runtime.',
+    pricingHarnessTotalNote: 'The Harness does not provide fixed rates. Its reported total price is shown after the Job completes.',
     pricingLiteLlmNote: 'These LiteLLM rates are saved as an immutable billing snapshot when the Job is created.',
     agentAdvancedTab: 'Advanced',
     advancedAgentParams: 'Advanced agent params',

@@ -8,7 +8,7 @@ import { AgentModelSettings } from './AgentModelSettings'
 function PricingFixture() {
   const [value, setValue] = useState<AgentRow>({
     adapter: 'none', agentName: 'Claude DeepSeek', env: 'none', harness: 'claude-code',
-    id: 'claude-deepseek', kwargs: 'none', mcp: 'none', models: 'deepseek-v4-pro, deepseek-v4-flash',
+    id: 'claude-deepseek', kwargs: 'none', mcp: 'none', models: 'deepseek-v4-pro, deepseek-v4-flash, deepseek-chat',
     modelPricing: [
       { modelName: 'deepseek-v4-pro', source: 'litellm' },
       {
@@ -16,6 +16,7 @@ function PricingFixture() {
         inputCacheMissUsdPerMillion: 0.2, inputCacheHitUsdPerMillion: 0.02,
         outputUsdPerMillion: 0.6,
       },
+      { modelName: 'deepseek-chat', source: 'reported' },
     ],
     skills: 'none', source: 'OrnnLab profile', status: 'configured', updated: '-',
   })
@@ -52,6 +53,8 @@ export const MixedPricingSources: Story = {
     await expect(canvas.getByLabelText('Pricing source: deepseek-v4-pro')).toHaveTextContent('LiteLLM catalog')
     await expect(await canvas.findByText('$0.2')).toBeVisible()
     await expect(canvas.getByLabelText('Pricing source: deepseek-v4-flash')).toHaveTextContent('Custom pricing')
+    await expect(canvas.getByLabelText('Pricing source: deepseek-chat')).toHaveTextContent('Harness reported')
+    await expect(canvas.getByText(/reported total price is shown after the Job completes/)).toBeVisible()
     await userEvent.clear(canvas.getByLabelText('Output (USD / 1M tokens)'))
     await userEvent.type(canvas.getByLabelText('Output (USD / 1M tokens)'), '0.8')
     await expect(canvas.getByLabelText('Output (USD / 1M tokens)')).toHaveValue(0.8)

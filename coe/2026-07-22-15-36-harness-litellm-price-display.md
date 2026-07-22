@@ -1,7 +1,7 @@
 # Problem P-001: Harness 与 LiteLLM 价格看起来相同
-- Status: diagnosed
+- Status: fixed
 - Created: 2026-07-22 15:36
-- Updated: 2026-07-22 15:40
+- Updated: 2026-07-22 16:09
 - Objective: 解释手动 Agent 中 Harness 上报与 LiteLLM 价格为何显示相同，并确认展示价格没有混淆实际计费来源。
 - Symptoms:
   - 用户观察到同一手动 Agent 中 Harness 上报与 LiteLLM 都显示了 LiteLLM 价格。
@@ -24,12 +24,13 @@
   - none
 - Fix criteria:
   - 本案例只做诊断；如确认存在误导性设计，修复需用户另行授权并以展示和实际计费路径验证为准。
-- Current conclusion: 页面显示相同是当前实现有意复用 LiteLLM 目录参考价造成的；两种来源的实际成本计算并不相同。Harness 没有可供配置页预览的固定单价，这种展示容易让用户误解数据来源。
+- Current conclusion: 已按用户确认的规则修复：Harness 保留为第三个选项，但不请求、不展示固定单价，只提示 Job 完成后展示上报总价格；LiteLLM 和自定义行为保持不变。
 - Related hypotheses:
   - H-001
   - H-002
+  - H-003
 - Resolution basis:
-  - H-001、H-002；E-001 至 E-004
+  - H-001、H-002、H-003；E-001 至 E-005
 - Close reason:
   - not closed
 
@@ -206,3 +207,69 @@
   ```
 - Interpretation: 实际成本路径有显著差异；对于 Claude Code 接 DeepSeek 代理，Harness 上报总额还可能沿用 Claude Code 自身的成本口径，因此不能把目录参考价理解为 Harness 单价。
 - Time: 2026-07-22 15:40
+
+## Hypothesis H-003: 分离 Harness 提示与 LiteLLM 单价展示可消除误导
+- Status: confirmed
+- Parent: P-001
+- Claim: 保留三个来源选项，但让 `reported` 只显示任务完成后展示总价格的提示，并且仅让 `litellm` 请求和展示目录单价，可以消除原症状且不改变实际成本计算。
+- Layer: fix-validation
+- Factor relation: single
+- Depends on:
+  - H-001
+  - H-002
+- Rationale:
+  - 用户已明确授权该展示规则。
+- Falsifiable predictions:
+  - If true: Harness 初始状态没有美元单价、不会调用价格预览；切换 LiteLLM 后才加载三项价格；后端成本测试保持通过。
+  - If false: Harness 仍显示或请求目录价，或成本计算出现回归。
+- Diagnostic evidence plan:
+  - Prediction or clause under test: 原症状在 Harness 状态消失，LiteLLM 与成本分支保持工作。
+  - Signal: 组件回归测试、Storybook、全量前后端门禁。
+  - Capture method: 运行 `AgentModelSettings.test.tsx` 与 `scripts/test-after-change-web.sh`。
+  - Event name or marker:
+    - none
+  - Correlation keys:
+    - Agent Model Pricing component
+  - Differentiates from:
+    - 仅修改提示但仍渲染或请求目录价格
+  - Supports if:
+    - 测试断言 Harness 无单价且 loader 未调用，切换 LiteLLM 后三项价格出现；全量门禁通过。
+  - Refutes if:
+    - 任一原症状断言或成本回归失败。
+  - Instrumentation status: none
+  - Instrumentation lifecycle:
+    - none
+- Evidence gate: satisfied
+- Related evidence:
+  - E-005
+- Conclusion: Harness 原症状已消失，LiteLLM 单价加载与全部成本回归保持通过。
+- Repair design readiness: implemented and validated
+- Next step: none
+- Blocker:
+  - none
+- Close reason:
+  - not closed
+
+## Evidence E-005: Harness 无单价展示且完整门禁通过
+- Related hypotheses:
+  - H-003
+- Direction: supports
+- Type: fix-validation
+- Source: `AgentModelSettings.test.tsx`；`scripts/test-after-change-web.sh`
+- Prediction or plan link:
+  - H-003 的原症状消失与无成本回归预测。
+- Matched signal:
+  - Harness 状态不存在 `$1.5`，显示任务完成后展示总价格，price loader 未调用；切换 LiteLLM 后 `$1.5/$0.15/$6` 出现；全量门禁通过。
+- Correlation keys:
+  - Agent Model Pricing component
+- Raw content:
+  ```text
+  targeted frontend: 1 file / 3 tests passed
+  targeted backend: 36 passed
+  full Python: 168 passed / 3 skipped
+  full frontend: 32 files / 114 tests
+  Storybook smoke/static build: passed
+  launcher: 27/27 passed
+  ```
+- Interpretation: 修复满足用户指定展示规则，且没有改变三种来源选项或后端成本计算。
+- Time: 2026-07-22 16:09

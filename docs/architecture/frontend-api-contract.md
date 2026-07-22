@@ -302,7 +302,7 @@ interface Harness {
 
 `modelPricing` 必须与 `models` 一一对应。`custom` 必须提供三项非负价格，单位均为 USD / 1M Token；其他来源不要求价格字段。创建 Job 时后端选择与 `modelName` 对应的条目：`reported` 保存来源标记，`litellm` 保存解析后的目录价格，`custom` 保存用户价格。该快照只存于 Job 私有配置，不新增运行请求字段，也不随 Agent 后续编辑变化。
 
-`ModelPricingPreview` 返回 LiteLLM 目录匹配模型、输入缓存未命中、输入缓存命中、输出单价及可选来源 URL。前端在 `reported` 和 `litellm` 两种来源下展示相同预览；`reported` 只把它作为参考，实际成本仍读取 Harness 上报的 `cost_usd`。预览与 Job 快照必须调用同一个后端解析函数，禁止前端内置另一份价格表。
+`ModelPricingPreview` 返回 LiteLLM 目录匹配模型、输入缓存未命中、输入缓存命中、输出单价及可选来源 URL。前端仅在 `litellm` 来源下请求并展示预览；`reported` 不展示固定单价，只提示 Job 完成后读取 Harness 上报的 `cost_usd`。预览与 Job 快照必须调用同一个后端解析函数，禁止前端内置另一份价格表。
 
 Agent 的 `status` 是响应字段，不属于创建或更新请求。后端仅在 profile 通过 Harbor `AgentConfig` 校验并保存后返回 `configured`；未实现真实凭证可用性探针时不得由前端提交或伪造 `needs-token`。
 

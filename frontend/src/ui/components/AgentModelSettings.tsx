@@ -20,18 +20,19 @@ export function AgentModelSettings({ loadPricing, readOnly = false, t, value, on
   const models = readOnly
     ? parseModelNames(value.models)
     : modelRows.map((model) => model.trim()).filter(Boolean)
-  const modelKey = models.join('\n')
+  const previewModels = models.filter((model) => pricingForModel(model, value.modelPricing).source === 'litellm')
+  const previewKey = previewModels.join('\n')
   useEffect(() => {
-    if (!loadPricing || !modelKey) return
+    if (!loadPricing || !previewKey) return
     let active = true
-    void Promise.all(models.map(async (model) => {
+    void Promise.all(previewModels.map(async (model) => {
       const response = await loadPricing(model)
       return [model, response.data] as const
     })).then((entries) => {
       if (active) setPreviews(Object.fromEntries(entries))
     })
     return () => { active = false }
-  }, [loadPricing, modelKey])
+  }, [loadPricing, previewKey])
   const updateModels = (nextModels: string[]) => {
     setModelRows(nextModels)
     const cleanModels = nextModels.map((model) => model.trim()).filter(Boolean)
@@ -144,6 +145,9 @@ function ResolvedPricing({ pricing, preview, t }: {
   preview?: ModelPricingPreviewDto | null
   t: Translate
 }) {
+  if (pricing.source === 'reported') {
+    return <p className="model-pricing-note">{t('pricingHarnessTotalNote')}</p>
+  }
   if (preview === undefined) return <p className="model-pricing-note">{t('pricingLoading')}</p>
   if (preview === null) return <p className="model-pricing-note warning-copy">{t('pricingUnavailable')}</p>
   return (
@@ -153,9 +157,7 @@ function ResolvedPricing({ pricing, preview, t }: {
         <PriceValue label={t('inputCacheHitPrice')} value={preview.inputCacheHitUsdPerMillion} />
         <PriceValue label={t('outputPrice')} value={preview.outputUsdPerMillion} />
       </div>
-      <p className="model-pricing-note">
-        {pricing.source === 'reported' ? t('pricingHarnessReferenceNote') : t('pricingLiteLlmNote')}
-      </p>
+      <p className="model-pricing-note">{t('pricingLiteLlmNote')}</p>
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AgentRow } from '../../domain/harbor'
 import { getTranslator } from '../../i18n'
 import { AgentModelSettings } from './AgentModelSettings'
@@ -36,29 +36,33 @@ describe('AgentModelSettings', () => {
     expect(screen.getByRole('option', { name: 'Custom pricing' })).toBeInTheDocument()
   })
 
-  it('shows resolved rates for both Harness and LiteLLM sources', async () => {
-    render(<PricingFixture />)
+  it('hides unit rates for Harness and loads them only after selecting LiteLLM', async () => {
+    const pricingLoader = vi.fn(loadPricing)
+    render(<PricingFixture loadPricing={pricingLoader} />)
 
-    await waitFor(() => expect(screen.getByText('$1.5')).toBeInTheDocument())
-    expect(screen.getByText('$0.15')).toBeInTheDocument()
-    expect(screen.getByText('$6')).toBeInTheDocument()
-    expect(screen.getByText(/actual cost uses the total reported by the Harness/)).toBeInTheDocument()
+    expect(screen.queryByText('$1.5')).not.toBeInTheDocument()
+    expect(screen.getByText(/reported total price is shown after the Job completes/)).toBeInTheDocument()
+    expect(pricingLoader).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByLabelText('Pricing source: deepseek-v4-pro'))
     fireEvent.click(screen.getByRole('option', { name: 'LiteLLM catalog' }))
 
+    await waitFor(() => expect(screen.getByText('$1.5')).toBeInTheDocument())
+    expect(screen.getByText('$0.15')).toBeInTheDocument()
+    expect(screen.getByText('$6')).toBeInTheDocument()
+    expect(pricingLoader).toHaveBeenCalledWith('deepseek-v4-pro')
     expect(screen.getByText(/saved as an immutable billing snapshot/)).toBeInTheDocument()
   })
 })
 
-function PricingFixture() {
+function PricingFixture({ loadPricing: pricingLoader = loadPricing }: { loadPricing?: typeof loadPricing }) {
   const [value, setValue] = useState<AgentRow>({
     adapter: 'none', agentName: 'Claude DeepSeek', env: 'none', harness: 'claude-code',
     id: 'claude-deepseek', kwargs: 'none', mcp: 'none', models: 'deepseek-v4-pro',
     modelPricing: [{ modelName: 'deepseek-v4-pro', source: 'reported' }],
     skills: 'none', source: 'OrnnLab profile', status: 'configured', updated: '-',
   })
-  return <AgentModelSettings loadPricing={loadPricing} t={getTranslator('en')} value={value} onChange={setValue} />
+  return <AgentModelSettings loadPricing={pricingLoader} t={getTranslator('en')} value={value} onChange={setValue} />
 }
 
 async function loadPricing(modelName: string) {
