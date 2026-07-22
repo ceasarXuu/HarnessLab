@@ -23,6 +23,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     deleteAgent: unavailable,
     deleteEnvironment: unavailable,
     deleteLocalDataset: unavailable,
+    deleteJob: unavailable,
     downloadDataset: unavailable,
     getAgent: unavailable,
     getDataset: unavailable,

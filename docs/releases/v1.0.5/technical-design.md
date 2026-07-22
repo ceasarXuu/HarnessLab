@@ -65,14 +65,21 @@ flowchart LR
 
 Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload、Environment `docker_image`/`network_mode`/`healthcheck`/`workdir` 字段，也没有可枚举的 GPU/TPU 型号。它们不出现在当前 contract。
 
-### 4.3 Dataset 存储归属
+### 4.3 Job 删除边界
+
+- `WebUiJobDeletionService` 只接受 `completed/failed/cancelled/interrupted`。queued/running 必须先通过现有取消流程收敛，禁止在 Worker 仍可能写入时删除。
+- 数据库删除在一个 SQLite 事务内按依赖顺序清理 Job 关联的 `webui_operations`、Run/Experiment 事件、`webui_job_configs`、`queue_items` 和 `runs`；仅当 Experiment 不再包含其他 Run 时删除 Experiment 及其事件。排行榜没有独立副本，删除 Run 后自然消失。
+- 文件清理只接受可证明归属的根：`experiments/<run_id>`、无剩余 Run 时的 `experiments/<experiment_id>`，以及 `jobsDir/<harbor_job_name>` 或 `jobsDir/<job_name>` 的单层原生 Harbor 子目录。删除前校验 `result_path`、`report_path` 和事件镜像均位于这些根下；共享父目录、符号链接、目录穿越或外部直写文件会拒绝整个请求。
+- 文件清理在数据库事务提交前执行；文件失败会回滚数据库删除。删除具有不可恢复性，前端确认框明确列出记录、排行榜与产物影响。Dataset、Agent、Environment 和共享 `jobsDir` 不属于删除范围。
+
+### 4.4 Dataset 存储归属
 
 - `managed`：用户选择每次 Registry 下载的父目录，OrnnLab 在其下创建 `Dataset name + version` 的唯一子目录，并写入 `.ornnlab-dataset.json` 作为归属标记。只有带该标记的目录可移动或被 OrnnLab 删除；目标已存在时拒绝，绝不覆盖。
 - `external`：本地导入仅保存目录注册，不复制、移动或删除文件。目录被用户移动或删除后，DTO 返回 `path-unavailable`；用户可重新定位或移除注册。
 - 最近一次成功下载/移动选择的父目录保存在 `webui_dataset_preferences`，作为下一次位置选择的默认值。下载中的临时目标记录在 `webui_dataset_downloads`，取消或失败时仅清理带归属标记的临时目录。
 - 本地 API 的 `POST /system/directory-picker` 在系统原生目录选择器中选择绝对路径；WebUI 只显示回传路径，不从浏览器文件控件推断目录。mock 模式明确返回不可用，禁止伪造选择结果。
 
-### 4.3 Agent 和 Environment 的可写边界
+### 4.5 Agent 和 Environment 的可写边界
 
 - `Agent` 在 OrnnLab 中是可复用的 Harbor `AgentConfig` 模板，不代表修改 Harbor 的 Agent 实现。它组合 Harness、可选模型集合、环境变量、kwargs、Skills、MCP 和超时配置。
 - New Job 必须从所选 Agent 的 `models` 中选择一个 `modelName`。后端校验 `modelName in agent.models`，将选择保存在 Job 配置快照中，并以该值覆盖 Harbor `AgentConfig.model_name`；禁止默认取列表首项或接受集合外模型。
@@ -88,7 +95,7 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - built-in Environment 由 Harbor `EnvironmentType` 枚举生成，只读但可复制。custom Environment 保存前由 `EnvironmentConfig.model_validate` 校验。
 - `suppress_override_warnings` 已被 Harbor 标记为无效，不暴露。
 
-### 4.4 宿主代理到 Docker Environment 的运行时适配
+### 4.6 宿主代理到 Docker Environment 的运行时适配
 
 `ContainerProxyRuntime` 是应用级瞬态服务，由 FastAPI lifespan 启动，并在 worker
 停止后关闭。它只读取 OrnnLab 进程的标准代理变量，不修改全局 `os.environ`，

@@ -24,6 +24,7 @@ interface JobsPageProps {
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onCopyJob?: (jobId: string) => void
   onNewJob: () => void
+  onRefresh?: () => Promise<void>
   onLeaderboardChange: (jobId: string, include: boolean) => void
   onSearch: (value: string) => void
   onSelect: (job: HarborJob) => void
@@ -42,11 +43,14 @@ export function JobsPage({
   onJobAction,
   onCopyJob = () => undefined,
   onNewJob,
+  onRefresh = async () => undefined,
   onLeaderboardChange,
   onSearch,
   onSelect,
 }: JobsPageProps) {
   const [cancelTarget, setCancelTarget] = useState<HarborJob | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<HarborJob | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const detailResource = useJob(client, selected?.id)
   const eventsResource = useJobEvents(client, selected?.id)
   const trialsResource = useJobTrials(client, selected?.id)
@@ -78,6 +82,20 @@ export function JobsPage({
     setCancelTarget(null)
   }
 
+  const confirmDeletion = async () => {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    setDeleteError(null)
+    const response = await client.deleteJob(target.id)
+    if (response.error) {
+      setDeleteError(response.error.message)
+      return
+    }
+    onClose()
+    await onRefresh()
+  }
+
   return (
     <main className="workspace single-page">
       <div className="content-column">
@@ -103,10 +121,11 @@ export function JobsPage({
               writesEnabled={writesEnabled}
               onJobAction={requestJobAction}
               onCopyJob={onCopyJob}
+              onDeleteJob={setDeleteTarget}
               onLeaderboardChange={onLeaderboardChange}
             />
             <ResourceStatus
-              error={actionError ?? detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
+              error={deleteError ?? actionError ?? detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
               loading={
                 (detailResource.loading && !detailResource.data)
                 || (eventsResource.loading && !eventsResource.data)
@@ -125,6 +144,16 @@ export function JobsPage({
           title={t('cancelJobTitle')}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancellation}
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmDeleteJob')}
+          impacts={[t('deleteJobRecordsImpact'), t('deleteJobArtifactsImpact'), t('deleteJobLeaderboardImpact')]}
+          title={t('deleteJobTitle')}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => { void confirmDeletion() }}
         />
       )}
     </main>

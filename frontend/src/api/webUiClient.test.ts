@@ -90,6 +90,7 @@ describe('WebUiHttpClient', () => {
       client.deleteAgent('agent_1'),
       client.deleteEnvironment('environment_1'),
       client.deleteLocalDataset('dataset@1'),
+      client.deleteJob('job_1'),
       client.downloadDataset('dataset@1', { parentPath: '/tmp/datasets' }),
       client.getDatasetDefaultParent(),
       client.importDataset(dataset),
@@ -111,6 +112,7 @@ describe('WebUiHttpClient', () => {
     const urls = request.mock.calls.map(([url]) => String(url))
     expect(urls).toEqual(expect.arrayContaining([
       '/api/webui/v1/jobs/job_1/cancel',
+      '/api/webui/v1/jobs/job_1',
       '/api/webui/v1/operations/operation_1/cancel',
       '/api/webui/v1/datasets/dataset%401/download',
       '/api/webui/v1/datasets/storage/default-parent',

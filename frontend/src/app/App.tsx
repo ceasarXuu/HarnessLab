@@ -441,6 +441,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onJobAction={runJobAction}
             onCopyJob={copyExistingJob}
             onNewJob={() => navigate('jobs', 'new')}
+            onRefresh={jobsResource.refresh}
             onSearch={setSearch}
             onSelect={(job) => {
               setCopyJobError(null)

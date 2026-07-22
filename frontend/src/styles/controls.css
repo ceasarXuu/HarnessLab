@@ -26,6 +26,10 @@
 .icon-button:hover {
   background: var(--subtle);
 }
+.secondary-button.danger-button {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .icon-button {
   display: grid;
   width: 32px;

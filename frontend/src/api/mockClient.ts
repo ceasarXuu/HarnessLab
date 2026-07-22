@@ -28,10 +28,10 @@ export function createMockWebUiClient(): WebUiClient {
   let environmentDtos = environmentRows.map(toEnvironmentDto)
   let lastDatasetParent = '~/Datasets'
   const taskDtos = taskRows.map(toDatasetTaskDto)
-  const eventDtos = events.map((event) => ({ event: toJobEventDto(event), jobId: event.jobId }))
+  let eventDtos = events.map((event) => ({ event: toJobEventDto(event), jobId: event.jobId }))
   let leaderboardDtos = leaderboardRows.map(toLeaderboardEntryDto)
   let systemDtos = systemRows.map(toSystemComponentDto)
-  const trialDtos = trialRows.map(toTrialDto)
+  let trialDtos = trialRows.map(toTrialDto)
   const operations = createMockOperationStore()
   const operationEffects = new Map<string, { onCompleted?: () => void; onRunning?: () => void }>()
 
@@ -121,6 +121,18 @@ export function createMockWebUiClient(): WebUiClient {
       }
       datasetDtos = datasetDtos.map((item) => (item.ref === ref ? { ...item, download: { status: 'not-downloaded' } } : item))
       return operationResult(operations.complete('delete-local-dataset', 'dataset', ref, 'Local dataset removed'))
+    },
+    async deleteJob(id) {
+      const target = jobDtos.find((job) => job.id === id)
+      if (!target) return failure('JOB_NOT_FOUND', 'Job not found')
+      if (!isTerminalJob(target.status)) {
+        return failure('OPERATION_CONFLICT', 'Running or queued Jobs must be cancelled before deletion')
+      }
+      jobDtos = jobDtos.filter((job) => job.id !== id)
+      eventDtos = eventDtos.filter((item) => item.jobId !== id)
+      trialDtos = trialDtos.filter((item) => item.jobId !== id)
+      leaderboardDtos = leaderboardDtos.filter((item) => item.jobId !== id)
+      return success({ deletedJobId: id })
     },
     async downloadDataset(ref, request) {
       const dataset = datasetDtos.find((item) => item.ref === ref)

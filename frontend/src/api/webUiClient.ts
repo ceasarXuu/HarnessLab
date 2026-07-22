@@ -5,6 +5,7 @@ import type {
   ApiError,
   ApiResponse,
   DatasetDto,
+  DeleteJobResultDto,
   DatasetTaskDto,
   DatasetTaskQuery,
   EnvironmentDto,
@@ -52,6 +53,7 @@ export interface WebUiClient {
   deleteAgent(id: string): Promise<ApiResponse<OperationResultDto | null>>
   deleteEnvironment(id: string): Promise<ApiResponse<OperationResultDto | null>>
   deleteLocalDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
+  deleteJob(id: string): Promise<ApiResponse<DeleteJobResultDto | null>>
   downloadDataset(ref: string, request: DatasetParentPathRequestDto): Promise<ApiResponse<OperationResultDto | null>>
   getAgent(id: string): Promise<ApiResponse<AgentDto | null>>
   getDataset(ref: string): Promise<ApiResponse<DatasetDto | null>>
@@ -105,6 +107,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     deleteAgent: (id) => send<OperationResultDto>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`, 'DELETE'),
     deleteEnvironment: (id) => send<OperationResultDto>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`, 'DELETE'),
     deleteLocalDataset: (ref) => send<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/local`, 'DELETE'),
+    deleteJob: (id) => send<DeleteJobResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}`, 'DELETE'),
     downloadDataset: (ref, body) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/download`, body),
     getAgent: (id) => requestJson<AgentDto | null>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`),
     getDataset: (ref) => requestJson<DatasetDto | null>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}`),

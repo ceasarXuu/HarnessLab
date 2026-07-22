@@ -107,4 +107,31 @@ describe('Stage 3 Operation write boundary', () => {
 
     expect((await client.listLeaderboardDatasets()).data?.items.map((item) => item.ref)).not.toContain('harbor/hello-world@latest')
   })
+
+  it('deletes terminal Jobs and their mock leaderboard entries', async () => {
+    const client = createMockWebUiClient()
+    const jobs = (await client.listJobs()).data?.items ?? []
+    const target = jobs.find((job) => !['queued', 'running'].includes(job.status))
+    expect(target).toBeDefined()
+    if (!target) return
+
+    const response = await client.deleteJob(target.id)
+
+    expect(response.data).toEqual({ deletedJobId: target.id })
+    expect((await client.listJobs()).data?.items.map((job) => job.id)).not.toContain(target.id)
+    const leaderboard = await client.listLeaderboard({ dataset: target.datasetRef })
+    expect(leaderboard.data?.items.map((entry) => entry.jobId)).not.toContain(target.id)
+  })
+
+  it('requires active Jobs to be cancelled before deletion', async () => {
+    const client = createMockWebUiClient()
+    const running = (await client.listJobs()).data?.items.find((job) => job.status === 'running')
+    expect(running).toBeDefined()
+    if (!running) return
+
+    const response = await client.deleteJob(running.id)
+
+    expect(response.error?.code).toBe('OPERATION_CONFLICT')
+    expect((await client.listJobs()).data?.items.map((job) => job.id)).toContain(running.id)
+  })
 })

@@ -97,6 +97,7 @@ interface Operation {
 | Environment | `POST /environments`、`PATCH /environments/{id}`、`DELETE /environments/{id}`、`POST /environments/{id}/copy` | `{ operation }` |
 | Job | `GET /jobs`、`GET /jobs/{id}`、`GET /jobs/{id}/copy-config` | `Page<Job>`、`Job`、`JobConfig` |
 | Job | `POST /jobs` | `{ job, operation }` |
+| Job | `DELETE /jobs/{id}` | `{ deletedJobId }` |
 | Job | `POST /jobs/{id}/cancel`、`resume` | `{ operation }` |
 | Job | `GET /jobs/{id}/events`、`GET /jobs/{id}/trials` | `JobEvent[]`、`Trial[]` |
 | Job | `PATCH /jobs/{id}/leaderboard` | `{ job, leaderboard, operation }` |
@@ -111,6 +112,8 @@ interface Operation {
 | System | `PUT /system/docker/start-command`、`POST /system/docker/start` | `{ command }`、`{ operation }` |
 
 路径中的 Dataset ref 采用 URL encoding，例如 `terminal-bench%402.0`。
+
+`DELETE /jobs/{id}` 是不可恢复的同步删除。只接受终态 Job；成功后 Job、Trial、事件、队列/配置/Operation 记录、排行榜派生项和可证明独占的产物都不可再读取。响应不创建一个属于已删除 Job 的 Operation 记录。queued/running 返回 `OPERATION_CONFLICT`；产物归属无法证明返回 `INVALID_REQUEST`，且数据库记录不删除。前端必须经过影响范围确认，不得将删除与取消合并为一个动作。
 
 `GET /datasets/{ref}/tasks` 使用统一 `q`、`cursor`、`limit` 分页契约，默认 `limit=20`，最大 100。`q` 只匹配 Task 名称；列表项的 `description` 为空且 `environment` 为 `null`，后端禁止解析完整本地 Dataset 后再截断。前端切换 Dataset 或搜索条件时将 cursor 重置为首页。用户展开一项时调用 `GET /datasets/{ref}/task-detail?task=`，按需加载该 Task 的描述与环境摘要。
 

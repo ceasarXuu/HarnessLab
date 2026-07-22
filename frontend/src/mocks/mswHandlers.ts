@@ -57,6 +57,9 @@ export const webuiHandlers = [
   http.delete(`${webui}/agents/:agentId`, async ({ params }) =>
     HttpResponse.json(await client.deleteAgent(String(params.agentId))),
   ),
+  http.delete(`${webui}/jobs/:jobId`, async ({ params }) =>
+    HttpResponse.json(await client.deleteJob(String(params.jobId))),
+  ),
   http.get(`${webui}/agents`, async ({ request }) => HttpResponse.json(await client.listAgents(agentQuery(request)))),
   http.get(`${webui}/harnesses`, async ({ request }) => HttpResponse.json(await client.listHarnesses(listQuery(request)))),
   http.get(`${webui}/model-pricing/preview`, async ({ request }) => {

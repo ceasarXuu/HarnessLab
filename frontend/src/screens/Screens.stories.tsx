@@ -154,6 +154,31 @@ export const JobCancelConfirm: Story = {
   },
 }
 
+export const JobDeleteConfirm: Story = {
+  render: () => (
+    <JobsPage
+      client={createMockWebUiClient()}
+      jobs={jobs}
+      open
+      search=""
+      selected={jobs[1]}
+      t={t}
+      onClose={() => undefined}
+      onJobAction={() => undefined}
+      onLeaderboardChange={() => undefined}
+      onNewJob={() => undefined}
+      onSearch={() => undefined}
+      onSelect={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete' }))
+    await expect(canvas.getByRole('dialog', { name: 'Delete Job' })).toBeVisible()
+    await expect(canvas.getByText(/Permanently deletes this Job’s Harbor outputs/)).toBeVisible()
+  },
+}
+
 export const JobOperationRunning: Story = {
   render: () => (
     <JobsPage

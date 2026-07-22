@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, FileJson, FlaskConical, RotateCcw, Square, Terminal } from 'lucide-react'
+import { Copy, FileJson, FlaskConical, RotateCcw, Square, Terminal, Trash2 } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { JobStatusBadge } from './JobStatusBadge'
@@ -14,10 +14,11 @@ interface DetailRailProps {
   t: Translate
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onCopyJob: (jobId: string) => void
+  onDeleteJob?: (job: HarborJob) => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onCopyJob, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onCopyJob, onDeleteJob, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job, t)
@@ -46,6 +47,16 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
               <Copy aria-hidden="true" />
               {t('copy')}
             </button>
+            {onDeleteJob && isTerminalJob(job) && (
+              <button
+                className="secondary-button compact-button danger-button"
+                disabled={!writesEnabled}
+                onClick={() => onDeleteJob(job)}
+              >
+                <Trash2 aria-hidden="true" />
+                {t('delete')}
+              </button>
+            )}
           </div>
         </div>
         <div className="metric-grid">
@@ -134,6 +145,10 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
       </section>
     </aside>
   )
+}
+
+function isTerminalJob(job: HarborJob) {
+  return ['completed', 'failed', 'cancelled', 'interrupted'].includes(job.status)
 }
 
 function getPrimaryJobAction(job: HarborJob, t: Translate) {

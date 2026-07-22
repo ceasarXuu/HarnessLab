@@ -84,6 +84,10 @@ export interface JobDto {
   failureCode?: string
 }
 
+export interface DeleteJobResultDto {
+  deletedJobId: string
+}
+
 export type DatasetVisibility = 'public' | 'private'
 export type DatasetDownloadStatus = 'downloaded' | 'downloading' | 'not-downloaded' | 'path-unavailable'
 export type DatasetStorageKind = 'external' | 'managed'
