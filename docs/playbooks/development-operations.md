@@ -12,6 +12,7 @@
 | 1.5 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | 记录 Clash 回环代理无法被 Harbor trial 容器访问的诊断和安全转发方案。 |
 | 1.6 | Harbor `0.13.x`; Docker Engine | 2026-07-19 | OrnnLab 自动发现宿主代理并为 Docker Agent 托管临时 relay。 |
 | 1.7 | Harbor `0.13.x`; Docker Engine | 2026-07-23 | 记录历史 Harbor 容器归属确认、精确回收与跨项目保护流程。 |
+| 1.8 | Harbor `0.13.x`; Docker Engine | 2026-07-23 | 记录 OrnnLab 所有权标签、自动回收和多实例隔离验证流程。 |
 
 This file records current operational lessons for the Harbor WebUI rewrite.
 Legacy Rust CLI operations were archived on 2026-06-15.
@@ -258,3 +259,29 @@ docker network rm <explicit-network-id>...
 容器及 4 个空 Compose 网络，容器可写层约 916 MiB；其余 113 个 stopped 容器均挂载
 另一个项目目录，未删除。Terminal-Bench 镜像、跨项目容器和无法证明归属的 dangling
 镜像全部保留。
+
+## 2026-07-23 OrnnLab Docker 所有权自动回收
+
+新 Job 不再依赖历史容器的 mount 或安装路径进行事后猜测。`ORNNLAB_HOME` marker 中的
+稳定 `instance_id` 与 run ID 在 Harbor Compose 创建前写入每个服务、网络和卷。排障时先执行：
+
+```bash
+ornnlab doctor
+docker ps -a --filter label=ornnlab.managed=true --format '{{json .}}'
+docker network ls --filter label=ornnlab.managed=true
+docker volume ls --filter label=ornnlab.managed=true
+```
+
+健康报告中的孤儿数只统计当前数据目录实例、非活动 Run 且清理策略不是 `retain` 的容器。
+Job 结束后检查事件 `docker.ownership.cleanup_completed`；失败时检查
+`docker.ownership.cleanup_failed` 的显式 Docker 错误和服务日志中的
+`docker.ownership.cleanup`，不要立刻运行全局 prune。
+
+服务启动会在 Run 状态恢复之后再执行一次幂等对账。若同一 daemon 运行多个 OrnnLab
+数据目录，验证过滤条件必须同时包含 `ornnlab.instance_id` 和 `ornnlab.run_id`；只使用
+run ID 可能跨实例误删。显式 `keep_containers` 会写入 `ornnlab.cleanup=retain`，这类容器
+属于用户要求的保留对象，不应报告为泄漏。
+
+真实冒烟使用随机 project、instance 和 run，至少包含 main 与 sidecar；验证两个容器和
+默认网络标签一致、回收计数为 2、对应空网络被删除、同一 run 的二次扫描为 0。测试 finally 仍需
+执行同一随机 Compose project 的 `down --volumes --remove-orphans`，确保测试异常时也收敛。

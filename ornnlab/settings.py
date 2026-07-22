@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from ornnlab import __version__
 
@@ -65,17 +66,39 @@ class Settings:
             self.archive_dir,
         ]:
             path.mkdir(parents=True, exist_ok=True)
-        if not self.marker_path.exists():
+        marker = self._home_marker()
+        original = dict(marker)
+        if "instance_id" not in marker:
+            marker["instance_id"] = uuid4().hex
+        marker.update(
+            {
+                "schema_version": 2,
+                "product": "OrnnLab",
+                "home": str(self.home),
+                "version": __version__,
+            }
+        )
+        if marker != original:
             self.marker_path.write_text(
-                json.dumps(
-                    {
-                        "schema_version": 1,
-                        "product": "OrnnLab",
-                        "home": str(self.home),
-                        "version": __version__,
-                    },
-                    indent=2,
-                    sort_keys=True,
-                ),
+                json.dumps(marker, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
+
+    @property
+    def instance_id(self) -> str:
+        self.ensure_dirs()
+        value = self._home_marker().get("instance_id")
+        if not isinstance(value, str) or not value:
+            raise RuntimeError("OrnnLab home marker is missing instance_id")
+        return value
+
+    def _home_marker(self) -> dict[str, object]:
+        if not self.marker_path.exists():
+            return {}
+        try:
+            payload = json.loads(self.marker_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as error:
+            raise RuntimeError(f"Invalid OrnnLab home marker: {self.marker_path}") from error
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"Invalid OrnnLab home marker: {self.marker_path}")
+        return payload

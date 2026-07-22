@@ -17,7 +17,9 @@ class DoctorService:
 
     def status(self, include_logs: bool = False) -> dict:
         schema_version = sqlite.initialize(self.settings)
-        docker_orphans = DockerOrphanService().scan_ornnlab_containers()
+        docker_orphans = DockerOrphanService(
+            instance_id=self.settings.instance_id
+        ).scan_ornnlab_containers(self._active_run_ids())
         stale_running_runs = RunRecoveryService(self.settings).stale_running_count()
         harbor_capability = HarborEngine().capability_snapshot()
         status = {
@@ -43,7 +45,16 @@ class DoctorService:
         return status
 
     def docker_orphans(self) -> dict:
-        return DockerOrphanService().scan_ornnlab_containers()
+        return DockerOrphanService(
+            instance_id=self.settings.instance_id
+        ).scan_ornnlab_containers(self._active_run_ids())
+
+    def _active_run_ids(self) -> set[str]:
+        with sqlite.connect(self.settings) as conn:
+            return {
+                str(row["id"])
+                for row in conn.execute("SELECT id FROM runs WHERE status = 'running'")
+            }
 
     def logs_report(self, status: dict[str, Any] | None = None) -> dict[str, Any]:
         sqlite.initialize(self.settings)

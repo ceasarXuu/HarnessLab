@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHttpException
 
 from ornnlab.api import webui
 from ornnlab.services.container_proxy_runtime import ContainerProxyRuntime
+from ornnlab.services.docker_orphan_service import DockerOrphanService
 from ornnlab.services.event_history_redaction import redact_historical_event_payloads
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
@@ -31,6 +32,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     sqlite.initialize(active_settings)
     redact_historical_event_payloads(active_settings)
     startup_recovery = RunRecoveryService(active_settings).reconcile_startup()
+    startup_docker_cleanup = DockerOrphanService(
+        instance_id=active_settings.instance_id
+    ).cleanup_orphans(_active_run_ids(active_settings))
     operation_tasks: dict[str, asyncio.Task[None]] = {}
     interrupted_operations = WebUiOperationService(
         active_settings, operation_tasks
@@ -55,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="OrnnLab", version="0.3.0", lifespan=lifespan)
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
+    app.state.startup_docker_cleanup = startup_docker_cleanup
     app.state.interrupted_operations = interrupted_operations
     app.state.container_proxy = container_proxy
     app.state.worker = worker
@@ -110,6 +115,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(webui.router)
     return app
+
+
+def _active_run_ids(settings: Settings) -> set[str]:
+    with sqlite.connect(settings) as conn:
+        return {
+            str(row["id"])
+            for row in conn.execute("SELECT id FROM runs WHERE status = 'running'")
+        }
 
 
 def _error_response(

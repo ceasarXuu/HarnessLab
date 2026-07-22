@@ -24,6 +24,7 @@ from ornnlab.services.harbor_event_payloads import harbor_running_event_payload
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.report_service import ReportService
 from ornnlab.services.run_cancellation_service import RunCancellationService
+from ornnlab.services.run_docker_cleanup import cleanup_run_docker_resources
 from ornnlab.services.run_failure_service import RunFailureService
 from ornnlab.services.template_service import TemplateService
 from ornnlab.settings import Settings
@@ -314,6 +315,7 @@ class ExperimentService:
                 job_name=webui_config.get("job_name", run["id"]),
                 overrides=overrides,
                 runtime_container_env_defaults=proxy_policy.container_env_defaults,
+                owner_run_id=run["id"],
             )
             snapshot = self.engine.capability_snapshot()
             artifact_paths = self.builder.write_run_artifacts(config, snapshot)
@@ -368,6 +370,9 @@ class ExperimentService:
             return
         finally:
             await proxy_policy.close()
+            await cleanup_run_docker_resources(
+                self.settings, self.events, run["id"], config.environment
+            )
         report_path = self.reports.write_summary(
             run["id"],
             result["status"],
@@ -460,7 +465,11 @@ def _resolve_job_dir(configured_path: str | None, default_path) -> str:
 
 def _uses_docker_environment(overrides: dict) -> bool:
     environment = overrides.get("environment", {"type": "docker"})
-    return isinstance(environment, dict) and environment.get("type", "docker") == "docker"
+    return (
+        isinstance(environment, dict)
+        and not environment.get("import_path")
+        and environment.get("type", "docker") == "docker"
+    )
 
 
 def _explicit_proxy_names(agent_config: dict, overrides: dict) -> set[str]:

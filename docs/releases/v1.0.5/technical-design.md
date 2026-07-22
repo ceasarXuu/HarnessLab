@@ -74,6 +74,29 @@ Harbor 当前没有通用 Dataset `split` 配置、custom verifier WebUI payload
 - 文件清理只接受可证明归属的根：`experiments/<run_id>`、无剩余 Run 时的 `experiments/<experiment_id>`，以及 `jobsDir/<harbor_job_name>` 或 `jobsDir/<job_name>` 的单层原生 Harbor 子目录。删除前校验 `result_path`、`report_path` 和事件镜像均位于这些根下；共享父目录、符号链接、目录穿越或外部直写文件会拒绝整个请求。
 - 文件清理在数据库事务提交前执行；文件失败会回滚数据库删除。删除具有不可恢复性，前端确认框明确列出记录、排行榜与产物影响。Dataset、Agent、Environment 和共享 `jobsDir` 不属于删除范围。
 
+#### 4.3.1 Docker 容器所有权与回收
+
+- `~/.ornnlab/data/.ornnlab-home.json`（或当前 `ORNNLAB_HOME`）保存随机、稳定的
+  `instance_id`。旧 marker 在首次加载时原位升级；该值不从绝对路径、主机名或 Docker
+  网桥推断。
+- OrnnLab 将内置 Docker Environment 编译为 Harbor 支持的自定义 `import_path`：
+  `OwnedDockerEnvironment`。它在 Compose 启动前通过 `docker compose config --services`
+  解析完整服务、网络和卷集合，追加只含标签的最终覆盖层，确保 main、task sidecar、
+  Compose 网络和卷同时获得
+  `ornnlab.managed`、`ornnlab.instance_id`、`ornnlab.run_id` 和 `ornnlab.cleanup`。
+- 正常 Job 生命周期在 Harbor 子进程收敛后执行标签回收。即使 Harbor 内部
+  `docker compose down` 失败，OrnnLab 仍按 `instance_id + run_id` 删除容器，再仅按这些
+  网络/卷自身的 OrnnLab 标签清理；对过渡期未标记资源才使用容器携带的
+  `com.docker.compose.project` 兼容反查。资源删除使用显式
+  Docker ID，不执行 `docker system prune`，不删除镜像或 BuildKit cache。
+- 应用启动先把失去执行进程的 running Run 对账为终态，再扫描当前实例的非活动标签
+  资源并幂等回收。活动 Run 和 `ornnlab.cleanup=retain` 容器不进入清理计划；同一 daemon
+  上其他实例即使 run ID 相同也不会被命中。
+- `docker.ownership.compose_prepared`、`docker.ownership.cleanup` 写入服务日志；
+  `docker.ownership.cleanup_completed`、`docker.ownership.cleanup_failed` 和
+  `docker.ownership.retained` 写入 Job 事件。Docker 不可用或删除失败不会伪装为成功，
+  但也不覆盖已经落盘的 Harbor 任务结果。
+
 ### 4.4 Dataset 存储归属
 
 - `managed`：用户选择每次 Registry 下载的父目录，OrnnLab 在其下创建 `Dataset name + version` 的唯一子目录，并写入 `.ornnlab-dataset.json` 作为归属标记。只有带该标记的目录可移动或被 OrnnLab 删除；目标已存在时拒绝，绝不覆盖。

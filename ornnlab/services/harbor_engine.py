@@ -34,19 +34,26 @@ class HarborConfigBuilder:
         job_name: str | None = None,
         overrides: dict[str, Any] | None = None,
         runtime_container_env_defaults: dict[str, str] | None = None,
+        owner_run_id: str | None = None,
     ) -> HarborJobConfigView:
         overrides = overrides or {}
         normalized_agent = _normalize_agent_view(agent_config)
+        dataset_name = (
+            f"{benchmark_name}@{benchmark_version}" if benchmark_version else benchmark_name
+        )
+        effective_job_name = job_name or f"ornnlab-{_slug(dataset_name)}"
         environment = overrides.get("environment", {"type": "docker", "delete": True})
         if _is_docker_environment(overrides):
+            environment = _owned_docker_environment(
+                environment,
+                self.settings.instance_id,
+                owner_run_id or effective_job_name,
+            )
             environment = _merge_environment_env_defaults(
                 environment,
                 runtime_container_env_defaults or {},
                 normalized_agent.get("env", {}),
             )
-        dataset_name = (
-            f"{benchmark_name}@{benchmark_version}" if benchmark_version else benchmark_name
-        )
         dataset = {
             "name": dataset_name,
             "benchmark_name": benchmark_name,
@@ -54,7 +61,7 @@ class HarborConfigBuilder:
             "task_names": overrides.get("task_names"),
         }
         return HarborJobConfigView(
-            job_name=job_name or f"ornnlab-{_slug(dataset_name)}",
+            job_name=effective_job_name,
             agent=normalized_agent,
             dataset=_without_empty_values(dataset),
             n_tasks=overrides.get("n_tasks", n_tasks),
@@ -216,7 +223,34 @@ def _is_docker_environment(overrides: dict[str, Any]) -> bool:
     environment = overrides.get("environment", {"type": "docker"})
     if not isinstance(environment, dict):
         return False
+    if environment.get("import_path"):
+        return False
     return environment.get("type", "docker") == "docker"
+
+
+def _owned_docker_environment(
+    environment_config: dict[str, Any],
+    instance_id: str,
+    run_id: str | None,
+) -> dict[str, Any]:
+    if not run_id:
+        raise ValueError("Docker jobs require an OrnnLab owner run id")
+    merged = dict(environment_config)
+    kwargs = dict(merged.get("kwargs") or {})
+    cleanup_policy = "retain" if kwargs.get("keep_containers") else "auto"
+    kwargs.update(
+        {
+            "ornnlab_instance_id": instance_id,
+            "ornnlab_run_id": run_id,
+            "ornnlab_cleanup_policy": cleanup_policy,
+        }
+    )
+    merged.pop("type", None)
+    merged["import_path"] = (
+        "ornnlab.services.owned_docker_environment:OwnedDockerEnvironment"
+    )
+    merged["kwargs"] = kwargs
+    return merged
 
 
 def _merge_environment_env_defaults(

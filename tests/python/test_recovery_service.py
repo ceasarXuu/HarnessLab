@@ -3,6 +3,7 @@ import json
 from ornnlab.app import create_app
 from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.services.clock import now_iso
+from ornnlab.services.docker_orphan_service import DockerOrphanService
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.report_service import ReportService
@@ -93,6 +94,21 @@ def test_startup_recovery_uses_existing_result_artifact(settings):
     assert (
         EventService(settings).list_after(experiment_id)[-1].event_type == "experiment.reconciled"
     )
+
+
+def test_startup_recovery_reconciles_owned_docker_orphans(settings, monkeypatch):
+    calls: list[set[str]] = []
+    monkeypatch.setattr(
+        DockerOrphanService,
+        "cleanup_orphans",
+        lambda _self, active_run_ids=(): calls.append(set(active_run_ids))
+        or {"ok": True, "run_count": 1, "results": [], "error": None},
+    )
+
+    recovered_app = create_app(settings)
+
+    assert calls == [set()]
+    assert recovered_app.state.startup_docker_cleanup["run_count"] == 1
 
 
 class QueueRows:

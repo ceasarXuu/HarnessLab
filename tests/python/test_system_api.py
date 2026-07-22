@@ -63,7 +63,7 @@ def test_system_docker_orphans_returns_cleanup_plan(settings, monkeypatch, tmp_p
 
     assert payload["count"] == 1
     assert payload["cleanup_plan"][0]["dry_run"] is True
-    assert payload["cleanup_plan"][0]["manual_review_required"] is True
+    assert payload["cleanup_plan"][0]["manual_review_required"] is False
 
 
 def test_system_doctor_logs_reports_latest_failed_run(settings):
@@ -94,17 +94,22 @@ def _docker_script(tmp_path, container_id: str):
             [
                 "import json",
                 "import sys",
-                "if sys.argv[4] != 'label=ornnlab.run_id':",
-                "    raise SystemExit(0)",
                 "print(json.dumps({",
                 f"    'ID': '{container_id}',",
                 "    'Names': 'ornnlab-orphan',",
                 "    'Image': 'harbor-runner:latest',",
                 "    'Status': 'Exited (137)',",
-                "    'Labels': 'ornnlab.run_id=run-123',",
+                "    'Labels': 'ornnlab.managed=true,ornnlab.instance_id="
+                f"{settings_instance_placeholder()},ornnlab.run_id=run-123',",
                 "}))",
             ]
         ),
         encoding="utf-8",
     )
     return script
+
+
+def settings_instance_placeholder():
+    from ornnlab.settings import Settings
+
+    return Settings.from_env().instance_id

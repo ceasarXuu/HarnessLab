@@ -13,6 +13,21 @@ def test_sqlite_initializes_idempotently(settings):
     assert first == 9
     assert second == 9
     assert settings.db_path.exists()
+    assert settings.instance_id
+
+
+def test_existing_home_marker_is_upgraded_with_stable_instance_id(tmp_path):
+    settings = Settings(home=tmp_path)
+    settings.marker_path.write_text(
+        json.dumps({"schema_version": 1, "product": "OrnnLab"}), encoding="utf-8"
+    )
+
+    settings.ensure_dirs()
+    first = settings.instance_id
+    settings.ensure_dirs()
+
+    assert settings.instance_id == first
+    assert json.loads(settings.marker_path.read_text())["schema_version"] == 2
 
 
 def test_agent_configuration_has_one_canonical_storage_model(settings):

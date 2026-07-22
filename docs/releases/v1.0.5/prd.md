@@ -126,6 +126,13 @@ System 使用分组健康看板展示 OrnnLab Service、Harbor CLI、Docker、Ha
 
 OrnnLab 不安装、不内置也不识别具体 Docker Runtime。Docker 卡片通过当前 Docker Context 和标准 Docker CLI/API 展示 CLI 路径、Context、Client/Server 版本及 daemon 连接状态。页面只展示本地化的错误摘要，原始错误保留在 API 和服务日志中供诊断。
 
+OrnnLab 发起的 Harbor Docker Environment 必须为每个 Compose 服务、网络和卷维护
+OrnnLab 管理标识、数据目录实例 ID、run ID 和清理策略标签。正常完成、异常失败或取消后执行
+幂等回收；服务重启时再次对账并回收当前实例的非活动残留。回收只接受当前实例标签，
+不得依赖安装路径、容器名称、固定 Docker 网桥或设备特征，也不得影响其他 OrnnLab
+数据目录和其他项目。用户显式启用 Harbor `keep_containers` 时标记为 `retain`，自动回收
+必须尊重该策略。
+
 Docker 卡片始终提供一组“启动命令 + 运行”快捷控件。命令由当前用户自行填写并持久化，OrnnLab 不推断 Docker Desktop、Colima、OrbStack 等产品的启动方式。命令只允许单个可执行文件及参数，不支持管道、重定向、组合命令或其他 Shell 操作符，并以 `shell=false` 运行。输入框失焦时自动保存；运行后通过异步 Operation 轮询当前 Docker Context，daemon 可连接后刷新卡片。失败时页面只显示摘要，完整命令输出写入服务日志。Docker Runtime 的安装、关闭和故障处理仍由用户负责。
 
 OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重启并查看状态；服务异常退出后可由应用级守护进程按退避策略重启。该能力只管理当前用户会话中的 OrnnLab 前后端进程，不安装系统服务，也不做开机或登录自启动。
