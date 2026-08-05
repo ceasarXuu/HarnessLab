@@ -188,3 +188,20 @@ Round 1 无 reviewer 输出：首发 `/root/stage6_review` 与替补 `/root/stag
 ## Final Conclusion
 
 Stage 6 的 S6-06 独立对抗性审查在预算内未收敛：两个 fresh internal subagent 会话（/root/stage6_review 与 /root/stage6_review/stage6_review_r2）均未返回审查输出，且对状态询问无响应。依据 subagent-vs-review 技能硬规则（审查不可用 ≠ 通过、≠ 无发现）与用户 2 轮预算约束，审查未收敛即停止推进：S6-06 保持 In progress，Stage 6 不得标记 Done，等待用户决策（重试 / 缩小范围 / 更换审查类型 / 主 agent 内非 fresh 对抗审查（如实标注） / 显式接受风险）。
+
+## Appendix A: Subagent 可用性探针（2026-08-06）
+
+用户要求先确认「能否正确创建可用的 subagent」。主 agent 做了三组最小探针：
+
+| 探针 | fork_turns | 任务 | 结果 |
+|---|---|---|---|
+| /root/subagent_probe | none | 执行 pwd / git log -1 / python --version | 未执行，返回「我准备好了，请告诉我任务」；follow-up 补发任务后仍无响应 |
+| /root/subagent_probe2 | none | 同上（措辞改为 USER TASK） | 未执行，返回同类就绪问候 |
+| /root/subagent_probe3 | 1 | 同上 | 完整执行：probe3 → probe_v2 → selfcheck 三级链路均收到任务、执行命令并回传结果 |
+
+结论：
+
+- subagent 创建与通信机制本身可用，但**fresh 派生（fork_turns=none）下初始任务消息投递不稳定**：连续两次探针均未识别任务，只返回就绪问候；带少量上下文（fork_turns=1）的探针完整跑通。
+- 这与 Stage 6 审查失败的现象一致：审查者（/root/stage6_review）收到任务但长时间无输出，其 fresh 替补（stage6_review_r2）失联。
+- 对独立审查的影响：subagent-vs-review 要求 fresh 会话以避免上下文污染，但当前运行时 fresh 会话的任务投递不可靠，导致「独立 fresh 审查」这一前提难以稳定满足；重试同方式预期会复现失联。
+- 后续若继续 subagent 审查，需要用户决策：接受带上下文派生（弱化 fresh 隔离并如实标注）、改为 spawn 后显式补发任务、或改用主 agent 内非 fresh 对抗审查 / 显式接受风险。
