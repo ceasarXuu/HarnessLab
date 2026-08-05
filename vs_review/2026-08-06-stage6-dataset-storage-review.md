@@ -150,11 +150,29 @@ requirements | state | input | concurrency | failure | data | security | usabili
 
 ### Reviewer Outputs
 
-（待审查完成后填充）
+Round 1 无 reviewer 输出：首发 `/root/stage6_review` 与替补 `/root/stage6_review/stage6_review_r2` 均未返回审查结论（详见 Timeout Records）。
+
+替补会话在父代理声明失联后仍长时间运行（无输出），主 agent 于 2026-08-06T10:20+08:00 将其终止；如后续出现任何迟到输出，一律按 late result 处理，不得覆盖本轮的失联记录。
 
 ### Main Agent Response
 
-（待审查输出后填充）
+无 reviewer 输出可供分级（没有发现项，也没有 PASS/FAIL 结论）。
+
+| Reviewer | Finding | Broken Assumption / Failure Scenario | Severity | Decision | Evidence / Reason | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|
+| implementation-adversary（首发） | 无输出（失联） | 审查基础设施未交付结论 | n/a | n/a | Timeout Records：15 min + 8 min 无输出，状态询问无响应 | 启动替补；按技能规则不判通过 | 记录 user decision required |
+| implementation-adversary（替补） | 无输出（失联） | 审查基础设施未交付结论 | n/a | n/a | Timeout Records：15 min + 10 min 延长仍无输出 | 终止会话；不判通过 | 记录 user decision required |
+
+主 agent 结论：Round 1 未产生审查结论。依据用户 2026-08-06 审查预算约束（最多 2 轮，未收敛即停止并等待指示）与 subagent-vs-review 硬规则（审查不可用 ≠ 通过、≠ 无发现），不得把 Stage 6 标记为 Done，S6-06 保持 In progress。
+
+旁证（非独立审查，主 agent 侧抽查确认，供用户决策参考）：
+
+- `ornnlab/services/webui_dataset_service.py:454` `_managed_directory_name`、`:465` `_assert_managed_directory`、`:27` 标记文件 `.ornnlab-dataset.json`。
+- `ornnlab/services/webui_dataset_service.py:246` external 删除被 API 拒绝（"external Dataset files cannot be deleted by OrnnLab"）。
+- `ornnlab/storage/migrations/005_dataset_storage_locations.sql` 将 `source='local'` 迁移为 `storage_kind='external'`。
+- 原生目录选择器属实：`ornnlab/services/webui_system_service.py:148,232,241,256-257`（osascript / PowerShell / zenity / kdialog）；`frontend/src/api/webUiClient.ts:100` 经 `/system/directory-picker` 调用。
+
+### Closure Status
 
 - Blocking findings found: 未完成（两轮 fresh subagent 审查均失联，无 reviewer 输出）
 - Accepted blocking findings fixed: n/a
@@ -162,11 +180,11 @@ requirements | state | input | concurrency | failure | data | security | usabili
 - Blocking re-review passed: n/a
 - Rejected findings backed by evidence: n/a
 - Deferred findings documented: n/a
-- Implementation completeness gaps resolved or accepted by user: n/a
+- Implementation completeness gaps resolved or accepted by user: n/a（无审查结论）
 - Target benefit warnings recorded: n/a
 - Blocked reason: 首发与替补 implementation-adversary 均无输出且对状态询问无响应；按 subagent-vs-review 硬规则不得判通过
-- Allowed to proceed: pending（待用户决策）
+- Allowed to proceed: no（待用户决策）
 
 ## Final Conclusion
 
-Stage 6 的 S6-06 独立对抗性审查未能在本轮完成：两个 fresh internal subagent 审查会话（/root/stage6_review 与 /root/stage6_review/stage6_review_r2）均未返回任何审查输出，且对状态询问无响应。依据 subagent-vs-review 技能硬规则，审查不可用时不得将 Stage 6 判定为通过，因此 S6-06 仍保持 In progress，等待用户决策（重试 / 缩小范围 / 更换审查类型 / 显式接受风险或指定其他审查方式）。
+Stage 6 的 S6-06 独立对抗性审查在预算内未收敛：两个 fresh internal subagent 会话（/root/stage6_review 与 /root/stage6_review/stage6_review_r2）均未返回审查输出，且对状态询问无响应。依据 subagent-vs-review 技能硬规则（审查不可用 ≠ 通过、≠ 无发现）与用户 2 轮预算约束，审查未收敛即停止推进：S6-06 保持 In progress，Stage 6 不得标记 Done，等待用户决策（重试 / 缩小范围 / 更换审查类型 / 主 agent 内非 fresh 对抗审查（如实标注） / 显式接受风险）。
