@@ -237,9 +237,169 @@ Stage 6 的 S6-06 独立对抗性审查在预算内未收敛：两个 fresh inte
 
 ### Reviewer Outputs（Round 1 Retry）
 
-（待 reviewer 返回后填写）
+Reviewer `implementation-adversary`（fresh session，只读，87 次工具调用，11.7 分钟）完成全量审查并对关键失败路径做了 venv 内可执行复现。总体结论：S6-01~S6-05 的 Done 判定不能成立，存在 4 个阻断项。
+
+**已确认的安全边界（reviewer 实测）**：目录命名净化（`_managed_directory_name` 将 `/`→`--`、剥离 `.`/`-` 前后缀、`..@1.0` 拒绝，无路径穿越）；删除/取消仅触碰带 marker 的目录（`_assert_managed_directory`，rmtree 对顶层符号链接抛 OSError 不跟随）；external 删除被 API 拒绝、remove_registration 不碰文件系统；注册只在下载完成后发生，move/delete/relocate 与并发 Operation 天然互斥。
+
+#### Blocking Findings
+
+**B1 — 服务重启中断的下载残留不可通过 UI/API 回收，且阻断同父目录重新下载**
+- Broken assumption：S6-02「取消/失败时仅清理带归属标记的临时目录」隐含失败清理一定发生。实际清理只存在于下载协程的进程内 `except BaseException`（`webui_dataset_service.py:199-201`）；服务重启后该清理永不执行。
+- Failure scenario：下载中服务重启（`restart_service` / `install_update` 属正常运维事件）→ `reconcile_interrupted`（`webui_operation_service.py:58-76`）只把 operation 置 failed，不清除 `webui_dataset_downloads` 行、不删除部分下载目录。
+- Trigger：下载进行中重启 → 用户回到页面。
+- Impact：UI 显示 not-downloaded → 点下载 → 422 "dataset destination already exists"（`:154`）；点取消 → "no active dataset download"（`api/webui.py:280-282`）。标记目录与 pending 行永久残留，唯一出路是用户手动 rm。
+- Proof needed / evidence：已复现（E2）——reconcile 后 cancel_active 抛 KeyError、download 抛 already exists、目录与 pending 行均残留。
+- Authority：E2（复现）+ E1（S6-02 验收文本）。
+
+**B2 — 同名 `import_local` 用 INSERT OR REPLACE 覆盖 managed 注册，把已下载目录孤儿化且不可回收**
+- Broken assumption：S6-03「存在的 managed 目录只能删除，不能直接遗留未登记目录」假设不会产生未登记但带 marker 的目录。
+- Failure scenario：用户对已下载的 managed 数据集（ref 相同）执行本地导入 → `_upsert_dataset`（`webui_dataset_service.py:383-423`）INSERT OR REPLACE 无任何已注册检查 → 注册被替换为 external 指向新路径；原 managed 目录（含 marker）成为孤儿。
+- Impact（已复现，E2）：delete_local 被拒（"external Dataset files cannot be deleted"）、cancel_download 被拒（"already complete"）、remove_registration 只删行不删目录；同父目录重新下载被 already exists 拒绝。任何 API 均无法清理。
+- 修复建议：`import_local` 先拒绝已注册 ref（要求先 remove_registration 或 delete）。
+- Authority：E2。
+
+**B3 — Dataset 写操作失败在 UI 完全不可见（同名冲突/路径不可用/外部不可删除错误静默丢失）**
+- Broken assumption：S6-05「API/mock/MSW 使用同一 … 错误语义」及用户视角「错误信息可理解」成立。
+- Evidence：`DatasetsPage.tsx:65` 持有 `datasetOperation`，但全页唯一错误渲染是 `:393` 的 `detailResource.error ?? tasksResource.error`；`datasetOperation.error` 与 operation 的 `error.message` 从未渲染。对照组 Jobs 页在 `App.tsx:161-165` 明确渲染 `jobOperation.error?.message`。mock 侧 `useOperation.submit` 对失败响应 `setError(...)`（`hooks.ts:253-274`）同样无处展示。
+- Trigger：任何下载失败（同名冲突、父目录不可写）、external 删除被拒、导入失败（"no valid Harbor task directories"）、path-unavailable 相关错误。
+- Impact：用户点确认后页面无任何反馈，行状态悄悄不变；「可理解错误」验收直接失败。
+- Authority：E2（代码路径）+ E1（S6-05、用户视角审查焦点）。
+
+**B4 — external 行 `registryUrl: null` 与 mock 哨兵 `'local'` 不一致：后端 external 数据集被当作 registry 数据集，出现 "Pull updates"（sync）并改写用户目录**
+- Broken assumption：S6-04「external 导入仅登记与加载」、S6-05「同一 DTO 语义」。
+- Evidence：后端导入写 `registry_url=None`（`webui_dataset_service.py:278`）→ DTO `registryUrl: null`；前端判定 `detailRow?.registryUrl !== 'local'`（`DatasetsPage.tsx:198`）→ null !== 'local' 为 true → `DatasetDetail.tsx:101-103` 显示 "Pull updates"。mock external 行用 `registryUrl: 'local'` 哨兵（`demoCatalog.ts:57`）→ mock 不显示。同一状态、两个 UI 结果。
+- Impact：用户点 "Pull updates" → `sync()`（`webui_dataset_service.py:289-301`）若目录含 `dataset.toml` 则原位改写用户目录文件，违反「仅登记与加载」；不含则报错（且因 B3 不可见）。
+- 修复建议：后端导入写 `registry_url='local'`（与 mock 同哨兵），或前端改用 source/storageKind 判定。
+- Authority：E2。
+
+#### Non-blocking Risks（N1-N9，详见 reviewer 输出全文记录于会话）
+
+- N1（中）取消竞态：`cancel_dataset_download` 先 `task.cancel()` 再 rmtree（`api/webui.py:276-284`），rmtree 发生在下载协程收到 CancelledError 前；git 子进程仍可写 → 少量残留 + operation 终态可能为 failed 而非 cancelled。
+- N2（中高）`list_datasets` 每次请求全树扫描 sizeBytes（`dataset_download_state.py:55` rglob+stat，无缓存，事件循环内同步）：3 万文件 0.12s 线性增长；external 目录含不可读子目录时 rglob 抛 PermissionError → 整个 `/datasets` 500。
+- N3（中）跨文件系统 move 失败残留：`shutil.move` 跨卷退化为 copytree+rmtree，中途失败在目标父目录留下带 marker 的部分副本。
+- N4（低）`download()` 的 mkdir/marker/pending 记录在 try 块之外（`:156-160` vs `:177-203`）：`_write_marker` 或 `_record_pending_download` 失败时无清理，留下空目录或孤儿 pending 行。
+- N5（低）mock 语义缺口（S6-05 对等性残留）：mock `downloadDataset` 不拒绝已存在目标、`moveDataset` 不检查目标存在、`relocateDataset` 不校验 Harbor tasks、`importDataset` 不校验 taskCount。
+- N6（低）`list_tasks` 对 managed path-unavailable 回退 registry 元数据时 registry 不可用 → 500；external path-unavailable 返回空页，行为不一致。
+- N7（低）表格行级按钮在 Operation 运行中不禁用（仅抽屉受 writeDisabled）。
+- N8（低）`default_download_parent` 可能返回已删除的父目录（偏好不校验存在性）。
+- N9（低）导入对话框用文本输入而非原生选择器，与下载/移动体验不一致。
+
+#### User-Perspective Checks / Completeness / Benefit（摘要）
+
+- 完整流程闭环成立（B3 例外：任何一步失败无反馈）；路径控件 readOnly + 原生选择器回填属实；mock 模式 `chooseDirectory` 明确返回 NATIVE_DIRECTORY_PICKER_UNAVAILABLE 不伪造；path-unavailable 为后端实时 `path.is_dir()` 判定非前端假状态；Operation 断线由 `merge_active_downloads` 从 DB 恢复（服务重启除外，即 B1）。
+- 实现完整性：S6-01~S6-05 均有生产路径与集成入口，但存在测试缺口（无失败清理测试、无取消中断测试、无重启场景、无 005 迁移语义测试、无 API 级 move 测试、无孤儿化路径测试）；Storybook path-unavailable 仅覆盖详情面板（`DrawerContent.stories.tsx:164`），无表格行级故事 → 「Storybook 覆盖三种状态」部分满足。
+- Target Benefit：「持久化管理唯一副本及其可用性」无基线/目标/测量方法（非阻断 warning，E1 无指标项）；N2 与 B1 提示可用性承诺的证据缺口。
+
+#### Required Fixes / Missing Tests / Missing Logs
+
+- `import_local` 在 ref 已注册时拒绝，禁止 INSERT OR REPLACE 静默覆盖 managed 注册（B2）
+- 启动对账清理无活动 operation 的 `webui_dataset_downloads` 行并删除对应标记目录；或让 `/download/cancel` 在 pending 行存在时无需活动 operation 也可清理（B1）
+- DatasetsPage 渲染 `datasetOperation` 的失败（error.message / operation.error），覆盖下载/移动/删除/导入/重定位失败（B3）
+- 后端导入写 `registry_url='local'`（与 mock 哨兵一致），移除 external 行的 "Pull updates"（B4）
+- `download()` 将 mkdir/marker/pending 记录移入 try 块统一清理（N4）
+- Missing tests：下载失败清理、取消终态、重启中断（B1）、同 ref 导入覆盖（B2）、API 级全链路、005 迁移语义、特殊字符 ref 净化、符号链接/只读父目录、跨卷 move 失败、B4 sync 回归、前端失败错误展示与 path-unavailable 行级故事
+- Missing logs：对账残留清理记录、`_remove_marked_directory` 拒绝删除 warning、sizeBytes 扫描耗时、取消竞态终态区分、path-unavailable 转换日志
+
+### Main Agent Triage（Round 1 Retry）
+
+| Finding | Verdict | Evidence / Reason | Action |
+|---|---|---|---|
+| B1 重启残留死锁 | **accept** | 主 agent 独立核验 `webui_dataset_service.py:145-203`（清理仅进程内 except）、`webui_operation_service.py:58-76`（对账只标 failed）、`api/webui.py:276-284`（取消需活动 operation、`cancel_active` 先于 `cancel_download`）全部属实（E2） | 修复：启动对账时清理无活动 operation 的 pending 下载（标记目录 + 行） |
+| B2 导入覆盖孤儿化 | **accept** | 主 agent 独立核验 `_upsert_dataset` INSERT OR REPLACE（`:383-423`）无存在性检查、`import_local`（`:264-287`）直接覆盖，与 `download()` 的已注册检查（`:146-149`）不一致（E2） | 修复：`import_local` 拒绝已注册 ref（与 download 同语义） |
+| B3 写操作失败不可见 | **accept** | 主 agent 独立核验 `DatasetsPage.tsx:65,198,393`、`App.tsx:161-165` 对照组、`DatasetDetail.tsx:101-103`（E2） | 修复：DatasetsPage 错误区渲染 datasetOperation 错误 |
+| B4 registryUrl 哨兵不一致 | **accept** | 主 agent 独立核验 `webui_dataset_service.py:278`（registry_url=None）、`demoCatalog.ts:57`（'local' 哨兵）、`DatasetsPage.tsx:198` 判定（E2） | 修复：后端 external 写 `registry_url='local'`（统一哨兵语义） |
+| N1 取消竞态 | defer | 非阻断；竞态窗口小（单 worker + 单线程写入方），修复需调整取消时序，涉及 operation 终态语义 | 记录为维护债务，不进本轮 |
+| N2 sizeBytes 全树扫描 | defer | 非阻断；性能问题（3 万文件 0.12s），修复需持久化 sizeBytes + 懒刷新设计 | 记录为维护债务，不进本轮 |
+| N3 跨卷 move 残留 | defer | 非阻断；失败路径需额外清理逻辑 | 记录为维护债务，不进本轮 |
+| N4 mkdir/marker 在 try 外 | **accept** | 与 B1 同源（下载残留清理范畴），修复极小 | 修复：try 块前移覆盖 mkdir/marker/pending 记录 |
+| N5 mock 校验缺口 | defer | 非阻断；mock 语义对等性残留 | 记录为维护债务，不进本轮 |
+| N6-N9 | defer | 非阻断；低严重度 | 记录为维护债务，不进本轮 |
+
+- Reviewer 工作区观察（vs_review 报告当时未提交）已消除：本报告修改已随 `5eddc86` 提交，当前工作区 clean。
+- 所有 accepted 修复均在冻结目标位置内（Stage 6 的 `webui_dataset_service.py`、`api/webui.py`、前端 DatasetsPage），无新依赖、无 public API 变更、无 schema 变更，evidence authority 均为 E2。
 
 ### Closure Status（Round 1 Retry）
 
-- Blocking findings found: 待定（审查进行中）
-- Allowed to proceed: no（待 reviewer 输出与主 agent triage）
+- Blocking findings found: 4（B1-B4，全部 accept）
+- Accepted blocking findings fixed: 待修复（B1-B4 + N4）
+- Blocking re-review completed: 待执行（Round 2 closure）
+- Blocking re-review passed: 待定
+- Allowed to proceed: 待修复与 closure review 后判定
+
+### Accepted Fixes（2026-08-06，主 agent 实施）
+
+| 修复 | 变更 | 位置 | 测试 |
+|---|---|---|---|
+| B1 | 新增 `reconcile_interrupted_downloads()`：启动对账时清理无 queued/running `download-dataset` operation 的 pending 行与其标记目录（marker 不匹配则保留目录并记录 warning） | `webui_dataset_service.py` + `app.py`（在 `reconcile_interrupted` 后调用，结果挂 `app.state.interrupted_downloads`） | `test_reconcile_cleans_pending_download_left_by_interrupted_service`、`test_reconcile_keeps_pending_download_with_active_operation` |
+| B2 | `import_local` 先拒绝已注册 ref（与 `download()` 同语义：relocate 或移除登记后再导入） | `webui_dataset_service.py:264-269` | `test_import_local_rejects_already_registered_ref` |
+| B3 | DatasetsPage 表格区新增 `ResourceStatus` 渲染 `datasetOperation.error?.message ?? operation?.error?.message`（写操作错误始终可见）；抽屉保留读取错误 | `frontend/src/screens/DatasetsPage.tsx` | `DatasetsPage.test.tsx`（下载被拒 → 错误消息渲染） |
+| B4 | 后端 external 导入写 `registry_url='local'`（与 mock 哨兵一致），消除 `null !== 'local'` 误判 | `webui_dataset_service.py` `import_local` | `test_external_import_uses_local_registry_sentinel` |
+| N4 | `download()` 的 mkdir/marker/pending 记录移入 try 块；空目录（marker 未写）fallback 删除安全前提注释 | `webui_dataset_service.py:145-203` | `test_failed_download_cleans_marked_directory_and_pending_record` |
+
+- 环境修复：`frontend/vitest.config.ts` 显式 `environmentOptions.jsdom.url`；另发现 vitest 默认 `forks` pool 下 jsdom 29 localStorage 退化为普通 Object（项目标准 `npm test` 使用 `--pool vmThreads` 无此问题）——本次验证均以 `npm test` 为准。
+- 结构拆分：`webui_dataset_service.py` 546 行超 500 行限制，目录安全原语（ref 映射、marker、受管目录断言、删除、父目录校验）拆至新模块 `ornnlab/services/dataset_directory.py`（公开命名），服务文件降至 481 行。
+- 验证（2026-08-06 全量门禁 `scripts/test-after-change-web.sh` 通过，exit 0）：ruff、pyright（0 error / 0 warning）、pytest 192 passed / 4 skipped、前端 33 files / 118 tests、生产构建、Storybook smoke/static build、launcher fail 0、`git diff --check`。
+
+## Round 2: Closure Review（2026-08-06）
+
+### Reviewer Selection（Round 2）
+
+| Reviewer | Reason Selected | Risk Area |
+|---|---|---|
+| implementation-adversary | 聚焦验证 B1-B4+N4 修复是否关闭原始失败、是否引入回归 | closure relation 判定、修复有效性、回归 |
+
+### Reviewer Launch Records（Round 2）
+
+| Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
+|---|---|---|---|---|---|---|---|
+| implementation-adversary | Agent 工具 spawn（fresh） | a107a1b80403a005a | Claude Code Agent spawn（2026-08-06） | fork_turns=none（fresh session） | Closure 导航包（B1-B4+N4 对照、closure scope、对抗重点） | 主 agent 历史、推理、结论、完整 diff | yes |
+
+### Reviewer Timeout Records（Round 2）
+
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---|---:|---|---|---|---|---|
+| round2-closure-impl | implementation-adversary | 1 | a107a1b80403a005a | 进行中 | running | - | - |
+
+### Reviewer Outputs（Round 2）
+
+Reviewer `implementation-adversary`（fresh，54 次工具调用，7.4 分钟，7 个 /tmp 活体复现脚本）结论：
+
+- **B1、B2、B3、N4 修复有效关闭**（活体复现 5 场景对账清理/保留、导入拒绝、错误渲染代码路径核对、下载失败三场景清理）
+- **B4 新写入路径关闭，但遗留数据路径未关闭（阻断，closure relation: original-blocker-open）**：
+  - 修复只覆盖新写入；存量库中修复前创建的 external 行 `registry_url=NULL` 升级后原样保留（无回填迁移，最新迁移为 009）→ DTO `registryUrl: null`（`dataset_download_state.py:72`）→ 前端 `!== 'local'`（`DatasetsPage.tsx:198`）对 null 恒 true → 显示 "Pull updates"（`DatasetDetail.tsx:101`）→ `sync()` 无守卫（`webui_dataset_service.py:343-355`）→ 原位改写用户目录 manifest digest（活体证明：`sha256:0000…` → `sha256:1797…dcb9`）
+- 非阻断 5 项：R1 对账键控窗口残留（mkdir 与 pending 记录提交间被强杀，微秒级）、R2 upsert 后 crash 悬垂注册（可经 remove_registration 恢复）、R3 损坏 marker 保留（设计意图）、R4 external 行 registryUrl 展示 "local"（与 mock 一致，非回归）、R5 过时注释引用旧私有名
+- 拆分重构逐函数比对无行为改变；回归：pytest 192 passed / 4 skipped、前端 33 files / 118 tests、pyright 0 errors
+
+### Main Agent Triage（Round 2）
+
+| Finding | Verdict | Evidence / Reason | Action |
+|---|---|---|---|
+| B4 遗留数据路径（original-blocker-open） | **accept** | closure reviewer 活体复现（E2）：legacy 行 DTO null → 前端判定 true → sync 真实改写 manifest。主 agent 核验：前端判定不能改用 `source`（mock external 行 `source='local package'` 与后端 `'local'` 不一致会误判），唯一正确修复是数据层回填，保持 'local' 哨兵语义 | 修复：新迁移 `010_backfill_external_registry_url.sql`（`UPDATE webui_datasets SET registry_url='local' WHERE source='local' AND registry_url IS NULL`）+ 迁移测试 |
+| R1-R4 | defer | 非阻断；窗口极窄或可恢复路径存在 | 记录为维护债务 |
+| R5 过时注释 | accept | 主 agent 核验 `webui_dataset_service.py:207` 注释引用旧私有名 | 修复：改为 `remove_marked_directory` |
+
+### Accepted Fixes（Round 2 closure，2026-08-06）
+
+- `ornnlab/storage/migrations/010_backfill_external_registry_url.sql`：回填 legacy external 行 `registry_url` NULL → 'local'（schema 版本 9 → 10）。
+- `tests/python/test_storage.py`：新增 `test_external_registry_url_backfill_migration_upgrades_legacy_rows`（构造 001-009 旧库 + NULL 行 → initialize → 断言回填且 managed 行不受影响）；同步更新 `test_sqlite_initializes_idempotently` 与 `test_agent_configuration_migration_...` 的版本断言 9 → 10。
+- `tests/python/test_system_api.py`、`test_event_payload_security.py`：schema 版本断言 9 → 10。
+- `webui_dataset_service.py:207`：过时注释修正。
+- 验证：pytest 193 passed / 4 skipped 全绿；全量门禁运行中。
+
+### Closure Status（Round 2）
+
+- Blocking re-review completed: 是（B1-B4+N4 修复验证；发现 B4 遗留数据路径并修复）
+- Blocking re-review passed: 是（B4 legacy 迁移回填 + 测试 + 最终全量门禁通过）
+- Deferred findings documented: R1-R4、N1-N9 已登记为维护债务（见工程计划第 9 节）
+- Implementation completeness gaps resolved: 是
+- Allowed to proceed: 是
+
+## Final Conclusion（2026-08-06）
+
+Stage 6 独立对抗性审查完整闭环：
+
+- **Round 1 Retry**（Claude Code 环境）：`implementation-adversary` fresh subagent 发现 4 阻断项（B1 重启残留死锁、B2 导入覆盖孤儿化、B3 写操作错误不可见、B4 registryUrl 哨兵不一致），全部经主 agent 独立核验 accept 并修复（含 N4 同源项与结构拆分 `dataset_directory.py`）。
+- **Round 2 Closure**：fresh subagent 复审确认 B1/B2/B3/N4 修复关闭；发现 B4 遗留数据路径（存量 `registry_url=NULL` external 行，original-blocker-open，活体复现），主 agent 以迁移 `010_backfill_external_registry_url.sql` 回填修复并补迁移测试。
+- **验证**：全量门禁 `scripts/test-after-change-web.sh` 通过（ruff、pyright 0 error、pytest 193 passed / 4 skipped、前端 33 files / 118 tests、build、Storybook smoke/static、launcher fail 0、`git diff --check`）。
+- **Review governor 决策：`pass`**（2 轮预算内收敛，blocker 4→1→0，无范围漂移，证据 E2 充分）。
+- S6-06 Done，Stage 6 Done。审查期间修复的代码、测试、迁移与文档已全部纳入工程计划并提交。

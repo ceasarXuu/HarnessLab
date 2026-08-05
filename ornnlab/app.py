@@ -39,6 +39,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     interrupted_operations = WebUiOperationService(
         active_settings, operation_tasks
     ).reconcile_interrupted()
+    dataset_service = WebUiDatasetService(active_settings)
+    interrupted_downloads = dataset_service.reconcile_interrupted_downloads()
     container_proxy = ContainerProxyRuntime()
     worker = QueueWorkerService(active_settings, container_proxy)
 
@@ -61,9 +63,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.startup_recovery = startup_recovery
     app.state.startup_docker_cleanup = startup_docker_cleanup
     app.state.interrupted_operations = interrupted_operations
+    app.state.interrupted_downloads = interrupted_downloads
     app.state.container_proxy = container_proxy
     app.state.worker = worker
-    app.state.dataset_service = WebUiDatasetService(active_settings)
+    app.state.dataset_service = dataset_service
     app.state.operation_tasks = operation_tasks
 
     @app.middleware("http")

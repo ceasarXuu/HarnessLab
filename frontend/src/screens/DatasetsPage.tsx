@@ -353,6 +353,9 @@ export function DatasetsPage({ writesEnabled = true, client, rows, search, t, on
             </tbody>
           </table>
         </div>
+        <ResourceStatus
+          error={datasetOperation.error?.message ?? datasetOperation.operation?.error?.message ?? null}
+        />
         <Pagination {...pagination} t={t} onPage={pagination.setPage} />
       </section>
       {detailRow && selected && (

@@ -88,7 +88,7 @@ def test_schema_migration_redacts_existing_database_events(tmp_path):
             (json.dumps({"config": {"agent": {"env": {"TOKEN": SECRET}}}}),),
         )
 
-    assert sqlite.initialize(settings) == 9
+    assert sqlite.initialize(settings) == 10
     with sqlite3.connect(settings.db_path) as conn:
         payload = conn.execute("SELECT payload_json FROM experiment_events").fetchone()[0]
 

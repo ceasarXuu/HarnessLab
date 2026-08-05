@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from ornnlab.models.webui import DatasetImportInput
+from ornnlab.services.dataset_directory import write_marker
 from ornnlab.services.webui_dataset_service import WebUiDatasetService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -32,6 +33,12 @@ class CachedRegistryClient:
     async def list_datasets(self):
         self.list_calls += 1
         return [SimpleNamespace(name="terminal-bench", version="2.0", task_count=89)]
+
+
+class FailingRegistryClient:
+    async def download_dataset(self, _ref, *, output_dir, **_):
+        (output_dir / "partial-task").mkdir()
+        raise RuntimeError("registry exploded")
 
 
 def _use_registry_client(monkeypatch, client) -> None:
@@ -173,10 +180,123 @@ def test_missing_path_is_exposed_without_marking_dataset_downloaded(tmp_path):
     }
 
 
+def test_failed_download_cleans_marked_directory_and_pending_record(tmp_path, monkeypatch):
+    settings = _settings(tmp_path)
+    parent = tmp_path / "chosen-parent"
+    parent.mkdir()
+    _use_registry_client(monkeypatch, FailingRegistryClient())
+    service = WebUiDatasetService(settings)
+
+    with pytest.raises(RuntimeError, match="registry exploded"):
+        asyncio.run(service.download("team/eval@1.0", str(parent), lambda *_: None))
+
+    assert not (parent / "team--eval@1.0").exists()
+    assert _pending_download_rows(settings) == []
+
+
+def test_reconcile_cleans_pending_download_left_by_interrupted_service(tmp_path):
+    settings = _settings(tmp_path)
+    parent = tmp_path / "chosen-parent"
+    parent.mkdir()
+    service = WebUiDatasetService(settings)
+    destination = parent / "team--eval@1.0"
+    destination.mkdir()
+    write_marker(destination, "team/eval@1.0")
+    service._record_pending_download("team/eval@1.0", parent, destination)
+    _insert_operation(
+        settings, "op-interrupted", "download-dataset", "failed", "team/eval@1.0"
+    )
+
+    assert service.reconcile_interrupted_downloads() == 1
+    assert not destination.exists()
+    assert _pending_download_rows(settings) == []
+
+
+def test_reconcile_keeps_pending_download_with_active_operation(tmp_path):
+    settings = _settings(tmp_path)
+    parent = tmp_path / "chosen-parent"
+    parent.mkdir()
+    service = WebUiDatasetService(settings)
+    destination = parent / "team--eval@1.0"
+    destination.mkdir()
+    write_marker(destination, "team/eval@1.0")
+    service._record_pending_download("team/eval@1.0", parent, destination)
+    _insert_operation(settings, "op-active", "download-dataset", "running", "team/eval@1.0")
+
+    assert service.reconcile_interrupted_downloads() == 0
+    assert destination.is_dir()
+    assert len(_pending_download_rows(settings)) == 1
+
+
+def test_import_local_rejects_already_registered_ref(tmp_path, monkeypatch):
+    settings = _settings(tmp_path)
+    parent = tmp_path / "chosen-parent"
+    parent.mkdir()
+    _use_registry_client(monkeypatch, FakeRegistryClient())
+    service = WebUiDatasetService(settings)
+    asyncio.run(service.download("team/eval@1.0", str(parent), lambda *_: None))
+    external = _task_dataset(tmp_path / "external")
+
+    with pytest.raises(ValueError, match="already registered"):
+        asyncio.run(
+            service.import_local(
+                DatasetImportInput(
+                    name="team/eval", path=str(external), taskCount=1, version="1.0"
+                ),
+                lambda *_: None,
+            )
+        )
+
+    dataset = asyncio.run(service.get_dataset("team/eval@1.0"))
+    assert dataset["download"]["storageKind"] == "managed"
+    assert (parent / "team--eval@1.0").is_dir()
+
+
+def test_external_import_uses_local_registry_sentinel(tmp_path):
+    settings = _settings(tmp_path)
+    dataset = _task_dataset(tmp_path / "external")
+    service = WebUiDatasetService(settings)
+    asyncio.run(
+        service.import_local(
+            DatasetImportInput(name="local/demo", path=str(dataset), taskCount=1, version="v1"),
+            lambda *_: None,
+        )
+    )
+
+    assert asyncio.run(service.get_dataset("local/demo@v1"))["registryUrl"] == "local"
+
+
 def _settings(tmp_path: Path) -> Settings:
     settings = Settings(home=tmp_path / "ornnlab")
     sqlite.initialize(settings)
     return settings
+
+
+def _pending_download_rows(settings: Settings) -> list[dict]:
+    with sqlite.connect(settings) as conn:
+        return sqlite.rows(conn, "SELECT * FROM webui_dataset_downloads")
+
+
+def _insert_operation(
+    settings: Settings, operation_id: str, operation_type: str, status: str, resource_id: str
+) -> None:
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "INSERT INTO webui_operations("
+            "id, operation_type, status, resource_type, resource_id, progress, "
+            "message, created_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                operation_id,
+                operation_type,
+                status,
+                "dataset",
+                resource_id,
+                0,
+                "Interrupted by service restart",
+                "2026-08-06T00:00:00+00:00",
+            ),
+        )
 
 
 def _task_dataset(path: Path) -> Path:

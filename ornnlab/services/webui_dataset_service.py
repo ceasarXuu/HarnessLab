@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import os
-import re
 import shutil
 import time
 from pathlib import Path
@@ -12,6 +9,16 @@ from pathlib import Path
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
 from ornnlab.services.container_image_platforms import resolve_local_task
+from ornnlab.services.dataset_directory import (
+    assert_managed_directory,
+    join_ref,
+    managed_directory_name,
+    remove_marked_directory,
+    require_existing_directory,
+    require_parent_directory,
+    split_ref,
+    write_marker,
+)
 from ornnlab.services.dataset_download_state import (
     merge_active_downloads,
     remote_dataset_dto,
@@ -24,7 +31,6 @@ from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
 logger = logging.getLogger(__name__)
-_MARKER_FILE = ".ornnlab-dataset.json"
 _LAST_PARENT_KEY = "last_dataset_parent_path"
 _REGISTRY_CACHE_TTL_SECONDS = 60
 
@@ -64,9 +70,9 @@ class WebUiDatasetService:
         local = self._local_dataset(ref)
         if local:
             return merge_active_downloads(self.settings, [local])[0]
-        name, version = _split_ref(ref)
+        name, version = split_ref(ref)
         metadata = await _registry_client_factory().create().get_dataset_metadata(
-            _join_ref(name, version)
+            join_ref(name, version)
         )
         remote = remote_dataset_dto(metadata.name, metadata.version, len(metadata.task_ids))
         return merge_active_downloads(self.settings, [remote])[0]
@@ -113,9 +119,9 @@ class WebUiDatasetService:
         elif local and local["source"] == "local":
             task_names: list[str] = []
         else:
-            name, version = _split_ref(ref)
+            name, version = split_ref(ref)
             metadata = await _registry_client_factory().create().get_dataset_metadata(
-                _join_ref(name, version)
+                join_ref(name, version)
             )
             task_names = [task_id.get_name() for task_id in metadata.task_ids]
         if query:
@@ -147,19 +153,13 @@ class WebUiDatasetService:
             raise ValueError(
                 "dataset is already registered; relocate it or remove its registration first"
             )
-        name, version = _split_ref(ref)
-        parent = _require_parent_directory(parent_path)
-        destination = parent / _managed_directory_name(ref)
+        name, version = split_ref(ref)
+        parent = require_parent_directory(parent_path)
+        destination = parent / managed_directory_name(ref)
         if destination.exists():
             raise ValueError(f"dataset destination already exists: {destination}")
 
         self._set_last_parent(parent)
-        destination.mkdir()
-        _write_marker(destination, ref)
-        progress(5, "Preparing dataset directory")
-        self._record_pending_download(ref, parent, destination)
-        progress(10, "Starting dataset download")
-        logger.info("Preparing Dataset download ref=%s destination=%s", ref, destination)
         total = 0
         completed = 0
 
@@ -175,8 +175,14 @@ class WebUiDatasetService:
             progress(percentage, f"Downloaded {completed} of {total} tasks")
 
         try:
+            destination.mkdir()
+            write_marker(destination, ref)
+            progress(5, "Preparing dataset directory")
+            self._record_pending_download(ref, parent, destination)
+            progress(10, "Starting dataset download")
+            logger.info("Preparing Dataset download ref=%s destination=%s", ref, destination)
             items = await _registry_client_factory().create().download_dataset(
-                _join_ref(name, version),
+                join_ref(name, version),
                 output_dir=destination,
                 export=True,
                 on_total_known=on_total_known,
@@ -197,10 +203,53 @@ class WebUiDatasetService:
                 "Downloaded Dataset ref=%s destination=%s tasks=%s", ref, destination, len(items)
             )
         except BaseException:
-            _remove_marked_directory(destination, ref, allow_legacy=False)
+            # 目录为本进程刚创建：空目录（marker 尚未写入）删除安全，rmtree 不跟随符号链接；
+            # 已写入 marker 的目录由 remove_marked_directory 校验归属后删除。
+            if destination.is_dir() and not any(destination.iterdir()):
+                shutil.rmtree(destination)
+            remove_marked_directory(destination, ref, allow_legacy=False)
             raise
         finally:
             self._clear_pending_download(ref)
+
+    def reconcile_interrupted_downloads(self) -> int:
+        """Remove pending download records whose owning operation was interrupted by a
+        service restart, together with their OrnnLab-marked directories."""
+        with sqlite.connect(self.settings) as conn:
+            pending = sqlite.rows(
+                conn, "SELECT ref, destination_path FROM webui_dataset_downloads"
+            )
+            active_refs = {
+                str(row["resource_id"])
+                for row in conn.execute(
+                    "SELECT resource_id FROM webui_operations "
+                    "WHERE operation_type = 'download-dataset' "
+                    "AND status IN ('queued', 'running')"
+                )
+            }
+        cleaned = 0
+        for row in pending:
+            if row["ref"] in active_refs:
+                continue
+            destination = Path(row["destination_path"])
+            try:
+                remove_marked_directory(destination, row["ref"], allow_legacy=False)
+            except ValueError:
+                logger.warning(
+                    "Refusing to clean Dataset directory without OrnnLab marker "
+                    "ref=%s path=%s",
+                    row["ref"],
+                    destination,
+                )
+                continue
+            self._clear_pending_download(row["ref"])
+            cleaned += 1
+            logger.info(
+                "Cleaned interrupted Dataset download ref=%s path=%s", row["ref"], destination
+            )
+        if cleaned:
+            logger.warning("Reconciled interrupted Dataset downloads count=%s", cleaned)
+        return cleaned
 
     def cancel_download(self, ref: str) -> None:
         with sqlite.connect(self.settings) as conn:
@@ -210,7 +259,7 @@ class WebUiDatasetService:
         if not rows:
             raise ValueError("dataset download is already complete")
         destination = Path(rows[0]["destination_path"])
-        _remove_marked_directory(destination, ref, allow_legacy=False)
+        remove_marked_directory(destination, ref, allow_legacy=False)
         self._clear_pending_download(ref)
         logger.info("Cancelled Dataset download ref=%s destination=%s", ref, destination)
 
@@ -218,23 +267,23 @@ class WebUiDatasetService:
         row = self._require_dataset_row(ref)
         if row.get("storage_kind") != "managed":
             raise ValueError("only OrnnLab-managed datasets can be moved")
-        source = _require_existing_directory(row.get("local_path"))
-        _assert_managed_directory(source, ref, self.settings.datasets_dir)
-        parent = _require_parent_directory(parent_path)
-        destination = parent / _managed_directory_name(ref)
+        source = require_existing_directory(row.get("local_path"))
+        assert_managed_directory(source, ref, self.settings.datasets_dir)
+        parent = require_parent_directory(parent_path)
+        destination = parent / managed_directory_name(ref)
         if destination.exists():
             raise ValueError(f"dataset destination already exists: {destination}")
         shutil.move(str(source), str(destination))
-        _write_marker(destination, ref)
+        write_marker(destination, ref)
         self._update_path(ref, destination)
         self._set_last_parent(parent)
         logger.info("Moved Dataset ref=%s source=%s destination=%s", ref, source, destination)
 
     def relocate(self, ref: str, path_value: str) -> None:
         row = self._require_dataset_row(ref)
-        path = _require_existing_directory(path_value)
+        path = require_existing_directory(path_value)
         if row.get("storage_kind") == "managed":
-            _assert_managed_directory(path, ref, self.settings.datasets_dir, allow_legacy=False)
+            assert_managed_directory(path, ref, self.settings.datasets_dir, allow_legacy=False)
         elif not _local_tasks(path, ref):
             raise ValueError("external Dataset directory contains no valid Harbor tasks")
         self._update_path(ref, path)
@@ -244,9 +293,9 @@ class WebUiDatasetService:
         row = self._require_dataset_row(ref)
         if row.get("storage_kind") != "managed":
             raise ValueError("external Dataset files cannot be deleted by OrnnLab")
-        path = _require_existing_directory(row.get("local_path"))
-        _assert_managed_directory(path, ref, self.settings.datasets_dir)
-        _remove_marked_directory(
+        path = require_existing_directory(row.get("local_path"))
+        assert_managed_directory(path, ref, self.settings.datasets_dir)
+        remove_marked_directory(
             path, ref, allow_legacy=True, legacy_root=self.settings.datasets_dir
         )
         self.remove_registration(ref)
@@ -262,27 +311,32 @@ class WebUiDatasetService:
         logger.info("Removed Dataset registration ref=%s", ref)
 
     async def import_local(self, payload: DatasetImportInput, progress) -> None:
-        source_path = _require_existing_directory(payload.path)
-        tasks = _local_tasks(source_path, _join_ref(payload.name, payload.version))
+        ref = join_ref(payload.name, payload.version)
+        if self._dataset_row(ref):
+            raise ValueError(
+                "dataset is already registered; relocate it or remove its registration first"
+            )
+        source_path = require_existing_directory(payload.path)
+        tasks = _local_tasks(source_path, ref)
         if not tasks:
             raise ValueError("dataset directory contains no valid Harbor task directories")
         if payload.task_count not in {0, len(tasks)}:
             raise ValueError("taskCount must match the discovered Harbor task count")
         progress(75, "Registering local dataset")
         self._upsert_dataset(
-            ref=_join_ref(payload.name, payload.version),
+            ref=ref,
             name=payload.name,
             version=payload.version,
             source="local",
             visibility="private",
-            registry_url=None,
+            registry_url="local",
             local_path=str(source_path),
             storage_kind="external",
             task_count=len(tasks),
         )
         logger.info(
             "Registered external Dataset ref=%s path=%s",
-            _join_ref(payload.name, payload.version),
+            join_ref(payload.name, payload.version),
             source_path,
         )
 
@@ -431,68 +485,3 @@ def _registry_client_factory():
     from harbor.registry.client.factory import RegistryClientFactory
 
     return RegistryClientFactory
-
-
-def _require_parent_directory(value: str) -> Path:
-    path = Path(value).expanduser().resolve()
-    if not path.is_dir():
-        raise ValueError("dataset parent directory must exist")
-    if not os.access(path, os.W_OK | os.X_OK):
-        raise ValueError("dataset parent directory is not writable")
-    return path
-
-
-def _require_existing_directory(value: str | None) -> Path:
-    if not value:
-        raise ValueError("dataset path is not available")
-    path = Path(value).expanduser().resolve()
-    if not path.is_dir():
-        raise ValueError("dataset path must be an existing directory")
-    return path
-
-
-def _managed_directory_name(ref: str) -> str:
-    name = re.sub(r"[^A-Za-z0-9._@-]+", "-", ref.replace("/", "--")).strip(".-")
-    if not name:
-        raise ValueError("dataset reference cannot produce a directory name")
-    return name
-
-
-def _write_marker(path: Path, ref: str) -> None:
-    (path / _MARKER_FILE).write_text(json.dumps({"ref": ref}, sort_keys=True), encoding="utf-8")
-
-
-def _assert_managed_directory(
-    path: Path, ref: str, legacy_root: Path, *, allow_legacy: bool = True
-) -> None:
-    marker = path / _MARKER_FILE
-    if marker.is_file():
-        try:
-            if json.loads(marker.read_text(encoding="utf-8")).get("ref") == ref:
-                return
-        except json.JSONDecodeError:
-            pass
-    if allow_legacy and path.parent.resolve() == legacy_root.resolve():
-        return
-    raise ValueError("dataset directory is not managed by OrnnLab")
-
-
-def _remove_marked_directory(
-    path: Path, ref: str, *, allow_legacy: bool, legacy_root: Path | None = None
-) -> None:
-    if not path.exists():
-        return
-    root = legacy_root or path.parent
-    _assert_managed_directory(path, ref, root, allow_legacy=allow_legacy)
-    shutil.rmtree(path)
-
-
-
-
-def _split_ref(ref: str) -> tuple[str, str | None]:
-    name, separator, version = ref.rpartition("@")
-    return (name, version) if separator else (ref, None)
-
-
-def _join_ref(name: str, version: str | None) -> str:
-    return f"{name}@{version}" if version else name

@@ -14,7 +14,7 @@
 | 3 | 后端 API 破坏性升级 | Done | `/api/webui/v1` 已成为唯一产品 API；全量质量门、Codex Web Preview 和两轮 OpenCode 审计均已完成 |
 | 4 | API 模式联调 | Done | 已以真实 `/api/webui/v1`、Docker、Harbor 与 Hub 可观察状态完成全栈验证；直接启动前端仍默认 mock |
 | 5 | 发布前硬化 | Done | 严格 API 构建配置、跨平台启动与 CI、真实 Harbor 条件回归、两轮独立 Codex 审查均已闭环 |
-| 6 | Dataset 存储位置管理 | In progress | S6-01 至 S6-05 已完成并通过前后端门禁；S6-06 等待对抗性审查结论 |
+| 6 | Dataset 存储位置管理 | Done | S6-01 至 S6-05 已完成并通过前后端门禁；S6-06 独立对抗性审查（两轮，Claude Code fresh subagent）无阻断项，遗留数据回填迁移 010 已闭环 |
 | 7 | 应用级守护进程 | Done | 应用级 daemon、CLI 生命周期、崩溃重启、System 状态接入与 hardening 测试已落地；全量门禁通过，最终 subagent 复审 APPROVED |
 | 8 | System 健康看板 | Done | 判别联合契约、真实 Docker daemon 状态、分组卡片、Storybook 状态矩阵及前后端全量门禁均已完成 |
 | 9 | Job 列表实时进度 | Done | 移除状态列，新增任务结果分类、运行中 loading 与每秒运行秒表；真实 API 和全量门禁通过 |
@@ -81,7 +81,7 @@ Stage 6 的目标是让用户选择任意本地父目录下载 Harbor registry D
 | S6-03 | 迁移、重定位与删除边界 | managed Dataset 支持异步移动；路径丢失可重新定位或移除登记；存在的 managed 目录只能删除，不能直接遗留未登记目录 | Done |
 | S6-04 | 本地导入边界 | external 导入仅登记与加载；重新定位或移除登记不会删除用户原始目录；删除请求被 API 拒绝 | Done |
 | S6-05 | 前端与 mock 对等 | API/mock/MSW 使用同一 DTO、Operation 与错误语义；Dataset 和 New Job 路径控件通过本机原生目录选择器回填只读路径；Storybook 覆盖 managed、external、path-unavailable 状态 | Done |
-| S6-06 | 回归与审查 | 已通过后端 API/文件边界、前端交互、Storybook 与全量门禁；待独立对抗性审查确认无阻断项 | In progress |
+| S6-06 | 回归与审查 | 独立对抗性审查两轮（2026-08-06，Claude Code fresh subagent `implementation-adversary`）确认无阻断项。Round 1 发现 B1 重启残留死锁、B2 导入覆盖孤儿化、B3 写操作错误不可见、B4 registryUrl 哨兵不一致，全部修复并经 Round 2 closure 复审；closure 发现 B4 遗留数据路径（存量 external 行 NULL），以迁移 `010_backfill_external_registry_url.sql` 回填修复。全量门禁通过（pytest 193 passed / 4 skipped、前端 33 files / 118 tests） | Done |
 
 ## 6. Stage 7 应用级守护进程
 
@@ -112,6 +112,7 @@ Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进�
   显式 `keep_containers` 保持 `retain`，不按名称、路径或本机 Docker 网桥猜测归属。
 - 通过事件服务返回 Job 事件；事件写入统一脱敏，Harbor running 事件不再持久化完整配置，migration 009 与启动清理覆盖历史数据库和 JSONL 镜像；通过 Operation 表返回异步状态与错误。
 - 添加 `tests/python/test_webui_api.py`，验证 API 包络、旧路由移除、资源写操作、字段拒绝、Operation、系统失败语义与真实 Trial DTO 边界。
+- Dataset 存储边界加固（Stage 6 审查闭环）：下载的 mkdir/marker/pending 记录移入统一 try 清理；启动对账 `reconcile_interrupted_downloads()` 清理服务重启中断的下载残留（无活跃 operation 的 pending 行与标记目录）；`import_local` 拒绝已注册 ref，禁止 INSERT OR REPLACE 覆盖 managed 注册；external 注册统一写 `registry_url='local'` 哨兵，迁移 `010_backfill_external_registry_url.sql` 回填存量 NULL 行；目录安全原语（ref 映射、marker、受管目录断言、删除）拆分至 `ornnlab/services/dataset_directory.py`。
 
 ### 前端
 
@@ -178,6 +179,8 @@ Compose 双服务冒烟证明 main、sidecar 与网络均带实例/run 标签，
 复扫为 0；真实 Harbor `hello-world@1.0` + oracle 运行中 inspect 证明 ownership 覆盖已
 进入 Harbor 创建链，任务自然结束后目标容器和项目网络均为 0。
 
+2026-08-06 的 Stage 6 独立对抗性审查与闭环全量门禁通过：审查两轮（Round 1 发现 4 阻断项、Round 2 closure 复审 + B4 遗留路径）均由 Claude Code fresh subagent `implementation-adversary` 执行并附活体复现；全部阻断项修复后全量门禁绿：Ruff、Pyright（0 error / 0 warning）、Python 193 passed / 4 skipped、前端 33 files / 118 tests、lint、typecheck、生产构建、Storybook smoke/static build、launcher 和 `git diff --check`。审查报告见 `vs_review/2026-08-06-stage6-dataset-storage-review.md`。
+
 `pytest` 的 3 个 warning 来自 Starlette TestClient 和 Supabase 客户端的第三方 deprecation warning，不是测试失败。
 
 OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 异步生命周期、Dataset 取消下载、终态 Job 取消、Agent 超时映射、旧路由和 Playwright 门禁问题均已修复。第二轮只读审计会话 `ses_0b3178c56ffeipe58UCLgtb7bw` 的结论为 `NO BLOCKERS`。
@@ -219,9 +222,8 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 
 ## 9. 后续执行顺序
 
-1. 完成 Stage 6 的独立对抗性审查，确认 Dataset 任意父目录下载、导入、移动和删除边界无阻断项。
-2. 进入 Stage 7，先实现应用级守护进程核心生命周期和状态文件，再接入 System 页。
-3. 持续保持唯一 `/api/webui/v1` 契约；发现缺口时直接升级该契约，不引入旧 API adapter、API-to-mock 回退或第二套 DTO。
+1. 维护债务登记（非阻断，来自 Stage 6 审查）：取消竞态终态（N1）、sizeBytes 全树扫描缓存（N2）、跨卷 move 失败清理（N3）、mock 写操作校验缺口（N5）、list_tasks registry 不可用 500（N6）、行级按钮 Operation 中不禁用（N7）、default parent 存在性校验（N8）、导入文本输入替代原生选择器（N9）、对账键控窗口残留（R1）、upsert 后 crash 悬垂注册（R2）。如需处理应单列维护任务，避免混入新阶段范围。
+2. 持续保持唯一 `/api/webui/v1` 契约；发现缺口时直接升级该契约，不引入旧 API adapter、API-to-mock 回退或第二套 DTO。
 
 ## 10. 运行经验
 
@@ -244,3 +246,6 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
   回收时先从归属容器读取 Compose project，再使用显式资源 ID 清理，禁止用名称模式或
   `docker system prune` 扩大范围。多个数据目录共享 daemon 时必须同时过滤稳定实例 ID。
 - 高密度 JSDOM 页面断言在 Windows runner 上可明显慢于 macOS；为该测试显式声明合理时限，避免默认 5 秒把平台性能差异误判为功能失败。
+- 前端测试必须用 `npm test`（`--pool vmThreads --maxWorkers=1`）运行；直接 `npx vitest run` 使用默认 `forks` pool，jsdom 29 下 `window.localStorage` 会退化为普通 Object（`getItem` 等 Storage 方法丢失），导致 App 级测试大规模虚假失败。显式 `environmentOptions.jsdom.url` 已加进 vitest 配置加固，但 pool 差异仍存在。
+- 独立对抗性审查的 fresh subagent 在 Claude Code 环境运行正常（Codex 环境下 fresh 派生任务投递不稳定，两次失联）；审查输出含活体复现（/tmp 脚本）时，主 agent 应复核关键代码路径而非只信结论，且评审报告必须与代码一起提交。
+- 审查发现「新写入修复」与「存量数据修复」是两个问题：修复写入路径后必须检查是否有遗留数据（存量行/旧 schema）仍走旧行为，必要时补数据迁移（如 010 回填）而非只改前端判定；改用非哨兵字段判定前需确认 mock 与后端的字段取值完全一致。

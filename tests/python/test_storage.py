@@ -10,10 +10,52 @@ def test_sqlite_initializes_idempotently(settings):
     first = sqlite.initialize(settings)
     second = sqlite.initialize(settings)
 
-    assert first == 9
-    assert second == 9
+    assert first == 10
+    assert second == 10
     assert settings.db_path.exists()
     assert settings.instance_id
+
+
+def test_external_registry_url_backfill_migration_upgrades_legacy_rows(tmp_path):
+    settings = Settings(home=tmp_path)
+    migrations = sorted(sqlite.MIGRATIONS_DIR.glob("00[1-9]_*.sql"))
+    with sqlite3.connect(settings.db_path) as conn:
+        conn.execute(
+            "CREATE TABLE schema_migrations("
+            "version text primary key, applied_at text not null default CURRENT_TIMESTAMP)"
+        )
+        for migration in migrations:
+            conn.executescript(migration.read_text(encoding="utf-8"))
+            conn.execute("INSERT INTO schema_migrations(version) VALUES (?)", (migration.stem,))
+        conn.execute(
+            "INSERT INTO webui_datasets("
+            "ref, name, version, source, visibility, registry_url, local_path, storage_kind, "
+            "task_count, created_at, updated_at, deleted_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+            (
+                "legacy/local@v1", "legacy", "v1", "local", "private", None,
+                "/tmp/legacy-dataset", "external", 1,
+                "2026-07-01T00:00:00Z", "2026-07-01T00:00:00Z",
+            ),
+        )
+        conn.execute(
+            "INSERT INTO webui_datasets("
+            "ref, name, version, source, visibility, registry_url, local_path, storage_kind, "
+            "task_count, created_at, updated_at, deleted_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+            (
+                "harbor/reg@2.0", "reg", "2.0", "harbor registry", "public",
+                "https://hub.harborframework.com", "/tmp/managed-dataset", "managed", 5,
+                "2026-07-01T00:00:00Z", "2026-07-01T00:00:00Z",
+            ),
+        )
+
+    assert sqlite.initialize(settings) == 10
+    with sqlite.connect(settings) as conn:
+        rows = sqlite.rows(conn, "SELECT ref, registry_url FROM webui_datasets")
+    by_ref = {row["ref"]: row["registry_url"] for row in rows}
+    assert by_ref["legacy/local@v1"] == "local"
+    assert by_ref["harbor/reg@2.0"] == "https://hub.harborframework.com"
 
 
 def test_existing_home_marker_is_upgraded_with_stable_instance_id(tmp_path):
@@ -96,7 +138,7 @@ def test_agent_configuration_migration_preserves_profiles_and_drops_system_prese
             (preset["id"], json.dumps(preset)),
         )
 
-    assert sqlite.initialize(settings) == 9
+    assert sqlite.initialize(settings) == 10
     with sqlite3.connect(settings.db_path) as conn:
         stored = conn.execute(
             "SELECT config_json FROM agents WHERE id = ?", (existing["id"],)
