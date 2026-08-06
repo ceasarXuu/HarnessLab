@@ -16,6 +16,7 @@ v1.0.5 将 OrnnLab 建设为基于 Harbor 的本地实验控制台。当前前�
 | [应用级守护进程工程设计](dev-daemon/engineering-design.md) | Stage 7 的阶段门、完整性矩阵、日志链、测试与回滚方案 |
 | [应用级守护进程实现设计](dev-daemon/implementation-design.md) | daemon 模块边界、state schema、进程身份、生命周期、日志脱敏、CLI/API 契约与测试门禁 |
 | [System 健康看板](system-health/README.md) | System 分组看板、组件专属状态和结构化健康契约 |
+| [第一轮走查](first-round-walkthrough/README.md) | v1.0.5 用户测试阶段的走查目标、判定口径、进度与问题台账 |
 | [WebUI API 契约](../../architecture/frontend-api-contract.md) | `/api/webui/v1` 的唯一对外接口规范 |
 
 ## 文档规则

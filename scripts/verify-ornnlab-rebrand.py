@@ -53,6 +53,8 @@ DOC_INVENTORY = {
     "docs/releases/v1.0.5/dev-daemon/engineering-design.md": "rename-now",
     "docs/releases/v1.0.5/dev-daemon/implementation-design.md": "rename-now",
     "docs/releases/v1.0.5/engineering-plan.md": "rename-now",
+    "docs/releases/v1.0.5/first-round-walkthrough/README.md": "rename-now",
+    "docs/releases/v1.0.5/first-round-walkthrough/issues.md": "rename-now",
     "docs/releases/v1.0.5/prd.md": "rename-now",
     "docs/releases/v1.0.5/system-health/README.md": "rename-now",
     "docs/releases/v1.0.5/system-health/implementation-design.md": "rename-now",
