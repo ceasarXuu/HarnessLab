@@ -447,4 +447,24 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.queryByText(/harbor auth/)).not.toBeInTheDocument()
   })
+
+  it('refreshes system health periodically while the system page is open', async () => {
+    const client = createMockWebUiClient()
+    const listSystemHealth = vi.spyOn(client, 'listSystemHealth')
+    vi.useFakeTimers()
+    render(<App client={client} />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'System' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    expect(screen.getByText('OrnnLab Service')).toBeInTheDocument()
+    const callsAfterLoad = listSystemHealth.mock.calls.length
+    expect(callsAfterLoad).toBeGreaterThanOrEqual(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(listSystemHealth.mock.calls.length).toBeGreaterThan(callsAfterLoad)
+  })
 })

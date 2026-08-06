@@ -39,11 +39,11 @@ v1.0.5 计划内阶段（Stage 0-12）均已 Done。本轮走查以真实用户�
 
 | 项目 | 数量 |
 |---|---|
-| 累计反馈问题 | 2 |
+| 累计反馈问题 | 3 |
 | open | 0 |
-| triaged | 2 |
+| triaged | 1 |
 | fixing | 0 |
-| closed | 0 |
+| closed | 2 |
 
 > 明细见 [issues.md](issues.md)。每次记录或状态变更时同步更新本表。
 

@@ -233,7 +233,7 @@ def _gpu_component() -> dict:
         return _gpu_unavailable("not-detected")
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
         _log_probe_transition("resource-gpu", "error", exc)
-        return _gpu_unavailable("error")
+        return _gpu_unavailable("error", error=_probe_error_detail(exc))
     if not values:
         _log_probe_transition("resource-gpu", "not-detected")
         return _gpu_unavailable("not-detected")
@@ -243,18 +243,28 @@ def _gpu_component() -> dict:
         "state": _usage_state(usage),
         "usagePercent": usage,
         "deviceCount": len(values),
+        "error": None,
         "actions": [],
     }
     _log_probe_transition("resource-gpu", component["state"])
     return component
 
 
-def _gpu_unavailable(state: str) -> dict:
+def _probe_error_detail(exc: Exception) -> str:
+    if isinstance(exc, subprocess.CalledProcessError):
+        stderr = (exc.stderr or "").strip()
+        stdout = (exc.stdout or "").strip()
+        return stderr or stdout or f"nvidia-smi exited with {exc.returncode}"
+    return str(exc)
+
+
+def _gpu_unavailable(state: str, error: str | None = None) -> dict:
     return {
         "kind": "resource-gpu",
         "state": state,
         "usagePercent": None,
         "deviceCount": 0,
+        "error": error,
         "actions": [],
     }
 

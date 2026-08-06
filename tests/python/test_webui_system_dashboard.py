@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 from subprocess import CompletedProcess
 
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.system_health_probe import (
     _disk_state,
+    _gpu_component,
     _log_probe_transition,
     _probe_signatures,
     _usage_state,
@@ -105,3 +107,62 @@ def test_system_health_logs_probe_failures_only_on_state_change(caplog):
     ]
     assert len(failure_logs) == 1
     assert len(recovery_logs) == 1
+
+
+def _run_gpu_probe(monkeypatch, error: Exception) -> dict:
+    def _raising_run(*_args, **_kwargs):
+        raise error
+
+    monkeypatch.setattr(
+        "ornnlab.services.system_health_probe.subprocess.run", _raising_run, raising=False
+    )
+    return _gpu_component()
+
+
+def test_gpu_probe_surfaces_nvidia_smi_error_detail(monkeypatch):
+    component = _run_gpu_probe(
+        monkeypatch,
+        subprocess.CalledProcessError(
+            18,
+            ["nvidia-smi"],
+            stderr="Failed to initialize NVML: Driver/library version mismatch",
+        ),
+    )
+
+    assert component["state"] == "error"
+    assert component["usagePercent"] is None
+    assert component["deviceCount"] == 0
+    assert component["error"] == "Failed to initialize NVML: Driver/library version mismatch"
+
+
+def test_gpu_probe_falls_back_to_returncode_when_smi_has_no_output(monkeypatch):
+    component = _run_gpu_probe(
+        monkeypatch, subprocess.CalledProcessError(18, ["nvidia-smi"])
+    )
+
+    assert component["state"] == "error"
+    assert component["error"] == "nvidia-smi exited with 18"
+
+
+def test_gpu_probe_not_detected_has_no_error(monkeypatch):
+    component = _run_gpu_probe(monkeypatch, FileNotFoundError())
+
+    assert component["state"] == "not-detected"
+    assert component["error"] is None
+
+
+def test_gpu_probe_reads_usage_without_error(monkeypatch):
+    monkeypatch.setattr(
+        "ornnlab.services.system_health_probe.subprocess.run",
+        lambda *_args, **_kwargs: CompletedProcess(
+            ["nvidia-smi"], 0, stdout="7\n", stderr=""
+        ),
+        raising=False,
+    )
+
+    component = _gpu_component()
+
+    assert component["state"] == "normal"
+    assert component["usagePercent"] == 7.0
+    assert component["deviceCount"] == 1
+    assert component["error"] is None

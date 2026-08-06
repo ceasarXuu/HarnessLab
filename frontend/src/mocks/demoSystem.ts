@@ -116,7 +116,7 @@ export const systemRows: SystemRow[] = [
   },
   {
     kind: 'resource-gpu',
-    state: 'not-detected', usagePercent: null, deviceCount: 0, actions: [],
+    state: 'not-detected', usagePercent: null, deviceCount: 0, error: null, actions: [],
   },
   {
     kind: 'resource-storage',

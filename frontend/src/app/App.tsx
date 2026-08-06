@@ -133,6 +133,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     || selectedJob?.status === 'running'
 
   usePollingRefresh(jobsResource.refresh, route.page === 'jobs' && route.jobView === 'list' && hasLiveJob)
+  usePollingRefresh(systemResource.refresh, route.page === 'system', 2_000)
 
   useEffect(() => {
     if (agentsResource.loading || datasetsResource.loading || environmentsResource.loading) return

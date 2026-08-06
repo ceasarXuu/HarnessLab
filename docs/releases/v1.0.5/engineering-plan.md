@@ -249,3 +249,4 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - 前端测试必须用 `npm test`（`--pool vmThreads --maxWorkers=1`）运行；直接 `npx vitest run` 使用默认 `forks` pool，jsdom 29 下 `window.localStorage` 会退化为普通 Object（`getItem` 等 Storage 方法丢失），导致 App 级测试大规模虚假失败。显式 `environmentOptions.jsdom.url` 已加进 vitest 配置加固，但 pool 差异仍存在。
 - 独立对抗性审查的 fresh subagent 在 Claude Code 环境运行正常（Codex 环境下 fresh 派生任务投递不稳定，两次失联）；审查输出含活体复现（/tmp 脚本）时，主 agent 应复核关键代码路径而非只信结论，且评审报告必须与代码一起提交。
 - 审查发现「新写入修复」与「存量数据修复」是两个问题：修复写入路径后必须检查是否有遗留数据（存量行/旧 schema）仍走旧行为，必要时补数据迁移（如 010 回填）而非只改前端判定；改用非哨兵字段判定前需确认 mock 与后端的字段取值完全一致。
+- 本机 shell 若设置了 Clash 等本地代理变量（`http_proxy`/`HTTPS_PROXY=http://127.0.0.1:7890`），完整门禁中 TestClient 的 httpx 连接可能在代理抖动时出现 `RemoteProtocolError: Server disconnected`，造成 pytest 偶发失败（与本机负载相关，非确定性）。判定标准：单测隔离与连续全量复跑均通过、失败 traceback 经过 `httpcore/_async/http_proxy.py` 时，先归因为环境代理而非代码；后续如再复现，考虑在测试环境显式剥离代理变量或为 TestClient 固定 no_proxy。

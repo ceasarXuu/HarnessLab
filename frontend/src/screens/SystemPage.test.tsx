@@ -41,6 +41,25 @@ describe('SystemPage', () => {
     expect(within(docker).getByText('27.5.1')).toBeVisible()
   })
 
+  it('surfaces the GPU probe error reason inside the GPU card', () => {
+    const rows = systemRows.map((row) => row.kind === 'resource-gpu'
+      ? { ...row, state: 'error' as const, error: 'Failed to initialize NVML: Driver/library version mismatch' }
+      : row)
+
+    render(
+      <SystemPage
+        client={createMockWebUiClient()}
+        rows={rows}
+        t={getTranslator('en')}
+        onRefresh={async () => undefined}
+      />,
+    )
+
+    const gpu = screen.getByRole('article', { name: 'GPU usage' })
+    expect(within(gpu).getByText('Error')).toBeVisible()
+    expect(within(gpu).getByText('Failed to initialize NVML: Driver/library version mismatch')).toBeVisible()
+  })
+
   it('does not offer Docker cache cleanup while the daemon is stopped', () => {
     const rows = systemRows.map((row) => row.kind === 'docker'
       ? { ...row, state: 'not-running' as const, serverVersion: null, actions: [], error: 'daemon unavailable' }

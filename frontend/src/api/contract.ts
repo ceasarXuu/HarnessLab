@@ -389,6 +389,7 @@ export type SystemComponentDto =
       state: 'normal' | 'elevated' | 'high' | 'not-detected' | 'error'
       usagePercent: number | null
       deviceCount: number
+      error: string | null
     })
   | (SystemComponentBaseDto & {
       kind: 'resource-storage'

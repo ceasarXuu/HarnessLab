@@ -129,7 +129,7 @@ export type SystemRow =
   | (SystemRowBase & { kind: 'docker'; state: 'running' | 'not-running' | 'not-installed' | 'error'; context: string | null; clientVersion: string | null; serverVersion: string | null; startCommand: string; executablePath: string; error: string | null })
   | (SystemRowBase & { kind: 'storage'; state: 'available' | 'unavailable'; sizeBytes: number | null; path: string; error: string | null })
   | (SystemRowBase & { kind: 'resource-cpu'; state: 'normal' | 'elevated' | 'high' | 'unavailable'; usagePercent: number | null; logicalCores: number | null })
-  | (SystemRowBase & { kind: 'resource-gpu'; state: 'normal' | 'elevated' | 'high' | 'not-detected' | 'error'; usagePercent: number | null; deviceCount: number })
+  | (SystemRowBase & { kind: 'resource-gpu'; state: 'normal' | 'elevated' | 'high' | 'not-detected' | 'error'; usagePercent: number | null; deviceCount: number; error: string | null })
   | (SystemRowBase & { kind: 'resource-storage'; state: 'normal' | 'low' | 'critical' | 'unavailable'; availableBytes: number | null; totalBytes: number | null; path: string })
 
 export interface DatasetRow {
