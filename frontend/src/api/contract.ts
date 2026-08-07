@@ -151,7 +151,7 @@ export interface JobEventDto {
   occurredAt: string
 }
 
-export type TrialStatus = 'passed' | 'failed' | 'cancelled' | 'interrupted'
+export type TrialStatus = 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface TrialDto {
   costUsd: number | null

@@ -14,6 +14,8 @@ from ornnlab.services.harbor_paths import (
     resolve_harbor_log_path,
 )
 from ornnlab.services.harbor_results import (
+    running_trial_descriptors,
+    running_trial_dto,
     trial_log_path,
     trial_result_payloads,
 )
@@ -220,15 +222,18 @@ class WebUiJobService:
         if not run.get("job_dir"):
             return []
         config = self._job_config(job_id)
-        results = trial_result_payloads(
-            Path(run["job_dir"]),
-            run.get("harbor_job_name") or config.get("job_name"),
-            run.get("result_path"),
-        )
-        return [
+        job_path = Path(run["job_dir"])
+        job_name = run.get("harbor_job_name") or config.get("job_name")
+        result_path = run.get("result_path")
+        trials = [
             _trial_dto(job_id, item, config.get("pricing"))
-            for item in results
+            for item in trial_result_payloads(job_path, job_name, result_path)
         ]
+        trials.extend(
+            running_trial_dto(job_id, descriptor)
+            for descriptor in running_trial_descriptors(job_path, job_name, result_path)
+        )
+        return trials
 
     def leaderboard(
         self, dataset_ref: str, query: str | None = None, metric: str | None = None

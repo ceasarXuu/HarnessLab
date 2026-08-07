@@ -91,3 +91,68 @@ def test_running_job_rejects_unsafe_native_result_name(client, settings):
 
     assert response.status_code == 200
     assert response.json()["data"]["trial"]["total"] == 0
+
+
+def test_running_job_trials_list_includes_in_progress_trials(client, settings):
+    create_test_agent(settings)
+    created = ExperimentService(settings).create(
+        ExperimentCreate(
+            name="Live trials",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench-sample"],
+            n_tasks=None,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    jobs_dir = settings.home / "shared-jobs"
+    native_dir = jobs_dir / "live-trials"
+    native_dir.mkdir(parents=True)
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    (native_dir / "result.json").write_text(
+        json.dumps({"n_total_trials": 2, "stats": {}}), encoding="utf-8"
+    )
+
+    completed = native_dir / "sqlite__def"
+    completed.mkdir()
+    (completed / "config.json").write_text(
+        json.dumps({"trial_name": "sqlite__def", "task": {"path": "sample/sqlite-with-gcov"}}),
+        encoding="utf-8",
+    )
+    (completed / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-1",
+                "task_name": "sqlite-with-gcov",
+                "started_at": "2026-08-07T13:09:07Z",
+                "finished_at": "2026-08-07T13:14:19Z",
+                "agent_result": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    running = native_dir / "chess__abc"
+    running.mkdir()
+    (running / "config.json").write_text(
+        json.dumps({"trial_name": "chess__abc", "task": {"path": "sample/chess-best-move"}}),
+        encoding="utf-8",
+    )
+    (running / "trial.log").write_text("agent output\n", encoding="utf-8")
+
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'running', started_at = ?, job_dir = ?, "
+            "harbor_job_name = ?, result_path = NULL WHERE id = ?",
+            ("2026-08-07T13:09:03Z", str(jobs_dir), "live-trials", run_id),
+        )
+
+    response = client.get(f"{API}/jobs/{run_id}/trials")
+
+    assert response.status_code == 200
+    by_task = {trial["taskName"]: trial for trial in response.json()["data"]}
+    assert set(by_task) == {"sqlite-with-gcov", "chess-best-move"}
+    assert by_task["sqlite-with-gcov"]["status"] == "passed"
+    assert by_task["chess-best-move"]["status"] == "running"
+    assert by_task["chess-best-move"]["logPath"] == str(running / "trial.log")
+    assert by_task["chess-best-move"]["score"] is None
+    assert by_task["chess-best-move"]["runtimeSeconds"] is None
