@@ -279,6 +279,8 @@ export const enMessages = {
     deleteItem: 'Delete',
     envKey: 'Env key',
     envValue: 'Env value',
+    hideValue: 'Hide',
+    showValue: 'Show',
     modelName: 'Model name',
     jobModel: 'Model',
     modelNamePlaceholder: 'For example, claude-sonnet-4-5',

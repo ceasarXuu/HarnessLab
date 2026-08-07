@@ -281,6 +281,8 @@ export const zhMessages = {
     deleteItem: '删除',
     envKey: 'Env key',
     envValue: 'Env value',
+    hideValue: '隐藏',
+    showValue: '显示',
     modelName: '模型名称',
     jobModel: '模型',
     modelNamePlaceholder: '例如 claude-sonnet-4-5',

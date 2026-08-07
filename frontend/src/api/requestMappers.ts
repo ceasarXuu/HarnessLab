@@ -42,6 +42,7 @@ export function agentRowToDto(agent: AgentRow): AgentInputDto {
     authenticationMode: agent.authenticationMode,
     env: parseKeyValues(agent.env),
     harness: agent.harness,
+    hiddenEnvKeys: agent.hiddenEnvKeys,
     id: agent.id,
     importPath: agent.harness === 'custom-harness' ? optional(agent.adapter) : undefined,
     kwargs: agent.kwargs ?? '',

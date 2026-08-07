@@ -74,6 +74,7 @@ export function agentDtoToRow(agent: AgentDto): AgentRow {
     capabilities: agent.capabilities ?? fallbackAgentCapabilities(),
     env: formatKeyValues(agent.env),
     harness: agent.harness,
+    hiddenEnvKeys: agent.hiddenEnvKeys ?? [],
     id: agent.id,
     kwargs: agent.kwargs,
     maxTimeout: agent.maxTimeoutSeconds === undefined ? undefined : `${agent.maxTimeoutSeconds}s`,

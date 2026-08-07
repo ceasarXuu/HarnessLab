@@ -275,6 +275,44 @@ def test_agent_environment_variables_preserve_inherited_and_fixed_values(client,
     }
 
 
+def test_agent_env_visibility_persists_globally_and_stays_out_of_config(client):
+    assert client.post(f"{API}/agents", json=_agent_payload()).status_code == 200
+    second = {**_agent_payload(), "id": "oracle-profile-2", "agentName": "Oracle 2"}
+    assert client.post(f"{API}/agents", json=second).status_code == 200
+
+    assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == []
+
+    updated = client.patch(
+        f"{API}/agents/oracle-profile",
+        json={
+            **_agent_payload(),
+            "hiddenEnvKeys": ["OPENAI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"],
+        },
+    )
+    assert updated.status_code == 200
+    expected = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]
+    assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == expected
+    assert client.get(f"{API}/agents/oracle-profile-2").json()["data"]["hiddenEnvKeys"] == expected
+    listed = client.get(f"{API}/agents").json()["data"]["items"]
+    assert all(item["hiddenEnvKeys"] == expected for item in listed)
+
+    assert client.patch(f"{API}/agents/oracle-profile", json=_agent_payload()).status_code == 200
+    assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == expected
+
+    assert client.patch(
+        f"{API}/agents/oracle-profile",
+        json={**_agent_payload(), "hiddenEnvKeys": []},
+    ).status_code == 200
+    assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == []
+
+    with sqlite.connect(client.app.state.settings) as conn:
+        rows = sqlite.rows(conn, "SELECT config_json FROM agents WHERE id = 'oracle-profile'")
+    stored = json.loads(rows[0]["config_json"])
+    assert "hiddenEnvKeys" not in stored
+    assert "hidden_env_keys" not in stored
+
+
+
 def test_agent_environment_variable_inheritance_resolves_without_logging_values(
     monkeypatch, caplog
 ):

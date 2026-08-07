@@ -181,3 +181,6 @@ OrnnLab Service 指应用级 dev service：用户可主动启动、关闭、重�
 - Given Agent 的模型选择 LiteLLM 或自定义价格, when 创建 Job, then 保存该模型的价格快照，并由 Job、Trial、Leaderboard 按缓存命中量一致计算；后续修改 Agent 价格不改变历史结果。
 - Given Agent 模型选择 Harness 上报, when 编辑模型设置, then 不展示三项固定单价，只提示任务完成后展示 Harness 上报总价格；Given 选择 LiteLLM 目录, then 展示输入缓存未命中、输入缓存命中和输出三项目录单价，目录缺少模型时明确显示不可用。
 - Given Job 已进入终态且产物归属可证明, when 用户确认永久删除, then 该 Job 的所有数据库记录、排行榜派生项和独占产物均消失，共享 `jobsDir`、其他 Job 及其资源保持不变；Given Job 仍在 queued/running 或存在无法证明归属的外部产物, then 删除被拒绝且记录和可识别产物保持不变。
+- Given Agent 详情抽屉的环境变量 value 为明文, when 用户点击该行尾部的隐藏按钮, then 该 value 显示为 `••••••` 且按钮变为显示；再次点击恢复明文。
+- Given 用户在任一 Agent 中隐藏键名 X, when 打开含键名 X 的其他 Agent 或重启服务后查看, then 相关行仍保持隐藏（隐藏状态按键名全局持久化在后端，不随清浏览器数据/换浏览器失效）。
+- Given value 为空或继承占位的环境变量行, when 渲染详情抽屉, then 不展示隐藏/显示按钮。

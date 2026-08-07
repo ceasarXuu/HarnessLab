@@ -82,6 +82,7 @@ class AgentInput(WebUiModel):
     authentication_mode: str | None = Field(alias="authenticationMode", default=None)
     env: list[KeyValueInput] = Field(default_factory=list)
     harness: str = Field(min_length=1)
+    hidden_env_keys: list[str] | None = Field(alias="hiddenEnvKeys", default=None)
     id: str = Field(min_length=1)
     import_path: str | None = Field(alias="importPath", default=None)
     kwargs: str = ""

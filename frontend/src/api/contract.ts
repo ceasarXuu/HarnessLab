@@ -226,6 +226,7 @@ export interface AgentInputDto {
   authenticationMode?: string
   env: KeyValueDto[]
   harness: string
+  hiddenEnvKeys?: string[]
   id: string
   importPath?: string
   kwargs: string

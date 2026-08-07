@@ -22,6 +22,15 @@ export function AgentEnvironmentVariables({ capabilities, readOnly, t, value, on
     authenticationMode: nextMode,
     env: filterEnvironmentForMode(value.env ?? 'none', capabilities, nextMode),
   })
+  const toggleHidden = (key: string, hidden: boolean) => {
+    const current = new Set(value.hiddenEnvKeys ?? [])
+    if (hidden) {
+      current.add(key)
+    } else {
+      current.delete(key)
+    }
+    onChange({ ...value, hiddenEnvKeys: [...current] })
+  }
 
   return (
     <section className="surface rail-card">
@@ -46,11 +55,13 @@ export function AgentEnvironmentVariables({ capabilities, readOnly, t, value, on
             <KeyValueControl
               allowInherited
               compact
+              hiddenKeys={value.hiddenEnvKeys ?? []}
               keyOptions={keyOptions}
               label={t('genericAgentEnv')}
               labels={envKeyValueLabels(t)}
               value={value.env ?? 'none'}
               onChange={(env) => onChange({ ...value, env })}
+              onToggleHidden={toggleHidden}
             />
           </div>
         )}
@@ -75,7 +86,9 @@ function filterEnvironmentForMode(value: string, capabilities: AgentCapabilities
 function envKeyValueLabels(t: Translate) {
   return {
     add: t('add'), customKey: t('customEnvironmentVariable'), delete: t('delete'),
-    inherited: t('envSourceInherited'), key: t('envKey'), literal: t('envSourceLiteral'),
-    searchKeys: t('searchEnvironmentVariables'), source: t('envValueSource'), value: t('envValue'),
+    hideValue: t('hideValue'), inherited: t('envSourceInherited'),
+    key: t('envKey'), literal: t('envSourceLiteral'),
+    searchKeys: t('searchEnvironmentVariables'), showValue: t('showValue'),
+    source: t('envValueSource'), value: t('envValue'),
   }
 }

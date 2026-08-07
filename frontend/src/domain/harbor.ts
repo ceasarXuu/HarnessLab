@@ -175,6 +175,7 @@ export interface AgentRow {
   setupTimeout?: string
   timeout?: string
   maxTimeout?: string
+  hiddenEnvKeys?: string[]
   modelPricing: ModelPricing[]
   capabilities?: AgentCapabilities
 }

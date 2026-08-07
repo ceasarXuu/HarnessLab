@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { CustomSelect } from './CustomSelect'
 
 interface KeyValueControlProps {
@@ -11,6 +11,8 @@ interface KeyValueControlProps {
   readOnly?: boolean
   allowInherited?: boolean
   keyOptions?: string[]
+  hiddenKeys?: string[]
+  onToggleHidden?: (key: string, hidden: boolean) => void
   labels: {
     add: string
     customKey?: string
@@ -21,6 +23,8 @@ interface KeyValueControlProps {
     source?: string
     inherited?: string
     literal?: string
+    hideValue?: string
+    showValue?: string
   }
 }
 
@@ -34,7 +38,7 @@ interface KeyValueRow {
 const customKeyValue = '__ornnlab_custom_environment_variable__'
 const noKeyOptions: string[] = []
 
-export function KeyValueControl({ label, value, onChange, className, compact = false, readOnly = false, allowInherited = false, keyOptions = noKeyOptions, labels }: KeyValueControlProps) {
+export function KeyValueControl({ label, value, onChange, className, compact = false, readOnly = false, allowInherited = false, keyOptions = noKeyOptions, hiddenKeys = [], onToggleHidden, labels }: KeyValueControlProps) {
   const keyOptionsSignature = keyOptions.join('\n')
   const [rows, setRows] = useState(() => parseRows(value, keyOptions))
   useEffect(() => {
@@ -139,10 +143,21 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
                 <input
                   aria-label={compact ? labels.value : undefined}
                   readOnly={readOnly}
+                  type={rowHidden(row, hiddenKeys) ? 'password' : 'text'}
                   value={row.value}
                   onChange={(event) => commit(rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))}
                 />
               </label>
+            )}
+            {!row.inherited && row.key.trim() && row.value && onToggleHidden && (
+              <button
+                aria-label={`${rowHidden(row, hiddenKeys) ? labels.showValue : labels.hideValue} ${row.key}`}
+                className="icon-button"
+                type="button"
+                onClick={() => onToggleHidden(row.key, !rowHidden(row, hiddenKeys))}
+              >
+                {rowHidden(row, hiddenKeys) ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+              </button>
             )}
             {!readOnly && (
               <button
@@ -160,6 +175,10 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
       </div>
     </div>
   )
+}
+
+function rowHidden(row: KeyValueRow, hiddenKeys: string[]) {
+  return Boolean(row.key.trim() && hiddenKeys.includes(row.key))
 }
 
 function parseRows(value: string, keyOptions: string[]): KeyValueRow[] {

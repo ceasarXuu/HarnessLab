@@ -9,6 +9,10 @@ from ornnlab.models.webui import AgentInput, EnvironmentInput
 from ornnlab.services import agent_capabilities
 from ornnlab.services.agent_profile_normalization import normalize_agent_profile
 from ornnlab.services.clock import now_iso
+from ornnlab.services.env_visibility import (
+    hidden_env_keys as read_hidden_env_keys,
+)
+from ornnlab.services.env_visibility import save_hidden_env_keys
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
@@ -23,9 +27,12 @@ class WebUiProfileService:
         self, query: str | None = None, status: str | None = None
     ) -> list[dict]:
         records = self._configured_agents()
+        hidden_env_keys = read_hidden_env_keys(self.settings)
         filtered = [record for record in records if _matches(record, query)]
         if status:
             filtered = [record for record in filtered if record["status"] == status]
+        for record in filtered:
+            record["hiddenEnvKeys"] = hidden_env_keys
         return sorted(filtered, key=lambda item: item["agentName"].lower())
 
     def list_harnesses(self, query: str | None = None) -> list[dict]:
@@ -50,7 +57,9 @@ class WebUiProfileService:
                 (agent_id,),
             )
         if rows:
-            return _configured_agent(json.loads(rows[0]["config_json"]))
+            agent = _configured_agent(json.loads(rows[0]["config_json"]))
+            agent["hiddenEnvKeys"] = read_hidden_env_keys(self.settings)
+            return agent
         raise KeyError(agent_id)
 
     def resolve_agent(self, value: str) -> dict:
@@ -64,6 +73,8 @@ class WebUiProfileService:
         agent = _agent_dto(payload)
         self._validate_agent(agent)
         self._write_agent_config(agent, create=True)
+        if payload.hidden_env_keys is not None:
+            save_hidden_env_keys(self.settings, payload.hidden_env_keys)
         return agent
 
     def update_agent(self, agent_id: str, payload: AgentInput) -> dict:
@@ -75,6 +86,8 @@ class WebUiProfileService:
         agent = _agent_dto(payload)
         self._validate_agent(agent)
         self._write_agent_config(agent, create=False)
+        if payload.hidden_env_keys is not None:
+            save_hidden_env_keys(self.settings, payload.hidden_env_keys)
         return agent
 
     def delete_agent(self, agent_id: str) -> None:
@@ -350,6 +363,7 @@ class WebUiProfileService:
 
 def _agent_dto(payload: AgentInput) -> dict:
     agent = payload.model_dump(by_alias=True, exclude_none=True)
+    agent.pop("hiddenEnvKeys", None)
     agent["env"] = [entry.model_dump() for entry in payload.env]
     return normalize_agent_profile({
         **agent,

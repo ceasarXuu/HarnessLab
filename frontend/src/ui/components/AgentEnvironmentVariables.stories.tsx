@@ -47,3 +47,27 @@ export const AuthenticationModes: Story = {
     await expect(canvas.queryByRole('option', { name: 'ANTHROPIC_API_KEY' })).not.toBeInTheDocument()
   },
 }
+
+function HiddenValuesFixture() {
+  const [agent, setAgent] = useState<AgentRow>({
+    adapter: 'none', agentName: 'Claude Code', authenticationMode: 'anthropic-api', capabilities,
+    env: 'ANTHROPIC_API_KEY=sk-ant-secret\nANTHROPIC_BASE_URL=https://api.example.test', harness: 'claude-code',
+    hiddenEnvKeys: ['ANTHROPIC_API_KEY'], id: 'claude-code-profile', kwargs: 'none', maxTimeout: '-',
+    mcp: 'none', modelPricing: [], models: 'none', runtime: '-', setupTimeout: '-', skills: 'none', source: 'OrnnLab profile',
+    status: 'configured', timeout: '-', updated: '-',
+  })
+  return <AgentEnvironmentVariables capabilities={capabilities} readOnly={false} t={getTranslator('en')} value={agent} onChange={setAgent} />
+}
+
+export const HiddenValues: Story = {
+  render: () => <HiddenValuesFixture />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const secret = canvas.getByLabelText('Env value')
+    await expect(secret).toHaveAttribute('type', 'password')
+    await userEvent.click(canvas.getByRole('button', { name: 'Show ANTHROPIC_API_KEY' }))
+    await expect(canvas.getByLabelText('Env value')).toHaveAttribute('type', 'text')
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide ANTHROPIC_API_KEY' }))
+    await expect(canvas.getByLabelText('Env value')).toHaveAttribute('type', 'password')
+  },
+}
