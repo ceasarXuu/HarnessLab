@@ -1,39 +1,34 @@
 # Subagent VS Review: Job resume 产品化修复（权限/锁/代理/凭证）
 
 - Created: 2026-08-08T02:38:00+0800
-- Updated: 2026-08-08T02:38:00+0800
+- Updated: 2026-08-08T03:20:00+0800
 - Report schema: adversarial-v2
 - Task: 让被中断的 Harbor Job 可以一键恢复（产品级根治：root 残留权限、陈旧锁、代理中继、敏感凭证四个根因）
 - Report path: `vs_review/2026-08-08-resume-productization-review.md`
 - Review mode: fresh internal subagents
 - Source session policy: no inherited main-agent context
-- Status: open
-- Control outcome: none
+- Status: open（待用户决策 Round 3 或接受）
+- Control outcome: user-decision-required
 - Automatic round budget: 2
-- Completed rounds: 0
-- Last known-good checkpoint: `27ab94d`（resume 修复链开始前）
+- Completed rounds: 2
+- Last known-good checkpoint: `27ab94d`
 
 ## Review Control Contract
 
 ### Frozen Objective
-被中断的 Harbor Docker Job 在点击"恢复"后能自动完成：① 容器清理前 chown bind-mount（杜绝 root 残留）；② 陈旧 lock.json 在 Job 确证死亡时自动清除；③ resume 前重建代理中继并回写 config/trial config；④ 从 Agent 档案恢复被 Harbor 序列化脱敏的敏感 env 并注入子进程；⑤ 失败时透出真实错误。所有修复对安装 ornnlab 的用户通用（非本机补丁）。
+被中断的 Harbor Docker Job 在点击"恢复"后能自动完成：① 容器清理前 chown bind-mount；② 陈旧 lock.json 在 Job 确证死亡时自动清除；③ resume 前重建代理中继并回写 config/trial config；④ 从 Agent 档案恢复被脱敏的敏感 env 并注入子进程；⑤ 失败时透出真实错误。所有修复对安装 ornnlab 的用户通用。
 
 ### Acceptance Criteria
 - 中断 Job resume 不再因权限/锁/代理/凭证失败（每项有单测或实机证据）。
-- 清锁只在 Job 确证死亡时发生（三重守卫：无活动操作、无 harbor 进程、无归属容器）。
+- 清锁只在 Job 确证死亡时发生（守卫不误伤活 Job，也不被死 Job 卡死）。
 - 敏感值不落盘明文（恢复后由 Harbor 模板化，运行时解析）。
 - 全量门禁通过。
 
 ### Explicit Non-goals
-- 不修改 Harbor 第三方代码。
-- 不新增常驻依赖；不改变公开 API 契约。
-- 不做 Windows 容器属主处理（Docker Desktop VM 自动处理）。
+- 不修改 Harbor 第三方代码；不新增常驻依赖；不改公开 API 契约；不做 Windows 容器属主处理。
 
 ### Frozen Target Locations
-- `ornnlab/services/webui_job_resume.py`
-- `ornnlab/services/webui_job_service.py`（resume_job / _resume_harbor_job）
-- `ornnlab/services/docker_orphan_service.py`（_chown_container_bind_mounts / _parse_mounts）
-- `tests/python/test_webui_job_resume.py`、`tests/python/test_docker_orphan_service.py`、`tests/python/test_webui_api.py`
+- `ornnlab/services/webui_job_resume.py`、`webui_job_service.py`（resume_job/_resume_harbor_job）、`docker_orphan_service.py`（_chown_container_bind_mounts/_parse_mounts）、相关测试。
 
 ### Allowed Change Categories
 - 修复性代码、测试、日志。
@@ -45,13 +40,13 @@
 | Authority | Source | What It Controls |
 |---|---|---|
 | E0 | 用户指令（"都产品化"） | 目标与范围 |
-| E1 | 工程计划/PRD（anti-fabrication、事件脱敏） | 项目约束 |
-| E2 | 实机验证（chown/锁/代理/token 恢复）、测试 | 实际行为 |
-| E3 | Harbor `templatize_sensitive_env` 源码 | 外部机制事实 |
+| E1 | 工程计划/PRD | 项目约束 |
+| E2 | 实机验证、测试、代码链对照 | 实际行为 |
+| E3 | Harbor 源码（templatize_sensitive_env 等） | 外部机制事实 |
 | E4 | reviewer/main-agent 推理 | 假设 |
 
 ### Baseline And Rollback
-- Baseline revision: `c7f9a92`
+- Baseline revision: `c7f9a92`（Round 1 起点）→ `bca943f`（审查修复后 HEAD）
 - Rollback checkpoint: `27ab94d`
 - Expected benefit: 中断 Job 恢复零手工干预；未来不再产生 root 残留
 - Acceptable side effects: 清锁仅在确证死亡时发生；chown/代理恢复为 best-effort
@@ -60,132 +55,155 @@
 ## Round 1: 初始对抗性审查
 
 ### Round Control
-- Round type: initial
-- Round number: 1
-- Completed automatic rounds before launch: 0
-- User approval for this round: n/a
-- Closure finding IDs: n/a
-- Permitted closure relation: n/a
-- Target scope delta allowed: none
+- Round type: initial；Round number: 1；Completed automatic rounds before launch: 0
+- User approval: n/a；Closure finding IDs: n/a；Target scope delta: none
 
 ### Review Input
-
-#### Objective
-见 Frozen Objective。
-
-#### Acceptance Criteria
-见 Acceptance Criteria。
-
-#### Explicit Non-goals
-见 Explicit Non-goals。
-
-#### Review Target
-代码实现（A/B/C/D 四层修复 + 失败透出）。
-
-#### Target Locations
-- `ornnlab/services/webui_job_resume.py`（prepare_resume_proxy / cleanup_resume_leftovers / clear_stale_job_lock / restore_sensitive_env / agent_env / 守卫辅助）
-- `ornnlab/services/webui_job_service.py`（resume_job 编排 / _resume_harbor_job env 注入）
-- `ornnlab/services/docker_orphan_service.py`（_chown_container_bind_mounts stopped 容器 start 重试 / _parse_mounts）
-- `tests/python/test_webui_job_resume.py` 等
-
-#### Baseline And Rollback Checkpoint
-- Baseline: `c7f9a92`；Rollback: `27ab94d`
-
-#### Change Introduction
-为"中断 Job 一键恢复"实现四层产品级修复：A) resume 前用 docker root 容器 chown root 残留；B) 陈旧 lock.json 在三重死亡守卫下备份清除；C) docker 清理时对 stopped 容器先 start 再 chown bind-mount；D) resume 前从 Agent 档案恢复 config 中被 Harbor 序列化脱敏（****）的敏感 env，并把 Agent env 注入 harbor 子进程。另含 resume 失败 stderr 透出、并发 resume 防重入、代理 relay 重建与 config/trial config 回写。
-
-#### Risk Focus
-- 清锁守卫是否可被绕过（操作表状态、进程 cmdline 匹配、容器标签匹配的假阴性/假阳性）
-- 敏感 env 恢复与注入的落盘/泄露路径（恢复后 Harbor 是否必然模板化；注入 env 是否会写日志）
-- docker 子进程命令的注入面（`-v <path>:/work`、`--filter label=ornnlab.run_id=<id>` 等参数的边界）
-- 并发/幂等：两次 resume、resume 与运行中清理、操作表中陈旧 running 行
-- 失败路径：docker 不可用、psutil 异常、进程消失、文件被外部删除
-- 对真实用户的可诊断性（错误信息是否指向可行动作）
-
-#### User-Perspective Review Focus
-- resume 失败时用户能否理解原因并行动（错误文案/日志）
-- 无 docker 环境（纯 Harbor 无容器）的 Job resume 是否被新逻辑误伤
-
-#### Implementation Completeness Focus
-- A/B/C/D 是否都走生产路径（resume_job 编排链）而非测试专用
-- 每层是否有失败兜底且不阻断主流程
-
-#### Target Benefit Focus
-- 声称"中断 Job 零手工干预"：是否有实机证据覆盖四层（有 E2 实机记录，需核对完整性）
-
-#### Evidence Sources And Gaps
-- E2: 实机 chown（running/stopped 容器）、锁自动清除、proxy relay 重建、token 恢复为模板且新 trial 0 认证错误
-- E3: Harbor `harbor/utils/env.py` templatize_sensitive_env 源码
-- E4: 各守卫假设需 reviewer 挑战
-
-#### Assumptions To Attack
-- "无活动操作 = 无进程在跑"（操作表陈旧行）
-- "进程 cmdline 含 job 路径即可识别 harbor 进程"（初始 run 的 cmdline 是 `harbor run --config <tmp>`，不含 job 路径——孤儿进程探测可能漏）
-- "`docker ps --filter label=ornnlab.run_id=X` 能识别活容器"（残留容器/清理前窗口）
-- "restore 后 Harbor 必然模板化而非再次脱敏"（env 注入与 templatize 的匹配条件）
-- "`docker exec chown -R` 对 bind mount 全目标安全"（mount 目标包含敏感路径？）
-- "`****` 是脱敏唯一标记"（Harbor 对 ≤8 字符值脱敏为纯 `****`）
-
-#### Adversarial Lenses
-- implementation | concurrency | failure | data | security | observability | maintenance | testing
-
-#### Verification Status
-- pytest 223 passed / 4 skipped；全量门禁绿；实机验证记录见工程计划与本会话
-- 已知缺口：无 Windows 实机；`configure-git-webserver` 一次瞬时 401 未复现
-
-#### Reviewer Instructions
-- Fresh internal subagent session（fork_context=false）。
-- 不继承主 agent 上下文、推理、结论。
-- 直接阅读目标文件，只读，不修改任何文件。
-- 对抗性：尝试推翻至少一个假设/快乐路径/失败路径/安全边界。
-- 每条阻断或范围扩张结论标注 E0-E4。
-- 引用证据路径与行号。
-- 输出：摘要、阻断项（含反例：破坏的假设、失败场景、触发条件、影响、所需证明、证据级别）、非阻断风险、用户视角检查、实现完整性检查、所需修复、缺失测试、缺失日志、证据清单。
+见会话内导航包（objective/acceptance/target/risk focus/assumptions/adversarial lenses 同上方契约；round type=initial；reviewer=implementation-adversary；timeout policy=complex 20min+10min；只读、fresh session、无主上下文继承、引用行号、标注 E0-E4）。
 
 ### Reviewer Timeout Policy
 | Complexity | Initial Wait | Extension | Max Attempts Per Role | Blocking Closure Behavior |
-|---|---|---:|---:|---|
+|---|---|---:|---:|---:|---|
 | complex | 20 分钟 | +10 分钟 | 2 | 无法通过则不得标记 passed |
 
 ### Reviewer Selection
 | Reviewer | Reason Selected | Risk Area |
 |---|---|---|
-| implementation-adversary | 目标是多层状态/并发/失败/安全边界的代码实现，正确性风险最高 | 守卫绕过、敏感值路径、docker 子进程边界、并发与幂等 |
+| implementation-adversary | 多层状态/并发/失败/安全边界代码，正确性风险最高 | 守卫绕过、敏感值路径、docker 子进程边界 |
 
 ### Reviewer Launch Records
 | Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
 |---|---|---|---|---|---|---|---|
-| implementation-adversary | Task tool (fresh subagent) | 待启动后填写 | Task tool 调用记录 | fork_context=false | Round 1 Review Input | 主 agent 历史、推理、草稿、结论、完整 diff | yes |
+| implementation-adversary (Round 1) | Task tool (fresh subagent, general) | ses_0227abfedffehmQSIlzQOFV4sT | Task tool 调用 | fork_context=false | Round 1 Review Input | 主 agent 历史/推理/结论/完整 diff | yes |
+| implementation-adversary (Round 2) | Task tool (fresh subagent, general) | ses_0226aa66bffegVpbE84VoiYYO4 | Task tool 调用 | fork_context=false | Round 2 Closure Input | 主 agent 历史/推理/结论 | yes |
 
 ### Reviewer Timeout Records
 | Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
 |---|---:|---|---:|---|---:|---|
-| implementation-adversary-r1 | implementation-adversary | 1 | 待启动后填写 | 待定 | 待定 | 待定 | 待定 |
+| implementation-adversary-r1 | implementation-adversary | 1 | ses_0227abfedffehmQSIlzQOFV4sT | <20min | completed | n/a | completed |
+| implementation-adversary-r2 | implementation-adversary | 1 | ses_0226aa66bffegVpbE84VoiYYO4 | <20min | completed | n/a | completed |
 
 ### Reviewer Outputs
 
-（待 reviewer 返回后填写）
+#### implementation-adversary-r1
+
+##### Summary
+四层修复编排链已接入生产路径、测试覆盖快乐路径。发现 1 个确定阻断（B1 env 替换而非合并）、1 个安全边界阻断（B2 守卫 2 对原始 harbor 进程失明）、1 个覆盖缺口（B3 environment/verifier 敏感 env 不恢复）、1 个死容器误伤（B4）。
+
+##### Blocking Findings
+- **B1**：`_resume_harbor_job` 用 `env=agent_env` 替换子进程环境 → PATH/HOME 丢失。E1（调用点对照 + Harbor preflight `shutil.which("docker")`）。后经主代理实证：Linux 上 `shutil.which` 无 PATH 时回退 `os.defpath=/bin:/usr/bin` 侥幸可用；macOS（/opt/homebrew）与继承 env 场景必炸。
+- **B2**：`_live_harbor_process_for` 只匹配 cmdline 含 job 路径的进程；原始 run 进程 cmdline 为 `harbor run --config <jobs_dir>/harbor.config.json` 或 `/tmp/ornnlab-harbor-runtime-*`，均不含 `<jobs_dir>/<job_name>` → 孤儿进程漏检 → 活 Job 清锁 → 双执行。E1。
+- **B3**：`restore_sensitive_env` 只恢复 `agents/agent` env；EnvironmentConfig/VerifierConfig 同样有 templatize 序列化器 → environment/verifier 敏感值 resume 后仍脱敏 → 静默 401。E1。
+- **B4**：`_run_has_live_containers` 用 `docker ps -aq`（含 Exited）→ 死容器永久阻止清锁（尤其 keep_containers=retain 配置）→ resume 永远 lock mismatch。E1。
+
+##### Non-blocking Risks
+1. 事件循环冻结（docker ps timeout 10s + psutil 全量扫在同步段）；2. 多 worker 竞态（操作表无唯一约束）；3. resume 产物容器无生命周期管理；4. chown 失败不进 cleanup errors；5. 离线 alpine 拉取失败；6. resume 取消时 CancelledError 未捕获 → run 停留 running、harbor 孤儿；7. 宿主代理移除时 config 残留死 relay URL；8. 小项（非原子写/`****` 子串误恢复/守卫 3 不过滤 instance_id/错误尾部 300 字符）。
+
+##### User-Perspective Checks
+- 可恢复性 pass（失败回 interrupted 可再点）；可诊断性差（守卫拒绝原因无日志无 UI 透出）；canResume 预检不足。
+
+##### Implementation Completeness Checks
+- 四层修复均在 resume_job 生产编排链；B1 合并语义为核心错；B2 守卫失明；B3 恢复范围不全；B4 死容器判活。
+
+##### Evidence
+- `webui_job_service.py:341-348`（env 替换）、`webui_job_resume.py:147-156`（marker 匹配）、`webui_job_resume.py:220-231`（恢复范围）、`webui_job_resume.py:159-178`（-aq）、`harbor_subprocess.py:56-66`（run cmdline）、site-packages/harbor/utils/env.py:55-58（脱敏格式）。
+
+#### implementation-adversary-r2（闭环节点）
+
+##### Summary
+B1、B3、B4 及附加修复均已闭环且无直接回归。B2 未闭环：代理模板化场景（--config → /tmp/ornnlab-harbor-runtime-*）原始 run 进程依旧失明（BLK-1）；新目录前缀匹配在共享 jobsDir 布局下必然跨 job 误伤（BLK-2）。`or None` 确认为恒真死代码（BLK-3，非阻断）。
+
+##### Blocking Findings
+- **BLK-1**（original-blocker-open，E2）：`--config` 前缀匹配不覆盖 `/tmp/ornnlab-harbor-runtime-*` 临时 config 形态（代理模板化场景，正是本功能核心场景）→ 活 Job 下清锁仍可能发生。
+- **BLK-2**（fix-regression，E2）：jobsDir 前缀匹配以目录为粒度；共享 jobsDir 下所有 job 的 config 是同一文件 `<jobsDir>/harbor.config.json` → 兄弟 job 运行中会阻塞本 job 清锁（fail-closed 但 resume 永远失败，仅 info 日志）。
+
+##### Non-blocking Risks
+- B3 部分恢复时告警语义不完整（elif 短路）；B4 legacy 无 instance 标签容器 fail-open；B4 status=running 不含 paused/restarting；B4 fake docker 测试不校验 filter；`str(CancelledError)` 为空 → failure_summary 为空（外观）。
+
+##### Closure Relation
+| 修复项 | 结论 | 关系 |
+|---|---|---|
+| B1 env 合并 | 闭环 | original-blocker-closed |
+| B2 进程探测 | 未闭环 | original-blocker-open（BLK-1）+ fix-regression（BLK-2） |
+| B3 恢复范围 | 闭环 | original-blocker-closed |
+| B4 容器过滤 | 闭环 | original-blocker-closed |
+| 附加修复 | 无回归 | n/a |
+
+##### 建议方向（未执行）
+B2 应读 config 内容校验 job_name/jobs_dir 归属，而非目录前缀。
 
 ### Main Agent Response
 
-（待 reviewer 返回后填写）
+| Reviewer | Finding | 反例 | Severity | Decision | Authority | Closure Relation | Evidence / Reason | Scope Effect | Side Effects | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| r1 | B1 env 替换 | PATH 丢失 | blocking | accept | E1+E2 实证 | original-blocker | shutil.which 回退 defpath 掩盖；macOS 必炸 | env 合并 | 无 | 改 `{**os.environ, **run_agent_env}`；移除 `or None` 死代码（BLK-3） | 无 |
+| r1 | B2 守卫失明 | 原始 run cmdline 无 job 路径 | blocking | accept | E1 | original-blocker | Round 1 修复为前缀匹配，Round 2 判定不完整 → 二次修复 | 见 Round 2 | 见 Round 2 | 见 Round 2 修复 | 无 |
+| r1 | B3 恢复范围 | environment/verifier 仍脱敏 | blocking | accept | E1 | original-blocker | 扩展 environment.env（环境预设档案）+ verifier 告警 | 小 | 无 | 已实现 + 测试 | 无 |
+| r1 | B4 死容器 | -aq 含 Exited | blocking | accept | E1 | original-blocker | 加 status=running + instance_id 过滤 | 小 | legacy 容器 fail-open（非阻断） | 已实现 + 测试 | 无 |
+| r1 | 取消路径 | CancelledError 未捕获 | non-blocking | accept | E1 | n/a | 补 catch + _mark_resume_failed | 小 | 无 | 已实现 | 无 |
+| r1 | 守卫拒绝无日志 | 无法诊断 | non-blocking | accept | E4 | n/a | 补 reason= 日志 | 小 | 无 | 已实现 | 无 |
+| r1 | 非原子写 | 崩溃截断 | non-blocking | accept | E4 | n/a | 用 atomic_write_text | 小 | 无 | 已实现 | 无 |
+| r1 | docker ps 超时 10s | 事件循环冻结 | non-blocking | accept | E4 | n/a | 5s；resume 为低频操作 | 小 | 无 | 已实现 | 仍同步执行，如需彻底避免需 to_thread |
+| r1 | 多 worker 竞态 | 双 resume | non-blocking | reject | E1 | unrelated | 单 worker 架构（app.py 单 uvicorn） | 无 | 无 | 记录 | 若未来多 worker 再处理 |
+| r1 | resume 容器生命周期 | 残留至下次启动 | non-blocking | defer | E4 | unrelated | 启动清理兜底 | 无 | 无 | 记录为后续维护项 | 待跟踪 |
+| r1 | chown 失败不上报 | 用户误信成功 | non-blocking | defer | E4 | unrelated | 保留 warning 日志；resume 路径有 A 兜底 | 无 | 无 | 记录 | 待跟踪 |
+| r1 | 离线 alpine | 失败可诊断性 | non-blocking | defer | E4 | unrelated | 错误尾部透出 PermissionError | 无 | 无 | 记录 | 待跟踪 |
+| r1 | 代理失效静默 | 死 relay URL | non-blocking | defer | E4 | unrelated | 宿主代理移除属配置变更 | 无 | 无 | 记录 | 待跟踪 |
+| r1 | `****` 子串误恢复 | 病理值 | non-blocking | reject | E4 | n/a | 档案为权威源，替换方向正确 | 无 | 无 | 拒绝 | 无 |
+| r1 | 错误尾部 300 字符 | 截断 | non-blocking | reject | E4 | n/a | 尾部为最相关信息 | 无 | 无 | 拒绝 | 无 |
+| r2 | BLK-1 模板化场景失明 | temp config 形态 | blocking | accept | E2 | original-blocker-open | 改为读 --config 文件内容按 job_name+jobs_dir 归属 | 中 | 无 | 已实现（_config_targets_job）+ 测试 | 无 |
+| r2 | BLK-2 共享 jobsDir 误伤 | 目录前缀粒度 | blocking | accept | E2 | fix-regression | 移除前缀启发；resume 按 --job-path 精确匹配；run 按 config 内容归属 | 中 | 无 | 已实现 + 测试（异 job/兄弟路径/不可读） | 无 |
+| r2 | BLK-3 or None 死代码 | 恒真 | non-blocking | accept | E4 | n/a | 移除 | 无 | 无 | 已实现 | 无 |
 
-### Review Governor
+### Review Governor (Round 1)
+- Completed rounds before decision: 1；Unresolved blockers after round: 4（B1-B4）
+- Governor decision: start-closure-round（4 个阻断均接受且有 E1/E2 证据；修复在冻结目标位置内；无范围扩张）
+- Decision reason: 阻断项均与冻结目标直接相关，证据充分，修复边界清晰
 
-（待 reviewer 返回后填写）
+### Review Governor (Round 2)
+- Completed rounds before decision: 2（预算已用尽）
+- Unresolved blockers after round: 2（BLK-1、BLK-2，随后由主代理修复并经测试验证）
+- Blockers closed: B1、B3、B4、BLK-3；BLK-1/BLK-2 由主代理在 Round 2 后修复（bca943f），测试覆盖（_cmdline_targets_job/_config_targets_job 6 个用例）
+- New blocker classes: none（BLK-2 为 B2 修复的回归，同类）
+- Repeated failure class: yes - 进程探测（B2 → BLK-1/BLK-2 同主题）
+- Scope expansion proposed: no；New modules/deps/API/data changes: none
+- Governor decision: user-decision-required（自动预算 2 轮已用尽；Round 2 闭环节点曾发现原阻断未闭环，修复后是否追加一轮聚焦复审需用户决定）
+- Decision reason: 预算规则——Round 2 后不自动启动 Round 3
 
 ### Convergence Reflection
-
-（如需要）
+- Original objective / acceptance criteria / non-goals: 见契约
+- Completed rounds versus budget: 2/2
+- Findings closed: B1、B3、B4、BLK-3 及 5 项非阻断；BLK-1/BLK-2 已修复（bca943f）未复审
+- Findings repeated: 进程探测主题在 B2/BLK-1/BLK-2 重复出现，最终以"读 config 内容精确归属"收敛
+- Evidence inventory: E0（用户授权产品化）、E1（代码/计划）、E2（实机验证 + 测试 231 passed + 门禁绿）、E3（Harbor 源码）、E4（reviewer 推理）
+- Newly touched: webui_job_resume.py、webui_job_service.py、docker_orphan_service.py、测试 3 文件
+- Cumulative growth: webui_job_resume 357 行（新模块）、webui_job_service 499 行（限内）
+- Benefits achieved: 中断 Job resume 全自动（权限/锁/代理/凭证四层实机验证）
+- Side effects: 无已知回归（全量门禁绿）
+- Risk direction: decreasing
+- Last known-good checkpoint: `27ab94d`；Rollback options: `git revert bca943f`（或回退 27ab94d）
+- Recommended bounded choices: ① 追加一轮聚焦复审（BLK-1/BLK-2 修复，预算外需批准）；② 基于测试证据接受修复；③ 回退
 
 ### User Decision
-
-（如需要）
+- Decision requested: 追加一轮聚焦复审 / 接受修复 / 回退
+- Options and consequences:
+  - 追加 Round 3（仅审 BLK-1/BLK-2 修复与其直接回归）：证据最充分，成本一次 fresh reviewer
+  - 接受修复（依据 6 个新测试 + 全量门禁 + 代码链对照）：成本零，风险为进程探测仍可能有未覆盖形态
+  - 回退到 27ab94d：放弃本轮 resume 产品化
+- User decision: pending
 
 ### Closure Status
-
-（待定）
+- Blocking findings found: yes（Round 1: B1-B4；Round 2: BLK-1/BLK-2）
+- Accepted blocking findings fixed: yes（bca943f 已含全部修复）
+- Blocking re-review completed: no（Round 2 闭环节点发现原阻断未闭环；修复后未再复审）
+- Blocking re-review passed: no
+- Automatic round budget respected: yes（2/2）
+- Third-or-later round explicitly user-approved before launch: n/a（未启动）
+- Scope drift detected: no
+- Evidence sufficient for scope-expanding actions: yes（E1/E2）
+- Control outcome: user-decision-required
+- Allowed to proceed: 待用户决策
 
 ## Final Conclusion
 
-（待定）
+Round 1（初始）发现 4 阻断（B1-B4）已全部接受并修复；Round 2（闭环节点）发现 B2 修复不完整（BLK-1 模板化场景失明、BLK-2 共享目录误伤），主代理已按 reviewer 建议改为"读 config 内容精确归属"并修复（`bca943f`），6 个新测试 + 全量门禁绿。自动审查预算 2 轮已用尽，按规则不自动启动 Round 3。任务状态：**待用户决策**——追加一轮聚焦复审 / 接受当前修复 / 回退。
