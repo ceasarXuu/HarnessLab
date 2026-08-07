@@ -321,10 +321,16 @@ class WebUiJobService:
 
     async def _resume_harbor_job(self, job_path: Path) -> None:
         command = [harbor_cli_executable(), "job", "resume", "--job-path", str(job_path)]
-        process = await asyncio.create_subprocess_exec(*command)
-        code = await process.wait()
-        if code != 0:
-            raise RuntimeError(f"harbor job resume exited with {code}")
+        process = await asyncio.create_subprocess_exec(
+            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
+        )
+        output, _ = await process.communicate()
+        if process.returncode != 0:
+            message = output.decode("utf-8", errors="replace").strip()
+            raise RuntimeError(
+                f"harbor job resume exited with {process.returncode}: {_resume_error_tail(message)}"
+            )
+
 
     def _mark_resume_running(self, run: dict) -> None:
         now = _now()
@@ -366,6 +372,12 @@ class WebUiJobService:
                 conn, "SELECT config_json FROM webui_job_configs WHERE run_id = ?", (job_id,)
             )
         return json.loads(rows[0]["config_json"]) if rows else {}
+
+
+def _resume_error_tail(message: str, max_chars: int = 300) -> str:
+    if not message:
+        return "no output captured"
+    return message[-max_chars:]
 
 
 def _job_dto(row: dict) -> dict:

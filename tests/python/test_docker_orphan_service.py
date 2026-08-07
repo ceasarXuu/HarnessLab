@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 from ornnlab.services.docker_orphan_service import DockerOrphanService
@@ -163,6 +164,59 @@ def test_docker_orphan_scan_reports_timeout(tmp_path):
     assert result["error"] == "docker_ps_timeout"
 
 
+def test_parse_mounts_extracts_only_bind_targets():
+    service = DockerOrphanService(command=["docker"], instance_id="instance-1")
+
+    assert service._parse_mounts(
+        {
+            "stdout": json.dumps(
+                [
+                    {"Type": "bind", "Destination": "/work"},
+                    {"Type": "volume", "Destination": "/data"},
+                    "not-a-dict",
+                    {"Type": "bind"},
+                ]
+            ),
+            "error": None,
+        }
+    ) == ["/work"]
+    assert service._parse_mounts({"stdout": "not json", "error": None}) == []
+    assert service._parse_mounts({"stdout": "", "error": "docker_command_failed"}) == []
+
+
+def test_cleanup_run_chowns_bind_mounts_before_removing_containers(tmp_path):
+    calls = tmp_path / "calls.jsonl"
+    script = _docker_fixture(
+        tmp_path,
+        [
+            _container(
+                "abc123",
+                "run-1",
+                "instance-1",
+                project="harbor-project",
+            )
+        ],
+        calls=calls,
+        mounts='[{"Type":"bind","Source":"/host/work","Destination":"/work"}]',
+    )
+
+    result = DockerOrphanService(
+        command=[sys.executable, str(script)], instance_id="instance-1"
+    ).cleanup_run("run-1")
+
+    assert result["ok"] is True
+    commands = [json.loads(line) for line in calls.read_text().splitlines()]
+    chown = [
+        command
+        for command in commands
+        if command[:2] == ["exec", "abc123"] and command[2] == "chown"
+    ]
+    assert chown == [
+        ["exec", "abc123", "chown", "-R", f"{os.getuid()}:{os.getgid()}", "/work"]
+    ]
+    assert commands.index(chown[0]) < commands.index(["rm", "-f", "abc123"])
+
+
 def _container(
     container_id: str,
     run_id: str,
@@ -188,7 +242,7 @@ def _container(
     }
 
 
-def _docker_fixture(tmp_path, containers, calls=None):
+def _docker_fixture(tmp_path, containers, calls=None, mounts=None):
     script = tmp_path / "fake_docker.py"
     script.write_text(
         "\n".join(
@@ -198,6 +252,7 @@ def _docker_fixture(tmp_path, containers, calls=None):
                 "import sys",
                 f"containers = {containers!r}",
                 f"calls = pathlib.Path({str(calls)!r}) if {calls is not None!r} else None",
+                f"mounts = {mounts!r}",
                 "args = sys.argv[1:]",
                 "if calls is not None:",
                 "    with calls.open('a') as handle:",
@@ -205,6 +260,8 @@ def _docker_fixture(tmp_path, containers, calls=None):
                 "if args[:2] == ['ps', '-a']:",
                 "    for container in containers:",
                 "        print(json.dumps(container))",
+                "elif args[0] == 'inspect':",
+                "    print(mounts or '[]')",
                 "elif args[:2] == ['network', 'ls']:",
                 "    print('network-1')",
                 "elif args[:2] == ['volume', 'ls']:",

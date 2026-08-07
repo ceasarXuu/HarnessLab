@@ -162,7 +162,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const selectedJobActionError = jobOperation.operation?.type === 'resume-job'
     && jobOperation.operation.resourceId === selectedJob?.id
     && jobOperation.operation.status === 'failed'
-    ? t('resumeJobFailed')
+    ? jobOperation.operation.message ?? t('resumeJobFailed')
     : copyJobError ?? jobOperation.error?.message ?? null
 
   const filteredJobs = useMemo(() => {

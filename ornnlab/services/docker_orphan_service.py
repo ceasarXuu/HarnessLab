@@ -98,6 +98,8 @@ class DockerOrphanService:
             }
         )
         errors: list[str] = []
+        for item in containers:
+            self._chown_container_bind_mounts(item)
         removed_containers = self._remove_resources(
             "container", [item["id"] for item in containers], errors
         )
@@ -266,6 +268,62 @@ class DockerOrphanService:
                 "error": result.stderr.strip() or result.stdout.strip() or "docker_command_failed",
             }
         return {"stdout": result.stdout, "error": None}
+
+    def _chown_container_bind_mounts(self, container: dict[str, Any]) -> None:
+        """Best-effort chown of bind-mounted targets to the host user.
+
+        Mirrors Harbor's ``prepare_logs_for_host``: files written by root
+        processes inside the container stay root-owned on the host and later
+        block deletion (e.g. ``harbor job resume`` cleanup). Chown runs inside
+        the container as root while it is still alive, before OrnnLab removes it.
+        """
+        if not hasattr(os, "getuid"):
+            return
+        container_id = container["id"]
+        inspected = self._run(
+            [*self.command, "inspect", container_id, "--format", "{{json .Mounts}}"]
+        )
+        mounts = self._parse_mounts(inspected)
+        for target in mounts:
+            chown = self._run(
+                [
+                    *self.command,
+                    "exec",
+                    container_id,
+                    "chown",
+                    "-R",
+                    f"{os.getuid()}:{os.getgid()}",
+                    target,
+                ]
+            )
+            if chown["error"]:
+                logger.warning(
+                    "docker.ownership.chown_failed container=%s target=%s error=%s",
+                    container_id,
+                    target,
+                    chown["error"],
+                )
+
+    def _parse_mounts(self, inspected: dict[str, str | None]) -> list[str]:
+        if inspected["error"]:
+            logger.warning(
+                "docker.ownership.chown_inspect_failed error=%s", inspected["error"]
+            )
+            return []
+        try:
+            mounts = json.loads(inspected["stdout"] or "[]")
+        except json.JSONDecodeError:
+            logger.warning("docker.ownership.chown_parse_failed")
+            return []
+        if not isinstance(mounts, list):
+            return []
+        return [
+            str(mount["Destination"])
+            for mount in mounts
+            if isinstance(mount, dict)
+            and mount.get("Type") == "bind"
+            and mount.get("Destination")
+        ]
 
     def _cleanup_plan_item(self, container: dict[str, Any]) -> dict[str, Any]:
         return {

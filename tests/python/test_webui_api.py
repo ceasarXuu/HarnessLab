@@ -697,6 +697,18 @@ def test_job_dto_only_marks_a_failed_job_resumable_when_harbor_config_exists(
     assert available["canResume"] is True
 
 
+def test_resume_error_tail_captures_harbor_stderr():
+    from ornnlab.services.webui_job_service import _resume_error_tail
+
+    assert _resume_error_tail("") == "no output captured"
+    assert _resume_error_tail("PermissionError: [Errno 13] Permission denied") == (
+        "PermissionError: [Errno 13] Permission denied"
+    )
+    tail = _resume_error_tail("x" * 500)
+    assert len(tail) == 300
+    assert tail == "x" * 300
+
+
 def test_copy_job_config_returns_an_editable_draft_without_creating_a_job(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()
