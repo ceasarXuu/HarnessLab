@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -34,6 +35,7 @@ from ornnlab.services.webui_job_resume import (
     agent_env,
     cleanup_resume_leftovers,
     clear_stale_job_lock,
+    environment_env,
     prepare_resume_proxy,
     restore_sensitive_env,
 )
@@ -196,11 +198,19 @@ class WebUiJobService:
             self._mark_resume_running(run)
             policy = None
             run_agent_env = agent_env(self.profiles, run.get("agent_id"))
+            run_environment_env = environment_env(
+                self.profiles, self._job_config(job_id).get("environment_preset_id")
+            )
             try:
                 await cleanup_resume_leftovers(job_path)
-                restore_sensitive_env(job_path, run_agent_env)
+                restore_sensitive_env(job_path, run_agent_env, run_environment_env)
                 policy = await prepare_resume_proxy(self.experiments.container_proxy, job_path)
-                await self._resume_harbor_job(job_path, env=run_agent_env or None)
+                await self._resume_harbor_job(
+                    job_path, env={**os.environ, **run_agent_env} or None
+                )
+            except asyncio.CancelledError as exc:
+                self._mark_resume_failed(run, exc)
+                raise
             except Exception as exc:
                 self._mark_resume_failed(run, exc)
                 raise
@@ -364,21 +374,14 @@ class WebUiJobService:
             )
         self.events.append("run", run["id"], "harbor.job.resume_requested", {})
 
-    def _mark_resume_failed(self, run: dict, error: Exception) -> None:
+    def _mark_resume_failed(self, run: dict, error: BaseException) -> None:
         now = _now()
         with sqlite.connect(self.settings) as conn:
             conn.execute(
                 "UPDATE runs SET status = ?, finished_at = ?, failure_class = ?, "
                 "failure_code = ?, failure_summary = ?, updated_at = ? WHERE id = ?",
-                (
-                    "interrupted",
-                    now,
-                    "harbor_resume",
-                    "resume_command_failed",
-                    str(error),
-                    now,
-                    run["id"],
-                ),
+                ("interrupted", now, "harbor_resume", "resume_command_failed", str(error),
+                 now, run["id"]),
             )
         self.events.append(
             "run",

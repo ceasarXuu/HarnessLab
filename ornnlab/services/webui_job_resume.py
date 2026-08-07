@@ -16,6 +16,7 @@ from ornnlab.services.command_line import split_command
 from ornnlab.services.container_proxy_runtime import RuntimeProxyPolicy
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+from ornnlab.storage.paths import atomic_write_text
 
 logger = logging.getLogger(__name__)
 
@@ -97,17 +98,26 @@ def clear_stale_job_lock(settings: Settings, run_id: str, job_path: Path) -> boo
     Harbor refuses to resume when the existing lock does not match the re-resolved
     Job lock (e.g. after a proxy relay rewrite). The lock is a concurrency guard, so
     it is only cleared when: no active OrnnLab operation references the run, no live
-    Harbor process references the Job path, and no OrnnLab-managed Docker containers
-    remain for the run.
+    Harbor process references the Job path, and no running OrnnLab-managed Docker
+    containers remain for the run.
     """
     lock_path = job_path / "lock.json"
     if not lock_path.exists():
         return False
     if _active_operation_for_run(settings, run_id):
+        logger.info(
+            "docker.resume_lock_kept reason=active_operation run_id=%s", run_id
+        )
         return False
     if _live_harbor_process_for(job_path):
+        logger.info(
+            "docker.resume_lock_kept reason=live_harbor_process path=%s", job_path
+        )
         return False
-    if _run_has_live_containers(run_id):
+    if _run_has_live_containers(settings, run_id):
+        logger.info(
+            "docker.resume_lock_kept reason=live_containers run_id=%s", run_id
+        )
         return False
     backup = job_path / f"lock.json.bak-{int(time.time())}"
     shutil.copy2(lock_path, backup)
@@ -146,17 +156,26 @@ def _active_operation_for_run(
 
 def _live_harbor_process_for(job_path: Path) -> bool:
     marker = job_path.as_posix()
+    jobs_dir_prefix = f"{job_path.parent.as_posix()}/"
     try:
         for proc in psutil.process_iter(["cmdline"]):
-            cmdline = " ".join(proc.info.get("cmdline") or [])
-            if "harbor" in cmdline.lower() and marker in cmdline:
+            args = proc.info.get("cmdline") or []
+            text = " ".join(args)
+            if "harbor" not in text.lower():
+                continue
+            if marker in text:
                 return True
+            if "--config" in args:
+                config_index = args.index("--config")
+                config_path = args[config_index + 1] if config_index + 1 < len(args) else ""
+                if config_path.startswith(jobs_dir_prefix):
+                    return True
     except (psutil.Error, OSError):
         return True
     return False
 
 
-def _run_has_live_containers(run_id: str) -> bool:
+def _run_has_live_containers(settings: Settings, run_id: str) -> bool:
     command = _docker_command()
     try:
         result = subprocess.run(
@@ -165,13 +184,17 @@ def _run_has_live_containers(run_id: str) -> bool:
                 "ps",
                 "-aq",
                 "--filter",
+                "status=running",
+                "--filter",
                 "label=ornnlab.managed=true",
+                "--filter",
+                f"label=ornnlab.instance_id={settings.instance_id}",
                 "--filter",
                 f"label=ornnlab.run_id={run_id}",
             ],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
         return True
@@ -201,7 +224,21 @@ def agent_env(profiles: Any, agent_id: str | None) -> dict[str, str]:
         agent = profiles.get_agent(agent_id)
     except KeyError:
         return {}
-    entries = agent.get("env") or []
+    return _profile_env(agent)
+
+
+def environment_env(profiles: Any, preset_id: str | None) -> dict[str, str]:
+    if not preset_id:
+        return {}
+    try:
+        environment = profiles.get_environment(preset_id)
+    except KeyError:
+        return {}
+    return _profile_env(environment)
+
+
+def _profile_env(profile: Any) -> dict[str, str]:
+    entries = profile.get("env") or []
     return {
         str(entry["key"]): str(entry["value"])
         for entry in entries
@@ -209,13 +246,18 @@ def agent_env(profiles: Any, agent_id: str | None) -> dict[str, str]:
     }
 
 
-def restore_sensitive_env(job_path: Path, real_env: dict[str, str]) -> None:
+def restore_sensitive_env(
+    job_path: Path,
+    real_env: dict[str, str],
+    environment_env: dict[str, str] | None = None,
+) -> None:
     """Replace redacted sensitive values with the Agent's real values.
 
     Harbor's config serializer templates sensitive env vars when they match the
     host environment and redacts them otherwise; a resume whose process env lacks
     the secret would bake a redacted value into the Job config. Restore those
-    values from the Agent profile so the resumed trials receive real credentials.
+    values from the Agent and Environment profiles so the resumed trials receive
+    real credentials.
     """
     for config_path in (job_path / "config.json", *job_path.glob("*/config.json")):
         config = _read_config_file(config_path)
@@ -229,8 +271,28 @@ def restore_sensitive_env(job_path: Path, real_env: dict[str, str]) -> None:
             config["agent"].get("env"), real_env
         ):
             changed = True
+        environment_env_value = (config.get("environment") or {}).get("env")
+        if isinstance(environment_env_value, dict):
+            if environment_env and _restore_env(environment_env_value, environment_env):
+                changed = True
+            elif _has_redacted(environment_env_value):
+                logger.warning(
+                    "docker.resume_environment_env_redacted_unrestorable path=%s",
+                    config_path,
+                )
+        verifier_env = (config.get("verifier") or {}).get("env")
+        if _has_redacted(verifier_env):
+            logger.warning(
+                "docker.resume_verifier_env_redacted_unrestorable path=%s", config_path
+            )
         if changed:
             _write_config(config_path, config)
+
+
+def _has_redacted(env: Any) -> bool:
+    return isinstance(env, dict) and any(
+        isinstance(value, str) and "****" in value for value in env.values()
+    )
 
 
 def _read_config_file(path: Path) -> dict:
@@ -282,8 +344,8 @@ def _apply_proxy_env(env: dict, subprocess_env: dict) -> bool:
 
 
 def _write_config(path: Path, config: dict) -> None:
-    path.write_text(
-        json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    atomic_write_text(
+        path, json.dumps(config, indent=2, ensure_ascii=False) + "\n"
     )
 
 

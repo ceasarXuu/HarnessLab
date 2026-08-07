@@ -8,11 +8,15 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from ornnlab.services.webui_job_resume import (
+    _live_harbor_process_for,
     agent_env,
     cleanup_resume_leftovers,
     clear_stale_job_lock,
+    environment_env,
     restore_sensitive_env,
 )
+from ornnlab.services.webui_job_service import WebUiJobService
+from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.storage import sqlite
 
 
@@ -260,3 +264,129 @@ def test_agent_env_reads_profile_env_and_ignores_inherited(monkeypatch):
         raise KeyError("agent deleted")
 
     assert agent_env(SimpleNamespace(get_agent=_missing), "agent-1") == {}
+
+
+def test_environment_env_reads_preset_and_ignores_inherited():
+    profiles = SimpleNamespace(
+        get_environment=lambda _preset_id: {
+            "env": [
+                {"key": "HF_TOKEN", "value": "hf-real"},
+                {"key": "INHERITED_VAR", "value": None},
+            ]
+        }
+    )
+
+    assert environment_env(profiles, "preset-1") == {"HF_TOKEN": "hf-real"}
+    assert environment_env(profiles, None) == {}
+
+    def _missing(_preset_id):
+        raise KeyError("preset deleted")
+
+    assert environment_env(SimpleNamespace(get_environment=_missing), "preset-1") == {}
+
+
+def test_restore_sensitive_env_restores_environment_env(tmp_path: Path, caplog):
+    from ornnlab.services.webui_job_resume import _has_redacted
+
+    job_path = tmp_path / "job"
+    job_path.mkdir()
+    (job_path / "config.json").write_text(
+        json.dumps(
+            {
+                "agents": [{"env": {"ANTHROPIC_AUTH_TOKEN": "sk-d****b47"}}],
+                "environment": {"env": {"HF_TOKEN": "hf****abcd"}},
+                "verifier": {"env": {"VERIFIER_SECRET": "vs****wxyz"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    restore_sensitive_env(
+        job_path,
+        {"ANTHROPIC_AUTH_TOKEN": "sk-real-token"},
+        environment_env={"HF_TOKEN": "hf-real-token"},
+    )
+
+    updated = json.loads((job_path / "config.json").read_text(encoding="utf-8"))
+    assert updated["agents"][0]["env"]["ANTHROPIC_AUTH_TOKEN"] == "sk-real-token"
+    assert updated["environment"]["env"]["HF_TOKEN"] == "hf-real-token"
+    assert updated["verifier"]["env"]["VERIFIER_SECRET"] == "vs****wxyz"
+    assert any("verifier_env_redacted_unrestorable" in record.message for record in caplog.records)
+    assert _has_redacted({"A": "x****y"}) is True
+    assert _has_redacted({"A": "plain"}) is False
+
+
+def test_live_harbor_process_matches_initial_run_config_path(monkeypatch):
+    job_path = Path("/tmp/jobs/run-some-job")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: iter(
+            [
+                SimpleNamespace(
+                    info={
+                        "cmdline": [
+                            "harbor",
+                            "run",
+                            "--config",
+                            "/tmp/jobs/harbor.config.json",
+                        ]
+                    }
+                )
+            ]
+        ),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_ignores_config_outside_jobs_dir(monkeypatch):
+    job_path = Path("/tmp/jobs/run-some-job")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: iter(
+            [
+                SimpleNamespace(
+                    info={
+                        "cmdline": [
+                            "harbor",
+                            "run",
+                            "--config",
+                            "/tmp/other/harbor.config.json",
+                        ]
+                    }
+                )
+            ]
+        ),
+    )
+
+    assert _live_harbor_process_for(job_path) is False
+
+
+def test_resume_harbor_job_forwards_merged_env(settings, tmp_path: Path, monkeypatch):
+    captured: dict = {}
+
+    class FakeProcess:
+        returncode = 0
+
+        async def communicate(self):
+            return b"", None
+
+    async def fake_spawn(*_args, **_kwargs):
+        captured["env"] = _kwargs.get("env")
+        return FakeProcess()
+
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_service.asyncio.create_subprocess_exec", fake_spawn
+    )
+    service = WebUiJobService(
+        settings, WebUiOperationService(settings, {}), object()
+    )
+
+    asyncio.run(
+        service._resume_harbor_job(
+            tmp_path, env={**os.environ, "AGENT_KEY": "agent-value"}
+        )
+    )
+
+    assert captured["env"]["AGENT_KEY"] == "agent-value"
+    assert "PATH" in captured["env"]
