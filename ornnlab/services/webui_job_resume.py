@@ -174,19 +174,36 @@ def _cmdline_targets_job(args: list[str], job_path: Path) -> bool:
     if "--config" in args:
         index = args.index("--config")
         if index + 1 >= len(args):
-            return False
-        return _config_targets_job(Path(args[index + 1]), job_path)
+            return True
+        return _config_belongs_to_job(Path(args[index + 1]), job_path)
     return False
 
 
-def _config_targets_job(config_path: Path, job_path: Path) -> bool:
-    try:
-        payload = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+def _config_belongs_to_job(config_path: Path, job_path: Path) -> bool:
+    payload = _read_config_file(config_path)
+    if _config_matches_job(payload, job_path):
+        return True
+    config_text = config_path.as_posix()
+    same_jobs_dir = config_text.startswith(f"{job_path.parent.as_posix()}/")
+    if same_jobs_dir or "ornnlab-harbor-runtime" in config_text:
+        logger.info(
+            "docker.resume_lock_probe_inconclusive config=%s same_jobs_dir=%s "
+            "unreadable=%s",
+            config_text,
+            same_jobs_dir,
+            not payload,
+        )
+        return True
+    return False
+
+
+def _config_matches_job(payload: dict, job_path: Path) -> bool:
+    if not payload:
         return False
+    jobs_dir = payload.get("jobs_dir")
     return (
         payload.get("job_name") == job_path.name
-        and payload.get("jobs_dir") == str(job_path.parent)
+        and jobs_dir in {str(job_path), str(job_path.parent)}
     )
 
 

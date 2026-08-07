@@ -352,7 +352,9 @@ def test_live_harbor_process_matches_temp_runtime_config(tmp_path: Path, monkeyp
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_ignores_config_of_other_job(tmp_path: Path, monkeypatch):
+def test_live_harbor_process_fails_closed_on_shared_config_of_sibling_job(
+    tmp_path: Path, monkeypatch
+):
     job_path = tmp_path / "jobs" / "run-some-job"
     job_path.parent.mkdir(parents=True)
     config = job_path.parent / "harbor.config.json"
@@ -365,7 +367,58 @@ def test_live_harbor_process_ignores_config_of_other_job(tmp_path: Path, monkeyp
         lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(config)]),
     )
 
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_ignores_config_in_unrelated_jobs_dir(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs-a" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    other = tmp_path / "jobs-b" / "harbor.config.json"
+    other.parent.mkdir(parents=True)
+    other.write_text(
+        json.dumps({"job_name": "other", "jobs_dir": str(other.parent)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(other)]),
+    )
+
     assert _live_harbor_process_for(job_path) is False
+
+
+def test_live_harbor_process_fails_closed_on_unreadable_same_dir_config(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    missing = job_path.parent / "harbor.config.json"
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(missing)]),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_matches_legacy_layout_config(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs"  # legacy: job_path IS the jobs dir
+    job_path.mkdir(parents=True)
+    config = job_path / "harbor.config.json"
+    config.write_text(
+        json.dumps({"job_name": "jobs", "jobs_dir": str(job_path)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(config)]),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
 
 
 def test_live_harbor_process_matches_resume_by_exact_job_path(
@@ -383,19 +436,6 @@ def test_live_harbor_process_matches_resume_by_exact_job_path(
     )
 
     assert _live_harbor_process_for(job_path) is True
-
-
-def test_live_harbor_process_ignores_unreadable_config(tmp_path: Path, monkeypatch):
-    job_path = tmp_path / "jobs" / "run-some-job"
-    job_path.parent.mkdir(parents=True)
-    monkeypatch.setattr(
-        "ornnlab.services.webui_job_resume.psutil.process_iter",
-        lambda *_: _iter_cmdlines(
-            ["harbor", "run", "--config", str(job_path.parent / "missing.json")]
-        ),
-    )
-
-    assert _live_harbor_process_for(job_path) is False
 
 
 def test_resume_harbor_job_forwards_merged_env(settings, tmp_path: Path, monkeypatch):

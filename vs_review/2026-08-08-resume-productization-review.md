@@ -190,20 +190,125 @@ B2 应读 config 内容校验 job_name/jobs_dir 归属，而非目录前缀。
   - 追加 Round 3（仅审 BLK-1/BLK-2 修复与其直接回归）：证据最充分，成本一次 fresh reviewer
   - 接受修复（依据 6 个新测试 + 全量门禁 + 代码链对照）：成本零，风险为进程探测仍可能有未覆盖形态
   - 回退到 27ab94d：放弃本轮 resume 产品化
+- User decision: **批准追加一轮聚焦复审**（Round 3，仅限 BLK-1/BLK-2 修复 `bca943f` 及其直接回归）
+- Approval evidence: 用户消息"批准追加一轮"（2026-08-08）
+- Authorized next scope: Round 3 仅审查 `_cmdline_targets_job` / `_config_targets_job` 的实现与测试，及其直接回归（bca943f diff 范围内）
+
+## Round 3: BLK-1/BLK-2 修复聚焦复审（用户批准）
+
+### Round Control
+- Round type: user-approved-extra
+- Round number: 3
+- Completed automatic rounds before launch: 2
+- User approval for this round: 用户消息"批准追加一轮"（2026-08-08，记录于 User Decision 节）
+- Closure finding IDs: BLK-1、BLK-2
+- Permitted closure relation: original-blocker-open | fix-regression | direct-adjacent-objective-failure
+- Target scope delta allowed: 仅 bca943f diff（_cmdline_targets_job/_config_targets_job 及测试）
+
+### Review Input
+- Objective: 验证 BLK-1（代理模板化场景原始 run 进程识别）与 BLK-2（共享 jobsDir 跨 job 误伤）在 `bca943f` 的修复中真正闭环，且修复未引入直接回归。
+- Target locations: `ornnlab/services/webui_job_resume.py`（_live_harbor_process_for/_cmdline_targets_job/_config_targets_job）、`tests/python/test_webui_job_resume.py`（test_live_harbor_process_* 6 用例）。
+- Baseline: `1322d67`（Round 2 审查基线）；修复提交：`bca943f`。
+- Change introduction: 进程探测从"cmdline 含 job 路径 / --config 前缀匹配"改为：resume 形态按 `--job-path` 精确路径匹配；run 形态读取 `--config` 文件内容，按 `job_name == job_path.name` 且 `jobs_dir == str(job_path.parent)` 精确归属。
+- Risk focus（挑战）：
+  - 精确匹配是否仍存在假阴性（原始 run 进程 cmdline 的其他形态？`harbor run` 无 `--config` 标志的形态？进程名不含 "harbor" 子串的形态，如 venv 路径含 "harbor" 但可执行名不同？）
+  - `_config_targets_job` 读共享 `harbor.config.json` 时：该文件被后续 job 覆盖后，旧孤儿进程归属误判为 False（fail-open）的风险与概率
+  - `Path(args[index+1]) == job_path` 的等价性（符号链接/相对路径/尾部斜杠）
+  - 新增测试是否真正覆盖 BLK-1/BLK-2 的反例，而非仅验证实现细节
+  - 性能：每个 resume 全量 psutil 扫描 + 读 config 文件，是否引入可感知延迟
+- Closure relation 判定要求：每条发现标注 original-blocker-open / fix-regression / direct-adjacent-objective-failure / unrelated-existing-risk。
+- Reviewer instructions: fresh session、只读、引用行号、标注 E0-E4、聚焦闭环节点。
+
+### Reviewer Timeout Policy
+| Complexity | Initial Wait | Extension | Max Attempts Per Role | Blocking Closure Behavior |
+|---|---|---:|---:|---:|---|
+| normal | 12 分钟 | +6 分钟 | 2 | 无法通过则不得标记 passed |
+
+### Reviewer Selection
+| Reviewer | Reason Selected | Risk Area |
+|---|---|---|
+| implementation-adversary | 与 Round 1/2 同主题（进程探测归属正确性），同角色一致性 | 假阴性/假阳性/回归 |
+
+### Reviewer Launch Records
+| Reviewer | Internal Mechanism | Session / Job ID | Trace Source | Context Forked | Input Packet | Context Explicitly Excluded | Read-only |
+|---|---|---|---|---|---|---|---|
+| implementation-adversary (Round 3) | Task tool (fresh subagent, general) | 待启动后填写 | Task tool 调用 | fork_context=false | Round 3 Review Input | 主 agent 历史/推理/结论 | yes |
+
+### Reviewer Timeout Records
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---:|---|---:|---|---:|---|
+| implementation-adversary-r3 | implementation-adversary | 1 | ses_0224f8175ffePJvRu6gkk2t67j | <12min | completed | n/a | completed |
+
+### Reviewer Outputs
+
+#### implementation-adversary-r3（聚焦复审）
+
+##### Summary
+修复方向正确（内容归属 + resume 精确路径），BLK-1 主场景（SIGKILL 后 temp config 残留）与 BLK-2 主场景（resume `/a/b` vs `/a/b2`）已闭环。但内容启发在两类结构性场景产生 **fail-open 漏检**：① 共享 config 文件 last-writer-wins（后启动兄弟 job 覆写后，孤儿进程归属误判 False）；② legacy 布局（job_path == jobs_dir）下 `jobs_dir == str(job_path.parent)` 恒不成立，探测结构性失效。两处均为"活 Job 被清锁 → 双写"的安全方向失败。
+
+##### Blocking Findings
+- **B1**（fix-regression + original-blocker-open 残留，E2）：共享 jobsDir 下 `harbor.config.json` 内容 = 最后一次启动的 job（harbor_engine.py:95-98 原子覆写）；孤儿进程 A + B 已启动（文件=B）→ 探测 A 失配 → fail-open 清锁 → 双写。触发链：共享目录 + 孤儿存活期间兄弟启动 + 容器守卫已被启动清理移除。
+- **B2**（fix-regression，E2）：legacy 布局 `resolve_harbor_job_path` 回退 job_path==jobs_dir（harbor_paths.py:24-27）→ `jobs_dir == str(job_path.parent)` 恒 False → run 进程探测结构性 miss。
+- **B3**（original-blocker-open 残留，E2，低概率）：config 不可读/解析失败返回 False（fail-open），与"确证死亡才清锁"契约方向相反；temp config 在干净退出被清理后孤儿存活即触发。
+
+##### Non-blocking Risks
+- N1（配置依赖）：`ORNNLAB_HARBOR_CLI` 自定义为不含 "harbor" 的二进制名 → 前置过滤静默失效（fail-open）。
+- N2：自定义 subprocess command 自带 `--config` 时 `args.index("--config")` 读到用户 command 自己的文件。
+- N7（pre-existing）：resume 双击 TOCTOU（active_resume_operation 检查与 submit 非原子）——与本提交无关。
+- N8：修复后常见路径 fail-closed → 孤儿存活时 resume 永久阻塞，系统无孤儿 harbor 进程清理机制。
+
+##### 建议修复（未执行）
+1. 根因：进程 PID 为身份信号（spawn 时持久化 pid+start_time，探测校验存活），精确且 fail-safe；文件内容启发在共享目录下不可判定。
+2. 短期：统一 fail-closed（进程存在但不可读/失配 → 保留锁 + 日志）；修正 legacy 分支比对目标；配套孤儿进程清理机制。
+
+### Main Agent Response（Round 3）
+
+| Reviewer | Finding | 反例 | Severity | Decision | Authority | Closure Relation | Evidence / Reason | Scope Effect | Side Effects | Action Taken | Follow-up |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| r3 | B1 共享文件 last-writer-wins fail-open | 孤儿 A + 文件=B → 误清锁 | blocking | accept | E2 | fix-regression + original-blocker-open | 内容归属在共享目录不可判定 | 无 | 无 | 同目录 config 失配/不可读统一 fail-closed（保留锁 + `resume_lock_probe_inconclusive` 日志） | PID 信号为根治项（见下） |
+| r3 | B2 legacy 布局结构性失配 | jobs_dir 恒 ≠ parent | blocking | accept | E2 | fix-regression | 比对目标修正 | 无 | 无 | `_config_matches_job` 接受 `jobs_dir in {job_path, job_path.parent}` | 无 |
+| r3 | B3 不可读 fail-open | 信号不可得放行清锁 | blocking | accept | E2 | original-blocker-open | 统一 fail-closed | 无 | 无 | 同目录/ornnlab-harbor-runtime 前缀不可读 → True（保留锁） | 无 |
+| r3 | N1 二进制名绕过 | 自定义名无 "harbor" | non-blocking | defer | E4 | unrelated-existing-risk | 配置依赖边缘；记录 | 无 | 无 | 记录 | PID 根治项一并处理 |
+| r3 | N2 自定义 --config | index 读到 command 自身文件 | non-blocking | defer | E4 | unrelated-existing-risk | 自定义 command 边缘；同目录判定仍 fail-closed | 无 | 无 | 记录 | 同上 |
+| r3 | N7 双击 TOCTOU | 检查与提交非原子 | non-blocking | defer | E4 | unrelated-existing-risk | pre-existing，单 worker 下窗口极小 | 无 | 无 | 记录 | 若多 worker 再处理 |
+| r3 | N8 孤儿阻塞 | fail-closed 后 resume 卡死 | non-blocking | defer | E4 | unrelated-existing-risk | 有 reason=live_harbor_process 日志与 Harbor 锁错误提示 | 无 | 无 | 记录 | 孤儿进程清理为独立产品项（reconcile_startup 终止孤儿），需另行立项 |
+
+**PID 根治项（未实施，需批准）**：以进程 PID + start_time 为身份信号（spawn 时持久化 sidecar，探测校验存活）替代文件内容启发——精确、无歧义、无共享目录歧义。需修改 `harbor_subprocess.py`（冻结目标外）并新增 sidecar 文件（持久数据变更），按控制契约需 E0 批准后另行实施。
+
+### Review Governor (Round 3)
+- Completed rounds before decision: 3（预算 2 + 用户批准 1）
+- Unresolved blockers after round: 3（B1/B2/B3），随后由主代理在冻结目标内修复并经测试验证（233 passed、门禁绿）
+- Blockers closed: B1/B2/B3 全部接受并以 fail-closed + legacy 修正闭环；测试从 6 扩至 9 个用例（兄弟同目录 fail-closed、异目录忽略、同目录不可读 fail-closed、legacy 命中）
+- New blocker classes: none（同主题 fail-open 方向）
+- Repeated failure class: yes - 进程探测归属（B2 → BLK-1/BLK-2 → B1/B2/B3，最终以 fail-closed 收敛）
+- Scope expansion proposed: no（PID 根治项作为需批准的后续项记录，未实施）
+- Governor decision: user-decision-required（Round 4 需用户批准；当前 fail-closed 修复已消除全部已证 fail-open 路径）
+- Decision reason: 自动预算 2 轮 + 用户批准 1 轮均已使用；B1/B2/B3 已在冻结目标内修复并有测试证据；是否追加 Round 4 或接受当前状态需用户决定
+
+### Convergence Reflection
+- Completed rounds versus budget: 3/3（2 自动 + 1 用户批准）
+- Findings closed: B1-B4（R1）、BLK-1/BLK-2（R2）、B1/B2/B3（R3）；全部以测试 + 门禁闭环
+- Findings repeated: 进程探测归属主题经历 3 轮（前缀→内容→fail-closed），最终收敛为"无法确证排除即保留锁"的安全方向
+- Benefits achieved: resume 全自动（权限/锁/代理/凭证四层实机 + 测试验证）
+- Risk direction: decreasing（fail-open 路径全部转为 fail-closed）
+- Last known-good checkpoint: `27ab94d`；Rollback: `git revert` 最近提交
+- Recommended bounded choices: ① 追加 Round 4（仅审 fail-closed 修复）；② 接受当前状态（B1/B2/B3 修复有 9 个用例 + 门禁绿）；③ 批准 PID 根治项另行实施；④ 回退
+
+### User Decision (Round 3)
+- Decision requested: 追加 Round 4 / 接受当前状态 / 批准 PID 根治项 / 回退
 - User decision: pending
 
 ### Closure Status
-- Blocking findings found: yes（Round 1: B1-B4；Round 2: BLK-1/BLK-2）
-- Accepted blocking findings fixed: yes（bca943f 已含全部修复）
-- Blocking re-review completed: no（Round 2 闭环节点发现原阻断未闭环；修复后未再复审）
-- Blocking re-review passed: no
-- Automatic round budget respected: yes（2/2）
-- Third-or-later round explicitly user-approved before launch: n/a（未启动）
-- Scope drift detected: no
-- Evidence sufficient for scope-expanding actions: yes（E1/E2）
+- Blocking findings found: yes（R1: B1-B4；R2: BLK-1/BLK-2；R3: B1/B2/B3）
+- Accepted blocking findings fixed: yes（全部接受；R3 修复在 `bca943f` 之后的提交中）
+- Blocking re-review completed: Round 2 完成（发现未闭环）；Round 3 完成（发现 fail-open 方向问题）；Round 3 修复后未复审
+- Blocking re-review passed: no（R3 复审未通过，修复后无后续复审）
+- Automatic round budget respected: yes（2/2 自动；Round 3 用户批准）
+- Third-or-later round explicitly user-approved before launch: yes（Round 3，用户"批准追加一轮"）
+- Scope drift detected: no（PID 根治项仅记录，未实施）
 - Control outcome: user-decision-required
 - Allowed to proceed: 待用户决策
 
 ## Final Conclusion
 
-Round 1（初始）发现 4 阻断（B1-B4）已全部接受并修复；Round 2（闭环节点）发现 B2 修复不完整（BLK-1 模板化场景失明、BLK-2 共享目录误伤），主代理已按 reviewer 建议改为"读 config 内容精确归属"并修复（`bca943f`），6 个新测试 + 全量门禁绿。自动审查预算 2 轮已用尽，按规则不自动启动 Round 3。任务状态：**待用户决策**——追加一轮聚焦复审 / 接受当前修复 / 回退。
+三轮审查（2 自动 + 1 用户批准）共发现并接受 9 个阻断项，全部在冻结目标内修复：fail-open 路径统一转为 fail-closed（无法确证排除的 harbor 进程即保留锁）、legacy 分支修正、恢复范围扩展、env 合并、容器 running 过滤、取消路径、原子写、守卫日志。当前状态：**B1/B2/B3 修复已测试闭环（233 passed、全量门禁绿），无已证 fail-open 路径残留**；PID 身份信号根治项（消除共享目录歧义的最终方案）与孤儿进程清理机制作为需批准的后续项记录。是否追加 Round 4 复审、接受当前状态、批准 PID 根治项或回退，待用户决定。
