@@ -44,4 +44,15 @@
 - 结论：triaged（观察项，未修代码；后续如再复现，优先排查本机代理对 TestClient 的影响，必要时在测试环境显式剥离代理变量）
 - 备注：见 `docs/releases/v1.0.5/engineering-plan.md` 运行经验条目。
 
+### W1-04 中断 Job 展示错误：列表任务数归零、已停止 task 仍显示 running
+- 日期：2026-08-07
+- 模块/页面：Jobs 列表 + Job 详情抽屉（中断态 Job）
+- 严重度：P1
+- 现象：Job 因服务重启被中断后，列表未正确展示任务总数与已完成数量（total=0），详情页 trials 中实际已停止的 task 仍显示 `running`。
+- 复现步骤：1. 服务运行中启动 Job；2. 重启 dev 服务（run 被标为 interrupted）；3. 查看列表与详情 trials。
+- 期望行为：中断 Job 按 Harbor 原生结果展示真实数据（total=10、completed=7、passed/notPassed 分布），已停止的 task 不再显示 running。
+- 实际行为：`load_job_result._live_native_result_path` 仅对 `status=='running'` 读取原生 result.json，interrupted 时返回空 → total=0；`running_trial_descriptors` 不受 DB 状态门控、仅靠原生 `finished_at` 判定，而中断时 `finished_at=None`（Harbor 被终止未写终态）→ 残留目录被误报 running。
+- 结论：closed（accepted，已修复 2026-08-07）
+- 备注：修复：① `_live_native_result_path` 去掉 DB 状态门控，任何 `result_path` 为空且有 job 专属原生结果的 Job 都读取原生计数；② `trials_for_job` 仅当 DB `status=='running'` 时追加进行中 trial（避免中断后残留目录被当作 running）。回归测试：interrupted 计数读取、interrupted trials 不报 running。实测列表 `total=10, completed=7, passed=3, notPassed=4, errored=0`，trials 仅剩 7 个 passed。
+
 <!-- 新问题追加到此处，编号递增 -->

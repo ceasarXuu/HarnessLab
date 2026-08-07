@@ -227,10 +227,11 @@ class WebUiJobService:
             _trial_dto(job_id, item, config.get("pricing"))
             for item in trial_result_payloads(job_path, job_name, result_path)
         ]
-        trials.extend(
-            running_trial_dto(job_id, descriptor)
-            for descriptor in running_trial_descriptors(job_path, job_name, result_path)
-        )
+        if run.get("status") == "running":
+            trials.extend(
+                running_trial_dto(job_id, descriptor)
+                for descriptor in running_trial_descriptors(job_path, job_name, result_path)
+            )
         return trials
 
     def logs_for_job(self, job_id: str) -> dict:

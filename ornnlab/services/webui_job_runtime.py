@@ -30,7 +30,7 @@ def load_job_result(row: dict) -> dict:
 
 
 def _live_native_result_path(row: dict) -> Path | None:
-    if row.get("status") != "running" or not row.get("job_dir"):
+    if not row.get("job_dir"):
         return None
     job_name = row.get("harbor_job_name")
     if not isinstance(job_name, str) or not _safe_child_name(job_name):
