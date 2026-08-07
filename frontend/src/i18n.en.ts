@@ -318,6 +318,8 @@ export const enMessages = {
     confirmCleanup: 'Confirm cleanup',
     eventLog: 'Event log',
     eventLogPath: 'Log file',
+    jobLog: 'Job log',
+    noLogContent: 'No log content yet',
     artifactPaths: 'Artifact paths',
     newJobDesc: 'Create a JobConfig, review the resolved command, then run it.',
     jobName: 'job_name',

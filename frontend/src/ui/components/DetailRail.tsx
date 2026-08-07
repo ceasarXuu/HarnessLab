@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, FileJson, FlaskConical, RotateCcw, Square, Terminal, Trash2 } from 'lucide-react'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
@@ -10,6 +10,8 @@ interface DetailRailProps {
   writesEnabled?: boolean
   job: HarborJob
   events: EventLog[]
+  logs?: string
+  logsPath?: string | null
   trials: TrialRow[]
   t: Translate
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
@@ -18,10 +20,16 @@ interface DetailRailProps {
   onLeaderboardChange: (jobId: string, include: boolean) => void
 }
 
-export function DetailRail({ writesEnabled = true, job, events, trials, t, onJobAction, onCopyJob, onDeleteJob, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ writesEnabled = true, job, events, logs = '', logsPath = null, trials, t, onJobAction, onCopyJob, onDeleteJob, onLeaderboardChange }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
+  const logViewRef = useRef<HTMLPreElement>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
   const primaryJobAction = getPrimaryJobAction(job, t)
+
+  useEffect(() => {
+    const element = logViewRef.current
+    if (element) element.scrollTop = element.scrollHeight
+  }, [logs])
 
   return (
     <aside className="detail-rail">
@@ -130,6 +138,20 @@ export function DetailRail({ writesEnabled = true, job, events, trials, t, onJob
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="surface rail-card">
+        <div className="rail-title">
+          <Terminal aria-hidden="true" />
+          <h3>{t('jobLog')}</h3>
+        </div>
+        <p className="rail-subtitle">
+          <span>{t('eventLogPath')}</span>
+          <code>{logsPath ?? '—'}</code>
+        </p>
+        <pre ref={logViewRef} className="job-log-view" aria-label={t('jobLog')}>
+          {logs || t('noLogContent')}
+        </pre>
       </section>
 
       <section className="surface rail-card">

@@ -9,10 +9,7 @@ from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.models.webui import CreateJobInput
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
-from ornnlab.services.harbor_paths import (
-    resolve_harbor_job_path,
-    resolve_harbor_log_path,
-)
+from ornnlab.services.harbor_paths import resolve_harbor_job_path
 from ornnlab.services.harbor_results import (
     running_trial_descriptors,
     running_trial_dto,
@@ -25,6 +22,7 @@ from ornnlab.services.model_pricing import calculate_cost, pricing_snapshot
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_job_copy import load_job_copy_config
+from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
 from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_job_runtime import load_job_result
@@ -235,6 +233,9 @@ class WebUiJobService:
         )
         return trials
 
+    def logs_for_job(self, job_id: str) -> dict:
+        return job_log_payload(self.experiments.get_run(job_id), self._job_config(job_id))
+
     def leaderboard(
         self, dataset_ref: str, query: str | None = None, metric: str | None = None
     ) -> list[dict]:
@@ -379,7 +380,7 @@ def _job_dto(row: dict) -> dict:
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
         "canResume": _can_resume(row, status),
         "jobDir": row.get("job_dir"),
-        "eventLogPath": _event_log_path(row, config),
+        "eventLogPath": event_log_path(row, config),
         "artifactPaths": _artifacts(row),
         "failureCode": row.get("failure_code"),
     }
@@ -462,12 +463,6 @@ def _artifacts(row: dict) -> list[str]:
     if row.get("job_dir"):
         values.append(str(Path(row["job_dir"]) / "harbor.config.json"))
     return [value for value in values if value]
-
-
-def _event_log_path(row: dict, config: dict) -> str | None:
-    if not row.get("job_dir"):
-        return None
-    return str(resolve_harbor_log_path(Path(row["job_dir"]), config.get("job_name")))
 
 
 def _now() -> str:

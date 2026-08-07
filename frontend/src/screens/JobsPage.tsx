@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useJob, useJobEvents, useJobTrials, usePollingRefresh } from '../api/hooks'
+import { useJob, useJobEvents, useJobLogs, useJobTrials, usePollingRefresh } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { DetailRail } from '../ui/components/DetailRail'
@@ -54,6 +54,7 @@ export function JobsPage({
   const detailResource = useJob(client, selected?.id)
   const eventsResource = useJobEvents(client, selected?.id)
   const trialsResource = useJobTrials(client, selected?.id)
+  const logsResource = useJobLogs(client, selected?.id)
   const loadedDetailJob = detailResource.data ? jobDtoToHarborJob(detailResource.data) : selected
   const detailJob = loadedDetailJob && selected
     ? { ...loadedDetailJob, status: selected.status, canResume: selected.canResume }
@@ -66,6 +67,7 @@ export function JobsPage({
   usePollingRefresh(detailResource.refresh, live)
   usePollingRefresh(eventsResource.refresh, live)
   usePollingRefresh(trialsResource.refresh, live)
+  usePollingRefresh(logsResource.refresh, live)
 
   const requestJobAction = (jobId: string, action: 'cancel' | 'resume') => {
     if (action !== 'cancel') {
@@ -116,6 +118,8 @@ export function JobsPage({
             <DetailRail
               job={detailJob}
               events={events}
+              logs={logsResource.data?.content ?? ''}
+              logsPath={logsResource.data?.logPath ?? null}
               trials={trials}
               t={t}
               writesEnabled={writesEnabled}

@@ -151,6 +151,11 @@ export interface JobEventDto {
   occurredAt: string
 }
 
+export interface JobLogDto {
+  content: string
+  logPath: string | null
+}
+
 export type TrialStatus = 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface TrialDto {

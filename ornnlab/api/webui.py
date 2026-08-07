@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-from uuid import uuid4
 
 from fastapi import APIRouter, Request
 
+from ornnlab.api.webui_deps import (
+    _data,
+    _datasets,
+    _jobs,
+    _operations,
+    _page,
+    _page_data,
+    _profiles,
+    _require_query,
+    _system,
+)
 from ornnlab.api.webui_resources import router as resources_router
 from ornnlab.models.webui import (
     AgentInput,
@@ -16,11 +26,6 @@ from ornnlab.models.webui import (
     EnvironmentInput,
     LeaderboardUpdateInput,
 )
-from ornnlab.services.webui_dataset_service import WebUiDatasetService
-from ornnlab.services.webui_job_service import WebUiJobService
-from ornnlab.services.webui_operation_service import WebUiOperationService
-from ornnlab.services.webui_profile_service import WebUiProfileService
-from ornnlab.services.webui_system_service import WebUiSystemService
 
 router = APIRouter(prefix="/api/webui/v1", tags=["webui"])
 router.include_router(resources_router)
@@ -201,6 +206,12 @@ async def list_job_trials(job_id: str, request: Request) -> dict:
     return _data(request, _jobs(request).trials_for_job(job_id))
 
 
+@router.get("/jobs/{job_id}/logs")
+async def get_job_logs(job_id: str, request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, _jobs(request).logs_for_job(job_id))
+
+
 @router.patch("/jobs/{job_id}/leaderboard")
 async def update_job_leaderboard(
     job_id: str, payload: LeaderboardUpdateInput, request: Request
@@ -243,12 +254,11 @@ async def get_dataset_task(dataset_ref: str, task: str, request: Request) -> dic
 async def import_dataset(payload: DatasetImportInput, request: Request) -> dict:
     _require_query(request, set())
     datasets = _datasets(request)
-
-    async def work(progress) -> None:
-        await datasets.import_local(payload, progress)
-
     operation = _operations(request).submit(
-        "import-dataset", "dataset", f"{payload.name}@{payload.version}", work
+        "import-dataset",
+        "dataset",
+        f"{payload.name}@{payload.version}",
+        lambda progress: datasets.import_local(payload, progress),
     )
     return _data(request, {"operation": operation})
 
@@ -265,11 +275,12 @@ async def download_dataset(
 ) -> dict:
     _require_query(request, set())
     datasets = _datasets(request)
-
-    async def work(progress) -> None:
-        await datasets.download(dataset_ref, payload.parent_path, progress)
-
-    operation = _operations(request).submit("download-dataset", "dataset", dataset_ref, work)
+    operation = _operations(request).submit(
+        "download-dataset",
+        "dataset",
+        dataset_ref,
+        lambda progress: datasets.download(dataset_ref, payload.parent_path, progress),
+    )
     return _data(request, {"operation": operation})
 
 
@@ -334,11 +345,12 @@ async def relocate_dataset(dataset_ref: str, payload: DatasetPathInput, request:
 async def sync_dataset(dataset_ref: str, request: Request) -> dict:
     _require_query(request, set())
     datasets = _datasets(request)
-
-    async def work(progress) -> None:
-        await datasets.sync(dataset_ref, progress)
-
-    operation = _operations(request).submit("sync-dataset", "dataset", dataset_ref, work)
+    operation = _operations(request).submit(
+        "sync-dataset",
+        "dataset",
+        dataset_ref,
+        lambda progress: datasets.sync(dataset_ref, progress),
+    )
     return _data(request, {"operation": operation})
 
 
@@ -439,62 +451,3 @@ async def start_docker(payload: DockerStartCommandInput, request: Request) -> di
 async def choose_directory(request: Request) -> dict:
     _require_query(request, set())
     return _data(request, await asyncio.to_thread(_system(request).choose_directory))
-
-
-def _operations(request: Request) -> WebUiOperationService:
-    return WebUiOperationService(request.app.state.settings, request.app.state.operation_tasks)
-
-
-def _profiles(request: Request) -> WebUiProfileService:
-    return WebUiProfileService(request.app.state.settings)
-
-
-def _jobs(request: Request) -> WebUiJobService:
-    return WebUiJobService(
-        request.app.state.settings, _operations(request), request.app.state.worker
-    )
-
-
-def _datasets(request: Request) -> WebUiDatasetService:
-    return request.app.state.dataset_service
-
-
-def _system(request: Request) -> WebUiSystemService:
-    return WebUiSystemService(request.app.state.settings, _operations(request))
-
-
-def _data(request: Request, data: object) -> dict:
-    return {"data": data, "error": None, "meta": {"requestId": _request_id(request)}}
-
-
-def _page(request: Request, items: list[dict], cursor: str | None, limit: int) -> dict:
-    offset = int(cursor or "0")
-    page = items[offset : offset + limit]
-    next_cursor = str(offset + limit) if offset + limit < len(items) else None
-    meta = {"requestId": _request_id(request), "total": len(items)}
-    if next_cursor:
-        meta["nextCursor"] = next_cursor
-    return {
-        "data": {"items": page, "total": len(items), "nextCursor": next_cursor},
-        "error": None,
-        "meta": meta,
-    }
-
-
-def _page_data(request: Request, page: dict) -> dict:
-    meta = {"requestId": _request_id(request), "total": page["total"]}
-    if page.get("nextCursor"):
-        meta["nextCursor"] = page["nextCursor"]
-    return {"data": page, "error": None, "meta": meta}
-
-
-def _require_query(request: Request, allowed: set[str]) -> None:
-    unsupported = sorted(set(request.query_params) - allowed)
-    if unsupported:
-        raise ValueError(f"unsupported query parameters: {', '.join(unsupported)}")
-
-
-def _request_id(request: Request) -> str:
-    if not hasattr(request.state, "request_id"):
-        request.state.request_id = uuid4().hex
-    return request.state.request_id

@@ -358,6 +358,20 @@ code {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.job-log-view {
+  max-height: 240px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-family: var(--mono-font, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 .doctor-list li {
   display: flex;
   align-items: center;

@@ -320,6 +320,8 @@ export const zhMessages = {
     confirmCleanup: '确认清理',
     eventLog: '事件日志',
     eventLogPath: '日志文件',
+    jobLog: 'Job 日志',
+    noLogContent: '暂无日志内容',
     artifactPaths: '产物路径',
     newJobDesc: '先创建 JobConfig，确认解析后的命令，再执行运行。',
     jobName: 'job_name',

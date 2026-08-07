@@ -68,7 +68,7 @@ describe('App', () => {
     expect(screen.getByText('/Users/xuzhang/.ornnlab/HarnessLab/trials/job_91a7')).toBeInTheDocument()
     expect(screen.queryByText('harbor.config.json', { exact: true })).not.toBeInTheDocument()
     expect(screen.queryByText('job.log', { exact: true })).not.toBeInTheDocument()
-    expect(screen.getByText('Log file')).toBeInTheDocument()
+    expect(screen.getAllByText('Log file')).toHaveLength(2)
     expect(screen.getAllByText('/Users/xuzhang/.ornnlab/HarnessLab/jobs/terminal-bench-smoke/job.log')).toHaveLength(2)
     expect(screen.queryByText('Trial diagnostics')).not.toBeInTheDocument()
     expect(screen.queryByText('analysis: trials/job_91a7/apt-setup.analysis.json')).not.toBeInTheDocument()

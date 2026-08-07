@@ -13,6 +13,7 @@ import type {
   HarnessDto,
   JobDto,
   JobEventDto,
+  JobLogDto,
   LeaderboardDatasetDto,
   LeaderboardEntryDto,
   LeaderboardQuery,
@@ -205,6 +206,11 @@ export function useJobEvents(client: WebUiClient, id?: string): WebUiResource<Jo
 
 export function useJobTrials(client: WebUiClient, id?: string): WebUiResource<TrialDto[]> {
   const load = useCallback(() => client.listJobTrials(id ?? ''), [client, id])
+  return useWebUiResource(load, [client, id], Boolean(id))
+}
+
+export function useJobLogs(client: WebUiClient, id?: string): WebUiResource<JobLogDto> {
+  const load = useCallback(() => client.getJobLogs(id ?? ''), [client, id])
   return useWebUiResource(load, [client, id], Boolean(id))
 }
 

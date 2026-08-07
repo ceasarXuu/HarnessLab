@@ -23,6 +23,7 @@ import type {
   JobDto,
   JobConfigDto,
   JobEventDto,
+  JobLogDto,
   LeaderboardDatasetDto,
   LeaderboardEntryDto,
   LeaderboardQuery,
@@ -77,6 +78,7 @@ export interface WebUiClient {
   listEnvironments(query?: EnvironmentQuery): Promise<ApiResponse<Page<EnvironmentDto> | null>>
   listJobEvents(id: string): Promise<ApiResponse<JobEventDto[] | null>>
   listJobTrials(id: string): Promise<ApiResponse<TrialDto[] | null>>
+  getJobLogs(id: string): Promise<ApiResponse<JobLogDto | null>>
   listJobs(query?: ListQuery): Promise<ApiResponse<Page<JobDto> | null>>
   listLeaderboard(query: LeaderboardQuery): Promise<ApiResponse<Page<LeaderboardEntryDto> | null>>
   listLeaderboardDatasets(query?: ListQuery): Promise<ApiResponse<Page<LeaderboardDatasetDto> | null>>
@@ -133,6 +135,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     listEnvironments: (query) => requestJson<Page<EnvironmentDto>>(request, `${baseUrl}/environments${toSearch(query)}`),
     listJobEvents: (id) => requestJson<JobEventDto[]>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/events`),
     listJobTrials: (id) => requestJson<TrialDto[]>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/trials`),
+    getJobLogs: (id) => requestJson<JobLogDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/logs`),
     listJobs: (query) => requestJson<Page<JobDto>>(request, `${baseUrl}/jobs${toSearch(query)}`),
     listLeaderboard: (query) => requestJson<Page<LeaderboardEntryDto>>(request, `${baseUrl}/leaderboard${toSearch(query)}`),
     listLeaderboardDatasets: (query) => requestJson<Page<LeaderboardDatasetDto>>(request, `${baseUrl}/leaderboard/datasets${toSearch(query)}`),

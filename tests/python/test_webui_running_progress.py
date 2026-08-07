@@ -156,3 +156,65 @@ def test_running_job_trials_list_includes_in_progress_trials(client, settings):
     assert by_task["chess-best-move"]["logPath"] == str(running / "trial.log")
     assert by_task["chess-best-move"]["score"] is None
     assert by_task["chess-best-move"]["runtimeSeconds"] is None
+
+
+def test_job_logs_reads_the_native_job_log(client, settings):
+    create_test_agent(settings)
+    created = ExperimentService(settings).create(
+        ExperimentCreate(
+            name="Live logs",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench-sample"],
+            n_tasks=None,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    jobs_dir = settings.home / "shared-jobs"
+    jobs_dir.mkdir()
+    (jobs_dir / "job.log").write_text("line1\nline2\nagent output\n", encoding="utf-8")
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'running', job_dir = ?, result_path = NULL WHERE id = ?",
+            (str(jobs_dir), run_id),
+        )
+
+    response = client.get(f"{API}/jobs/{run_id}/logs")
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["logPath"] == str(jobs_dir / "job.log")
+    assert data["content"] == "line1\nline2\nagent output\n"
+
+
+def test_job_logs_tail_large_files_and_return_empty_without_dir(client, settings):
+    create_test_agent(settings)
+    created = ExperimentService(settings).create(
+        ExperimentCreate(
+            name="Large logs",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench-sample"],
+            n_tasks=None,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    jobs_dir = settings.home / "shared-jobs"
+    jobs_dir.mkdir()
+    (jobs_dir / "job.log").write_text("z" * 200_000 + "\nTAIL", encoding="utf-8")
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'running', job_dir = ?, result_path = NULL WHERE id = ?",
+            (str(jobs_dir), run_id),
+        )
+
+    data = client.get(f"{API}/jobs/{run_id}/logs").json()["data"]
+    assert data["content"].endswith("\nTAIL")
+    assert len(data["content"]) == 200_000
+
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET job_dir = NULL WHERE id = ?",
+            (run_id,),
+        )
+    empty = client.get(f"{API}/jobs/{run_id}/logs").json()["data"]
+    assert empty["logPath"] is None
+    assert empty["content"] == ""

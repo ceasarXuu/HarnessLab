@@ -70,4 +70,27 @@ describe('DetailRail Job actions', () => {
     expect(passedRow).toHaveTextContent('passed')
     expect(passedRow).toHaveTextContent('00:05:00')
   })
+
+  it('renders the raw job log with its path', () => {
+    const job = jobs[0]
+
+    render(
+      <DetailRail
+        job={job}
+        events={[]}
+        logs={'Running command: claude ...\nagent output line'}
+        logsPath={'/tmp/job.log'}
+        trials={[]}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+      />,
+    )
+
+    const log = screen.getByLabelText('Job log')
+    expect(log).toHaveTextContent('Running command: claude ...')
+    expect(log).toHaveTextContent('agent output line')
+    expect(screen.getByText('/tmp/job.log')).toBeInTheDocument()
+  })
 })

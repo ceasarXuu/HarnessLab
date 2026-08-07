@@ -47,6 +47,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     listHarnesses: unavailable,
     listJobEvents: unavailable,
     listJobTrials: unavailable,
+    getJobLogs: unavailable,
     listJobs: unavailable,
     listLeaderboard: unavailable,
     listLeaderboardDatasets: unavailable,

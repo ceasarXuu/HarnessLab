@@ -284,6 +284,14 @@ export function createMockWebUiClient(): WebUiClient {
     async listJobTrials(id) {
       return success(trialDtos.filter((trial) => trial.jobId === id))
     },
+    async getJobLogs(id) {
+      const job = jobDtos.find((entry) => entry.id === id)
+      if (!job) return failure('JOB_NOT_FOUND', 'Job not found')
+      return success({
+        content: `experiment.created\nwebui.job.configured\nharbor.job.running\nRunning task: ${job.name}\nagent output line\n`,
+        logPath: job.eventLogPath ?? null,
+      })
+    },
     async listJobs(query) {
       return success(page(filterByQuery(jobDtos, query, (job) => [job.name, job.datasetRef, job.agentName, job.harness, job.model, job.status]), query))
     },
