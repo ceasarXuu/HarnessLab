@@ -316,46 +316,82 @@ def test_restore_sensitive_env_restores_environment_env(tmp_path: Path, caplog):
     assert _has_redacted({"A": "plain"}) is False
 
 
-def test_live_harbor_process_matches_initial_run_config_path(monkeypatch):
-    job_path = Path("/tmp/jobs/run-some-job")
+def _iter_cmdlines(*cmdlines: list[str]):
+    return iter(SimpleNamespace(info={"cmdline": cmdline}) for cmdline in cmdlines)
+
+
+def test_live_harbor_process_matches_run_config_by_content(tmp_path: Path, monkeypatch):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    config = job_path.parent / "harbor.config.json"
+    config.write_text(
+        json.dumps({"job_name": "run-some-job", "jobs_dir": str(job_path.parent)}),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         "ornnlab.services.webui_job_resume.psutil.process_iter",
-        lambda *_: iter(
-            [
-                SimpleNamespace(
-                    info={
-                        "cmdline": [
-                            "harbor",
-                            "run",
-                            "--config",
-                            "/tmp/jobs/harbor.config.json",
-                        ]
-                    }
-                )
-            ]
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(config)]),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_matches_temp_runtime_config(tmp_path: Path, monkeypatch):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    runtime_config = tmp_path / ".harbor.runtime.config.json"
+    runtime_config.write_text(
+        json.dumps({"job_name": "run-some-job", "jobs_dir": str(job_path.parent)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(runtime_config)]),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_ignores_config_of_other_job(tmp_path: Path, monkeypatch):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    config = job_path.parent / "harbor.config.json"
+    config.write_text(
+        json.dumps({"job_name": "run-other-job", "jobs_dir": str(job_path.parent)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(["harbor", "run", "--config", str(config)]),
+    )
+
+    assert _live_harbor_process_for(job_path) is False
+
+
+def test_live_harbor_process_matches_resume_by_exact_job_path(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    sibling = tmp_path / "jobs" / "run-sibling-job"
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.process_iter",
+        lambda *_: _iter_cmdlines(
+            ["harbor", "job", "resume", "--job-path", str(job_path)],
+            ["harbor", "job", "resume", "--job-path", str(sibling)],
         ),
     )
 
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_ignores_config_outside_jobs_dir(monkeypatch):
-    job_path = Path("/tmp/jobs/run-some-job")
+def test_live_harbor_process_ignores_unreadable_config(tmp_path: Path, monkeypatch):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
     monkeypatch.setattr(
         "ornnlab.services.webui_job_resume.psutil.process_iter",
-        lambda *_: iter(
-            [
-                SimpleNamespace(
-                    info={
-                        "cmdline": [
-                            "harbor",
-                            "run",
-                            "--config",
-                            "/tmp/other/harbor.config.json",
-                        ]
-                    }
-                )
-            ]
+        lambda *_: _iter_cmdlines(
+            ["harbor", "run", "--config", str(job_path.parent / "missing.json")]
         ),
     )
 

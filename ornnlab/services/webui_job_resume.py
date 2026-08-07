@@ -155,24 +155,39 @@ def _active_operation_for_run(
 
 
 def _live_harbor_process_for(job_path: Path) -> bool:
-    marker = job_path.as_posix()
-    jobs_dir_prefix = f"{job_path.parent.as_posix()}/"
     try:
         for proc in psutil.process_iter(["cmdline"]):
             args = proc.info.get("cmdline") or []
-            text = " ".join(args)
-            if "harbor" not in text.lower():
+            if not any("harbor" in arg.lower() for arg in args):
                 continue
-            if marker in text:
+            if _cmdline_targets_job(args, job_path):
                 return True
-            if "--config" in args:
-                config_index = args.index("--config")
-                config_path = args[config_index + 1] if config_index + 1 < len(args) else ""
-                if config_path.startswith(jobs_dir_prefix):
-                    return True
     except (psutil.Error, OSError):
         return True
     return False
+
+
+def _cmdline_targets_job(args: list[str], job_path: Path) -> bool:
+    if "--job-path" in args:
+        index = args.index("--job-path")
+        return index + 1 < len(args) and Path(args[index + 1]) == job_path
+    if "--config" in args:
+        index = args.index("--config")
+        if index + 1 >= len(args):
+            return False
+        return _config_targets_job(Path(args[index + 1]), job_path)
+    return False
+
+
+def _config_targets_job(config_path: Path, job_path: Path) -> bool:
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        payload.get("job_name") == job_path.name
+        and payload.get("jobs_dir") == str(job_path.parent)
+    )
 
 
 def _run_has_live_containers(settings: Settings, run_id: str) -> bool:

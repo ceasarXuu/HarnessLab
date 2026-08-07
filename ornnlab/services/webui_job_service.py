@@ -206,7 +206,7 @@ class WebUiJobService:
                 restore_sensitive_env(job_path, run_agent_env, run_environment_env)
                 policy = await prepare_resume_proxy(self.experiments.container_proxy, job_path)
                 await self._resume_harbor_job(
-                    job_path, env={**os.environ, **run_agent_env} or None
+                    job_path, env={**os.environ, **run_agent_env}
                 )
             except asyncio.CancelledError as exc:
                 self._mark_resume_failed(run, exc)
