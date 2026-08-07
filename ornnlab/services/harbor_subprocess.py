@@ -82,7 +82,12 @@ class ManagedSubprocessHarborRunner:
                 ) from error
             output_task = asyncio.create_task(_mirror_stdout(process, log_path))
             sidecar_path = job_dir / _job_pid_sidecar_name(config.job_name)
-            _write_job_pid_sidecar(sidecar_path, process)
+            try:
+                _write_job_pid_sidecar(sidecar_path, process)
+            except OSError:
+                logger.warning(
+                    "harbor_subprocess.sidecar_write_failed path=%s", sidecar_path
+                )
             try:
                 return_code = await process.wait()
                 output = await output_task

@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import time
@@ -166,6 +165,10 @@ def _live_harbor_process_for(job_path: Path, job_name: str | None = None) -> boo
             continue
         alive = _sidecar_process_alive(sidecar_path)
         if alive is not None:
+            if alive is False:
+                logger.info(
+                    "docker.resume_lock_probe_sidecar_dead path=%s", sidecar_path
+                )
             return alive
     try:
         for proc in psutil.process_iter(["cmdline"]):
@@ -185,8 +188,9 @@ def _job_sidecar_candidates(job_path: Path, job_name: str | None) -> list[Path]:
 
 
 def _job_pid_sidecar_name(job_name: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9._-]", "_", job_name)
-    return f".ornnlab-{safe}.pid"
+    from ornnlab.services.harbor_subprocess import _job_pid_sidecar_name as _shared
+
+    return _shared(job_name)
 
 
 def _sidecar_process_alive(path: Path) -> bool | None:
@@ -216,7 +220,9 @@ def _sidecar_process_alive(path: Path) -> bool | None:
 def _cmdline_targets_job(args: list[str], job_path: Path) -> bool:
     if "--job-path" in args:
         index = args.index("--job-path")
-        return index + 1 < len(args) and Path(args[index + 1]) == job_path
+        if index + 1 >= len(args):
+            return True
+        return Path(args[index + 1]) == job_path
     if "--config" in args:
         index = args.index("--config")
         if index + 1 >= len(args):

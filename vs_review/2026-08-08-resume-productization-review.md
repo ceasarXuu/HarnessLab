@@ -296,19 +296,82 @@ B2 应读 config 内容校验 job_name/jobs_dir 归属，而非目录前缀。
 
 ### User Decision (Round 3)
 - Decision requested: 追加 Round 4 / 接受当前状态 / 批准 PID 根治项 / 回退
-- User decision: pending
+- User decision: **批准 PID 根治项 + 追加 Round 4**（用户消息"批准1、3"，2026-08-08）
+- Authorized next scope: ①实施 PID sidecar 根治（修改 harbor_subprocess.py + 新增 sidecar 文件）；②Round 4 聚焦复审（e3271b3 fail-closed 修复 + PID 实现及其直接回归）
+
+## Round 4: PID 根治项 + fail-closed 修复聚焦复审（用户批准）
+
+### Round Control
+- Round type: user-approved-extra；Round number: 4
+- Completed automatic rounds before launch: 3（2 自动 + 1 用户批准）
+- User approval: 用户消息"批准1、3"（2026-08-08）
+- Closure finding IDs: e3271b3（fail-closed）+ 2eb2ed6（PID sidecar）的全部已接受阻断项
+- Permitted closure relation: original-blocker-open | fix-regression | direct-adjacent-objective-failure
+- Target scope delta allowed: e3271b3 + 2eb2ed6 提交范围
+
+### Review Input
+- Objective: 验证 fail-closed 修复（同目录失配/不可读保留锁）与 PID sidecar 根治（spawn 持久化 pid+start_time、探测精确判定）真正闭环，无直接回归，且无残余 fail-open 路径。
+- Target locations: `ornnlab/services/harbor_subprocess.py`（_write/_remove_job_pid_sidecar、run 调用点）、`ornnlab/services/webui_job_resume.py`（_live_harbor_process_for/_sidecar_process_alive/_cmdline_targets_job/_config_belongs_to_job）、相关测试。
+- Risk focus: sidecar 生命周期竞态、start_time 阈值、路径净化注入、resume 进程无 sidecar 的并发保护、job_name 映射一致性、fail-closed 残留的兄弟阻塞、测试真实性、TOCTOU/权限/多实例/并发写。
+- Reviewer instructions: fresh session、只读、引用行号、标注 E0-E4、闭环节点关系。
+
+### Reviewer Timeout Records
+| Reviewer Output Key | Reviewer Role | Attempt | Session / Job ID | Waited | Status | Reason | Action |
+|---|---:|---|---:|---|---:|---|
+| implementation-adversary-r4 | implementation-adversary | 1 | ses_0222fa17dffeJTyEb6HThiEqEI | <12min | lost（空结果） | reviewer 返回空输出 | replacement spawned |
+| implementation-adversary-r4 | implementation-adversary | 2 | ses_0222a5f65ffeJNqjWFVq16zmX2 | <12min | completed | n/a | completed |
+
+### Reviewer Outputs
+
+#### implementation-adversary-r4（替换尝试）
+
+##### Summary
+设计闭环方向正确：PID sidecar 精确身份信号消除共享 jobsDir last-writer-wins 歧义，start_time 校验为"权威死亡"判定提供不可伪造身份，cmdline 内容启发退居 fail-closed 回退位。**未能推翻其安全方向（fail-open）——无阻断性发现。** 全部 8 个挑战点静态分析 + 分支实证（19/19 测试）验证。
+
+##### Blocking Findings
+无。
+
+##### Non-blocking Risks
+- N1：`_write_job_pid_sidecar` 在 try/finally 外，写失败（ENOSPC/EACCES）冒泡 → 运行标 failed 而 harbor 子进程孤儿继续 → 建议 try/except + warn。
+- N2：`--job-path` 缺值返回 False（fail-open）与 `--config` 缺值返回 True 不对称 → 建议对齐 True。
+- N3：sidecar 权威死亡路径无专属日志 → 建议 `resume_lock_probe_sidecar_dead`。
+- N4：sidecar 命名函数两模块重复 → 建议共享。
+- N5：Round-3 已记录的 N7/N8 仍开放（已有日志兜底与文档挂账）。
+
+##### Evidence
+- 挑战点结论：快速退出/写入顺序安全；1s 阈值合理（自身时钟不漂移，失配仅来自 PID 复用，<1s 即保守阻塞）；路径净化无逃逸（`.ornnlab-` 前缀 + `/`→`_`）；resume 进程由 `--job-path` 精确匹配 + 操作表双层覆盖；job_name 映射同源（experiment_service.py:326）；兄弟阻塞仅残留于无 sidecar 场景（已文档化）；测试走真实分支。
+
+### Main Agent Response（Round 4）
+
+| Reviewer | Finding | 反例 | Severity | Decision | Authority | Closure Relation | Evidence / Reason | Action Taken |
+|---|---|---|---|---|---|---|---|---|
+| r4 | 无阻断性发现 | 全部挑战点在 fail-open 方向无法构造反例 | blocking | - | E2 实证 | n/a | 19/19 测试 + 静态推演 | 接受通过 |
+| r4 | N1 sidecar 写失败冒泡 | ENOSPC/EACCES | non-blocking | accept | E4 | n/a | 写失败不应失败整个 run | 已加 try/except + `sidecar_write_failed` warn |
+| r4 | N2 缺值不对称 | `--job-path` 缺值 False | non-blocking | accept | E4 | n/a | 对齐 fail-closed True | 已修 |
+| r4 | N3 sidecar 死亡无日志 | 无法区分权威死亡与无进程 | non-blocking | accept | E4 | n/a | 排查依据 | 已加 `resume_lock_probe_sidecar_dead` |
+| r4 | N4 命名函数重复 | 净化规则漂移 | non-blocking | accept | E4 | n/a | 共享 | webui_job_resume 改导入 harbor_subprocess 实现 |
+| r4 | N5 N7/N8 遗留 | 双击 TOCTOU、孤儿清理 | non-blocking | defer | E4 | unrelated-existing-risk | 已有日志兜底 | 记录 |
+
+### Review Governor (Round 4)
+- Completed rounds before decision: 4（2 自动 + 2 用户批准）
+- Unresolved blockers after round: 0
+- Blockers closed: 全部 9 个阻断项（R1: B1-B4；R2: BLK-1/BLK-2；R3: B1/B2/B3）闭环
+- New blocker classes: none；Repeated failure class: 进程探测历经 4 轮收敛为"PID 权威判定 + fail-closed 回退"
+- Scope expansion: 用户批准的 PID 根治项（harbor_subprocess 修改 + sidecar 文件）已实施
+- Governor decision: pass
+- Decision reason: Round 4 无阻断；N1-N4 已硬化；全量门禁绿（pytest 238/4）
 
 ### Closure Status
-- Blocking findings found: yes（R1: B1-B4；R2: BLK-1/BLK-2；R3: B1/B2/B3）
-- Accepted blocking findings fixed: yes（全部接受；R3 修复在 `bca943f` 之后的提交中）
-- Blocking re-review completed: Round 2 完成（发现未闭环）；Round 3 完成（发现 fail-open 方向问题）；Round 3 修复后未复审
-- Blocking re-review passed: no（R3 复审未通过，修复后无后续复审）
-- Automatic round budget respected: yes（2/2 自动；Round 3 用户批准）
-- Third-or-later round explicitly user-approved before launch: yes（Round 3，用户"批准追加一轮"）
-- Scope drift detected: no（PID 根治项仅记录，未实施）
-- Control outcome: user-decision-required
-- Allowed to proceed: 待用户决策
+- Blocking findings found: yes（R1: 4；R2: 2；R3: 3）
+- Accepted blocking findings fixed: yes（全部）
+- Blocking re-review completed: yes（R2/R3/R4）
+- Blocking re-review passed: yes（R4 无阻断）
+- Automatic round budget respected: yes（2/2 自动；R3/R4 用户批准）
+- Third-or-later round explicitly user-approved before launch: yes（R3、R4）
+- Scope drift detected: no（PID 根治为用户批准项）
+- Control outcome: none
+- Allowed to proceed: yes
 
 ## Final Conclusion
 
-三轮审查（2 自动 + 1 用户批准）共发现并接受 9 个阻断项，全部在冻结目标内修复：fail-open 路径统一转为 fail-closed（无法确证排除的 harbor 进程即保留锁）、legacy 分支修正、恢复范围扩展、env 合并、容器 running 过滤、取消路径、原子写、守卫日志。当前状态：**B1/B2/B3 修复已测试闭环（233 passed、全量门禁绿），无已证 fail-open 路径残留**；PID 身份信号根治项（消除共享目录歧义的最终方案）与孤儿进程清理机制作为需批准的后续项记录。是否追加 Round 4 复审、接受当前状态、批准 PID 根治项或回退，待用户决定。
+**PASS**。三轮自动+批准审查共发现并闭环 9 个阻断项（权限 chown、锁守卫、代理重建、凭证恢复、env 合并、进程探测 4 轮收敛到 PID 权威判定 + fail-closed 回退），Round 4 复审无阻断性发现，N1-N4 硬化项已实施。全量门禁绿（pytest 238/4、前端 34 files、smoke、launcher 27/27）。遗留非阻断项（N7 双击 TOCTOU、N8 孤儿进程清理机制）已记录待后续维护。审查闭环，任务可继续。
