@@ -297,12 +297,34 @@ class DockerOrphanService:
                 ]
             )
             if chown["error"]:
-                logger.warning(
-                    "docker.ownership.chown_failed container=%s target=%s error=%s",
-                    container_id,
-                    target,
-                    chown["error"],
+                started = self._run([*self.command, "start", container_id])
+                if started["error"]:
+                    logger.warning(
+                        "docker.ownership.chown_failed container=%s target=%s error=%s",
+                        container_id,
+                        target,
+                        chown["error"],
+                    )
+                    continue
+                retried = self._run(
+                    [
+                        *self.command,
+                        "exec",
+                        container_id,
+                        "chown",
+                        "-R",
+                        f"{os.getuid()}:{os.getgid()}",
+                        target,
+                    ]
                 )
+                if retried["error"]:
+                    logger.warning(
+                        "docker.ownership.chown_failed_after_start container=%s target=%s "
+                        "error=%s",
+                        container_id,
+                        target,
+                        retried["error"],
+                    )
 
     def _parse_mounts(self, inspected: dict[str, str | None]) -> list[str]:
         if inspected["error"]:

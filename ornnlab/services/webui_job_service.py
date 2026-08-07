@@ -29,7 +29,14 @@ from ornnlab.services.webui_job_copy import load_job_copy_config
 from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
 from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
-from ornnlab.services.webui_job_resume import prepare_resume_proxy
+from ornnlab.services.webui_job_resume import (
+    active_resume_operation,
+    agent_env,
+    cleanup_resume_leftovers,
+    clear_stale_job_lock,
+    prepare_resume_proxy,
+    restore_sensitive_env,
+)
 from ornnlab.services.webui_job_runtime import load_job_result
 from ornnlab.services.webui_job_tasks import pending_task_names
 from ornnlab.services.webui_operation_service import WebUiOperationService
@@ -175,19 +182,25 @@ class WebUiJobService:
         run = self.experiments.get_run(job_id)
         if run["status"] not in {"failed", "interrupted"}:
             raise ValueError("only failed or interrupted jobs can be resumed")
+        if active_resume_operation(self.settings, job_id):
+            raise ValueError("Job resume is already in progress")
         if not run.get("job_dir"):
             raise ValueError("Harbor job directory is unavailable for resume")
         job_path = resolve_harbor_job_path(Path(run["job_dir"]), run.get("harbor_job_name"))
         if not job_path.is_dir() or not (job_path / "config.json").is_file():
             raise ValueError("Harbor job directory is unavailable for resume")
+        clear_stale_job_lock(self.settings, job_id, job_path)
 
         async def work(progress) -> None:
             progress(10, "Resuming Harbor job")
             self._mark_resume_running(run)
             policy = None
+            run_agent_env = agent_env(self.profiles, run.get("agent_id"))
             try:
+                await cleanup_resume_leftovers(job_path)
+                restore_sensitive_env(job_path, run_agent_env)
                 policy = await prepare_resume_proxy(self.experiments.container_proxy, job_path)
-                await self._resume_harbor_job(job_path)
+                await self._resume_harbor_job(job_path, env=run_agent_env or None)
             except Exception as exc:
                 self._mark_resume_failed(run, exc)
                 raise
@@ -325,10 +338,13 @@ class WebUiJobService:
             for row in rows
         ]
 
-    async def _resume_harbor_job(self, job_path: Path) -> None:
+    async def _resume_harbor_job(self, job_path: Path, env: dict | None = None) -> None:
         command = [harbor_cli_executable(), "job", "resume", "--job-path", str(job_path)]
         process = await asyncio.create_subprocess_exec(
-            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            env=env,
         )
         output, _ = await process.communicate()
         if process.returncode != 0:

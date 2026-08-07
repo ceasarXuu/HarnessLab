@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
+import os
+import shutil
+import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
+import psutil
+
+from ornnlab.services.command_line import split_command
 from ornnlab.services.container_proxy_runtime import RuntimeProxyPolicy
+from ornnlab.settings import Settings
+from ornnlab.storage import sqlite
+
+logger = logging.getLogger(__name__)
 
 _PROXY_ENV_RUNTIME_NAMES = {
     "HTTP_PROXY": "ORNNLAB_CONTAINER_HTTP_PROXY",
@@ -39,6 +52,204 @@ async def prepare_resume_proxy(
         return None
     rewrite_config_proxy_env(job_path, policy.subprocess_env)
     return policy
+
+
+async def cleanup_resume_leftovers(job_path: Path) -> bool:
+    """Chown root-owned Job leftovers via a short-lived root container.
+
+    Interrupted Docker Jobs can leave files owned by root (container subprocesses);
+    Harbor's resume cleanup cannot remove them. A root container on the bind-mounted
+    Job directory restores ownership before ``harbor job resume`` runs.
+    """
+    if not hasattr(os, "getuid") or not _has_root_owned_files(job_path):
+        return False
+    command = _docker_command()
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        "run",
+        "--rm",
+        "-v",
+        f"{job_path}:/work",
+        "alpine",
+        "chown",
+        "-R",
+        f"{os.getuid()}:{os.getgid()}",
+        "/work",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    output, _ = await process.communicate()
+    if process.returncode != 0:
+        logger.warning(
+            "docker.resume_leftover_chown_failed path=%s exit=%s output=%s",
+            job_path,
+            process.returncode,
+            (output or b"").decode("utf-8", errors="replace")[-300:],
+        )
+        return False
+    logger.info("docker.resume_leftover_chown_completed path=%s", job_path)
+    return True
+
+
+def clear_stale_job_lock(settings: Settings, run_id: str, job_path: Path) -> bool:
+    """Back up and remove a stale lock.json when the Job is provably dead.
+
+    Harbor refuses to resume when the existing lock does not match the re-resolved
+    Job lock (e.g. after a proxy relay rewrite). The lock is a concurrency guard, so
+    it is only cleared when: no active OrnnLab operation references the run, no live
+    Harbor process references the Job path, and no OrnnLab-managed Docker containers
+    remain for the run.
+    """
+    lock_path = job_path / "lock.json"
+    if not lock_path.exists():
+        return False
+    if _active_operation_for_run(settings, run_id):
+        return False
+    if _live_harbor_process_for(job_path):
+        return False
+    if _run_has_live_containers(run_id):
+        return False
+    backup = job_path / f"lock.json.bak-{int(time.time())}"
+    shutil.copy2(lock_path, backup)
+    lock_path.unlink()
+    logger.info(
+        "docker.resume_stale_lock_cleared path=%s backup=%s",
+        job_path,
+        backup.name,
+    )
+    return True
+
+
+def active_resume_operation(settings: Settings, run_id: str) -> bool:
+    return _active_operation_for_run(settings, run_id, operation_type="resume-job")
+
+
+def _active_operation_for_run(
+    settings: Settings, run_id: str, operation_type: str | None = None
+) -> bool:
+    if operation_type:
+        query = (
+            "SELECT id FROM webui_operations WHERE resource_id = ? "
+            "AND operation_type = ? AND status IN ('queued', 'running')"
+        )
+        params: tuple[Any, ...] = (run_id, operation_type)
+    else:
+        query = (
+            "SELECT id FROM webui_operations WHERE resource_id = ? "
+            "AND status IN ('queued', 'running')"
+        )
+        params = (run_id,)
+    with sqlite.connect(settings) as conn:
+        rows = sqlite.rows(conn, query, params)
+    return bool(rows)
+
+
+def _live_harbor_process_for(job_path: Path) -> bool:
+    marker = job_path.as_posix()
+    try:
+        for proc in psutil.process_iter(["cmdline"]):
+            cmdline = " ".join(proc.info.get("cmdline") or [])
+            if "harbor" in cmdline.lower() and marker in cmdline:
+                return True
+    except (psutil.Error, OSError):
+        return True
+    return False
+
+
+def _run_has_live_containers(run_id: str) -> bool:
+    command = _docker_command()
+    try:
+        result = subprocess.run(
+            [
+                *command,
+                "ps",
+                "-aq",
+                "--filter",
+                "label=ornnlab.managed=true",
+                "--filter",
+                f"label=ornnlab.run_id={run_id}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    return bool(result.stdout.strip())
+
+
+def _docker_command() -> list[str]:
+    return split_command(os.environ.get("ORNNLAB_DOCKER_COMMAND", "docker"))
+
+
+def _has_root_owned_files(job_path: Path) -> bool:
+    uid = os.getuid()
+    for root, dirs, files in os.walk(job_path):
+        for name in dirs + files:
+            try:
+                if os.stat(os.path.join(root, name)).st_uid != uid:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+def agent_env(profiles: Any, agent_id: str | None) -> dict[str, str]:
+    if not agent_id:
+        return {}
+    try:
+        agent = profiles.get_agent(agent_id)
+    except KeyError:
+        return {}
+    entries = agent.get("env") or []
+    return {
+        str(entry["key"]): str(entry["value"])
+        for entry in entries
+        if isinstance(entry, dict) and entry.get("key") and entry.get("value") is not None
+    }
+
+
+def restore_sensitive_env(job_path: Path, real_env: dict[str, str]) -> None:
+    """Replace redacted sensitive values with the Agent's real values.
+
+    Harbor's config serializer templates sensitive env vars when they match the
+    host environment and redacts them otherwise; a resume whose process env lacks
+    the secret would bake a redacted value into the Job config. Restore those
+    values from the Agent profile so the resumed trials receive real credentials.
+    """
+    for config_path in (job_path / "config.json", *job_path.glob("*/config.json")):
+        config = _read_config_file(config_path)
+        changed = False
+        agents = config.get("agents")
+        if isinstance(agents, list):
+            for agent in agents:
+                if isinstance(agent, dict) and _restore_env(agent.get("env"), real_env):
+                    changed = True
+        if isinstance(config.get("agent"), dict) and _restore_env(
+            config["agent"].get("env"), real_env
+        ):
+            changed = True
+        if changed:
+            _write_config(config_path, config)
+
+
+def _read_config_file(path: Path) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _restore_env(env: Any, real_env: dict[str, str]) -> bool:
+    if not isinstance(env, dict):
+        return False
+    changed = False
+    for key, value in env.items():
+        if isinstance(value, str) and "****" in value and key in real_env:
+            env[key] = real_env[key]
+            changed = True
+    return changed
 
 
 def rewrite_config_proxy_env(job_path: Path, subprocess_env: dict) -> None:
