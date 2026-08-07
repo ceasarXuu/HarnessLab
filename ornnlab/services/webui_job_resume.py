@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -92,7 +93,12 @@ async def cleanup_resume_leftovers(job_path: Path) -> bool:
     return True
 
 
-def clear_stale_job_lock(settings: Settings, run_id: str, job_path: Path) -> bool:
+def clear_stale_job_lock(
+    settings: Settings,
+    run_id: str,
+    job_path: Path,
+    job_name: str | None = None,
+) -> bool:
     """Back up and remove a stale lock.json when the Job is provably dead.
 
     Harbor refuses to resume when the existing lock does not match the re-resolved
@@ -109,7 +115,7 @@ def clear_stale_job_lock(settings: Settings, run_id: str, job_path: Path) -> boo
             "docker.resume_lock_kept reason=active_operation run_id=%s", run_id
         )
         return False
-    if _live_harbor_process_for(job_path):
+    if _live_harbor_process_for(job_path, job_name):
         logger.info(
             "docker.resume_lock_kept reason=live_harbor_process path=%s", job_path
         )
@@ -154,7 +160,13 @@ def _active_operation_for_run(
     return bool(rows)
 
 
-def _live_harbor_process_for(job_path: Path) -> bool:
+def _live_harbor_process_for(job_path: Path, job_name: str | None = None) -> bool:
+    for sidecar_path in _job_sidecar_candidates(job_path, job_name):
+        if not sidecar_path.is_file():
+            continue
+        alive = _sidecar_process_alive(sidecar_path)
+        if alive is not None:
+            return alive
     try:
         for proc in psutil.process_iter(["cmdline"]):
             args = proc.info.get("cmdline") or []
@@ -165,6 +177,40 @@ def _live_harbor_process_for(job_path: Path) -> bool:
     except (psutil.Error, OSError):
         return True
     return False
+
+
+def _job_sidecar_candidates(job_path: Path, job_name: str | None) -> list[Path]:
+    name = _job_pid_sidecar_name(job_name or job_path.name)
+    return [job_path.parent / name, job_path / name]
+
+
+def _job_pid_sidecar_name(job_name: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", job_name)
+    return f".ornnlab-{safe}.pid"
+
+
+def _sidecar_process_alive(path: Path) -> bool | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    pid = payload.get("pid")
+    if not isinstance(pid, int):
+        return None
+    try:
+        proc = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        return False
+    except (psutil.Error, OSError):
+        return True
+    start_time = payload.get("start_time")
+    if isinstance(start_time, int | float):
+        try:
+            if abs(proc.create_time() - float(start_time)) > 1.0:
+                return False
+        except (psutil.Error, OSError):
+            return True
+    return True
 
 
 def _cmdline_targets_job(args: list[str], job_path: Path) -> bool:

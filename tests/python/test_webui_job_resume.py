@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import psutil
+
 from ornnlab.services.webui_job_resume import (
     _live_harbor_process_for,
     agent_env,
@@ -401,6 +403,64 @@ def test_live_harbor_process_fails_closed_on_unreadable_same_dir_config(
     )
 
     assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_uses_live_sidecar_process(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    sidecar = job_path.parent / ".ornnlab-run-some-job.pid"
+    sidecar.write_text(json.dumps({"pid": 4242, "start_time": 100.0}), encoding="utf-8")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.Process",
+        lambda pid: SimpleNamespace(create_time=lambda: 100.0),
+    )
+
+    assert _live_harbor_process_for(job_path) is True
+
+
+def test_live_harbor_process_treats_dead_sidecar_as_authoritative(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    sidecar = job_path.parent / ".ornnlab-run-some-job.pid"
+    sidecar.write_text(json.dumps({"pid": 4242, "start_time": 100.0}), encoding="utf-8")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.Process",
+        lambda pid: (_ for _ in ()).throw(psutil.NoSuchProcess(pid)),
+    )
+
+    assert _live_harbor_process_for(job_path) is False
+
+
+def test_live_harbor_process_detects_pid_reuse(tmp_path: Path, monkeypatch):
+    job_path = tmp_path / "jobs" / "run-some-job"
+    job_path.parent.mkdir(parents=True)
+    sidecar = job_path.parent / ".ornnlab-run-some-job.pid"
+    sidecar.write_text(json.dumps({"pid": 4242, "start_time": 100.0}), encoding="utf-8")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.Process",
+        lambda pid: SimpleNamespace(create_time=lambda: 999.0),
+    )
+
+    assert _live_harbor_process_for(job_path) is False
+
+
+def test_live_harbor_process_uses_legacy_sidecar_location(
+    tmp_path: Path, monkeypatch
+):
+    job_path = tmp_path / "jobs"  # legacy: job_path IS the jobs dir
+    job_path.mkdir(parents=True)
+    sidecar = job_path / ".ornnlab-run-some-job.pid"
+    sidecar.write_text(json.dumps({"pid": 4242, "start_time": 100.0}), encoding="utf-8")
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.psutil.Process",
+        lambda pid: SimpleNamespace(create_time=lambda: 100.0),
+    )
+
+    assert _live_harbor_process_for(job_path, job_name="run-some-job") is True
 
 
 def test_live_harbor_process_matches_legacy_layout_config(

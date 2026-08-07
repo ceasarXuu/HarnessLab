@@ -14,6 +14,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import psutil
+
 from ornnlab.models.harbor import HarborJobConfigView
 from ornnlab.services.command_line import split_command
 from ornnlab.services.harbor_paths import resolve_harbor_result_path
@@ -79,6 +81,8 @@ class ManagedSubprocessHarborRunner:
                     executable,
                 ) from error
             output_task = asyncio.create_task(_mirror_stdout(process, log_path))
+            sidecar_path = job_dir / _job_pid_sidecar_name(config.job_name)
+            _write_job_pid_sidecar(sidecar_path, process)
             try:
                 return_code = await process.wait()
                 output = await output_task
@@ -93,6 +97,8 @@ class ManagedSubprocessHarborRunner:
                 output_task.cancel()
                 await _ignore_cancelled(output_task)
                 raise
+            finally:
+                _remove_job_pid_sidecar(sidecar_path)
         if return_code != 0:
             raise RuntimeError(f"harbor subprocess exited with {return_code}: {output[-400:]}")
         result_path = resolve_harbor_result_path(job_dir, config.job_name)
@@ -104,6 +110,28 @@ class ManagedSubprocessHarborRunner:
             "result_path": str(result_path),
             "harbor_job_id": result.get("harbor_job_id"),
         }
+
+
+def _job_pid_sidecar_name(job_name: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", job_name)
+    return f".ornnlab-{safe}.pid"
+
+
+def _write_job_pid_sidecar(path: Path, process: Any) -> None:
+    try:
+        start_time = psutil.Process(process.pid).create_time()
+    except (psutil.Error, OSError):
+        start_time = None
+    atomic_write_text(
+        path, json.dumps({"pid": process.pid, "start_time": start_time})
+    )
+
+
+def _remove_job_pid_sidecar(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.warning("harbor_subprocess.sidecar_remove_failed path=%s", path)
 
 
 def _command_from_env() -> list[str]:

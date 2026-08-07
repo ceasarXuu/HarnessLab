@@ -315,6 +315,49 @@ def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):
         assert not terminated.exists()
 
 
+def test_managed_subprocess_runner_writes_and_cleans_pid_sidecar(tmp_path):
+    script = tmp_path / "fake_harbor_sleep.py"
+    script.write_text(
+        "import json, pathlib, sys, time\n"
+        "config_path = pathlib.Path(sys.argv[sys.argv.index('--config') + 1])\n"
+        "config = json.loads(config_path.read_text())\n"
+        "job_dir = pathlib.Path(config['jobs_dir'])\n"
+        "job_dir.mkdir(parents=True, exist_ok=True)\n"
+        "(job_dir / 'result.json').write_text(json.dumps({'status': 'completed'}))\n"
+        "time.sleep(3)\n",
+        encoding="utf-8",
+    )
+    settings = Settings(home=tmp_path)
+    builder = HarborConfigBuilder(settings)
+    config = builder.build(
+        {"name": "oracle"},
+        "terminal-bench",
+        "2.0",
+        1,
+        1,
+        1,
+        str(tmp_path / "harbor-job"),
+        "sidecar-job",
+    )
+    builder.write_run_artifacts(config, HarborEngine(mode="subprocess").capability_snapshot())
+    sidecar = tmp_path / "harbor-job" / ".ornnlab-sidecar-job.pid"
+
+    async def _run():
+        runner = ManagedSubprocessHarborRunner(command=[sys.executable, str(script)])
+        task = asyncio.create_task(runner.run(config))
+        for _ in range(100):
+            if sidecar.exists():
+                break
+            await asyncio.sleep(0.02)
+        assert sidecar.exists(), "pid sidecar should exist while the process runs"
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        assert isinstance(payload["pid"], int)
+        await task
+        assert not sidecar.exists(), "pid sidecar should be removed after exit"
+
+    asyncio.run(_run())
+
+
 def test_subprocess_command_env_uses_ornnlab_variable(monkeypatch):
     monkeypatch.setenv("ORNNLAB_HARBOR_SUBPROCESS_COMMAND", "new-harbor run")
 

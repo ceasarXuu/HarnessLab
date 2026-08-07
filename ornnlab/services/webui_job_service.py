@@ -191,7 +191,7 @@ class WebUiJobService:
         job_path = resolve_harbor_job_path(Path(run["job_dir"]), run.get("harbor_job_name"))
         if not job_path.is_dir() or not (job_path / "config.json").is_file():
             raise ValueError("Harbor job directory is unavailable for resume")
-        clear_stale_job_lock(self.settings, job_id, job_path)
+        clear_stale_job_lock(self.settings, job_id, job_path, run.get("harbor_job_name"))
 
         async def work(progress) -> None:
             progress(10, "Resuming Harbor job")
