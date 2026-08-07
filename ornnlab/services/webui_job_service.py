@@ -29,6 +29,7 @@ from ornnlab.services.webui_job_copy import load_job_copy_config
 from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
 from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
+from ornnlab.services.webui_job_resume import prepare_resume_proxy
 from ornnlab.services.webui_job_runtime import load_job_result
 from ornnlab.services.webui_job_tasks import pending_task_names
 from ornnlab.services.webui_operation_service import WebUiOperationService
@@ -183,11 +184,16 @@ class WebUiJobService:
         async def work(progress) -> None:
             progress(10, "Resuming Harbor job")
             self._mark_resume_running(run)
+            policy = None
             try:
+                policy = await prepare_resume_proxy(self.experiments.container_proxy, job_path)
                 await self._resume_harbor_job(job_path)
             except Exception as exc:
                 self._mark_resume_failed(run, exc)
                 raise
+            finally:
+                if policy is not None:
+                    await policy.close()
             RunRecoveryService(self.settings).reconcile_run(job_id)
             progress(100, "Harbor job resumed")
 

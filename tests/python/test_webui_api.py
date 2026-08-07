@@ -709,6 +709,82 @@ def test_resume_error_tail_captures_harbor_stderr():
     assert tail == "x" * 300
 
 
+def test_resume_proxy_rewrites_config_with_fresh_relay(tmp_path: Path):
+    from ornnlab.services.webui_job_resume import prepare_resume_proxy
+
+    job_path = tmp_path / "job"
+    job_path.mkdir()
+    trial_dir = job_path / "trial-a"
+    trial_dir.mkdir()
+    (job_path / "config.json").write_text(
+        json.dumps(
+            {
+                "environment": {
+                    "env": {
+                        "HTTP_PROXY": "http://172.17.0.1:11111",
+                        "http_proxy": "http://172.17.0.1:11111",
+                        "NO_PROXY": "localhost",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (trial_dir / "config.json").write_text(
+        json.dumps(
+            {
+                "environment": {
+                    "env": {
+                        "HTTP_PROXY": "http://172.17.0.1:11111",
+                        "http_proxy": "http://172.17.0.1:11111",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class FakeProxyRuntime:
+        async def prepare_policy(self):
+            class Policy:
+                subprocess_env = {
+                    "ORNNLAB_CONTAINER_HTTP_PROXY": "http://172.17.0.1:22222",
+                    "ORNNLAB_CONTAINER_NO_PROXY": "localhost",
+                }
+
+                async def close(self):
+                    pass
+
+            return Policy()
+
+    policy = asyncio.run(prepare_resume_proxy(FakeProxyRuntime(), job_path))
+
+    assert policy is not None
+    updated = json.loads((job_path / "config.json").read_text(encoding="utf-8"))
+    assert updated["environment"]["env"]["HTTP_PROXY"] == "http://172.17.0.1:22222"
+    assert updated["environment"]["env"]["http_proxy"] == "http://172.17.0.1:22222"
+    assert updated["environment"]["env"]["NO_PROXY"] == "localhost"
+    trial_updated = json.loads((trial_dir / "config.json").read_text(encoding="utf-8"))
+    assert trial_updated["environment"]["env"]["HTTP_PROXY"] == "http://172.17.0.1:22222"
+    assert trial_updated["environment"]["env"]["http_proxy"] == "http://172.17.0.1:22222"
+
+
+def test_resume_proxy_skipped_when_config_has_no_proxy_env(tmp_path: Path):
+    from ornnlab.services.webui_job_resume import prepare_resume_proxy
+
+    job_path = tmp_path / "job"
+    job_path.mkdir()
+    (job_path / "config.json").write_text(
+        json.dumps({"environment": {"env": {}}}), encoding="utf-8"
+    )
+
+    class FakeProxyRuntime:
+        async def prepare_policy(self):
+            raise AssertionError("prepare_policy must not be called without proxy env")
+
+    assert asyncio.run(prepare_resume_proxy(FakeProxyRuntime(), job_path)) is None
+
+
 def test_copy_job_config_returns_an_editable_draft_without_creating_a_job(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()
