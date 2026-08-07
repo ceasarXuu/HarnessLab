@@ -90,7 +90,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
           <FlaskConical aria-hidden="true" />
           <h3>{t('jobTrials')}</h3>
         </div>
-        <div className="mini-table">
+        <div className="mini-table trial-scroll-list">
           <div className="mini-row trial-row mini-header" role="row">
             <span>{t('taskName')}</span>
             <span>{t('result')}</span>

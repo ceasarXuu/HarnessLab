@@ -71,6 +71,33 @@ describe('DetailRail Job actions', () => {
     expect(passedRow).toHaveTextContent('00:05:00')
   })
 
+  it('renders pending tasks with a muted pending status', () => {
+    const job = jobs[0]
+    const trials: TrialRow[] = [
+      {
+        analysisPath: '', artifactPath: '', cost: '-', duration: '-', id: 'pending-task',
+        jobId: job.id, logPath: '', progress: 'pending', result: 'pending',
+        retries: 0, score: '-', task: 'configure-git-webserver', tokens: '-', verifierEvidence: '',
+      },
+    ]
+
+    render(
+      <DetailRail
+        job={job}
+        events={[]}
+        trials={trials}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+      />,
+    )
+
+    const row = screen.getByRole('button', { name: /configure-git-webserver/ })
+    expect(row).toHaveTextContent('pending')
+    expect(row.querySelector('.status-dot')).toHaveClass('pending')
+  })
+
   it('renders the raw job log with its path', () => {
     const job = jobs[0]
 

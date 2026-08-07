@@ -11,10 +11,14 @@ from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.harbor_paths import resolve_harbor_job_path
 from ornnlab.services.harbor_results import (
+    pending_trial_dto,
     running_trial_descriptors,
     running_trial_dto,
-    trial_log_path,
+    token_usage_m,
+    trial_dir_epoch,
+    trial_dto,
     trial_result_payloads,
+    trial_start_epoch,
 )
 from ornnlab.services.harbor_score import result_pass_at_one
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
@@ -26,6 +30,7 @@ from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
 from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
 from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_job_runtime import load_job_result
+from ornnlab.services.webui_job_tasks import pending_task_names
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.settings import Settings
@@ -215,7 +220,7 @@ class WebUiJobService:
             for event in events
         ]
 
-    def trials_for_job(self, job_id: str) -> list[dict]:
+    async def trials_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
         if not run.get("job_dir"):
             return []
@@ -223,16 +228,28 @@ class WebUiJobService:
         job_path = Path(run["job_dir"])
         job_name = run.get("harbor_job_name") or config.get("job_name")
         result_path = run.get("result_path")
-        trials = [
-            _trial_dto(job_id, item, config.get("pricing"))
+        pricing = config.get("pricing")
+        entries: list[tuple[float, dict]] = [
+            (trial_start_epoch(item), trial_dto(job_id, item, pricing))
             for item in trial_result_payloads(job_path, job_name, result_path)
         ]
-        if run.get("status") == "running":
-            trials.extend(
-                running_trial_dto(job_id, descriptor)
-                for descriptor in running_trial_descriptors(job_path, job_name, result_path)
+        started = {trial["taskName"] for _, trial in entries}
+        in_flight_status = "running" if run.get("status") == "running" else "interrupted"
+        for descriptor in running_trial_descriptors(job_path, job_name, result_path):
+            entries.append(
+                (
+                    trial_dir_epoch(descriptor),
+                    running_trial_dto(job_id, descriptor, in_flight_status),
+                )
             )
-        return trials
+            started.add(descriptor["task_name"])
+        ref = _join_ref(str(run.get("benchmark_name") or ""), run.get("benchmark_version"))
+        for task_name in await pending_task_names(
+            self.settings, ref, started, load_job_result(run).get("n_total_trials")
+        ):
+            entries.append((0.0, pending_trial_dto(job_id, task_name)))
+        entries.sort(key=lambda entry: (-entry[0], entry[1]["taskName"]))
+        return [entry[1] for entry in entries]
 
     def logs_for_job(self, job_id: str) -> dict:
         return job_log_payload(self.experiments.get_run(job_id), self._job_config(job_id))
@@ -375,7 +392,7 @@ def _job_dto(row: dict) -> dict:
         "trial": trial,
         "score": _job_score(result),
         "costUsd": calculate_cost(stats, config.get("pricing")),
-        "tokenUsageM": _token_usage_m(stats),
+        "tokenUsageM": token_usage_m(stats),
         "runtimeSeconds": runtime_seconds(row.get("started_at"), row.get("finished_at")),
         "createdAt": row["created_at"],
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
@@ -394,21 +411,6 @@ def _can_resume(row: dict, status: str) -> bool:
     return (job_path / "config.json").is_file()
 
 
-def _trial_dto(job_id: str, item: dict, pricing: dict | None = None) -> dict:
-    agent_result = item.get("agent_result") or {}
-    token_usage = _trial_token_usage(agent_result, item.get("step_results"))
-    return {
-        "id": str(item.get("id", item.get("trial_name", "unknown"))),
-        "jobId": job_id,
-        "taskName": str(item.get("task_name", item.get("name", "unknown"))),
-        "status": "failed" if item.get("exception_info") else "passed",
-        "score": _verifier_score(item.get("verifier_result")),
-        "retryCount": None,
-        "runtimeSeconds": runtime_seconds(item.get("started_at"), item.get("finished_at")),
-        "costUsd": calculate_cost(token_usage, pricing),
-        "tokenUsageM": _token_usage_m(token_usage),
-        "logPath": trial_log_path(item),
-    }
 
 
 def _config(row: dict) -> dict:
@@ -443,16 +445,6 @@ def _job_score(result: dict) -> dict | None:
     return None
 
 
-def _verifier_score(value: object) -> dict | None:
-    if not isinstance(value, dict):
-        return None
-    rewards = value.get("rewards")
-    if not isinstance(rewards, dict):
-        return None
-    value = rewards.get("pass")
-    if isinstance(value, int | float) and value in {0, 1}:
-        return {"kind": "percentage", "value": float(value) * 100}
-    return None
 
 
 def _version_filter(version: str | None) -> str:
@@ -468,25 +460,3 @@ def _artifacts(row: dict) -> list[str]:
 
 def _now() -> str:
     return datetime.now().astimezone().isoformat()
-
-
-def _token_usage_m(stats: dict) -> float | None:
-    values = [stats.get("n_input_tokens"), stats.get("n_output_tokens")]
-    if not any(isinstance(value, int | float) for value in values):
-        return None
-    return sum(float(value) for value in values if isinstance(value, int | float)) / 1_000_000
-
-
-def _trial_token_usage(agent_result: object, step_results: object) -> dict:
-    contexts = [agent_result] if isinstance(agent_result, dict) else []
-    if not contexts and isinstance(step_results, list):
-        contexts = [item.get("agent_result") for item in step_results if isinstance(item, dict)]
-    result: dict[str, float] = {}
-    for context in contexts:
-        if not isinstance(context, dict):
-            continue
-        for key in ("n_input_tokens", "n_cache_tokens", "n_output_tokens", "cost_usd"):
-            value = context.get(key)
-            if isinstance(value, int | float):
-                result[key] = result.get(key, 0.0) + float(value)
-    return result

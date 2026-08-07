@@ -203,7 +203,7 @@ async def list_job_events(job_id: str, request: Request) -> dict:
 @router.get("/jobs/{job_id}/trials")
 async def list_job_trials(job_id: str, request: Request) -> dict:
     _require_query(request, set())
-    return _data(request, _jobs(request).trials_for_job(job_id))
+    return _data(request, await _jobs(request).trials_for_job(job_id))
 
 
 @router.get("/jobs/{job_id}/logs")

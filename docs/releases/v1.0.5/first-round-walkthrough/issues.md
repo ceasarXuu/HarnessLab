@@ -55,4 +55,15 @@
 - 结论：closed（accepted，已修复 2026-08-07）
 - 备注：修复：① `_live_native_result_path` 去掉 DB 状态门控，任何 `result_path` 为空且有 job 专属原生结果的 Job 都读取原生计数；② `trials_for_job` 仅当 DB `status=='running'` 时追加进行中 trial（避免中断后残留目录被当作 running）。回归测试：interrupted 计数读取、interrupted trials 不报 running。实测列表 `total=10, completed=7, passed=3, notPassed=4, errored=0`，trials 仅剩 7 个 passed。
 
+### W1-05 Job trials 应列出全部 task 并标明状态
+- 日期：2026-08-07
+- 模块/页面：Job 详情抽屉 → Trial 列表
+- 严重度：P2
+- 现象：trials 只展示运行结束（有 result.json）的 task，进行中/未开始的 task 不展示；行数多时无纵向滚动。
+- 复现步骤：1. 打开运行中或已中断 Job 的详情抽屉；2. 观察 Trial 列表。
+- 期望行为：列出该 Job 的全部 task 并标明状态（passed/notPassed/failed/running/interrupted/pending）；行数超过 10 个时纵向滚动；按开始时间倒排（越近开始越靠前）。
+- 实际行为：只显示已完成 trial；进行中目录在运行态才显示 running，未开始 task 完全不展示。
+- 结论：closed（accepted，已修复 2026-08-07）
+- 备注：修复：① `trials_for_job` 组装全量 task——已完成（per-trial result.json）、进行中（有目录无结果，运行态= running / 中断态= interrupted）、未开始（本地 Dataset task catalog 或 Harbor registry metadata 补名，均不可用则编号占位 "Task N"）；② 按开始时间倒排（进行中取目录 mtime），pending 排最后；③ 前端 `TrialStatus` 增加 pending，详情列表 10 行滚动窗（`trial-scroll-list` max-height 465px），pending 灰色样式；④ registry 探测走 `webui_job_tasks`（TTL 缓存 + 失败降级），测试环境 autouse 禁用网络保证确定性。实测：中断 Job 展示 10 个 task（2 interrupted + 7 passed + 1 pending `configure-git-webserver`）。
+
 <!-- 新问题追加到此处，编号递增 -->

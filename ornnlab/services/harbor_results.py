@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
 from ornnlab.services.harbor_paths import resolve_harbor_job_path, resolve_harbor_result_path
+from ornnlab.services.model_pricing import calculate_cost
+from ornnlab.services.webui_job_progress import runtime_seconds
 
 
 def load_result_payload(path: Path) -> dict[str, Any]:
@@ -92,12 +95,14 @@ def _trial_task_name(config: dict[str, Any], path: Path) -> str:
     return str(path.name).split("__", 1)[0]
 
 
-def running_trial_dto(job_id: str, descriptor: dict[str, Any]) -> dict[str, Any]:
+def running_trial_dto(
+    job_id: str, descriptor: dict[str, Any], status: str = "running"
+) -> dict[str, Any]:
     return {
         "id": str(descriptor["trial_name"]),
         "jobId": job_id,
         "taskName": str(descriptor["task_name"]),
-        "status": "running",
+        "status": status,
         "score": None,
         "retryCount": None,
         "runtimeSeconds": None,
@@ -105,6 +110,93 @@ def running_trial_dto(job_id: str, descriptor: dict[str, Any]) -> dict[str, Any]
         "tokenUsageM": None,
         "logPath": descriptor.get("log_path"),
     }
+
+
+def pending_trial_dto(job_id: str, task_name: str) -> dict[str, Any]:
+    return {
+        "id": task_name,
+        "jobId": job_id,
+        "taskName": task_name,
+        "status": "pending",
+        "score": None,
+        "retryCount": None,
+        "runtimeSeconds": None,
+        "costUsd": None,
+        "tokenUsageM": None,
+        "logPath": None,
+    }
+
+
+def trial_start_epoch(item: dict[str, Any]) -> float:
+    for key in ("started_at", "finished_at"):
+        value = item.get(key)
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                continue
+    return 0.0
+
+
+def trial_dir_epoch(descriptor: dict[str, Any]) -> float:
+    log_path = descriptor.get("log_path")
+    if not isinstance(log_path, str):
+        return 0.0
+    try:
+        return Path(log_path).parent.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) -> dict[str, Any]:
+    agent_result = item.get("agent_result") or {}
+    token_usage = trial_token_usage(agent_result, item.get("step_results"))
+    return {
+        "id": str(item.get("id", item.get("trial_name", "unknown"))),
+        "jobId": job_id,
+        "taskName": str(item.get("task_name", item.get("name", "unknown"))),
+        "status": "failed" if item.get("exception_info") else "passed",
+        "score": verifier_score(item.get("verifier_result")),
+        "retryCount": None,
+        "runtimeSeconds": runtime_seconds(item.get("started_at"), item.get("finished_at")),
+        "costUsd": calculate_cost(token_usage, pricing),
+        "tokenUsageM": token_usage_m(token_usage),
+        "logPath": trial_log_path(item),
+    }
+
+
+def trial_token_usage(agent_result: object, step_results: object) -> dict[str, Any]:
+    contexts = [agent_result] if isinstance(agent_result, dict) else []
+    if not contexts and isinstance(step_results, list):
+        contexts = [item.get("agent_result") for item in step_results if isinstance(item, dict)]
+    result: dict[str, Any] = {}
+    for context in contexts:
+        if not isinstance(context, dict):
+            continue
+        for key in ("n_input_tokens", "n_cache_tokens", "n_output_tokens", "cost_usd"):
+            value = context.get(key)
+            if isinstance(value, int | float):
+                result[key] = result.get(key, 0.0) + float(value)
+    return result
+
+
+def token_usage_m(stats: dict[str, Any]) -> float | None:
+    values = [stats.get("n_input_tokens"), stats.get("n_output_tokens")]
+    if not any(isinstance(value, int | float) for value in values):
+        return None
+    return sum(float(value) for value in values if isinstance(value, int | float)) / 1_000_000
+
+
+def verifier_score(value: object) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    rewards = value.get("rewards")
+    if not isinstance(rewards, dict):
+        return None
+    value = rewards.get("pass")
+    if isinstance(value, int | float) and value in {0, 1}:
+        return {"kind": "percentage", "value": float(value) * 100}
+    return None
 
 
 def trial_log_path(result: dict[str, Any]) -> str | None:

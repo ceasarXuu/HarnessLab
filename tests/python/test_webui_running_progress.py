@@ -197,8 +197,171 @@ def test_interrupted_job_trials_do_not_claim_running(client, settings):
 
     assert response.status_code == 200
     trials = response.json()["data"]
-    assert [trial["taskName"] for trial in trials] == ["sqlite-with-gcov"]
+    assert {(trial["taskName"], trial["status"]) for trial in trials} == {
+        ("sqlite-with-gcov", "passed"),
+        ("build-cython-ext", "interrupted"),
+    }
     assert all(trial["status"] != "running" for trial in trials)
+
+
+def test_job_trials_list_all_tasks_with_pending_sorted_by_start_time(client, settings):
+    create_test_agent(settings)
+    created = ExperimentService(settings).create(
+        ExperimentCreate(
+            name="All trials",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench-sample"],
+            benchmark_version="2.0",
+            n_tasks=None,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+
+    dataset_dir = settings.home / "dataset-tasks"
+    for task in ("chess-best-move", "sqlite-with-gcov", "build-cython-ext"):
+        task_dir = dataset_dir / task
+        task_dir.mkdir(parents=True)
+        (task_dir / "environment").mkdir()
+        (task_dir / "task.toml").write_text(f'name = "{task}"\n', encoding="utf-8")
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "INSERT INTO webui_datasets(ref, name, version, source, visibility, local_path, "
+            "task_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "terminal-bench-sample@2.0",
+                "terminal-bench-sample",
+                "2.0",
+                "registry",
+                "public",
+                str(dataset_dir),
+                3,
+                "2026-08-07T00:00:00Z",
+                "2026-08-07T00:00:00Z",
+            ),
+        )
+
+    jobs_dir = settings.home / "shared-jobs"
+    native_dir = jobs_dir / "all-trials"
+    native_dir.mkdir(parents=True)
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    (native_dir / "result.json").write_text(
+        json.dumps({"n_total_trials": 3, "stats": {}}), encoding="utf-8"
+    )
+
+    early = native_dir / "sqlite__early"
+    early.mkdir()
+    (early / "config.json").write_text(
+        json.dumps({"trial_name": "sqlite__early", "task": {"path": "sample/sqlite-with-gcov"}}),
+        encoding="utf-8",
+    )
+    (early / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-early",
+                "task_name": "sqlite-with-gcov",
+                "started_at": "2026-08-07T13:09:07Z",
+                "finished_at": "2026-08-07T13:10:07Z",
+                "agent_result": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    recent = native_dir / "chess__recent"
+    recent.mkdir()
+    (recent / "config.json").write_text(
+        json.dumps({"trial_name": "chess__recent", "task": {"path": "sample/chess-best-move"}}),
+        encoding="utf-8",
+    )
+    (recent / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-recent",
+                "task_name": "chess-best-move",
+                "started_at": "2026-08-07T13:12:00Z",
+                "finished_at": "2026-08-07T13:13:00Z",
+                "agent_result": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'running', started_at = ?, job_dir = ?, "
+            "harbor_job_name = ?, result_path = NULL WHERE id = ?",
+            ("2026-08-07T13:09:03Z", str(jobs_dir), "all-trials", run_id),
+        )
+
+    response = client.get(f"{API}/jobs/{run_id}/trials")
+
+    assert response.status_code == 200
+    trials = response.json()["data"]
+    assert [(trial["taskName"], trial["status"]) for trial in trials] == [
+        ("chess-best-move", "passed"),
+        ("sqlite-with-gcov", "passed"),
+        ("build-cython-ext", "pending"),
+    ]
+    assert trials[2]["score"] is None
+    assert trials[2]["runtimeSeconds"] is None
+
+
+def test_job_trials_pending_falls_back_to_numbered_tasks_when_names_unavailable(
+    client, settings
+):
+    create_test_agent(settings)
+    created = ExperimentService(settings).create(
+        ExperimentCreate(
+            name="Numbered pending",
+            agent_ids=["oracle"],
+            benchmark_names=["terminal-bench-sample"],
+            n_tasks=None,
+        )
+    )
+    run_id = created["runs"][0]["id"]
+    jobs_dir = settings.home / "shared-jobs"
+    native_dir = jobs_dir / "numbered-job"
+    native_dir.mkdir(parents=True)
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    (native_dir / "result.json").write_text(
+        json.dumps({"n_total_trials": 3, "stats": {}}), encoding="utf-8"
+    )
+
+    completed = native_dir / "sqlite__def"
+    completed.mkdir()
+    (completed / "config.json").write_text(
+        json.dumps({"trial_name": "sqlite__def", "task": {"path": "sample/sqlite-with-gcov"}}),
+        encoding="utf-8",
+    )
+    (completed / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-1",
+                "task_name": "sqlite-with-gcov",
+                "started_at": "2026-08-07T13:09:07Z",
+                "finished_at": "2026-08-07T13:10:07Z",
+                "agent_result": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'running', started_at = ?, job_dir = ?, "
+            "harbor_job_name = ?, result_path = NULL WHERE id = ?",
+            ("2026-08-07T13:09:03Z", str(jobs_dir), "numbered-job", run_id),
+        )
+
+    response = client.get(f"{API}/jobs/{run_id}/trials")
+
+    assert response.status_code == 200
+    trials = response.json()["data"]
+    assert [(trial["taskName"], trial["status"]) for trial in trials] == [
+        ("sqlite-with-gcov", "passed"),
+        ("Task 2", "pending"),
+        ("Task 3", "pending"),
+    ]
 
 
 def test_running_job_trials_list_includes_in_progress_trials(client, settings):

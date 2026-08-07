@@ -4,6 +4,7 @@ import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +12,21 @@ from fastapi.testclient import TestClient
 from ornnlab.app import create_app
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+
+
+@pytest.fixture(autouse=True)
+def job_tasks_registry_unavailable(monkeypatch) -> Iterator[None]:
+    """Keep Job trial task-name resolution deterministic without network access."""
+
+    class _UnavailableRegistry:
+        async def get_dataset_metadata(self, _ref):
+            raise RuntimeError("registry unavailable in tests")
+
+    factory = SimpleNamespace(create=lambda: _UnavailableRegistry())
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_tasks._registry_client_factory", lambda: factory
+    )
+    yield
 
 
 @pytest.fixture(autouse=True)

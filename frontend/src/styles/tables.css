@@ -47,6 +47,9 @@ tbody tr:hover,
 .success {
   color: var(--success);
 }
+.pending {
+  color: var(--muted);
+}
 .queued,
 .warning {
   color: var(--warning);
@@ -99,6 +102,11 @@ tbody tr:hover,
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+.trial-scroll-list {
+  max-height: 465px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .drawer-search {
   width: 100%;

@@ -9,8 +9,9 @@ from ornnlab.services.agent_config_service import AgentConfigService
 from ornnlab.services.dataset_download_state import stored_dataset_dto, stored_dataset_runtime
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_engine import _resolve_env
+from ornnlab.services.harbor_results import trial_dto as _trial_dto
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
-from ornnlab.services.webui_job_service import _job_score, _trial_dto
+from ornnlab.services.webui_job_service import _job_score
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.storage import sqlite

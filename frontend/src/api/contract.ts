@@ -156,7 +156,7 @@ export interface JobLogDto {
   logPath: string | null
 }
 
-export type TrialStatus = 'running' | 'passed' | 'failed' | 'cancelled' | 'interrupted'
+export type TrialStatus = 'running' | 'pending' | 'passed' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface TrialDto {
   costUsd: number | null
