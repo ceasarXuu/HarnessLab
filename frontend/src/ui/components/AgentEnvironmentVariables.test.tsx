@@ -67,6 +67,8 @@ describe('AgentEnvironmentVariables visibility', () => {
     const secret = valueInput('ANTHROPIC_API_KEY')
     expect(secret).toHaveAttribute('type', 'password')
     expect(screen.getByRole('button', { name: 'Show ANTHROPIC_API_KEY' })).toBeInTheDocument()
+    expect(secret.closest('.key-value-row')?.className).toContain('key-value-row--with-visibility')
+    expect(screen.getByRole('button', { name: 'Delete Variables ANTHROPIC_API_KEY' })).toBeInTheDocument()
   })
 
   it('toggles the hidden key in hiddenEnvKeys when the button is clicked', () => {

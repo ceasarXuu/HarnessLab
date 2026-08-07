@@ -301,6 +301,9 @@
 .key-value-row--inherited {
   grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) auto;
 }
+.key-value-row--with-visibility {
+  grid-template-columns: minmax(0, 0.9fr) minmax(150px, 0.7fr) minmax(0, 1fr) auto auto;
+}
 .key-value-row > label {
   min-width: 0;
 }

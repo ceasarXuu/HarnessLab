@@ -73,7 +73,7 @@ export function KeyValueControl({ label, value, onChange, className, compact = f
       <div className="key-value-list">
         {rows.map((row, index) => (
           <div
-            className={`key-value-row${allowInherited ? ' key-value-row--with-source' : ''}${allowInherited && row.inherited ? ' key-value-row--inherited' : ''}`}
+            className={`key-value-row${allowInherited ? ' key-value-row--with-source' : ''}${allowInherited && row.inherited ? ' key-value-row--inherited' : ''}${onToggleHidden ? ' key-value-row--with-visibility' : ''}`}
             key={index}
             onBlur={(event) => {
               if (event.currentTarget.contains(event.relatedTarget)) return
