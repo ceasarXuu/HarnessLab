@@ -18,9 +18,10 @@ interface DetailRailProps {
   onCopyJob: (jobId: string) => void
   onDeleteJob?: (job: HarborJob) => void
   onLeaderboardChange: (jobId: string, include: boolean) => void
+  onRerunFailed?: (job: HarborJob) => void
 }
 
-export function DetailRail({ writesEnabled = true, job, events, logs = '', logsPath = null, trials, t, onJobAction, onCopyJob, onDeleteJob, onLeaderboardChange }: DetailRailProps) {
+export function DetailRail({ writesEnabled = true, job, events, logs = '', logsPath = null, trials, t, onJobAction, onCopyJob, onDeleteJob, onLeaderboardChange, onRerunFailed }: DetailRailProps) {
   const [expandedTrialId, setExpandedTrialId] = useState<string | null>(null)
   const logViewRef = useRef<HTMLPreElement>(null)
   const artifactPaths = job.artifactPaths ?? buildArtifactPaths(job)
@@ -89,6 +90,15 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
         <div className="rail-title">
           <FlaskConical aria-hidden="true" />
           <h3>{t('jobTrials')}</h3>
+          {canRerunFailed(job, trials) && onRerunFailed && (
+            <button
+              className="secondary-button compact-action"
+              disabled={!writesEnabled}
+              onClick={() => onRerunFailed(job)}
+            >
+              {t('rerunFailedTasks')}
+            </button>
+          )}
         </div>
         <div className="mini-table trial-scroll-list">
           <div className="mini-row trial-row mini-header" role="row">
@@ -106,7 +116,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
                 onClick={() => setExpandedTrialId((current) => (current === trial.id ? null : trial.id))}
               >
                 <span>{trial.task}</span>
-                <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result}`}>{trial.result}</span>
+                <span className={`status-dot ${trialStatusClass(trial.result)}`}>{trial.result}</span>
                 <span>{trial.duration}</span>
                 <span>{trial.cost} / {trial.tokens}</span>
               </button>
@@ -172,6 +182,17 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
 
 function isTerminalJob(job: HarborJob) {
   return ['completed', 'failed', 'cancelled', 'interrupted'].includes(job.status)
+}
+
+function canRerunFailed(job: HarborJob, trials: TrialRow[]) {
+  return isTerminalJob(job) && trials.some((trial) => trial.result === 'errored')
+}
+
+function trialStatusClass(result: string) {
+  if (result === 'passed') return 'success'
+  if (result === 'notPassed') return 'warning'
+  if (result === 'errored') return 'error'
+  return result
 }
 
 function getPrimaryJobAction(job: HarborJob, t: Translate) {

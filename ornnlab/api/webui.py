@@ -194,6 +194,12 @@ async def resume_job(job_id: str, request: Request) -> dict:
     return _data(request, {"operation": _jobs(request).resume_job(job_id)})
 
 
+@router.post("/jobs/{job_id}/rerun-failed")
+async def rerun_failed_job(job_id: str, request: Request) -> dict:
+    _require_query(request, set())
+    return _data(request, {"operation": _jobs(request).rerun_failed_job(job_id)})
+
+
 @router.get("/jobs/{job_id}/events")
 async def list_job_events(job_id: str, request: Request) -> dict:
     _require_query(request, set())

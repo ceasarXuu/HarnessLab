@@ -103,7 +103,7 @@ describe('DetailRail Job actions', () => {
     const trials: TrialRow[] = [
       {
         analysisPath: '', artifactPath: '', cost: '-', duration: '-', error: 'NonZeroAgentExitCodeError: Command failed (exit 1)',
-        id: 'failed-trial', jobId: job.id, logPath: '/tmp/f.log', progress: 'failed', result: 'failed',
+        id: 'failed-trial', jobId: job.id, logPath: '/tmp/f.log', progress: 'errored', result: 'errored',
         retries: 0, score: '-', task: 'configure-git-webserver', tokens: '-', verifierEvidence: '',
       },
     ]
@@ -122,6 +122,63 @@ describe('DetailRail Job actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /configure-git-webserver/ }))
     expect(await screen.findByText(/NonZeroAgentExitCodeError: Command failed/)).toBeInTheDocument()
+  })
+
+  it('shows re-run failed tasks only for terminal jobs with errored trials', () => {
+    const job = jobs[0]
+    const onRerunFailed = vi.fn()
+    const errored: TrialRow[] = [
+      {
+        analysisPath: '', artifactPath: '', cost: '-', duration: '-', error: 'NonZeroAgentExitCodeError',
+        id: 'e1', jobId: job.id, logPath: '', progress: 'errored', result: 'errored',
+        retries: 0, score: '-', task: 'hello-world', tokens: '-', verifierEvidence: '',
+      },
+    ]
+
+    const { rerender } = render(
+      <DetailRail
+        job={{ ...job, status: 'completed' }}
+        events={[]}
+        trials={errored}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+        onRerunFailed={onRerunFailed}
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Re-run failed tasks' })
+    expect(button).toBeInTheDocument()
+    fireEvent.click(button)
+    expect(onRerunFailed).toHaveBeenCalledWith(expect.objectContaining({ id: job.id }))
+
+    rerender(
+      <DetailRail
+        job={{ ...job, status: 'running' }}
+        events={[]}
+        trials={errored}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+        onRerunFailed={onRerunFailed}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Re-run failed tasks' })).not.toBeInTheDocument()
+
+    rerender(
+      <DetailRail
+        job={{ ...job, status: 'completed' }}
+        events={[]}
+        trials={[]}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+        onRerunFailed={onRerunFailed}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Re-run failed tasks' })).not.toBeInTheDocument()
   })
 
   it('renders the raw job log with its path', () => {

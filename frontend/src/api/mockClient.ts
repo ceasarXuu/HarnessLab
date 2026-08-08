@@ -334,6 +334,11 @@ export function createMockWebUiClient(): WebUiClient {
         onRunning: () => { jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'running' } : job)) },
       }))
     },
+    async rerunFailedTasks(id) {
+      return operationResult(submitOperation('rerun-failed-job', 'job', id, {
+        onRunning: () => { jobDtos = jobDtos.map((job) => (job.id === id ? { ...job, status: 'running' } : job)) },
+      }))
+    },
     async syncDataset(ref) {
       return operationResult(submitOperation('sync-dataset', 'dataset', ref))
     },

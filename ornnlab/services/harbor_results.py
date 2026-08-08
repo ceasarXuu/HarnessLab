@@ -177,7 +177,7 @@ def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) ->
         "id": str(item.get("id", item.get("trial_name", "unknown"))),
         "jobId": job_id,
         "taskName": str(item.get("task_name", item.get("name", "unknown"))),
-        "status": "failed" if item.get("exception_info") else "passed",
+        "status": trial_outcome(item),
         "score": verifier_score(item.get("verifier_result")),
         "retryCount": None,
         "runtimeSeconds": runtime_seconds(item.get("started_at"), item.get("finished_at")),
@@ -186,6 +186,20 @@ def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) ->
         "logPath": trial_log_path(item),
         "error": _trial_error(item),
     }
+
+
+def trial_outcome(item: dict[str, Any]) -> str:
+    """Trial outcome status aligned with the Job breakdown.
+
+    ``errored`` for exception failures, ``notPassed`` for completed trials whose
+    verifier reward is 0 (不得分), ``passed`` otherwise (score or no verifier).
+    """
+    if item.get("exception_info"):
+        return "errored"
+    reward = _verifier_reward(item.get("verifier_result"))
+    if reward == 0:
+        return "notPassed"
+    return "passed"
 
 
 def _trial_error(item: dict[str, Any], max_chars: int = 200) -> str | None:
@@ -223,14 +237,27 @@ def token_usage_m(stats: dict[str, Any]) -> float | None:
 
 
 def verifier_score(value: object) -> dict[str, Any] | None:
-    if not isinstance(value, dict):
+    reward = _verifier_reward(value)
+    if reward is None:
         return None
-    rewards = value.get("rewards")
+    return {"kind": "percentage", "value": reward * 100}
+
+
+def _verifier_reward(verifier: object) -> float | None:
+    """Extract the verifier reward from Harbor's trial result.
+
+    Harbor writes the reward under ``rewards.reward`` in native trial results and
+    historically under ``rewards.pass``; accept both shapes.
+    """
+    if not isinstance(verifier, dict):
+        return None
+    rewards = verifier.get("rewards")
     if not isinstance(rewards, dict):
         return None
-    value = rewards.get("pass")
-    if isinstance(value, int | float) and value in {0, 1}:
-        return {"kind": "percentage", "value": float(value) * 100}
+    for key in ("reward", "pass"):
+        value = rewards.get(key)
+        if isinstance(value, int | float) and not isinstance(value, bool) and value in {0.0, 1.0}:
+            return float(value)
     return None
 
 

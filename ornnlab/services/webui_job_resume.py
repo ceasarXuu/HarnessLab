@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,9 +15,65 @@ import psutil
 
 from ornnlab.services.command_line import split_command
 from ornnlab.services.container_proxy_runtime import RuntimeProxyPolicy
+from ornnlab.services.harbor_paths import resolve_harbor_job_path
+from ornnlab.services.harbor_results import has_resumable_trials, load_result_payload
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 from ornnlab.storage.paths import atomic_write_text
+
+
+def resume_error_tail(message: str, max_chars: int = 300) -> str:
+    if not message:
+        return "no output captured"
+    return message[-max_chars:]
+
+
+def can_resume_job(row: dict, status: str) -> bool:
+    if status not in {"failed", "interrupted"} or not row.get("job_dir"):
+        return False
+    job_path = resolve_harbor_job_path(Path(row["job_dir"]), row.get("harbor_job_name"))
+    if not (job_path / "config.json").is_file():
+        return False
+    return has_resumable_trials(job_path)
+
+
+def failed_trial_error_types(job_path: Path) -> list[str]:
+    error_types: set[str] = set()
+    for trial_dir in job_path.glob("*/"):
+        if not trial_dir.is_dir():
+            continue
+        result_path = trial_dir / "result.json"
+        if not result_path.is_file():
+            continue
+        exception = load_result_payload(result_path).get("exception_info")
+        if isinstance(exception, dict) and exception.get("exception_type"):
+            error_types.add(str(exception["exception_type"]))
+    return sorted(error_types)
+
+
+def mark_resume_running(settings: Settings, events: Any, run: dict) -> None:
+    now = datetime.now().astimezone().isoformat()
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = ?, finished_at = NULL, failure_class = NULL, "
+            "failure_code = NULL, failure_summary = NULL, updated_at = ? WHERE id = ?",
+            ("running", now, run["id"]),
+        )
+    events.append("run", run["id"], "harbor.job.resume_requested", {})
+
+
+def mark_resume_failed(settings: Settings, events: Any, run: dict, error: BaseException) -> None:
+    now = datetime.now().astimezone().isoformat()
+    with sqlite.connect(settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = ?, finished_at = ?, failure_class = ?, "
+            "failure_code = ?, failure_summary = ?, updated_at = ? WHERE id = ?",
+            ("interrupted", now, "harbor_resume", "resume_command_failed", str(error),
+             now, run["id"]),
+        )
+    events.append(
+        "run", run["id"], "harbor.job.resume_failed", {"error": str(error)}, severity="warning"
+    )
 
 logger = logging.getLogger(__name__)
 

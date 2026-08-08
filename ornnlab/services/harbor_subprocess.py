@@ -285,7 +285,13 @@ def _score(result: dict[str, Any]) -> float | None:
 
 
 def _status_from_result_payload(result: dict[str, Any]) -> str:
-    """Map Harbor's CLI result JSON to the same terminal states as its Python API."""
+    """Map Harbor's CLI result JSON to the same terminal states as its Python API.
+
+    Execution-state semantics (two-axis model): a Job whose trials all executed
+    is ``completed`` regardless of how many passed, failed, or errored; the
+    outcome detail lives in the trial breakdown. ``failed`` is reserved for
+    execution-level failures handled by other paths (setup/engine/exit code).
+    """
     explicit_status = result.get("status")
     if isinstance(explicit_status, str) and explicit_status in {
         "completed",
@@ -300,8 +306,6 @@ def _status_from_result_payload(result: dict[str, Any]) -> str:
         return "completed"
     if _positive_int(stats.get("n_cancelled_trials")):
         return "cancelled"
-    if _positive_int(stats.get("n_errored_trials")):
-        return "failed"
 
     total = _positive_int(result.get("n_total_trials"))
     completed = _positive_int(stats.get("n_completed_trials"))

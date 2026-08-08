@@ -247,7 +247,7 @@ def test_managed_subprocess_runner_uses_native_trial_stats_for_status(tmp_path):
         ManagedSubprocessHarborRunner(command=[sys.executable, str(script)]).run(config)
     )
 
-    assert result["status"] == "failed"
+    assert result["status"] == "completed"
 
 
 def test_managed_subprocess_runner_cleans_process_group_on_cancel(tmp_path):

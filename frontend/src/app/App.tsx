@@ -305,6 +305,14 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     await jobOperation.submit(mutation, ({ operation }) => operation)
   }
 
+  async function runRerunFailed(jobId: string) {
+    if (!writesEnabled) return
+    await jobOperation.submit(
+      () => client.rerunFailedTasks(jobId),
+      ({ operation }) => operation,
+    )
+  }
+
   async function copyExistingJob(jobId: string) {
     setCopyJobError(null)
     const response = await client.getJobCopyConfig(jobId)
@@ -442,6 +450,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             onJobAction={runJobAction}
             onCopyJob={copyExistingJob}
             onNewJob={() => navigate('jobs', 'new')}
+            onRerunFailed={runRerunFailed}
             onRefresh={jobsResource.refresh}
             onSearch={setSearch}
             onSelect={(job) => {

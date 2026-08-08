@@ -2,6 +2,32 @@ from __future__ import annotations
 
 from datetime import datetime
 
+TERMINAL_STATUSES = {"completed", "failed", "cancelled", "interrupted"}
+
+
+def trial_progress_total(row: dict) -> int:
+    return (int(row["n_tasks"]) if row.get("n_tasks") is not None else 0) * max(
+        1, int(row["n_attempts"])
+    )
+
+
+def execution_completed(result: dict, expected_total: int) -> bool:
+    """True when Harbor's native result shows every trial executed.
+
+    Outcome-agnostic: errored/not-passed trials still count as executed, matching
+    Harbor's execution model (execution state and outcome quality are separate).
+    """
+    if not result:
+        return False
+    total = result.get("n_total_trials")
+    if not isinstance(total, int) or total <= 0:
+        return False
+    stats = result.get("stats")
+    completed = stats.get("n_completed_trials") if isinstance(stats, dict) else None
+    if not isinstance(completed, int):
+        return False
+    return completed >= total
+
 
 def job_trial_progress(
     result: dict,

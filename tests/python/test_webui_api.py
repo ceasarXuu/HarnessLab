@@ -636,9 +636,25 @@ def test_trial_dto_surfaces_concise_failure_reason():
         },
     )
 
-    assert trial["status"] == "failed"
+    assert trial["status"] == "errored"
     assert trial["error"].startswith("NonZeroAgentExitCodeError: Command failed (exit 1): ")
     assert len(trial["error"]) <= 200
+
+
+def test_trial_dto_distinguishes_passed_from_not_passed():
+    passed = _trial_dto(
+        "job-1",
+        {"id": "trial-a", "task_name": "a", "verifier_result": {"rewards": {"pass": 1}}},
+    )
+    not_passed = _trial_dto(
+        "job-1",
+        {"id": "trial-b", "task_name": "b", "verifier_result": {"rewards": {"pass": 0}}},
+    )
+    no_verifier = _trial_dto("job-1", {"id": "trial-c", "task_name": "c"})
+
+    assert passed["status"] == "passed"
+    assert not_passed["status"] == "notPassed"
+    assert no_verifier["status"] == "passed"
 
 
 def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: Path):
@@ -769,14 +785,86 @@ def test_can_resume_requires_an_actual_resumable_trial(client, tmp_path: Path):
     assert client.get(f"{API}/jobs/{job_id}").json()["data"]["canResume"] is True
 
 
-def test_resume_error_tail_captures_harbor_stderr():
-    from ornnlab.services.webui_job_service import _resume_error_tail
+def test_rerun_failed_job_requires_errored_trials(client, tmp_path: Path):
+    _create_profile_prerequisites(client)
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+    job_id = created["id"]
+    job_dir = tmp_path / "resume-root"
+    job_dir.mkdir()
+    native_dir = job_dir / "native-job"
+    native_dir.mkdir()
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    terminal = native_dir / "trial-terminal"
+    terminal.mkdir()
+    (terminal / "result.json").write_text(
+        json.dumps({"id": "trial-terminal", "task_name": "hello"}),
+        encoding="utf-8",
+    )
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'completed', job_dir = ?, harbor_job_name = ? WHERE id = ?",
+            (str(job_dir), "native-job", job_id),
+        )
 
-    assert _resume_error_tail("") == "no output captured"
-    assert _resume_error_tail("PermissionError: [Errno 13] Permission denied") == (
+    rejected = client.post(f"{API}/jobs/{job_id}/rerun-failed")
+
+    assert rejected.status_code == 422
+    assert rejected.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_rerun_failed_job_submits_operation_with_error_types(client, tmp_path: Path):
+    _create_profile_prerequisites(client)
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+    job_id = created["id"]
+    job_dir = tmp_path / "resume-root"
+    job_dir.mkdir()
+    native_dir = job_dir / "native-job"
+    native_dir.mkdir()
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    passed = native_dir / "trial-passed"
+    passed.mkdir()
+    (passed / "result.json").write_text(
+        json.dumps({"id": "trial-p", "task_name": "hello"}),
+        encoding="utf-8",
+    )
+    errored = native_dir / "trial-errored"
+    errored.mkdir()
+    (errored / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-e",
+                "task_name": "hello",
+                "exception_info": {"exception_type": "NonZeroAgentExitCodeError"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'completed', job_dir = ?, harbor_job_name = ? WHERE id = ?",
+            (str(job_dir), "native-job", job_id),
+        )
+
+    response = client.post(f"{API}/jobs/{job_id}/rerun-failed")
+
+    assert response.status_code == 200
+    operation = response.json()["data"]["operation"]
+    assert operation["type"] == "rerun-failed-job"
+    assert operation["status"] in {"queued", "running"}
+
+
+def test_resume_error_tail_captures_harbor_stderr():
+    from ornnlab.services.webui_job_resume import resume_error_tail
+
+    assert resume_error_tail("") == "no output captured"
+    assert resume_error_tail("PermissionError: [Errno 13] Permission denied") == (
         "PermissionError: [Errno 13] Permission denied"
     )
-    tail = _resume_error_tail("x" * 500)
+    tail = resume_error_tail("x" * 500)
     assert len(tail) == 300
     assert tail == "x" * 300
 

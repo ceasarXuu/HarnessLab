@@ -87,6 +87,7 @@ export interface WebUiClient {
   saveDockerStartCommand(command: string): Promise<ApiResponse<DockerStartCommandDto | null>>
   startDocker(command: string): Promise<ApiResponse<OperationResultDto | null>>
   resumeJob(id: string): Promise<ApiResponse<OperationResultDto | null>>
+  rerunFailedTasks(id: string): Promise<ApiResponse<OperationResultDto | null>>
   syncDataset(ref: string): Promise<ApiResponse<OperationResultDto | null>>
   updateAgent(id: string, agent: AgentInputDto): Promise<ApiResponse<OperationResultDto | null>>
   updateEnvironment(id: string, environment: EnvironmentDto): Promise<ApiResponse<OperationResultDto | null>>
@@ -144,6 +145,7 @@ export function createWebUiHttpClient(baseUrl = '/api/webui/v1', request = fetch
     saveDockerStartCommand: (command) => send<DockerStartCommandDto>(request, `${baseUrl}/system/docker/start-command`, 'PUT', { command }),
     startDocker: (command) => post<OperationResultDto>(request, `${baseUrl}/system/docker/start`, { command }),
     resumeJob: (id) => post<OperationResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/resume`),
+    rerunFailedTasks: (id) => post<OperationResultDto>(request, `${baseUrl}/jobs/${encodeURIComponent(id)}/rerun-failed`),
     syncDataset: (ref) => post<OperationResultDto>(request, `${baseUrl}/datasets/${encodeURIComponent(ref)}/sync`),
     updateAgent: (id, agent) => send<OperationResultDto>(request, `${baseUrl}/agents/${encodeURIComponent(id)}`, 'PATCH', agent),
     updateEnvironment: (id, environment) => send<OperationResultDto>(request, `${baseUrl}/environments/${encodeURIComponent(id)}`, 'PATCH', environment),

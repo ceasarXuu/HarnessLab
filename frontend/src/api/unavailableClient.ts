@@ -56,6 +56,7 @@ export function createUnavailableWebUiClient(overrides: Partial<WebUiClient> = {
     saveDockerStartCommand: unavailable,
     startDocker: unavailable,
     resumeJob: unavailable,
+    rerunFailedTasks: unavailable,
     syncDataset: unavailable,
     updateAgent: unavailable,
     updateEnvironment: unavailable,

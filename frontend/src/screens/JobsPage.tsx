@@ -23,6 +23,7 @@ interface JobsPageProps {
   onClose: () => void
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
   onCopyJob?: (jobId: string) => void
+  onRerunFailed?: (jobId: string) => void
   onNewJob: () => void
   onRefresh?: () => Promise<void>
   onLeaderboardChange: (jobId: string, include: boolean) => void
@@ -42,6 +43,7 @@ export function JobsPage({
   onClose,
   onJobAction,
   onCopyJob = () => undefined,
+  onRerunFailed = () => undefined,
   onNewJob,
   onRefresh = async () => undefined,
   onLeaderboardChange,
@@ -50,6 +52,7 @@ export function JobsPage({
 }: JobsPageProps) {
   const [cancelTarget, setCancelTarget] = useState<HarborJob | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<HarborJob | null>(null)
+  const [rerunFailedTarget, setRerunFailedTarget] = useState<HarborJob | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const detailResource = useJob(client, selected?.id)
   const eventsResource = useJobEvents(client, selected?.id)
@@ -127,6 +130,7 @@ export function JobsPage({
               onCopyJob={onCopyJob}
               onDeleteJob={setDeleteTarget}
               onLeaderboardChange={onLeaderboardChange}
+              onRerunFailed={setRerunFailedTarget}
             />
             <ResourceStatus
               error={deleteError ?? actionError ?? detailResource.error?.message ?? eventsResource.error?.message ?? trialsResource.error?.message ?? null}
@@ -148,6 +152,20 @@ export function JobsPage({
           title={t('cancelJobTitle')}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancellation}
+        />
+      )}
+      {rerunFailedTarget && (
+        <ConfirmDialog
+          cancelLabel={t('cancel')}
+          confirmLabel={t('confirmRerun')}
+          impacts={[t('rerunFailedImpactToken'), t('rerunFailedImpactOthers')]}
+          title={t('rerunFailedTitle')}
+          onCancel={() => setRerunFailedTarget(null)}
+          onConfirm={() => {
+            const target = rerunFailedTarget
+            setRerunFailedTarget(null)
+            onRerunFailed(target.id)
+          }}
         />
       )}
       {deleteTarget && (

@@ -84,7 +84,7 @@
 
 | 阶段 | 新证据 | 受影响的假设/旧结论 | 结论更新 | 下游计划变更 | 计划有效性 | 下一步 |
 |---|---|---|---|---|---|---|
-| （待开始） | | | | | | |
+| Phase 2/3 | 实测（2026-08-09）：job 状态 completed + 明细 10/5/4/1；trial 状态 5 passed/4 notPassed/1 errored；`verifier_result.rewards.reward` 为真实键（`pass` 仅历史形态，已双键兼容）；rerun-failed 端点 queued→cancelled 验证 | current: errored>0 不再映射 failed；trial DTO 与明细口径一致 | current: 两轴模型落地 | 无 | valid | W7 全量门禁 + 提交 |
 
 ## 6. 开放问题
 

@@ -12,7 +12,6 @@ from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.harbor_paths import resolve_harbor_job_path
 from ornnlab.services.harbor_results import (
-    has_resumable_trials,
     pending_trial_dto,
     running_trial_descriptors,
     running_trial_dto,
@@ -29,16 +28,27 @@ from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_job_copy import load_job_copy_config
 from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
-from ornnlab.services.webui_job_progress import job_trial_progress, runtime_seconds
+from ornnlab.services.webui_job_progress import (
+    TERMINAL_STATUSES,
+    execution_completed,
+    job_trial_progress,
+    runtime_seconds,
+    trial_progress_total,
+)
 from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_job_resume import (
     active_resume_operation,
     agent_env,
+    can_resume_job,
     cleanup_resume_leftovers,
     clear_stale_job_lock,
     environment_env,
+    failed_trial_error_types,
+    mark_resume_failed,
+    mark_resume_running,
     prepare_resume_proxy,
     restore_sensitive_env,
+    resume_error_tail,
 )
 from ornnlab.services.webui_job_runtime import load_job_result
 from ornnlab.services.webui_job_tasks import pending_task_names
@@ -78,11 +88,7 @@ class WebUiJobService:
 
     def get_job(self, job_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
-            rows = sqlite.rows(
-                conn,
-                JOB_SELECT + "WHERE runs.id = ?",
-                (job_id,),
-            )
+            rows = sqlite.rows(conn, JOB_SELECT + "WHERE runs.id = ?", (job_id,))
         if not rows:
             raise KeyError(job_id)
         return _job_dto(rows[0])
@@ -156,15 +162,9 @@ class WebUiJobService:
                 (int(config.include_in_leaderboard and config.verifier_mode != "skip"), run["id"]),
             )
         self.events.append(
-            "run",
-            run["id"],
-            "webui.job.configured",
-            {
-                "agent_name": agent["agentName"],
-                "model_name": config.model_name,
-                "pricing_source": pricing["source"],
-            },
-        )
+            "run", run["id"], "webui.job.configured",
+            {"agent_name": agent["agentName"], "model_name": config.model_name,
+             "pricing_source": pricing["source"]})
         if request.run_immediately:
             QueueService(self.settings).enqueue_experiment(created["experiment"]["id"])
             self.worker.start()
@@ -193,10 +193,43 @@ class WebUiJobService:
         if not job_path.is_dir() or not (job_path / "config.json").is_file():
             raise ValueError("Harbor job directory is unavailable for resume")
         clear_stale_job_lock(self.settings, job_id, job_path, run.get("harbor_job_name"))
+        return self._resume_operation(run, job_path, operation_type="resume-job")
+
+    def rerun_failed_job(self, job_id: str) -> dict:
+        run = self.experiments.get_run(job_id)
+        if run["status"] not in TERMINAL_STATUSES:
+            raise ValueError("only terminal jobs can re-run failed tasks")
+        if active_resume_operation(self.settings, job_id):
+            raise ValueError("Job resume is already in progress")
+        if not run.get("job_dir"):
+            raise ValueError("Harbor job directory is unavailable for re-run")
+        job_path = resolve_harbor_job_path(Path(run["job_dir"]), run.get("harbor_job_name"))
+        if not job_path.is_dir() or not (job_path / "config.json").is_file():
+            raise ValueError("Harbor job directory is unavailable for re-run")
+        error_types = failed_trial_error_types(job_path)
+        if not error_types:
+            raise ValueError("no failed tasks to re-run")
+        clear_stale_job_lock(self.settings, job_id, job_path, run.get("harbor_job_name"))
+        return self._resume_operation(
+            run,
+            job_path,
+            operation_type="rerun-failed-job",
+            filter_error_types=error_types,
+        )
+
+    def _resume_operation(
+        self,
+        run: dict,
+        job_path: Path,
+        *,
+        operation_type: str,
+        filter_error_types: list[str] | None = None,
+    ) -> dict:
+        job_id = run["id"]
 
         async def work(progress) -> None:
             progress(10, "Resuming Harbor job")
-            self._mark_resume_running(run)
+            mark_resume_running(self.settings, self.events, run)
             policy = None
             run_agent_env = agent_env(self.profiles, run.get("agent_id"))
             run_environment_env = environment_env(
@@ -207,13 +240,15 @@ class WebUiJobService:
                 restore_sensitive_env(job_path, run_agent_env, run_environment_env)
                 policy = await prepare_resume_proxy(self.experiments.container_proxy, job_path)
                 await self._resume_harbor_job(
-                    job_path, env={**os.environ, **run_agent_env}
+                    job_path,
+                    env={**os.environ, **run_agent_env},
+                    filter_error_types=filter_error_types,
                 )
             except asyncio.CancelledError as exc:
-                self._mark_resume_failed(run, exc)
+                mark_resume_failed(self.settings, self.events, run, exc)
                 raise
             except Exception as exc:
-                self._mark_resume_failed(run, exc)
+                mark_resume_failed(self.settings, self.events, run, exc)
                 raise
             finally:
                 if policy is not None:
@@ -221,7 +256,7 @@ class WebUiJobService:
             RunRecoveryService(self.settings).reconcile_run(job_id)
             progress(100, "Harbor job resumed")
 
-        return self.operations.submit("resume-job", "job", job_id, work)
+        return self.operations.submit(operation_type, "job", job_id, work)
 
     def update_leaderboard(self, job_id: str, include: bool) -> tuple[dict, dict, list[dict]]:
         job = self.get_job(job_id)
@@ -241,14 +276,11 @@ class WebUiJobService:
     def events_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
         events = self.events.list_after_many([job_id, run["experiment_id"]], 0)
-        return [
-            {
-                "level": _event_level(event.severity),
-                "message": event.event_type,
-                "occurredAt": event.ts,
-            }
-            for event in events
-        ]
+        return [{
+            "level": _event_level(event.severity),
+            "message": event.event_type,
+            "occurredAt": event.ts,
+        } for event in events]
 
     async def trials_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
@@ -349,8 +381,15 @@ class WebUiJobService:
             for row in rows
         ]
 
-    async def _resume_harbor_job(self, job_path: Path, env: dict | None = None) -> None:
+    async def _resume_harbor_job(
+        self,
+        job_path: Path,
+        env: dict | None = None,
+        filter_error_types: list[str] | None = None,
+    ) -> None:
         command = [harbor_cli_executable(), "job", "resume", "--job-path", str(job_path)]
+        for error_type in filter_error_types or []:
+            command.extend(["--filter-error-type", error_type])
         process = await asyncio.create_subprocess_exec(
             *command,
             stdout=asyncio.subprocess.PIPE,
@@ -361,33 +400,8 @@ class WebUiJobService:
         if process.returncode != 0:
             message = output.decode("utf-8", errors="replace").strip()
             raise RuntimeError(
-                f"harbor job resume exited with {process.returncode}: {_resume_error_tail(message)}"
+                f"harbor job resume exited with {process.returncode}: {resume_error_tail(message)}"
             )
-
-
-    def _mark_resume_running(self, run: dict) -> None:
-        now = _now()
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, finished_at = NULL, failure_class = NULL, "
-                "failure_code = NULL, failure_summary = NULL, updated_at = ? WHERE id = ?",
-                ("running", now, run["id"]),
-            )
-        self.events.append("run", run["id"], "harbor.job.resume_requested", {})
-
-    def _mark_resume_failed(self, run: dict, error: BaseException) -> None:
-        now = _now()
-        with sqlite.connect(self.settings) as conn:
-            conn.execute(
-                "UPDATE runs SET status = ?, finished_at = ?, failure_class = ?, "
-                "failure_code = ?, failure_summary = ?, updated_at = ? WHERE id = ?",
-                ("interrupted", now, "harbor_resume", "resume_command_failed", str(error),
-                 now, run["id"]),
-            )
-        self.events.append(
-            "run", run["id"], "harbor.job.resume_failed", {"error": str(error)},
-            severity="warning",
-        )
 
     def _job_config(self, job_id: str) -> dict:
         with sqlite.connect(self.settings) as conn:
@@ -397,18 +411,13 @@ class WebUiJobService:
         return json.loads(rows[0]["config_json"]) if rows else {}
 
 
-def _resume_error_tail(message: str, max_chars: int = 300) -> str:
-    if not message:
-        return "no output captured"
-    return message[-max_chars:]
-
-
 def _job_dto(row: dict) -> dict:
     config = _config(row)
     result = load_job_result(row)
     status = str(row["status"])
-    attempts = max(1, int(row["n_attempts"]))
-    expected_total = (int(row["n_tasks"]) if row.get("n_tasks") is not None else 0) * attempts
+    expected_total = trial_progress_total(row)
+    if status in TERMINAL_STATUSES and execution_completed(result, expected_total):
+        status = "completed"
     stats = result.get("stats", {})
     trial = job_trial_progress(
         result,
@@ -431,21 +440,12 @@ def _job_dto(row: dict) -> dict:
         "runtimeSeconds": runtime_seconds(row.get("started_at"), row.get("finished_at")),
         "createdAt": row["created_at"],
         "includeInLeaderboard": bool(row["leaderboard_eligible"]),
-        "canResume": _can_resume(row, status),
+        "canResume": can_resume_job(row, status),
         "jobDir": row.get("job_dir"),
         "eventLogPath": event_log_path(row, config),
         "artifactPaths": _artifacts(row),
         "failureCode": row.get("failure_code"),
     }
-
-
-def _can_resume(row: dict, status: str) -> bool:
-    if status not in {"failed", "interrupted"} or not row.get("job_dir"):
-        return False
-    job_path = resolve_harbor_job_path(Path(row["job_dir"]), row.get("harbor_job_name"))
-    if not (job_path / "config.json").is_file():
-        return False
-    return has_resumable_trials(job_path)
 
 
 
