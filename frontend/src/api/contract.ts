@@ -161,6 +161,7 @@ export type TrialStatus = 'running' | 'pending' | 'passed' | 'notPassed' | 'erro
 export interface TrialDto {
   costUsd: number | null
   error: string | null
+  startedAt: string | null
   id: string
   jobId: string
   logPath: string | null

@@ -423,10 +423,12 @@ def test_running_job_trials_list_includes_in_progress_trials(client, settings):
     by_task = {trial["taskName"]: trial for trial in response.json()["data"]}
     assert set(by_task) == {"sqlite-with-gcov", "chess-best-move"}
     assert by_task["sqlite-with-gcov"]["status"] == "passed"
+    assert by_task["sqlite-with-gcov"]["startedAt"] == "2026-08-07T13:09:07Z"
     assert by_task["chess-best-move"]["status"] == "running"
     assert by_task["chess-best-move"]["logPath"] == str(running / "trial.log")
     assert by_task["chess-best-move"]["score"] is None
     assert by_task["chess-best-move"]["runtimeSeconds"] is None
+    assert by_task["chess-best-move"]["startedAt"] is not None
 
 
 def test_job_logs_reads_the_native_job_log(client, settings):

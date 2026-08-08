@@ -106,11 +106,24 @@ def running_trial_dto(
         "score": None,
         "retryCount": None,
         "runtimeSeconds": None,
+        "startedAt": _trial_dir_started_at(descriptor),
         "costUsd": None,
         "tokenUsageM": None,
         "logPath": descriptor.get("log_path"),
         "error": None,
     }
+
+
+def _trial_dir_started_at(descriptor: dict[str, Any]) -> str | None:
+    """Approximate a running trial's start time from its directory mtime."""
+    log_path = descriptor.get("log_path")
+    if not isinstance(log_path, str):
+        return None
+    try:
+        mtime = Path(log_path).parent.stat().st_mtime
+    except OSError:
+        return None
+    return datetime.fromtimestamp(mtime).astimezone().isoformat()
 
 
 def pending_trial_dto(job_id: str, task_name: str) -> dict[str, Any]:
@@ -125,6 +138,7 @@ def pending_trial_dto(job_id: str, task_name: str) -> dict[str, Any]:
         "costUsd": None,
         "tokenUsageM": None,
         "logPath": None,
+        "startedAt": None,
         "error": None,
     }
 
@@ -184,6 +198,7 @@ def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) ->
         "costUsd": calculate_cost(token_usage, pricing),
         "tokenUsageM": token_usage_m(token_usage),
         "logPath": trial_log_path(item),
+        "startedAt": item.get("started_at"),
         "error": _trial_error(item),
     }
 

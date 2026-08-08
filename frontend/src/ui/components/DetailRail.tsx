@@ -117,7 +117,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
               >
                 <span>{trial.task}</span>
                 <span className={`status-dot ${trialStatusClass(trial.result)}`}>{trial.result}</span>
-                <span>{trial.duration}</span>
+                <span>{trial.result === 'running' && trial.startedAt ? <RunningTimer startedAt={trial.startedAt} /> : trial.duration}</span>
                 <span>{trial.cost} / {trial.tokens}</span>
               </button>
               {expandedTrialId === trial.id && (
@@ -182,6 +182,25 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
 
 function isTerminalJob(job: HarborJob) {
   return ['completed', 'failed', 'cancelled', 'interrupted'].includes(job.status)
+}
+
+function RunningTimer({ startedAt }: { startedAt: string }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const elapsed = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1_000))
+  return <>{formatElapsed(elapsed)}</>
+}
+
+function formatElapsed(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
 }
 
 function canRerunFailed(job: HarborJob, trials: TrialRow[]) {

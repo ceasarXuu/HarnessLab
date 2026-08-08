@@ -700,6 +700,7 @@ def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: P
             "costUsd": None,
             "tokenUsageM": None,
             "logPath": str(trial_dir / "trial.log"),
+            "startedAt": "2026-07-11T00:00:00+00:00",
             "error": None,
         }
     ]

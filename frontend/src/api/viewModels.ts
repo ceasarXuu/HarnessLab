@@ -163,6 +163,7 @@ export function trialDtoToTrialRow(trial: TrialDto): TrialRow {
     progress: trial.status,
     result: trial.status,
     retries: trial.retryCount ?? 0,
+    startedAt: trial.startedAt ?? undefined,
     score: formatScore(trial.score),
     task: trial.taskName,
     tokens: formatTokenUsage(trial.tokenUsageM),

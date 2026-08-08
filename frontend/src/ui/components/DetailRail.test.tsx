@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { TrialRow } from '../../domain/harbor'
 import { getTranslator } from '../../i18n'
@@ -179,6 +179,40 @@ describe('DetailRail Job actions', () => {
       />,
     )
     expect(screen.queryByRole('button', { name: 'Re-run failed tasks' })).not.toBeInTheDocument()
+  })
+
+  it('ticks a live timer for running tasks', async () => {
+    vi.useFakeTimers()
+    try {
+      const job = jobs[0]
+      const startedAt = new Date(Date.now() - 65_000).toISOString()
+      const trials: TrialRow[] = [
+        {
+          analysisPath: '', artifactPath: '', cost: '-', duration: '-', error: '',
+          id: 'running-timer', jobId: job.id, logPath: '', progress: 'running', result: 'running',
+          retries: 0, score: '-', startedAt, task: 'chess-best-move', tokens: '-', verifierEvidence: '',
+        },
+      ]
+
+      render(
+        <DetailRail
+          job={{ ...job, status: 'running' }}
+          events={[]}
+          trials={trials}
+          t={getTranslator('en')}
+          onJobAction={vi.fn()}
+          onCopyJob={vi.fn()}
+          onLeaderboardChange={vi.fn()}
+        />,
+      )
+
+      const row = screen.getByRole('button', { name: /chess-best-move/ })
+      expect(row).toHaveTextContent('00:01:05')
+      act(() => { vi.advanceTimersByTime(2_000) })
+      expect(row).toHaveTextContent('00:01:07')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('renders the raw job log with its path', () => {
