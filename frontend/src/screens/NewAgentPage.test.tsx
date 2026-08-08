@@ -83,4 +83,41 @@ describe('NewAgentPage', () => {
 
     expect(screen.getByText('Add at least one available model.')).toBeInTheDocument()
   })
+
+  it('pre-fills the draft from a copied Agent', () => {
+    const copied = {
+      id: 'source-agent',
+      agentName: 'Copied Agent',
+      harness: 'claude-code',
+      adapter: 'none',
+      models: 'claude-sonnet-4-5',
+      status: 'configured' as const,
+      source: '~/.ornnlab/agents/copied-agent.toml',
+      updated: 'just now',
+      env: 'ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}',
+      kwargs: 'none',
+      skills: 'none',
+      mcp: 'none',
+      setupTimeout: '600s',
+      timeout: '1800s',
+      maxTimeout: '3600s',
+      hiddenEnvKeys: [],
+      modelPricing: [],
+    }
+
+    render(
+      <NewAgentPage
+        client={createMockWebUiClient()}
+        harnesses={harnessTemplates}
+        initialAgent={copied}
+        rows={[]}
+        t={getTranslator('en')}
+        onAgents={vi.fn()}
+        onRefresh={vi.fn(async () => undefined)}
+      />,
+    )
+
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('Copied Agent')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('claude-code')
+  })
 })

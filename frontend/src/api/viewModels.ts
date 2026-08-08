@@ -181,7 +181,7 @@ function formatTokenUsage(value: number | null): string {
   return `${Number(value.toFixed(4))}M`
 }
 
-function formatDuration(totalSeconds: number | null): string {
+export function formatDuration(totalSeconds: number | null): string {
   if (totalSeconds === null) return '-'
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)

@@ -19,10 +19,11 @@ interface AgentsPageProps {
   rows: AgentRow[]
   t: Translate
   onNewAgent: () => void
+  onCopyAgent?: (agent: AgentRow) => void
   onRefresh: () => Promise<void>
 }
 
-export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, onRefresh }: AgentsPageProps) {
+export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, onCopyAgent, onRefresh }: AgentsPageProps) {
   const [selected, setSelected] = useState<AgentRow | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<AgentRow | null>(null)
@@ -156,6 +157,7 @@ export function AgentsPage({ writesEnabled = true, client, rows, t, onNewAgent, 
               canSave={writesEnabled && !isOperationRunning(agentOperation.operation?.status)}
               client={client}
               t={t}
+              onCopy={onCopyAgent && (() => onCopyAgent(detailAgent))}
               onSave={saveAgent}
             />
             <ResourceStatus

@@ -180,4 +180,19 @@ describe('App agents and leaderboard', () => {
     expect(screen.getByLabelText('Agent Name')).toHaveValue('')
     expect(screen.queryByRole('tab', { name: 'Basic' })).not.toBeInTheDocument()
   })
+
+  it('copies an Agent into the New Agent page with parameters pre-filled', async () => {
+    render(<App />)
+    await screen.findByText('terminal-bench-smoke')
+
+    fireEvent.click(screen.getByRole('link', { name: 'Agents' }))
+    const row = await screen.findByText('Claude Code default')
+    fireEvent.click(row)
+    await screen.findByRole('button', { name: 'Copy' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(await screen.findByRole('heading', { name: 'New Agent' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Agent Name')).toHaveValue('Claude Code default')
+    expect(screen.getByLabelText('Harness')).toHaveTextContent('claude-code')
+  })
 })

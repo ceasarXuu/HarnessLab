@@ -1,3 +1,4 @@
+import { Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { WebUiClient } from '../../api/webUiClient'
 import type { AgentRow } from '../../domain/harbor'
@@ -10,10 +11,11 @@ interface AgentDetailProps {
   canSave?: boolean
   client: WebUiClient
   t: Translate
+  onCopy?: (agent: AgentRow) => void
   onSave: (agent: AgentRow) => boolean | Promise<boolean>
 }
 
-export function AgentDetail({ agent, canSave = true, client, t, onSave }: AgentDetailProps) {
+export function AgentDetail({ agent, canSave = true, client, t, onCopy, onSave }: AgentDetailProps) {
   const [draft, setDraft] = useState(agent)
   const statusClass = draft.status === 'needs-token' ? 'warning' : 'success'
   const statusLabel = getAgentStatusLabel(draft.status, t)
@@ -30,6 +32,11 @@ export function AgentDetail({ agent, canSave = true, client, t, onSave }: AgentD
           </div>
           <div className="rail-heading-actions">
             <span className={`status-dot ${statusClass}`}>{statusLabel}</span>
+            {onCopy && (
+              <button className="secondary-button compact-button" onClick={() => onCopy(agent)}>
+                <Copy />{t('copy')}
+              </button>
+            )}
           </div>
         </div>
         <AgentIdentityEditor lockHarness value={draft} t={t} onChange={setDraft} />

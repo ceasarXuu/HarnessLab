@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Copy, FileJson, FlaskConical, RotateCcw, Square, Terminal, Trash2 } from 'lucide-react'
+import { formatDuration } from '../../api/viewModels'
 import type { EventLog, HarborJob, TrialRow } from '../../domain/harbor'
 import type { Translate } from '../../i18n'
 import { JobStatusBadge } from './JobStatusBadge'
@@ -90,7 +91,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
         <div className="rail-title">
           <FlaskConical aria-hidden="true" />
           <h3>{t('jobTrials')}</h3>
-          {canRerunFailed(job, trials) && onRerunFailed && (
+          {isTerminalJob(job) && trials.some((trial) => trial.result === 'errored') && onRerunFailed && (
             <button
               className="secondary-button compact-action"
               disabled={!writesEnabled}
@@ -116,7 +117,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
                 onClick={() => setExpandedTrialId((current) => (current === trial.id ? null : trial.id))}
               >
                 <span>{trial.task}</span>
-                <span className={`status-dot ${trialStatusClass(trial.result)}`}>{trial.result}</span>
+                <span className={`status-dot ${trial.result === 'passed' ? 'success' : trial.result === 'notPassed' ? 'warning' : trial.result === 'errored' ? 'error' : trial.result}`}>{trial.result}</span>
                 <span>{trial.result === 'running' && trial.startedAt ? <RunningTimer startedAt={trial.startedAt} /> : trial.duration}</span>
                 <span>{trial.cost} / {trial.tokens}</span>
               </button>
@@ -185,33 +186,15 @@ function isTerminalJob(job: HarborJob) {
 }
 
 function RunningTimer({ startedAt }: { startedAt: string }) {
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(Date.now)
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000)
     return () => window.clearInterval(timer)
   }, [])
 
-  const elapsed = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1_000))
-  return <>{formatElapsed(elapsed)}</>
-}
-
-function formatElapsed(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':')
-}
-
-function canRerunFailed(job: HarborJob, trials: TrialRow[]) {
-  return isTerminalJob(job) && trials.some((trial) => trial.result === 'errored')
-}
-
-function trialStatusClass(result: string) {
-  if (result === 'passed') return 'success'
-  if (result === 'notPassed') return 'warning'
-  if (result === 'errored') return 'error'
-  return result
+  const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1_000))
+  return <>{formatDuration(elapsed)}</>
 }
 
 function getPrimaryJobAction(job: HarborJob, t: Translate) {

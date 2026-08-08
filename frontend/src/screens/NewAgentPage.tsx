@@ -13,18 +13,19 @@ interface NewAgentPageProps {
   canSave?: boolean
   client: WebUiClient
   harnesses: HarnessTemplate[]
+  initialAgent?: AgentRow | null
   rows: AgentRow[]
   t: Translate
   onAgents: () => void
   onRefresh: () => Promise<void>
 }
 
-export function NewAgentPage({ canSave = true, client, harnesses, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
+export function NewAgentPage({ canSave = true, client, harnesses, initialAgent, rows, t, onAgents, onRefresh }: NewAgentPageProps) {
   const capabilitiesByHarness = useMemo(
     () => Object.fromEntries(harnesses.map((harness) => [harness.name, harness.capabilities])),
     [harnesses],
   )
-  const [draft, setDraft] = useState(() => buildNewAgent(capabilitiesByHarness))
+  const [draft, setDraft] = useState<AgentRow>(() => initialAgent ?? buildNewAgent(capabilitiesByHarness))
   const [validationAttempted, setValidationAttempted] = useState(false)
   const agentOperation = useOperation(client)
   const allIssues = validateNewAgent(draft, t)

@@ -5,7 +5,7 @@ import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from 
 import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, jobConfigDtoToRunDraft, reconcileRunDraftResources } from '../domain/defaults'
-import type { HarborJob } from '../domain/harbor'
+import type { AgentRow, HarborJob } from '../domain/harbor'
 import { AppShell, type PageKey } from '../ui/components/AppShell'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { getTranslator, type Locale } from '../i18n'
@@ -98,6 +98,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
   const systemResource = useSystemHealth(client)
   const jobOperation = useOperation(client)
+  const [copiedAgentDraft, setCopiedAgentDraft] = useState<AgentRow | null>(null)
   const [selected, setSelected] = useState<HarborJob | null>(null)
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false)
   const [copyJobError, setCopyJobError] = useState<string | null>(null)
@@ -299,6 +300,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
     )
   }
 
+  const copyAgent = (agent: AgentRow) => writesEnabled && (setCopiedAgentDraft(agent), navigateAgent('new'))
+
   async function runJobAction(jobId: string, action: 'cancel' | 'resume') {
     if (!writesEnabled) return
     const mutation = action === 'cancel'
@@ -375,7 +378,8 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             client={client}
             rows={agents}
             t={t}
-            onNewAgent={() => navigateAgent('new')}
+            onNewAgent={() => (setCopiedAgentDraft(null), navigateAgent('new'))}
+            onCopyAgent={copyAgent}
             onRefresh={agentsResource.refresh}
           />
           <ResourceStatus
@@ -388,6 +392,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           canSave={writesEnabled}
           client={client}
           harnesses={harnesses}
+          initialAgent={copiedAgentDraft}
           rows={agents}
           t={t}
           onAgents={() => navigateAgent('list')}
