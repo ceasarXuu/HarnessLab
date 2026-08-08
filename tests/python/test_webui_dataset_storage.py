@@ -34,6 +34,11 @@ class CachedRegistryClient:
         self.list_calls += 1
         return [SimpleNamespace(name="terminal-bench", version="2.0", task_count=89)]
 
+    async def get_dataset_metadata(self, ref):
+        return SimpleNamespace(
+            task_ids=[SimpleNamespace(get_name=lambda i=i: f"t{i}") for i in range(10)]
+        )
+
 
 class FailingRegistryClient:
     async def download_dataset(self, _ref, *, output_dir, **_):
@@ -203,9 +208,7 @@ def test_reconcile_cleans_pending_download_left_by_interrupted_service(tmp_path)
     destination.mkdir()
     write_marker(destination, "team/eval@1.0")
     service._record_pending_download("team/eval@1.0", parent, destination)
-    _insert_operation(
-        settings, "op-interrupted", "download-dataset", "failed", "team/eval@1.0"
-    )
+    _insert_operation(settings, "op-interrupted", "download-dataset", "failed", "team/eval@1.0")
 
     assert service.reconcile_interrupted_downloads() == 1
     assert not destination.exists()
@@ -264,6 +267,33 @@ def test_external_import_uses_local_registry_sentinel(tmp_path):
     )
 
     assert asyncio.run(service.get_dataset("local/demo@v1"))["registryUrl"] == "local"
+
+
+def test_register_dataset_for_job_skips_when_already_local(tmp_path, monkeypatch):
+    settings = _settings(tmp_path)
+    _use_registry_client(monkeypatch, CachedRegistryClient())
+    service = WebUiDatasetService(settings)
+
+    target = asyncio.run(service.register_dataset_for_job("terminal-bench-sample@2.0"))
+
+    expected = str(settings.datasets_dir / "terminal-bench-sample@2.0")
+    assert target == expected
+    dataset = asyncio.run(service.get_dataset("terminal-bench-sample@2.0"))
+    assert dataset["download"] == {
+        "path": expected,
+        "status": "path-unavailable",
+        "storageKind": "managed",
+    }
+    assert dataset["taskCount"] == 10
+
+    again = asyncio.run(service.register_dataset_for_job("terminal-bench-sample@2.0"))
+
+    assert again is None
+    with sqlite.connect(settings) as conn:
+        rows = sqlite.rows(
+            conn, "SELECT * FROM webui_datasets WHERE ref = ?", ("terminal-bench-sample@2.0",)
+        )
+    assert len(rows) == 1
 
 
 def _settings(tmp_path: Path) -> Settings:

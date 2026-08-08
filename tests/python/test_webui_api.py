@@ -68,9 +68,7 @@ def test_dataset_task_runtime_location_does_not_scan_directory_size(tmp_path, mo
 
     monkeypatch.setattr(Path, "rglob", fail_size_scan)
 
-    runtime = stored_dataset_runtime(
-        {"local_path": str(dataset_path), "source": "harbor registry"}
-    )
+    runtime = stored_dataset_runtime({"local_path": str(dataset_path), "source": "harbor registry"})
 
     assert runtime == {
         "download": {"path": str(dataset_path), "status": "downloaded"},
@@ -196,9 +194,7 @@ def test_webui_agent_and_environment_crud(client):
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
     ]
-    qwen_parameters = {
-        item["key"]: item for item in qwen_harness["capabilities"]["parameters"]
-    }
+    qwen_parameters = {item["key"]: item for item in qwen_harness["capabilities"]["parameters"]}
     assert "api_key" not in qwen_parameters
     assert "base_url" not in qwen_parameters
 
@@ -212,14 +208,16 @@ def test_webui_agent_and_environment_crud(client):
     assert "LLM_TEMPERATURE" in openhands_agent["capabilities"]["environmentVariables"]
 
     claude_profile = _agent_payload()
-    claude_profile.update({
-        "id": "claude-reusable",
-        "agentName": "Claude reusable profile",
-        "harness": "claude-code",
-        "authenticationMode": "oauth",
-        "env": [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": None}],
-        "models": ["claude-haiku-4-5", "claude-sonnet-4-5"],
-    })
+    claude_profile.update(
+        {
+            "id": "claude-reusable",
+            "agentName": "Claude reusable profile",
+            "harness": "claude-code",
+            "authenticationMode": "oauth",
+            "env": [{"key": "CLAUDE_CODE_OAUTH_TOKEN", "value": None}],
+            "models": ["claude-haiku-4-5", "claude-sonnet-4-5"],
+        }
+    )
     updated = client.post(f"{API}/agents", json=claude_profile)
     assert updated.status_code == 200
     saved_built_in = client.get(f"{API}/agents/claude-reusable").json()["data"]
@@ -300,10 +298,13 @@ def test_agent_env_visibility_persists_globally_and_stays_out_of_config(client):
     assert client.patch(f"{API}/agents/oracle-profile", json=_agent_payload()).status_code == 200
     assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == expected
 
-    assert client.patch(
-        f"{API}/agents/oracle-profile",
-        json={**_agent_payload(), "hiddenEnvKeys": []},
-    ).status_code == 200
+    assert (
+        client.patch(
+            f"{API}/agents/oracle-profile",
+            json={**_agent_payload(), "hiddenEnvKeys": []},
+        ).status_code
+        == 200
+    )
     assert client.get(f"{API}/agents/oracle-profile").json()["data"]["hiddenEnvKeys"] == []
 
     with sqlite.connect(client.app.state.settings) as conn:
@@ -311,7 +312,6 @@ def test_agent_env_visibility_persists_globally_and_stays_out_of_config(client):
     stored = json.loads(rows[0]["config_json"])
     assert "hiddenEnvKeys" not in stored
     assert "hidden_env_keys" not in stored
-
 
 
 def test_agent_environment_variable_inheritance_resolves_without_logging_values(
@@ -368,6 +368,43 @@ def test_webui_job_create_events_and_leaderboard_update(client):
     ).json()["data"]
     assert update["job"]["includeInLeaderboard"] is False
     assert update["operation"]["status"] == "completed"
+
+
+def test_webui_job_create_registers_dataset_download_target(client):
+    _create_profile_prerequisites(client)
+    payload = _job_payload()
+    payload.update(
+        {
+            "jobName": "dataset-target-job",
+            "datasetRef": "terminal-bench-sample@2.0",
+        }
+    )
+
+    response = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
+
+    assert response.status_code == 200
+    job_id = response.json()["data"]["job"]["id"]
+    with sqlite.connect(client.app.state.settings) as conn:
+        stored = sqlite.rows(
+            conn, "SELECT config_json FROM webui_job_configs WHERE run_id = ?", (job_id,)
+        )[0]
+        rows = sqlite.rows(
+            conn, "SELECT * FROM webui_datasets WHERE ref = ?", ("terminal-bench-sample@2.0",)
+        )
+    overrides = json.loads(stored["config_json"])["harbor_overrides"]
+    expected_dir = str(Path(client.app.state.settings.datasets_dir) / "terminal-bench-sample@2.0")
+    assert overrides["dataset_download_dir"] == expected_dir
+    assert len(rows) == 1
+    assert rows[0]["local_path"] == expected_dir
+    assert rows[0]["task_count"] == 0
+
+    second = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False})
+    assert second.status_code == 200
+    with sqlite.connect(client.app.state.settings) as conn:
+        rows = sqlite.rows(
+            conn, "SELECT * FROM webui_datasets WHERE ref = ?", ("terminal-bench-sample@2.0",)
+        )
+    assert len(rows) == 1
 
 
 def test_webui_job_snapshots_selected_model_custom_pricing(client):
@@ -496,9 +533,9 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
             "name": "hello",
         }
     ]
-    task_detail = client.get(
-        f"{API}/datasets/local%2Fdemo%40v1/task-detail?task=hello"
-    ).json()["data"]
+    task_detail = client.get(f"{API}/datasets/local%2Fdemo%40v1/task-detail?task=hello").json()[
+        "data"
+    ]
     assert task_detail["name"] == "hello"
     assert task_detail["environment"]["containerImages"] == []
 
@@ -508,7 +545,11 @@ def test_webui_import_dataset_operation_is_persisted_and_pollable(client, tmp_pa
     assert dataset_response["download"]["status"] == "downloaded"
 
 
-def test_webui_external_dataset_storage_routes_preserve_files(client, tmp_path: Path):
+def test_webui_external_dataset_storage_routes_preserve_files(client, tmp_path: Path, monkeypatch):
+    async def no_remote_datasets():
+        return []
+
+    monkeypatch.setattr(client.app.state.dataset_service, "_remote_datasets", no_remote_datasets)
     original = _dataset_directory(tmp_path / "original")
     relocated = _dataset_directory(tmp_path / "relocated")
     imported = client.post(
@@ -559,9 +600,7 @@ def test_system_directory_picker_returns_the_native_selection(client, tmp_path: 
     assert response.json()["data"] == {"path": str(tmp_path)}
 
 
-def test_docker_start_command_is_persisted_executed_without_shell_and_exposed(
-    client, monkeypatch
-):
+def test_docker_start_command_is_persisted_executed_without_shell_and_exposed(client, monkeypatch):
     executed: list[list[str]] = []
     monkeypatch.setattr(
         "ornnlab.services.webui_system_service._run_checked",
@@ -579,9 +618,9 @@ def test_docker_start_command_is_persisted_executed_without_shell_and_exposed(
         for item in client.get(f"{API}/system/health").json()["data"]["items"]
         if item["kind"] == "docker"
     )
-    started = client.post(
-        f"{API}/system/docker/start", json={"command": "colima start"}
-    ).json()["data"]["operation"]
+    started = client.post(f"{API}/system/docker/start", json={"command": "colima start"}).json()[
+        "data"
+    ]["operation"]
 
     assert saved.json()["data"] == {"command": "colima start"}
     assert docker["startCommand"] == "colima start"
@@ -949,16 +988,18 @@ def test_resume_proxy_skipped_when_config_has_no_proxy_env(tmp_path: Path):
 def test_copy_job_config_returns_an_editable_draft_without_creating_a_job(client):
     _create_profile_prerequisites(client)
     payload = _job_payload()
-    payload.update({
-        "jobName": "copy-source",
-        "jobsDir": "/tmp/shared-jobs",
-        "selectedTaskNames": ["hello"],
-        "notes": "keep this note",
-        "retryInclude": "TimeoutError, NetworkError",
-    })
-    created = client.post(
-        f"{API}/jobs", json={"config": payload, "runImmediately": False}
-    ).json()["data"]["job"]
+    payload.update(
+        {
+            "jobName": "copy-source",
+            "jobsDir": "/tmp/shared-jobs",
+            "selectedTaskNames": ["hello"],
+            "notes": "keep this note",
+            "retryInclude": "TimeoutError, NetworkError",
+        }
+    )
+    created = client.post(f"{API}/jobs", json={"config": payload, "runImmediately": False}).json()[
+        "data"
+    ]["job"]
     with sqlite.connect(client.app.state.settings) as conn:
         before = sqlite.rows(conn, "SELECT COUNT(*) AS total FROM runs")[0]["total"]
 

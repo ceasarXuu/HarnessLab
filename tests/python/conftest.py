@@ -26,6 +26,9 @@ def job_tasks_registry_unavailable(monkeypatch) -> Iterator[None]:
     monkeypatch.setattr(
         "ornnlab.services.webui_job_tasks._registry_client_factory", lambda: factory
     )
+    monkeypatch.setattr(
+        "ornnlab.services.webui_dataset_service._registry_client_factory", lambda: factory
+    )
     yield
 
 

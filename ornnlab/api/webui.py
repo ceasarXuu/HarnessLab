@@ -30,6 +30,7 @@ from ornnlab.models.webui import (
 router = APIRouter(prefix="/api/webui/v1", tags=["webui"])
 router.include_router(resources_router)
 
+
 @router.get("/operations/{operation_id}")
 async def get_operation(operation_id: str, request: Request) -> dict:
     _require_query(request, set())
@@ -178,7 +179,7 @@ async def get_job_copy_config(job_id: str, request: Request) -> dict:
 @router.post("/jobs")
 async def create_job(payload: CreateJobInput, request: Request) -> dict:
     _require_query(request, set())
-    job, operation = _jobs(request).create_job(payload)
+    job, operation = await _jobs(request).create_job(payload)
     return _data(request, {"job": job, "operation": operation})
 
 
@@ -322,9 +323,7 @@ async def remove_dataset_registration(dataset_ref: str, request: Request) -> dic
 
 
 @router.post("/datasets/{dataset_ref:path}/move")
-async def move_dataset(
-    dataset_ref: str, payload: DatasetParentPathInput, request: Request
-) -> dict:
+async def move_dataset(dataset_ref: str, payload: DatasetParentPathInput, request: Request) -> dict:
     _require_query(request, set())
     datasets = _datasets(request)
 
@@ -440,9 +439,7 @@ async def clean_storage_cache(request: Request) -> dict:
 
 
 @router.put("/system/docker/start-command")
-async def save_docker_start_command(
-    payload: DockerStartCommandInput, request: Request
-) -> dict:
+async def save_docker_start_command(payload: DockerStartCommandInput, request: Request) -> dict:
     _require_query(request, set())
     return _data(request, _system(request).save_docker_start_command(payload.command))
 

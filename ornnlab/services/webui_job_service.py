@@ -26,6 +26,7 @@ from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.model_pricing import calculate_cost, pricing_snapshot
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
+from ornnlab.services.webui_dataset_service import WebUiDatasetService
 from ornnlab.services.webui_job_copy import load_job_copy_config
 from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
 from ornnlab.services.webui_job_progress import (
@@ -96,7 +97,7 @@ class WebUiJobService:
     def copy_job_config(self, job_id: str) -> dict:
         return load_job_copy_config(self.settings, job_id)
 
-    def create_job(self, request: CreateJobInput) -> tuple[dict, dict]:
+    async def create_job(self, request: CreateJobInput) -> tuple[dict, dict]:
         config = request.config
         agent = self.profiles.resolve_agent(config.agent_name)
         if config.model_name not in agent["models"]:
@@ -105,6 +106,9 @@ class WebUiJobService:
         environment = self.profiles.get_environment(config.environment_preset_id)
         benchmark_name, benchmark_version = _dataset_ref(config.dataset_ref)
         selected_tasks = config.selected_task_names
+        dataset_download_dir = await WebUiDatasetService(self.settings).register_dataset_for_job(
+            config.dataset_ref
+        )
         created = self.experiments.create(
             ExperimentCreate(
                 name=config.job_name,
@@ -139,6 +143,8 @@ class WebUiJobService:
             "metrics": [{"type": config.metric}],
             "environment": self.profiles.environment_harbor_config(environment),
         }
+        if dataset_download_dir:
+            overrides["dataset_download_dir"] = dataset_download_dir
         stored = {
             "agent_harness": agent["harness"],
             "agent_name": agent["agentName"],
@@ -162,9 +168,15 @@ class WebUiJobService:
                 (int(config.include_in_leaderboard and config.verifier_mode != "skip"), run["id"]),
             )
         self.events.append(
-            "run", run["id"], "webui.job.configured",
-            {"agent_name": agent["agentName"], "model_name": config.model_name,
-             "pricing_source": pricing["source"]})
+            "run",
+            run["id"],
+            "webui.job.configured",
+            {
+                "agent_name": agent["agentName"],
+                "model_name": config.model_name,
+                "pricing_source": pricing["source"],
+            },
+        )
         if request.run_immediately:
             QueueService(self.settings).enqueue_experiment(created["experiment"]["id"])
             self.worker.start()
@@ -276,11 +288,14 @@ class WebUiJobService:
     def events_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
         events = self.events.list_after_many([job_id, run["experiment_id"]], 0)
-        return [{
-            "level": _event_level(event.severity),
-            "message": event.event_type,
-            "occurredAt": event.ts,
-        } for event in events]
+        return [
+            {
+                "level": _event_level(event.severity),
+                "message": event.event_type,
+                "occurredAt": event.ts,
+            }
+            for event in events
+        ]
 
     async def trials_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
@@ -448,8 +463,6 @@ def _job_dto(row: dict) -> dict:
     }
 
 
-
-
 def _config(row: dict) -> dict:
     return json.loads(row["config_json"]) if row.get("config_json") else {}
 
@@ -480,8 +493,6 @@ def _job_score(result: dict) -> dict | None:
     if value is not None:
         return {"kind": "percentage", "value": value * 100}
     return None
-
-
 
 
 def _version_filter(version: str | None) -> str:

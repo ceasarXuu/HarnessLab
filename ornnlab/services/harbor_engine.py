@@ -59,6 +59,7 @@ class HarborConfigBuilder:
             "benchmark_name": benchmark_name,
             "benchmark_version": benchmark_version,
             "task_names": overrides.get("task_names"),
+            "download_dir": overrides.get("dataset_download_dir"),
         }
         return HarborJobConfigView(
             job_name=effective_job_name,
@@ -246,9 +247,7 @@ def _owned_docker_environment(
         }
     )
     merged.pop("type", None)
-    merged["import_path"] = (
-        "ornnlab.services.owned_docker_environment:OwnedDockerEnvironment"
-    )
+    merged["import_path"] = "ornnlab.services.owned_docker_environment:OwnedDockerEnvironment"
     merged["kwargs"] = kwargs
     return merged
 
@@ -309,6 +308,8 @@ def _dataset_config_payload(dataset: dict[str, Any], n_tasks: int | None) -> dic
     payload: dict[str, Any] = {"name": benchmark_name, "version": version}
     if dataset.get("task_names"):
         payload["task_names"] = dataset["task_names"]
+    if dataset.get("download_dir"):
+        payload["download_dir"] = dataset["download_dir"]
     if n_tasks is not None:
         payload["n_tasks"] = n_tasks
     return _without_empty_values(payload)

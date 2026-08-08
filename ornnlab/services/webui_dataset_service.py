@@ -71,8 +71,8 @@ class WebUiDatasetService:
         if local:
             return merge_active_downloads(self.settings, [local])[0]
         name, version = split_ref(ref)
-        metadata = await _registry_client_factory().create().get_dataset_metadata(
-            join_ref(name, version)
+        metadata = (
+            await _registry_client_factory().create().get_dataset_metadata(join_ref(name, version))
         )
         remote = remote_dataset_dto(metadata.name, metadata.version, len(metadata.task_ids))
         return merge_active_downloads(self.settings, [remote])[0]
@@ -120,8 +120,10 @@ class WebUiDatasetService:
             task_names: list[str] = []
         else:
             name, version = split_ref(ref)
-            metadata = await _registry_client_factory().create().get_dataset_metadata(
-                join_ref(name, version)
+            metadata = (
+                await _registry_client_factory()
+                .create()
+                .get_dataset_metadata(join_ref(name, version))
             )
             task_names = [task_id.get_name() for task_id in metadata.task_ids]
         if query:
@@ -181,12 +183,16 @@ class WebUiDatasetService:
             self._record_pending_download(ref, parent, destination)
             progress(10, "Starting dataset download")
             logger.info("Preparing Dataset download ref=%s destination=%s", ref, destination)
-            items = await _registry_client_factory().create().download_dataset(
-                join_ref(name, version),
-                output_dir=destination,
-                export=True,
-                on_total_known=on_total_known,
-                on_task_download_complete=on_complete,
+            items = (
+                await _registry_client_factory()
+                .create()
+                .download_dataset(
+                    join_ref(name, version),
+                    output_dir=destination,
+                    export=True,
+                    on_total_known=on_total_known,
+                    on_task_download_complete=on_complete,
+                )
             )
             self._upsert_dataset(
                 ref=ref,
@@ -216,9 +222,7 @@ class WebUiDatasetService:
         """Remove pending download records whose owning operation was interrupted by a
         service restart, together with their OrnnLab-marked directories."""
         with sqlite.connect(self.settings) as conn:
-            pending = sqlite.rows(
-                conn, "SELECT ref, destination_path FROM webui_dataset_downloads"
-            )
+            pending = sqlite.rows(conn, "SELECT ref, destination_path FROM webui_dataset_downloads")
             active_refs = {
                 str(row["resource_id"])
                 for row in conn.execute(
@@ -236,8 +240,7 @@ class WebUiDatasetService:
                 remove_marked_directory(destination, row["ref"], allow_legacy=False)
             except ValueError:
                 logger.warning(
-                    "Refusing to clean Dataset directory without OrnnLab marker "
-                    "ref=%s path=%s",
+                    "Refusing to clean Dataset directory without OrnnLab marker ref=%s path=%s",
                     row["ref"],
                     destination,
                 )
@@ -376,6 +379,44 @@ class WebUiDatasetService:
             raise KeyError(ref)
         return row
 
+    async def register_dataset_for_job(self, ref: str) -> str | None:
+        """Ensure a Job's dataset is registered as a managed download target.
+
+        Returns the managed download directory to pass to Harbor's dataset
+        ``download_dir``, or None when the dataset is already registered with a
+        local copy (nothing to download into OrnnLab).
+        """
+        row = self._dataset_row(ref)
+        if row and row.get("local_path"):
+            return None
+        name, version = split_ref(ref)
+        parent = Path(self.default_download_parent()["parentPath"])
+        target_dir = parent / managed_directory_name(ref)
+        task_count = 0
+        try:
+            metadata = await _registry_client_factory().create().get_dataset_metadata(ref)
+            task_count = len(metadata.task_ids)
+        except Exception as exc:  # registry unavailable: keep count best-effort
+            logger.warning("dataset.registry_metadata_failed ref=%s error=%s", ref, exc)
+        self._upsert_dataset(
+            ref=ref,
+            name=name,
+            version=version or "",
+            source="harbor registry",
+            visibility="public",
+            registry_url=None,
+            local_path=str(target_dir),
+            storage_kind="managed",
+            task_count=task_count,
+        )
+        logger.info(
+            "dataset.registered_for_job ref=%s target=%s tasks=%s",
+            ref,
+            target_dir,
+            task_count,
+        )
+        return str(target_dir)
+
     async def _remote_datasets(self) -> list[dict]:
         if self._registry_cache_is_fresh():
             logger.debug("Using cached Harbor registry Dataset catalog")
@@ -387,8 +428,7 @@ class WebUiDatasetService:
                 return list(self._registry_cache or [])
             summaries = await _registry_client_factory().create().list_datasets()
             self._registry_cache = [
-                remote_dataset_dto(item.name, item.version, item.task_count)
-                for item in summaries
+                remote_dataset_dto(item.name, item.version, item.task_count) for item in summaries
             ]
             self._registry_cache_updated_at = time.monotonic()
             logger.info(
