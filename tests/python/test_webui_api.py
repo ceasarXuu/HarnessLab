@@ -710,12 +710,63 @@ def test_job_dto_only_marks_a_failed_job_resumable_when_harbor_config_exists(
     native_dir = job_dir / "native-job"
     native_dir.mkdir()
     (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    still_unavailable = client.get(f"{API}/jobs/{job_id}").json()["data"]
+    unfinished = native_dir / "trial-unfinished"
+    unfinished.mkdir()
+    (unfinished / "config.json").write_text("{}", encoding="utf-8")
     available = client.get(f"{API}/jobs/{job_id}").json()["data"]
 
     assert unavailable["canResume"] is False
     assert rejected_resume.status_code == 422
     assert rejected_resume.json()["error"]["code"] == "INVALID_REQUEST"
+    assert still_unavailable["canResume"] is False
     assert available["canResume"] is True
+
+
+def test_can_resume_requires_an_actual_resumable_trial(client, tmp_path: Path):
+    _create_profile_prerequisites(client)
+    created = client.post(
+        f"{API}/jobs", json={"config": _job_payload(), "runImmediately": False}
+    ).json()["data"]["job"]
+    job_id = created["id"]
+    job_dir = tmp_path / "resume-root"
+    job_dir.mkdir()
+    native_dir = job_dir / "native-job"
+    native_dir.mkdir()
+    (native_dir / "config.json").write_text("{}", encoding="utf-8")
+    with sqlite.connect(client.app.state.settings) as conn:
+        conn.execute(
+            "UPDATE runs SET status = 'failed', job_dir = ?, harbor_job_name = ? WHERE id = ?",
+            (str(job_dir), "native-job", job_id),
+        )
+
+    terminal = native_dir / "trial-terminal"
+    terminal.mkdir()
+    (terminal / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-terminal",
+                "task_name": "hello",
+                "exception_info": {"exception_type": "NonZeroAgentExitCodeError"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert client.get(f"{API}/jobs/{job_id}").json()["data"]["canResume"] is False
+
+    cancelled = native_dir / "trial-cancelled"
+    cancelled.mkdir()
+    (cancelled / "result.json").write_text(
+        json.dumps(
+            {
+                "id": "trial-cancelled",
+                "task_name": "hello",
+                "exception_info": {"exception_type": "CancelledError"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert client.get(f"{API}/jobs/{job_id}").json()["data"]["canResume"] is True
 
 
 def test_resume_error_tail_captures_harbor_stderr():

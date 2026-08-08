@@ -150,6 +150,26 @@ def trial_dir_epoch(descriptor: dict[str, Any]) -> float:
         return 0.0
 
 
+def has_resumable_trials(job_path: Path) -> bool:
+    """Match Harbor `job resume` semantics: trials Harbor will actually re-run.
+
+    Harbor resumes trials whose directory has no result.json (unfinished
+    leftovers), plus trials whose failure matches the resume error filter
+    (default: CancelledError). Jobs where every trial already has a terminal
+    result are not resumable.
+    """
+    for trial_dir in job_path.glob("*/"):
+        if not trial_dir.is_dir():
+            continue
+        result_path = trial_dir / "result.json"
+        if not result_path.is_file():
+            return True
+        exception = load_result_payload(result_path).get("exception_info")
+        if isinstance(exception, dict) and exception.get("exception_type") == "CancelledError":
+            return True
+    return False
+
+
 def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) -> dict[str, Any]:
     agent_result = item.get("agent_result") or {}
     token_usage = trial_token_usage(agent_result, item.get("step_results"))

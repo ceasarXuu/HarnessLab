@@ -12,6 +12,7 @@ from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_service import ExperimentService
 from ornnlab.services.harbor_paths import resolve_harbor_job_path
 from ornnlab.services.harbor_results import (
+    has_resumable_trials,
     pending_trial_dto,
     running_trial_descriptors,
     running_trial_dto,
@@ -384,10 +385,7 @@ class WebUiJobService:
                  now, run["id"]),
             )
         self.events.append(
-            "run",
-            run["id"],
-            "harbor.job.resume_failed",
-            {"error": str(error)},
+            "run", run["id"], "harbor.job.resume_failed", {"error": str(error)},
             severity="warning",
         )
 
@@ -445,7 +443,9 @@ def _can_resume(row: dict, status: str) -> bool:
     if status not in {"failed", "interrupted"} or not row.get("job_dir"):
         return False
     job_path = resolve_harbor_job_path(Path(row["job_dir"]), row.get("harbor_job_name"))
-    return (job_path / "config.json").is_file()
+    if not (job_path / "config.json").is_file():
+        return False
+    return has_resumable_trials(job_path)
 
 
 
