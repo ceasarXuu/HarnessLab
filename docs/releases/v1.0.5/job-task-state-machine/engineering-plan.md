@@ -37,7 +37,7 @@
 | V1 | 读时派生（不改库）足以表达两轴模型 | 是否需 DB 迁移 | Static Evidence：梳理 `runs.status` 全部消费者（DTO/recovery/worker 判定） | 足够：所有消费者列表且无"状态必须持久化"的需求；不证明：历史数据需要回填 | 预算：代码阅读 ≤1h；允许：只读；禁止：改库 | 发现消费者依赖持久化语义则改为迁移方案 | planned |
 | V2 | `harbor job resume --filter-error-type <T>` 只重跑匹配类型失败 trial、保留其余结果并合并 | W5 重跑失败任务的设计与是否投入 | Sandbox Evidence：用一次性沙箱 job（临时 jobs_dir + 2 个成功 1 个失败 trial）执行 filter 重跑，检查 result.json 合并与未匹配 trial 保留 | 足够：重跑后仅失败 trial 的新结果、成功 trial 结果原样保留、计数正确；不证明：真实 Harbor 上传/分享路径 | 预算：≤30min、临时目录；允许：临时 job 目录创建/删除；禁止：改动生产 job 目录 | 结论不符则 W5 改为手动删除 trial 目录方案 | planned |
 | V3 | 存量 failed 行按新口径读时显示 completed+明细不破坏展示与恢复 | W6 兼容策略 | Static + 测试：用现有 job（`run-807c1fcbd081`，10/10 完成 1 errored）验证新派生 | 足够：该 job 显示 completed、明细 10/5/4/1、canResume=False；不证明：极端历史形态 | 预算：现有数据 + 单测 | 回归失败则回退派生改动 | planned |
-| V4 | "重跑失败任务"入口形态（错误类型集合 vs 单 task） | W5 UI 设计 | 产品决策（E0/E1）：用户已倾向 task 级语义 | 足够：用户确认入口形态；不证明：无需技术验证 | n/a | 无 | planned |
+| V4 | "重跑失败任务"入口形态 | W5 UI 设计 | 产品决策（E0/E1）：**用户已决策——task 列表上方按钮，按错误类型集合** | 足够：用户确认；不证明：无需技术验证 | n/a | 无 | verified |
 
 ## 3. 工作单元
 
@@ -88,6 +88,6 @@
 
 ## 6. 开放问题
 
-- V4：重跑失败任务入口形态——按错误类型集合（Harbor 原生）还是按单个 task（OrnnLab 删目录+resume）？需用户决策。
-- "全异常" job（如 10/10 errored）是否也是 completed（执行完成）？当前定义是；如用户不接受需修订 W2 边界。
-- 存量 failed 行读时派生的显示变化（如走查期间的历史 job）是否需要走查记录提示。
+- V4：重跑失败任务入口形态——**已决策（2026-08-09，用户）：task 列表上方放"重跑失败任务"按钮**（按错误类型集合，Harbor 原生 filter-error-type）。
+- "全异常" job（如 10/10 errored）是否也是 completed —— **已决策（2026-08-09，用户）：算**（执行完成即 completed，结果在明细）。
+- 存量 failed 行读时派生的显示变化（如走查期间的历史 job）是否需要走查记录提示——待执行时观察。
