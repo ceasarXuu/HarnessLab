@@ -131,8 +131,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const hasLiveJob = jobs.some((job) => job.status === 'queued' || job.status === 'running')
     || selectedJob?.status === 'queued'
     || selectedJob?.status === 'running'
+  const jobActionActive = jobOperation.operation?.status === 'queued'
+    || jobOperation.operation?.status === 'running'
 
-  usePollingRefresh(jobsResource.refresh, route.page === 'jobs' && route.jobView === 'list' && hasLiveJob)
+  usePollingRefresh(jobsResource.refresh, route.page === 'jobs' && route.jobView === 'list' && (hasLiveJob || jobActionActive))
   usePollingRefresh(systemResource.refresh, route.page === 'system', 2_000)
 
   useEffect(() => {
@@ -444,6 +446,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             search={search}
             selected={selectedJob}
             actionError={selectedJobActionError}
+            actionActive={jobActionActive && jobOperation.operation?.resourceId === selectedJob?.id}
             t={t}
             onClose={() => setJobDrawerOpen(false)}
             onLeaderboardChange={updateJobLeaderboardInclusion}

@@ -1,12 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMockWebUiClient } from '../api/mockClient'
 import { getTranslator } from '../i18n'
 import { jobs } from '../mocks/demo'
 import { JobsPage } from './JobsPage'
 
 describe('JobsPage', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('keeps status in the detail drawer while removing the list status column', async () => {
     const job = { ...jobs[0], status: 'running' as const }
 
@@ -32,6 +35,41 @@ describe('JobsPage', () => {
     expect(screen.queryByRole('columnheader', { name: '状态' })).not.toBeInTheDocument()
     expect(screen.queryByText('running')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
+  })
+
+  it('keeps polling the detail drawer while a Job action is running', async () => {
+    vi.useFakeTimers()
+    const client = createMockWebUiClient()
+    const listJobTrials = vi.spyOn(client, 'listJobTrials')
+    const job = jobs[0]
+
+    render(
+      <JobsPage
+        client={client}
+        jobs={[job]}
+        open
+        search=""
+        selected={job}
+        actionActive
+        t={getTranslator('en')}
+        onClose={() => undefined}
+        onJobAction={() => undefined}
+        onCopyJob={() => undefined}
+        onLeaderboardChange={() => undefined}
+        onNewJob={() => undefined}
+        onSearch={() => undefined}
+        onSelect={() => undefined}
+      />,
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    const callsAfterFirstPoll = listJobTrials.mock.calls.length
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    expect(listJobTrials.mock.calls.length).toBeGreaterThan(callsAfterFirstPoll)
   })
 
   it('requires confirmation before sending a Job cancellation request', async () => {

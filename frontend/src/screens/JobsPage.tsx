@@ -19,6 +19,7 @@ interface JobsPageProps {
   search: string
   selected: HarborJob | null
   actionError?: string | null
+  actionActive?: boolean
   t: Translate
   onClose: () => void
   onJobAction: (jobId: string, action: 'cancel' | 'resume') => void
@@ -39,6 +40,7 @@ export function JobsPage({
   search,
   selected,
   actionError = null,
+  actionActive = false,
   t,
   onClose,
   onJobAction,
@@ -65,7 +67,7 @@ export function JobsPage({
   const events = eventsResource.data?.map(jobEventDtoToEventLog) ?? []
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
   const pagination = usePaginatedItems({ items: jobs, resetKey: search })
-  const live = open && (selected?.status === 'queued' || selected?.status === 'running')
+  const live = open && (selected?.status === 'queued' || selected?.status === 'running' || actionActive)
 
   usePollingRefresh(detailResource.refresh, live)
   usePollingRefresh(eventsResource.refresh, live)
