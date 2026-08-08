@@ -156,6 +156,7 @@ export function trialDtoToTrialRow(trial: TrialDto): TrialRow {
     artifactPath: '',
     cost: formatCost(trial.costUsd),
     duration: formatDuration(trial.runtimeSeconds),
+    error: trial.error ?? '',
     id: trial.id,
     jobId: trial.jobId,
     logPath: trial.logPath ?? '',

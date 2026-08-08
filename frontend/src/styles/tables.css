@@ -204,6 +204,10 @@ tbody tr:hover,
   border: 1px solid var(--border);
   background: var(--surface-muted);
 }
+.trial-expanded .trial-error {
+  color: var(--danger);
+  word-break: break-all;
+}
 .task-row {
   grid-template-columns: minmax(0, 1fr) 104px;
   align-items: center;

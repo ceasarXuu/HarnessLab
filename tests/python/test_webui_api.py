@@ -619,6 +619,26 @@ def test_trial_dto_uses_real_harbor_result_fields_only():
     assert trial["tokenUsageM"] == 0.003
     assert trial["retryCount"] is None
     assert trial["logPath"] is None
+    assert trial["error"] is None
+
+
+def test_trial_dto_surfaces_concise_failure_reason():
+    long_message = "Command failed (exit 1): " + "x" * 300
+    trial = _trial_dto(
+        "job-1",
+        {
+            "id": "trial-f",
+            "task_name": "hello",
+            "exception_info": {
+                "exception_type": "NonZeroAgentExitCodeError",
+                "exception_message": long_message,
+            },
+        },
+    )
+
+    assert trial["status"] == "failed"
+    assert trial["error"].startswith("NonZeroAgentExitCodeError: Command failed (exit 1): ")
+    assert len(trial["error"]) <= 200
 
 
 def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: Path):
@@ -664,6 +684,7 @@ def test_webui_reads_trials_from_harbor_native_result_layout(client, tmp_path: P
             "costUsd": None,
             "tokenUsageM": None,
             "logPath": str(trial_dir / "trial.log"),
+            "error": None,
         }
     ]
 

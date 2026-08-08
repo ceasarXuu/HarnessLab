@@ -109,6 +109,7 @@ def running_trial_dto(
         "costUsd": None,
         "tokenUsageM": None,
         "logPath": descriptor.get("log_path"),
+        "error": None,
     }
 
 
@@ -124,6 +125,7 @@ def pending_trial_dto(job_id: str, task_name: str) -> dict[str, Any]:
         "costUsd": None,
         "tokenUsageM": None,
         "logPath": None,
+        "error": None,
     }
 
 
@@ -162,7 +164,20 @@ def trial_dto(job_id: str, item: dict[str, Any], pricing: dict | None = None) ->
         "costUsd": calculate_cost(token_usage, pricing),
         "tokenUsageM": token_usage_m(token_usage),
         "logPath": trial_log_path(item),
+        "error": _trial_error(item),
     }
+
+
+def _trial_error(item: dict[str, Any], max_chars: int = 200) -> str | None:
+    exception = item.get("exception_info")
+    if not isinstance(exception, dict):
+        return None
+    error_type = exception.get("exception_type")
+    message = exception.get("exception_message")
+    if not error_type and not message:
+        return None
+    text = f"{error_type}: {message}" if error_type else str(message)
+    return text[:max_chars]
 
 
 def trial_token_usage(agent_result: object, step_results: object) -> dict[str, Any]:

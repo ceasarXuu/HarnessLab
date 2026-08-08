@@ -112,6 +112,7 @@ export function DetailRail({ writesEnabled = true, job, events, logs = '', logsP
               </button>
               {expandedTrialId === trial.id && (
                 <div className="trial-expanded">
+                  {trial.error && <code className="trial-error">error: {trial.error}</code>}
                   <code>retries: {trial.retries}</code>
                   <code>log path: {trial.logPath}</code>
                 </div>

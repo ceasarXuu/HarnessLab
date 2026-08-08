@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { TrialRow } from '../../domain/harbor'
 import { getTranslator } from '../../i18n'
@@ -42,12 +42,12 @@ describe('DetailRail Job actions', () => {
       {
         analysisPath: '', artifactPath: '', cost: '-', duration: '-', id: 'running-trial',
         jobId: running.id, logPath: '/tmp/trial.log', progress: 'running', result: 'running',
-        retries: 0, score: '-', task: 'build-cython-ext', tokens: '-', verifierEvidence: '',
+        error: '', retries: 0, score: '-', task: 'build-cython-ext', tokens: '-', verifierEvidence: '',
       },
       {
         analysisPath: '', artifactPath: '', cost: '$0.50', duration: '00:05:00', id: 'passed-trial',
         jobId: running.id, logPath: '/tmp/other.log', progress: 'passed', result: 'passed',
-        retries: 0, score: '1.0/1.0', task: 'sqlite-with-gcov', tokens: '0.1M', verifierEvidence: '',
+        error: '', retries: 0, score: '1.0/1.0', task: 'sqlite-with-gcov', tokens: '0.1M', verifierEvidence: '',
       },
     ]
 
@@ -77,7 +77,7 @@ describe('DetailRail Job actions', () => {
       {
         analysisPath: '', artifactPath: '', cost: '-', duration: '-', id: 'pending-task',
         jobId: job.id, logPath: '', progress: 'pending', result: 'pending',
-        retries: 0, score: '-', task: 'configure-git-webserver', tokens: '-', verifierEvidence: '',
+        error: '', retries: 0, score: '-', task: 'configure-git-webserver', tokens: '-', verifierEvidence: '',
       },
     ]
 
@@ -96,6 +96,32 @@ describe('DetailRail Job actions', () => {
     const row = screen.getByRole('button', { name: /configure-git-webserver/ })
     expect(row).toHaveTextContent('pending')
     expect(row.querySelector('.status-dot')).toHaveClass('pending')
+  })
+
+  it('renders the trial failure reason in the expanded detail', async () => {
+    const job = jobs[0]
+    const trials: TrialRow[] = [
+      {
+        analysisPath: '', artifactPath: '', cost: '-', duration: '-', error: 'NonZeroAgentExitCodeError: Command failed (exit 1)',
+        id: 'failed-trial', jobId: job.id, logPath: '/tmp/f.log', progress: 'failed', result: 'failed',
+        retries: 0, score: '-', task: 'configure-git-webserver', tokens: '-', verifierEvidence: '',
+      },
+    ]
+
+    render(
+      <DetailRail
+        job={job}
+        events={[]}
+        trials={trials}
+        t={getTranslator('en')}
+        onJobAction={vi.fn()}
+        onCopyJob={vi.fn()}
+        onLeaderboardChange={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /configure-git-webserver/ }))
+    expect(await screen.findByText(/NonZeroAgentExitCodeError: Command failed/)).toBeInTheDocument()
   })
 
   it('renders the raw job log with its path', () => {

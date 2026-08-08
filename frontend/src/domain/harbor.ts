@@ -105,6 +105,7 @@ export interface TrialRow {
   jobId: string
   task: string
   result: string
+  error: string
   score: string
   retries: number
   duration: string

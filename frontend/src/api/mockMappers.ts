@@ -82,7 +82,7 @@ export function toJobEventDto(event: typeof events[number]): JobEventDto {
 
 export function toTrialDto(trial: TrialRow): TrialDto {
   return {
-    costUsd: parseNumber(trial.cost), id: trial.id, jobId: trial.jobId, logPath: trial.logPath, retryCount: trial.retries,
+    costUsd: parseNumber(trial.cost), error: trial.error || null, id: trial.id, jobId: trial.jobId, logPath: trial.logPath, retryCount: trial.retries,
     runtimeSeconds: parseDuration(trial.duration), score: parseScore(trial.score), status: trial.result as TrialDto['status'],
     taskName: trial.task, tokenUsageM: parseTokenUsageM(trial.tokens),
   }
