@@ -58,11 +58,21 @@ export function useWebUiResource<T>(
   load: () => Promise<ApiResponse<T | null>>,
   dependencies: readonly unknown[],
   enabled = true,
+  resetOn: readonly unknown[] = [],
 ): WebUiResource<T> {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<ApiError | null>(null)
   const [loading, setLoading] = useState(true)
   const sequence = useRef(0)
+  const resetKey = resetOn.join('\u0000')
+
+  useEffect(() => {
+    if (resetOn.length === 0) return undefined
+    setData(null)
+    setError(null)
+    setLoading(true)
+    return undefined
+  }, [resetKey])
 
   const refresh = useCallback(async () => {
     const request = ++sequence.current
@@ -167,12 +177,12 @@ export function useHarnesses(client: WebUiClient, query: ListQuery = {}): WebUiR
 
 export function useAgent(client: WebUiClient, id?: string): WebUiResource<AgentDto> {
   const load = useCallback(() => client.getAgent(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useDataset(client: WebUiClient, ref?: string): WebUiResource<DatasetDto> {
   const load = useCallback(() => client.getDataset(ref ?? ''), [client, ref])
-  return useWebUiResource(load, [client, ref], Boolean(ref))
+  return useWebUiResource(load, [client, ref], Boolean(ref), [ref])
 }
 
 export function useEnvironments(client: WebUiClient, query: EnvironmentQuery = {}): WebUiResource<Page<EnvironmentDto>> {
@@ -182,7 +192,7 @@ export function useEnvironments(client: WebUiClient, query: EnvironmentQuery = {
 
 export function useEnvironment(client: WebUiClient, id?: string): WebUiResource<EnvironmentDto> {
   const load = useCallback(() => client.getEnvironment(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useDatasetTasks(
@@ -196,22 +206,22 @@ export function useDatasetTasks(
 
 export function useJob(client: WebUiClient, id?: string): WebUiResource<JobDto> {
   const load = useCallback(() => client.getJob(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useJobEvents(client: WebUiClient, id?: string): WebUiResource<JobEventDto[]> {
   const load = useCallback(() => client.listJobEvents(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useJobTrials(client: WebUiClient, id?: string): WebUiResource<TrialDto[]> {
   const load = useCallback(() => client.listJobTrials(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useJobLogs(client: WebUiClient, id?: string): WebUiResource<JobLogDto> {
   const load = useCallback(() => client.getJobLogs(id ?? ''), [client, id])
-  return useWebUiResource(load, [client, id], Boolean(id))
+  return useWebUiResource(load, [client, id], Boolean(id), [id])
 }
 
 export function useLeaderboard(client: WebUiClient, query?: LeaderboardQuery): WebUiResource<Page<LeaderboardEntryDto>> {

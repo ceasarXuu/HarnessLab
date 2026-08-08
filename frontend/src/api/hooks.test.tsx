@@ -39,8 +39,25 @@ describe('useWebUiResource', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('exposes contract errors instead of keeping stale successful data', async () => {
-    const load = vi.fn<() => Promise<ApiResponse<string | null>>>().mockResolvedValue({
+  it('clears previous data when the resource key changes', async () => {
+    const load = vi.fn<(id: string) => Promise<ApiResponse<string | null>>>().mockResolvedValue({
+      data: 'loaded',
+      error: null,
+    })
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useWebUiResource(() => load(id), [load, id], true, [id]),
+      { initialProps: { id: 'job-a' } },
+    )
+
+    await waitFor(() => expect(result.current.data).toBe('loaded'))
+
+    rerender({ id: 'job-b' })
+    expect(result.current.data).toBeNull()
+    await waitFor(() => expect(result.current.data).toBe('loaded'))
+    expect(load).toHaveBeenLastCalledWith('job-b')
+  })
+
+  it('exposes contract errors instead of keeping stale successful data', async () => {    const load = vi.fn<() => Promise<ApiResponse<string | null>>>().mockResolvedValue({
       data: null,
       error: { code: 'NETWORK_REQUEST_FAILED', message: 'The API request could not be completed.' },
     })
