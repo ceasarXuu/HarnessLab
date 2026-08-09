@@ -72,6 +72,45 @@ describe('JobsPage', () => {
     expect(listJobTrials.mock.calls.length).toBeGreaterThan(callsAfterFirstPoll)
   })
 
+  it('flushes drawer resources once when the Job becomes terminal, capturing the final trial state', async () => {
+    vi.useFakeTimers()
+    const client = createMockWebUiClient()
+    const listJobTrials = vi.spyOn(client, 'listJobTrials')
+    const running = { ...jobs[0], status: 'running' as const }
+    const terminal = { ...jobs[0], status: 'completed' as const }
+    const props = {
+      client,
+      open: true,
+      search: '',
+      t: getTranslator('en'),
+      onClose: () => undefined,
+      onJobAction: () => undefined,
+      onCopyJob: () => undefined,
+      onLeaderboardChange: () => undefined,
+      onNewJob: () => undefined,
+      onSearch: () => undefined,
+      onSelect: () => undefined,
+    }
+
+    const { rerender } = render(<JobsPage {...props} jobs={[running]} selected={running} />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    const callsWhileRunning = listJobTrials.mock.calls.length
+
+    rerender(<JobsPage {...props} jobs={[terminal]} selected={terminal} />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+    expect(listJobTrials.mock.calls.length).toBeGreaterThan(callsWhileRunning)
+
+    const callsAfterFlush = listJobTrials.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(listJobTrials.mock.calls.length).toBe(callsAfterFlush)
+  })
+
   it('requires confirmation before sending a Job cancellation request', async () => {
     const user = userEvent.setup()
     const onJobAction = vi.fn()

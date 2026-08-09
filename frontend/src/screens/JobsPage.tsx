@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useJob, useJobEvents, useJobLogs, useJobTrials, usePollingRefresh } from '../api/hooks'
 import { jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
@@ -68,11 +68,25 @@ export function JobsPage({
   const trials = trialsResource.data?.map(trialDtoToTrialRow) ?? []
   const pagination = usePaginatedItems({ items: jobs, resetKey: search })
   const live = open && (selected?.status === 'queued' || selected?.status === 'running' || actionActive)
+  const wasLive = useRef(false)
 
   usePollingRefresh(detailResource.refresh, live)
   usePollingRefresh(eventsResource.refresh, live)
   usePollingRefresh(trialsResource.refresh, live)
   usePollingRefresh(logsResource.refresh, live)
+
+  useEffect(() => {
+    if (live) {
+      wasLive.current = true
+      return
+    }
+    if (!wasLive.current) return
+    wasLive.current = false
+    void detailResource.refresh()
+    void eventsResource.refresh()
+    void trialsResource.refresh()
+    void logsResource.refresh()
+  }, [live, detailResource.refresh, eventsResource.refresh, trialsResource.refresh, logsResource.refresh])
 
   const requestJobAction = (jobId: string, action: 'cancel' | 'resume') => {
     if (action !== 'cancel') {
