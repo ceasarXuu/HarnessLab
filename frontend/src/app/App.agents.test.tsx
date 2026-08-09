@@ -117,7 +117,7 @@ describe('App agents and leaderboard', () => {
     expect(await screen.findByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
     expect(screen.queryByText('Submission')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Agent filter')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Select dataset')).toHaveTextContent('Select dataset')
+    expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swebench-verified@1.0')
     fireEvent.click(screen.getByLabelText('Select dataset'))
     fireEvent.click(screen.getByRole('option', { name: /^terminal-bench@2\.0 / }))
     await screen.findByText('job_91a7')

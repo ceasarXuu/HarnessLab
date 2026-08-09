@@ -274,13 +274,14 @@ describe('App API mode', () => {
     expect(screen.getByRole('button', { name: 'Check update' })).toBeEnabled()
   })
 
-  it('uses the Dataset catalog for leaderboard selection, including Datasets without rankings', async () => {
+  it('auto-selects the most recent ranked Dataset and still allows browsing catalog Datasets', async () => {
     const client = createMockWebUiClient()
     render(<App client={client} />)
 
     await screen.findByText('terminal-bench-smoke')
     fireEvent.click(screen.getByRole('link', { name: 'Leaderboard' }))
-    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('Select dataset'))
+    await waitFor(() => expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swebench-verified@1.0'))
+    await screen.findByText('job_74c1')
     fireEvent.click(screen.getByLabelText('Select dataset'))
 
     expect(screen.getByRole('option', { name: /^swebench-verified@1\.0 / })).toBeInTheDocument()

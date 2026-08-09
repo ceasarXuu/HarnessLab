@@ -219,6 +219,17 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
       .map((row, index) => ({ ...row, rank: index + 1 }))
   }, [jobs, leaderboardDataset, leaderboardEntries])
 
+  const defaultLeaderboardDataset = useMemo(
+    () => jobs.find((job) => job.includeInLeaderboard && job.status === 'completed')?.dataset
+      ?? jobs.find((job) => job.includeInLeaderboard)?.dataset
+      ?? '',
+    [jobs],
+  )
+  useEffect(() => {
+    if (route.page !== 'leaderboard' || leaderboardDataset) return
+    if (defaultLeaderboardDataset) setLeaderboardDataset(defaultLeaderboardDataset)
+  }, [route.page, leaderboardDataset, defaultLeaderboardDataset])
+
   useEffect(() => {
     const onHashChange = () => setRoute(readRouteFromHash())
     window.addEventListener('hashchange', onHashChange)
