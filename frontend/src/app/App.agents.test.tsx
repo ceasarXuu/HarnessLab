@@ -119,7 +119,7 @@ describe('App agents and leaderboard', () => {
     expect(screen.queryByLabelText('Agent filter')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Select dataset')).toHaveTextContent('swebench-verified@1.0')
     fireEvent.click(screen.getByLabelText('Select dataset'))
-    fireEvent.click(screen.getByRole('option', { name: /^terminal-bench@2\.0 / }))
+    fireEvent.click(screen.getByRole('option', { name: 'terminal-bench@2.0' }))
     await screen.findByText('job_91a7')
     expect(screen.getByRole('columnheader', { name: 'Agent Name' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Harness' })).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('App agents and leaderboard', () => {
 
     fireEvent.click(screen.getByLabelText('Select dataset'))
     fireEvent.change(screen.getByLabelText('Search datasets'), { target: { value: 'swe' } })
-    fireEvent.click(screen.getByRole('option', { name: /^swebench-verified@1\.0 / }))
+    fireEvent.click(screen.getByRole('option', { name: 'swebench-verified@1.0' }))
     expect(await screen.findByText('job_74c1')).toBeInTheDocument()
     expect(screen.queryByLabelText('Search leaderboard')).not.toBeInTheDocument()
   })

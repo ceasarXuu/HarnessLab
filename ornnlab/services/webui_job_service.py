@@ -385,7 +385,7 @@ class WebUiJobService:
             rows = sqlite.rows(
                 conn,
                 "SELECT DISTINCT benchmark_name, benchmark_version FROM runs "
-                "WHERE leaderboard_eligible = 1",
+                "WHERE status != 'deleted'",
             )
         return [
             {

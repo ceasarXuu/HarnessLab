@@ -1,7 +1,7 @@
 import { Trophy } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useCachedServerSearch, useJob, useJobEvents, useJobTrials } from '../api/hooks'
-import { datasetDtoToRow, jobDtoToHarborJob, jobEventDtoToEventLog, trialDtoToTrialRow } from '../api/viewModels'
+import { jobDtoToHarborJob, jobEventDtoToEventLog, leaderboardDatasetDtoToRow, trialDtoToTrialRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { CustomSelect } from '../ui/components/CustomSelect'
 import { DetailDrawer } from '../ui/components/DetailDrawer'
@@ -9,16 +9,16 @@ import { DetailRail } from '../ui/components/DetailRail'
 import { Pagination } from '../ui/components/Pagination'
 import { ResourceStatus } from '../ui/components/ResourceStatus'
 import { usePaginatedItems } from '../ui/pagination'
-import type { DatasetRow, HarborJob, LeaderboardRow } from '../domain/harbor'
+import type { HarborJob, LeaderboardDataset, LeaderboardRow } from '../domain/harbor'
 import type { Translate } from '../i18n'
-import { datasetRef, datasetSelectOptions } from '../ui/datasetSelectOptions'
+import { datasetRef, leaderboardDatasetOptions } from '../ui/datasetSelectOptions'
 
 interface LeaderboardPageProps {
   writesEnabled?: boolean
   client: WebUiClient
   dataset: string
   datasetSearch: string
-  leaderboardDatasets: DatasetRow[]
+  leaderboardDatasets: LeaderboardDataset[]
   jobs: HarborJob[]
   rows: LeaderboardRow[]
   actionError?: string | null
@@ -55,7 +55,7 @@ export function LeaderboardPage({
   const trialsResource = useJobTrials(client, selectedJob?.id)
   const datasetSearchQuery = datasetSearch.trim() || undefined
   const loadDatasetSearch = useCallback(
-    (query: string) => client.listDatasets({ limit: 100, q: query }),
+    (query: string) => client.listLeaderboardDatasets({ limit: 100, q: query }),
     [client],
   )
   const datasetSearchResource = useCachedServerSearch('leaderboard-datasets', datasetSearchQuery, loadDatasetSearch)
@@ -69,10 +69,13 @@ export function LeaderboardPage({
     ),
   )
   const visibleDatasets = datasetSearchQuery
-    ? datasetSearchResource.data?.items.map(datasetDtoToRow) ?? fallbackDatasets
+    ? datasetSearchResource.data?.items.map(leaderboardDatasetDtoToRow) ?? fallbackDatasets
     : leaderboardDatasets
-  const selectableDatasets =
-    selectedDataset && !visibleDatasets.includes(selectedDataset) ? [selectedDataset, ...visibleDatasets] : visibleDatasets
+  const selectableDatasets = useMemo(() => {
+    const byRef = new Map(visibleDatasets.map((row) => [datasetRef(row), row]))
+    if (selectedDataset) byRef.set(datasetRef(selectedDataset), selectedDataset)
+    return [...byRef.values()]
+  }, [selectedDataset, visibleDatasets])
   const pagination = usePaginatedItems({ items: rows, resetKey: dataset })
 
   return (
@@ -93,7 +96,7 @@ export function LeaderboardPage({
               searchPlaceholder={t('searchDatasetsPlaceholder')}
               searchValue={datasetSearch}
               value={dataset}
-              options={datasetSelectOptions(selectableDatasets, t)}
+              options={leaderboardDatasetOptions(selectableDatasets, t)}
               onChange={onDataset}
               onSearchChange={onDatasetSearch}
             />

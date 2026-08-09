@@ -6,6 +6,7 @@ import { createMockWebUiClient } from '../api/mockClient'
 import { jobs } from '../mocks/demo'
 import { agentRows, datasetRows, environmentRows, harnessTemplates } from '../mocks/demoCatalog'
 import { leaderboardRows } from '../mocks/demoSystem'
+import type { LeaderboardDataset } from '../domain/harbor'
 import { AgentsPage } from './AgentsPage'
 import { DatasetsPage } from './DatasetsPage'
 import { EnvironmentsPage } from './EnvironmentsPage'
@@ -16,7 +17,9 @@ import { NewAgentPage } from './NewAgentPage'
 const t = getTranslator('en')
 const tZh = getTranslator('zh')
 const client = createMockWebUiClient()
-const leaderboardDatasets = datasetRows
+const leaderboardDatasets: LeaderboardDataset[] = datasetRows
+  .filter((row) => row.ref)
+  .map((row) => ({ name: row.name, ref: row.ref as string, version: row.version }))
 
 const meta = {
   title: 'Screens/Harbor WebUI',

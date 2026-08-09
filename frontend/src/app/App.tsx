@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHarnesses, useHubConnection, useJobs, useLeaderboard, useOperation, usePollingRefresh, useSystemHealth } from '../api/hooks'
+import { useAgents, useCachedServerSearch, useDatasets, useEnvironments, useHarnesses, useHubConnection, useJobs, useLeaderboard, useLeaderboardDatasets, useOperation, usePollingRefresh, useSystemHealth } from '../api/hooks'
 import { runDraftToCreateJobRequest } from '../api/requestMappers'
 import { createRuntimeWebUiClient, readWebUiDataMode, type WebUiDataMode } from '../api/runtimeClient'
-import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
+import { agentDtoToRow, datasetDtoToRow, environmentDtoToRow, harnessDtoToTemplate, jobDtoToHarborJob, leaderboardDatasetDtoToRow, leaderboardEntryDtoToRow, systemComponentDtoToRow } from '../api/viewModels'
 import type { WebUiClient } from '../api/webUiClient'
 import { defaultRunDraft, jobConfigDtoToRunDraft, reconcileRunDraftResources } from '../domain/defaults'
 import type { AgentRow, HarborJob } from '../domain/harbor'
@@ -96,6 +96,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const [leaderboardDataset, setLeaderboardDataset] = useState('')
   const [leaderboardDatasetSearch, setLeaderboardDatasetSearch] = useState('')
   const leaderboardResource = useLeaderboard(client, { dataset: leaderboardDataset })
+  const leaderboardDatasetsResource = useLeaderboardDatasets(client, { limit: 100 })
   const systemResource = useSystemHealth(client)
   const jobOperation = useOperation(client)
   const [copiedAgentDraft, setCopiedAgentDraft] = useState<AgentRow | null>(null)
@@ -125,6 +126,10 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
   const leaderboardEntries = useMemo(
     () => leaderboardResource.data?.items.map(leaderboardEntryDtoToRow) ?? [],
     [leaderboardResource.data],
+  )
+  const leaderboardDatasets = useMemo(
+    () => leaderboardDatasetsResource.data?.items.map(leaderboardDatasetDtoToRow) ?? [],
+    [leaderboardDatasetsResource.data],
   )
   const hubConnection = hubConnectionResource.loading
     ? 'loading'
@@ -434,7 +439,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
             actionError={selectedJobActionError}
             dataset={leaderboardDataset}
             datasetSearch={leaderboardDatasetSearch}
-            leaderboardDatasets={datasets}
+            leaderboardDatasets={leaderboardDatasets}
             client={client}
             jobs={jobs}
             rows={filteredLeaderboard}
@@ -448,7 +453,7 @@ export function App({ client: injectedClient, dataMode: injectedDataMode }: AppP
           />
           <ResourceStatus error={jobOperation.error?.message ?? null} />
           <ResourceStatus
-            error={datasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
+            error={leaderboardDatasetsResource.error || leaderboardResource.error ? t('unableToLoadLeaderboard') : null}
           />
         </>
       )}

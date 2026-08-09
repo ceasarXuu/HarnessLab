@@ -1,9 +1,9 @@
-import type { DatasetRow } from '../domain/harbor'
+import type { DatasetRow, LeaderboardDataset } from '../domain/harbor'
 import { orderDatasetCatalog } from '../domain/datasetOrdering'
 import type { Translate } from '../i18n'
 import type { SelectOption } from './components/CustomSelect'
 
-export function datasetRef(row: DatasetRow): string {
+export function datasetRef(row: Pick<DatasetRow, 'name' | 'version' | 'ref'>): string {
   return row.ref ?? `${row.name}@${row.version}`
 }
 
@@ -14,6 +14,13 @@ export function datasetSelectOptions(rows: DatasetRow[], t: Translate): SelectOp
       : row.downloadStatus === 'path-unavailable'
         ? { label: t('pathUnavailable'), tone: 'warning' }
         : { label: t('notDownloaded'), tone: 'neutral' },
+    label: datasetRef(row),
+    value: datasetRef(row),
+  }))
+}
+
+export function leaderboardDatasetOptions(rows: LeaderboardDataset[], _t: Translate): SelectOption[] {
+  return rows.map((row) => ({
     label: datasetRef(row),
     value: datasetRef(row),
   }))
