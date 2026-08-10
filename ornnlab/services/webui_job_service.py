@@ -21,7 +21,7 @@ from ornnlab.services.harbor_results import (
     trial_result_payloads,
     trial_start_epoch,
 )
-from ornnlab.services.harbor_score import result_pass_at_one
+from ornnlab.services.harbor_score import result_score
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
 from ornnlab.services.model_pricing import calculate_cost, pricing_snapshot
 from ornnlab.services.queue_service import QueueService
@@ -342,11 +342,11 @@ class WebUiJobService:
                 "LEFT JOIN webui_job_configs ON webui_job_configs.run_id = runs.id "
                 "WHERE runs.status = 'completed' AND runs.leaderboard_eligible = 1 "
                 f"AND runs.benchmark_name = ? AND {_version_filter(version)} "
-                "ORDER BY runs.score DESC, runs.finished_at DESC",
+                "ORDER BY runs.finished_at DESC",
                 (benchmark,) if version is None else (benchmark, version),
             )
         entries = []
-        for rank, row in enumerate(rows, start=1):
+        for row in rows:
             job = _job_dto(row)
             config = _config(row)
             if (
@@ -365,7 +365,7 @@ class WebUiJobService:
                 .get("metrics", [{}])[0]
                 .get("type", "mean"),
                 "model": job["model"],
-                "rank": rank,
+                "rank": 0,
                 "reportPath": row.get("report_path"),
                 "runtimeSeconds": job["runtimeSeconds"],
                 "score": job["score"],
@@ -378,6 +378,15 @@ class WebUiJobService:
                 or query.lower() in " ".join(str(value) for value in entry.values()).lower()
             ):
                 entries.append(entry)
+        entries.sort(
+            key=lambda entry: (
+                entry["score"] is None,
+                -entry["score"]["value"] if entry["score"] else 0,
+                entry["submittedAt"],
+            )
+        )
+        for rank, entry in enumerate(entries, start=1):
+            entry["rank"] = rank
         return entries
 
     def leaderboard_datasets(self) -> list[dict]:
@@ -488,8 +497,8 @@ def _event_level(severity: str) -> str:
 
 
 def _job_score(result: dict) -> dict | None:
-    """Expose only scores whose scale is explicit in Harbor's result payload."""
-    value = result_pass_at_one(result)
+    """Expose scores whose 0..1 scale is explicit in Harbor's result payload."""
+    value = result_score(result)
     if value is not None:
         return {"kind": "percentage", "value": value * 100}
     return None

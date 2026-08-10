@@ -19,6 +19,7 @@ import psutil
 from ornnlab.models.harbor import HarborJobConfigView
 from ornnlab.services.command_line import split_command
 from ornnlab.services.harbor_paths import resolve_harbor_result_path
+from ornnlab.services.harbor_score import result_score
 from ornnlab.storage.paths import atomic_write_text, ensure_parent
 
 JOB_LOG_NAME = "job.log"
@@ -281,7 +282,7 @@ def _score(result: dict[str, Any]) -> float | None:
     value = result.get("score")
     if isinstance(value, int | float):
         return float(value)
-    return None
+    return result_score(result)
 
 
 def _status_from_result_payload(result: dict[str, Any]) -> str:

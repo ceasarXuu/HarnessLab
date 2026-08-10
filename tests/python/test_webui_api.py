@@ -10,7 +10,7 @@ from ornnlab.services.dataset_download_state import stored_dataset_dto, stored_d
 from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_engine import _resolve_env
 from ornnlab.services.harbor_results import trial_dto as _trial_dto
-from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one
+from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one, result_score
 from ornnlab.services.webui_job_service import _job_score
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
@@ -1038,6 +1038,19 @@ def test_scores_require_an_explicit_harbor_scale():
             },
         )["score"]
         is None
+    )
+
+
+def test_scores_fall_back_to_proportional_metrics_when_pass_at_k_is_absent():
+    mean_result = {"stats": {"evals": {"test": {"metrics": [{"mean": 0.6}]}}}}
+    assert _job_score(mean_result) == {"kind": "percentage", "value": 60.0}
+    out_of_scale = {"stats": {"evals": {"test": {"metrics": [{"mean": 1.7}]}}}}
+    assert _job_score(out_of_scale) is None
+    assert (
+        result_score(
+            {"stats": {"evals": {"test": {"pass_at_k": {"1": 0.8}, "metrics": [{"mean": 0.5}]}}}}
+        )
+        == 0.8
     )
 
 

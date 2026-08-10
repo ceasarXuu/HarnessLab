@@ -8,7 +8,7 @@ from ornnlab.services.clock import now_iso
 from ornnlab.services.event_service import EventService
 from ornnlab.services.experiment_utils import derive_experiment_status
 from ornnlab.services.harbor_paths import resolve_harbor_result_path
-from ornnlab.services.harbor_score import pass_at_one
+from ornnlab.services.harbor_score import result_score
 from ornnlab.services.report_service import ReportService
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
@@ -223,14 +223,4 @@ def _score_from_result_payload(result: dict[str, Any]) -> float | None:
     score = result.get("score")
     if isinstance(score, int | float):
         return float(score)
-    stats_value = result.get("stats")
-    stats: dict[str, Any] = stats_value if isinstance(stats_value, dict) else {}
-    evals_value = stats.get("evals")
-    evals: dict[str, Any] = evals_value if isinstance(evals_value, dict) else {}
-    for dataset_stats in evals.values():
-        if not isinstance(dataset_stats, dict):
-            continue
-        score = pass_at_one(dataset_stats.get("pass_at_k"))
-        if score is not None:
-            return score
-    return None
+    return result_score(result)
