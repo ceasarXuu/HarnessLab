@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 
 from ornnlab.services.docker_orphan_service import DockerOrphanService
+from ornnlab.services.posix_owner import current_posix_uid_gid
 
 
 def test_scan_finds_only_inactive_auto_cleanup_containers(tmp_path):
@@ -211,8 +211,9 @@ def test_cleanup_run_chowns_bind_mounts_before_removing_containers(tmp_path):
         for command in commands
         if command[:2] == ["exec", "abc123"] and command[2] == "chown"
     ]
+    uid, gid = current_posix_uid_gid()
     assert chown == [
-        ["exec", "abc123", "chown", "-R", f"{os.getuid()}:{os.getgid()}", "/work"]
+        ["exec", "abc123", "chown", "-R", f"{uid}:{gid}", "/work"]
     ]
     assert commands.index(chown[0]) < commands.index(["rm", "-f", "abc123"])
 

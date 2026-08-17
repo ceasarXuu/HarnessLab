@@ -15,6 +15,7 @@ from ornnlab.services.owned_docker_environment import (
     ORNNLAB_MANAGED_LABEL,
     ORNNLAB_RUN_LABEL,
 )
+from ornnlab.services.posix_owner import current_posix_uid_gid
 
 COMPOSE_PROJECT_LABEL = "com.docker.compose.project"
 logger = logging.getLogger(__name__)
@@ -227,9 +228,7 @@ class DockerOrphanService:
         if result["error"]:
             errors.append(f"{resource}_list_failed: {result['error']}")
             return []
-        return [
-            line.strip() for line in (result["stdout"] or "").splitlines() if line.strip()
-        ]
+        return [line.strip() for line in (result["stdout"] or "").splitlines() if line.strip()]
 
     def _remove_resources(
         self,
@@ -284,6 +283,7 @@ class DockerOrphanService:
             [*self.command, "inspect", container_id, "--format", "{{json .Mounts}}"]
         )
         mounts = self._parse_mounts(inspected)
+        uid, gid = current_posix_uid_gid()
         for target in mounts:
             chown = self._run(
                 [
@@ -292,7 +292,7 @@ class DockerOrphanService:
                     container_id,
                     "chown",
                     "-R",
-                    f"{os.getuid()}:{os.getgid()}",
+                    f"{uid}:{gid}",
                     target,
                 ]
             )
@@ -319,8 +319,7 @@ class DockerOrphanService:
                 )
                 if retried["error"]:
                     logger.warning(
-                        "docker.ownership.chown_failed_after_start container=%s target=%s "
-                        "error=%s",
+                        "docker.ownership.chown_failed_after_start container=%s target=%s error=%s",
                         container_id,
                         target,
                         retried["error"],
@@ -328,9 +327,7 @@ class DockerOrphanService:
 
     def _parse_mounts(self, inspected: dict[str, str | None]) -> list[str]:
         if inspected["error"]:
-            logger.warning(
-                "docker.ownership.chown_inspect_failed error=%s", inspected["error"]
-            )
+            logger.warning("docker.ownership.chown_inspect_failed error=%s", inspected["error"])
             return []
         try:
             mounts = json.loads(inspected["stdout"] or "[]")
@@ -342,9 +339,7 @@ class DockerOrphanService:
         return [
             str(mount["Destination"])
             for mount in mounts
-            if isinstance(mount, dict)
-            and mount.get("Type") == "bind"
-            and mount.get("Destination")
+            if isinstance(mount, dict) and mount.get("Type") == "bind" and mount.get("Destination")
         ]
 
     def _cleanup_plan_item(self, container: dict[str, Any]) -> dict[str, Any]:

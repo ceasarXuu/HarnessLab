@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import psutil
 
+from ornnlab.services.posix_owner import current_posix_uid_gid
 from ornnlab.services.webui_job_resume import (
     _live_harbor_process_for,
     agent_env,
@@ -47,9 +48,7 @@ def test_clear_stale_job_lock_clears_when_job_is_provably_dead(
 ):
     job_path = tmp_path / "job"
     lock = _write_lock(job_path)
-    monkeypatch.setenv(
-        "ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}"
-    )
+    monkeypatch.setenv("ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}")
     monkeypatch.setattr(
         "ornnlab.services.webui_job_resume.psutil.process_iter", lambda *_: iter([])
     )
@@ -67,14 +66,10 @@ def test_clear_stale_job_lock_skips_without_lock_file(settings, tmp_path: Path):
     assert clear_stale_job_lock(settings, "run-1", job_path) is False
 
 
-def test_clear_stale_job_lock_respects_active_operation(
-    settings, tmp_path: Path, monkeypatch
-):
+def test_clear_stale_job_lock_respects_active_operation(settings, tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     lock = _write_lock(job_path)
-    monkeypatch.setenv(
-        "ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}"
-    )
+    monkeypatch.setenv("ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}")
     monkeypatch.setattr(
         "ornnlab.services.webui_job_resume.psutil.process_iter", lambda *_: iter([])
     )
@@ -89,14 +84,10 @@ def test_clear_stale_job_lock_respects_active_operation(
     assert lock.exists()
 
 
-def test_clear_stale_job_lock_respects_live_harbor_process(
-    settings, tmp_path: Path, monkeypatch
-):
+def test_clear_stale_job_lock_respects_live_harbor_process(settings, tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     lock = _write_lock(job_path)
-    monkeypatch.setenv(
-        "ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}"
-    )
+    monkeypatch.setenv("ORNNLAB_DOCKER_COMMAND", f"{sys.executable} {_fake_docker(tmp_path)}")
     monkeypatch.setattr(
         "ornnlab.services.webui_job_resume.psutil.process_iter",
         lambda *_: iter(
@@ -120,9 +111,7 @@ def test_clear_stale_job_lock_respects_live_harbor_process(
     assert lock.exists()
 
 
-def test_clear_stale_job_lock_respects_live_containers(
-    settings, tmp_path: Path, monkeypatch
-):
+def test_clear_stale_job_lock_respects_live_containers(settings, tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     lock = _write_lock(job_path)
     monkeypatch.setenv(
@@ -137,9 +126,7 @@ def test_clear_stale_job_lock_respects_live_containers(
     assert lock.exists()
 
 
-def test_cleanup_resume_leftovers_chowns_root_owned_files(
-    tmp_path: Path, monkeypatch
-):
+def test_cleanup_resume_leftovers_chowns_root_owned_files(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     (job_path / "trial").mkdir(parents=True)
     (job_path / "trial" / "root.txt").write_text("x", encoding="utf-8")
@@ -173,15 +160,13 @@ def test_cleanup_resume_leftovers_chowns_root_owned_files(
             "alpine",
             "chown",
             "-R",
-            f"99999:{os.getgid()}",
+            f"99999:{current_posix_uid_gid()[1]}",
             "/work",
         )
     ]
 
 
-def test_cleanup_resume_leftovers_skips_without_root_owned_files(
-    tmp_path: Path, monkeypatch
-):
+def test_cleanup_resume_leftovers_skips_without_root_owned_files(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     job_path.mkdir()
     (job_path / "mine.txt").write_text("x", encoding="utf-8")
@@ -372,9 +357,7 @@ def test_live_harbor_process_fails_closed_on_shared_config_of_sibling_job(
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_ignores_config_in_unrelated_jobs_dir(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_ignores_config_in_unrelated_jobs_dir(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs-a" / "run-some-job"
     job_path.parent.mkdir(parents=True)
     other = tmp_path / "jobs-b" / "harbor.config.json"
@@ -405,9 +388,7 @@ def test_live_harbor_process_fails_closed_on_unreadable_same_dir_config(
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_uses_live_sidecar_process(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_uses_live_sidecar_process(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs" / "run-some-job"
     job_path.parent.mkdir(parents=True)
     sidecar = job_path.parent / ".ornnlab-run-some-job.pid"
@@ -420,9 +401,7 @@ def test_live_harbor_process_uses_live_sidecar_process(
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_treats_dead_sidecar_as_authoritative(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_treats_dead_sidecar_as_authoritative(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs" / "run-some-job"
     job_path.parent.mkdir(parents=True)
     sidecar = job_path.parent / ".ornnlab-run-some-job.pid"
@@ -448,9 +427,7 @@ def test_live_harbor_process_detects_pid_reuse(tmp_path: Path, monkeypatch):
     assert _live_harbor_process_for(job_path) is False
 
 
-def test_live_harbor_process_uses_legacy_sidecar_location(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_uses_legacy_sidecar_location(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs"  # legacy: job_path IS the jobs dir
     job_path.mkdir(parents=True)
     sidecar = job_path / ".ornnlab-run-some-job.pid"
@@ -463,9 +440,7 @@ def test_live_harbor_process_uses_legacy_sidecar_location(
     assert _live_harbor_process_for(job_path, job_name="run-some-job") is True
 
 
-def test_live_harbor_process_matches_legacy_layout_config(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_matches_legacy_layout_config(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs"  # legacy: job_path IS the jobs dir
     job_path.mkdir(parents=True)
     config = job_path / "harbor.config.json"
@@ -481,9 +456,7 @@ def test_live_harbor_process_matches_legacy_layout_config(
     assert _live_harbor_process_for(job_path) is True
 
 
-def test_live_harbor_process_matches_resume_by_exact_job_path(
-    tmp_path: Path, monkeypatch
-):
+def test_live_harbor_process_matches_resume_by_exact_job_path(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "jobs" / "run-some-job"
     job_path.parent.mkdir(parents=True)
     sibling = tmp_path / "jobs" / "run-sibling-job"
@@ -514,14 +487,10 @@ def test_resume_harbor_job_forwards_merged_env(settings, tmp_path: Path, monkeyp
     monkeypatch.setattr(
         "ornnlab.services.webui_job_service.asyncio.create_subprocess_exec", fake_spawn
     )
-    service = WebUiJobService(
-        settings, WebUiOperationService(settings, {}), object()
-    )
+    service = WebUiJobService(settings, WebUiOperationService(settings, {}), object())
 
     asyncio.run(
-        service._resume_harbor_job(
-            tmp_path, env={**os.environ, "AGENT_KEY": "agent-value"}
-        )
+        service._resume_harbor_job(tmp_path, env={**os.environ, "AGENT_KEY": "agent-value"})
     )
 
     assert captured["env"]["AGENT_KEY"] == "agent-value"

@@ -17,6 +17,7 @@ from ornnlab.services.command_line import split_command
 from ornnlab.services.container_proxy_runtime import RuntimeProxyPolicy
 from ornnlab.services.harbor_paths import resolve_harbor_job_path
 from ornnlab.services.harbor_results import has_resumable_trials, load_result_payload
+from ornnlab.services.posix_owner import current_posix_uid_gid
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 from ornnlab.storage.paths import atomic_write_text
@@ -68,12 +69,20 @@ def mark_resume_failed(settings: Settings, events: Any, run: dict, error: BaseEx
         conn.execute(
             "UPDATE runs SET status = ?, finished_at = ?, failure_class = ?, "
             "failure_code = ?, failure_summary = ?, updated_at = ? WHERE id = ?",
-            ("interrupted", now, "harbor_resume", "resume_command_failed", str(error),
-             now, run["id"]),
+            (
+                "interrupted",
+                now,
+                "harbor_resume",
+                "resume_command_failed",
+                str(error),
+                now,
+                run["id"],
+            ),
         )
     events.append(
         "run", run["id"], "harbor.job.resume_failed", {"error": str(error)}, severity="warning"
     )
+
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +98,7 @@ _PROXY_ENV_RUNTIME_NAMES = {
 }
 
 
-async def prepare_resume_proxy(
-    proxy_runtime: Any, job_path: Path
-) -> RuntimeProxyPolicy | None:
+async def prepare_resume_proxy(proxy_runtime: Any, job_path: Path) -> RuntimeProxyPolicy | None:
     """Start fresh host relays and rewrite the Job config to use them.
 
     Resumed Docker Jobs inherit the relay URL baked into ``config.json`` by the
@@ -122,6 +129,7 @@ async def cleanup_resume_leftovers(job_path: Path) -> bool:
     if not hasattr(os, "getuid") or not _has_root_owned_files(job_path):
         return False
     command = _docker_command()
+    uid, gid = current_posix_uid_gid()
     process = await asyncio.create_subprocess_exec(
         *command,
         "run",
@@ -131,7 +139,7 @@ async def cleanup_resume_leftovers(job_path: Path) -> bool:
         "alpine",
         "chown",
         "-R",
-        f"{os.getuid()}:{os.getgid()}",
+        f"{uid}:{gid}",
         "/work",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
@@ -167,19 +175,13 @@ def clear_stale_job_lock(
     if not lock_path.exists():
         return False
     if _active_operation_for_run(settings, run_id):
-        logger.info(
-            "docker.resume_lock_kept reason=active_operation run_id=%s", run_id
-        )
+        logger.info("docker.resume_lock_kept reason=active_operation run_id=%s", run_id)
         return False
     if _live_harbor_process_for(job_path, job_name):
-        logger.info(
-            "docker.resume_lock_kept reason=live_harbor_process path=%s", job_path
-        )
+        logger.info("docker.resume_lock_kept reason=live_harbor_process path=%s", job_path)
         return False
     if _run_has_live_containers(settings, run_id):
-        logger.info(
-            "docker.resume_lock_kept reason=live_containers run_id=%s", run_id
-        )
+        logger.info("docker.resume_lock_kept reason=live_containers run_id=%s", run_id)
         return False
     backup = job_path / f"lock.json.bak-{int(time.time())}"
     shutil.copy2(lock_path, backup)
@@ -223,9 +225,7 @@ def _live_harbor_process_for(job_path: Path, job_name: str | None = None) -> boo
         alive = _sidecar_process_alive(sidecar_path)
         if alive is not None:
             if alive is False:
-                logger.info(
-                    "docker.resume_lock_probe_sidecar_dead path=%s", sidecar_path
-                )
+                logger.info("docker.resume_lock_probe_sidecar_dead path=%s", sidecar_path)
             return alive
     try:
         for proc in psutil.process_iter(["cmdline"]):
@@ -296,8 +296,7 @@ def _config_belongs_to_job(config_path: Path, job_path: Path) -> bool:
     same_jobs_dir = config_text.startswith(f"{job_path.parent.as_posix()}/")
     if same_jobs_dir or "ornnlab-harbor-runtime" in config_text:
         logger.info(
-            "docker.resume_lock_probe_inconclusive config=%s same_jobs_dir=%s "
-            "unreadable=%s",
+            "docker.resume_lock_probe_inconclusive config=%s same_jobs_dir=%s unreadable=%s",
             config_text,
             same_jobs_dir,
             not payload,
@@ -310,10 +309,10 @@ def _config_matches_job(payload: dict, job_path: Path) -> bool:
     if not payload:
         return False
     jobs_dir = payload.get("jobs_dir")
-    return (
-        payload.get("job_name") == job_path.name
-        and jobs_dir in {str(job_path), str(job_path.parent)}
-    )
+    return payload.get("job_name") == job_path.name and jobs_dir in {
+        str(job_path),
+        str(job_path.parent),
+    }
 
 
 def _run_has_live_containers(settings: Settings, run_id: str) -> bool:
@@ -347,7 +346,7 @@ def _docker_command() -> list[str]:
 
 
 def _has_root_owned_files(job_path: Path) -> bool:
-    uid = os.getuid()
+    uid, _ = current_posix_uid_gid()
     for root, dirs, files in os.walk(job_path):
         for name in dirs + files:
             try:
@@ -423,9 +422,7 @@ def restore_sensitive_env(
                 )
         verifier_env = (config.get("verifier") or {}).get("env")
         if _has_redacted(verifier_env):
-            logger.warning(
-                "docker.resume_verifier_env_redacted_unrestorable path=%s", config_path
-            )
+            logger.warning("docker.resume_verifier_env_redacted_unrestorable path=%s", config_path)
         if changed:
             _write_config(config_path, config)
 
@@ -485,9 +482,7 @@ def _apply_proxy_env(env: dict, subprocess_env: dict) -> bool:
 
 
 def _write_config(path: Path, config: dict) -> None:
-    atomic_write_text(
-        path, json.dumps(config, indent=2, ensure_ascii=False) + "\n"
-    )
+    atomic_write_text(path, json.dumps(config, indent=2, ensure_ascii=False) + "\n")
 
 
 def _read_job_config_file(job_path: Path) -> dict:
