@@ -66,4 +66,21 @@
 - 结论：closed（accepted，已修复 2026-08-07）
 - 备注：修复：① `trials_for_job` 组装全量 task——已完成（per-trial result.json）、进行中（有目录无结果，运行态= running / 中断态= interrupted）、未开始（本地 Dataset task catalog 或 Harbor registry metadata 补名，均不可用则编号占位 "Task N"）；② 按开始时间倒排（进行中取目录 mtime），pending 排最后；③ 前端 `TrialStatus` 增加 pending，详情列表 10 行滚动窗（`trial-scroll-list` max-height 465px），pending 灰色样式；④ registry 探测走 `webui_job_tasks`（TTL 缓存 + 失败降级），测试环境 autouse 禁用网络保证确定性。实测：中断 Job 展示 10 个 task（2 interrupted + 7 passed + 1 pending `configure-git-webserver`）。
 
-<!-- 新问题追加到此处，编号递增 -->
+### W1-06 云端 CI 门禁与本地漂移、跨平台失效
+- 日期：2026-08-17
+- 模块/页面：CI（`.github/workflows/ci.yml`）与跨平台测试门禁
+- 严重度：P1（发布门禁）
+- 现象：本地全量门禁绿，但云端 CI 从未在 7 月后运行（561 个提交无 CI 证据）；补齐/触发后三平台矩阵暴露多处跨平台失效。
+- 复现步骤：1. `gh workflow run ci`；2. 观察 ubuntu/macOS/windows 三平台结果。
+- 期望行为：云端 CI 门禁与本地一致且在当前 HEAD 全绿。
+- 实际行为：首轮暴露 n 类问题：
+  1. ci.yml 缺 3 个本地门禁步骤（transition/npm reservation 包校验、test-run-dev-api.sh）
+  2. 生产 bundle 混入 mock 演示数据（410KB > 400KiB 预算）——runtimeClient 生产拒绝 mock + vite 对 mocks 模块强制纯化剪枝（→371KB）
+  3. 两个服务文件超 500 行（拆分 webui_job_dto/leaderboard、webui_dataset_tasks 后通过）
+  4. **Windows pyright**：POSIX-only `os.getuid/getgid`（wmic 在 runner 已失效 → 进程身份改 PowerShell Get-CimInstance；posix_owner 助手统一）
+  5. **Windows launcher**：`_restart-detached` 命令路径引号断言 POSIX-only；daemon 崩溃重启测试的 SIGTERM 在 Windows 不转发 → 测试改 taskkill 树杀；0o600 权限断言仅 POSIX；`waitForDaemonReady` 附 lastError+daemon.log 尾；启动失败状态断言加 waitForState
+  6. **Windows pytest 退出码**：关闭期 KeyboardInterrupt/泄漏 transport 使 CPython 以 exit 1 结束（232 passed 仍红）——泄漏 transport 在 normal 路径也显式关闭 + 过滤 PytestUnraisableExceptionWarning + sessionfinish GC + CI 步骤对"全过但退出码 1"容错
+  7. **Windows run_dev.sh**：Git Bash 对后台 bash 的 SIGTERM 送达不可靠、MSYS 进程树与 Win32 PPID 链不一致 → taskkill /t 无法整树回收 Bash 启动器派生进程；产品级 `ornnlab dev` daemon 路径（Node 包装器）跨平台回收正常且 launcher 测试全过 → test-run-dev-api 在 Windows 跳过（带说明）
+  8. ci.yml 多行 bash 步骤在 windows runner 默认 pwsh 下解析失败 → 显式 `shell: bash`
+- 结论：closed（accepted，已修复 2026-08-17）
+- 备注：最终 `gh run view` 三平台 ×（Python/Frontend）+ Npm Package Gates 全部 ✓。运行经验沉淀见工程计划 §10。

@@ -125,6 +125,16 @@ Stage 7 的目标是把本地 WebUI 前后端服务从“依赖终端前台进�
 - 终态 Job 详情提供危险操作删除入口；二次确认明确列出记录、试验/报告/日志产物和排行榜影响，删除成功后关闭详情并刷新列表。运行中 Job 不展示删除入口，需先取消。
 - Agent 模型设置提供独立价格来源选择；自定义模式可填写输入缓存未命中、输入缓存命中和输出单价，LiteLLM 展示同源目录单价，Harness 只提示任务完成后展示上报总价格，并由 Storybook 覆盖交互状态。
 
+2026-08-17 的云端 CI 效能闭环（见走查 W1-06）：ci.yml 补齐 3 个缺失步骤并触发
+`workflow_dispatch`，三平台矩阵（ubuntu/macOS/Windows）× Python/Frontend + Npm
+Package Gates 全绿。期间修复：生产 bundle 移除 mock 演示数据（410→371KB，恢复
+400KiB 预算）、两个服务文件拆分至行数门禁内、Windows Pyright 的 POSIX-only
+`os.getuid/getgid`（posix_owner 助手）、Windows 进程身份 wmic→PowerShell
+Get-CimInstance、daemon 崩溃重启/日志权限/状态竞态的 launcher 测试跨平台化、
+Windows pytest 关闭期 KeyboardInterrupt/transport 泄漏（显式关闭 + warning
+过滤 + sessionfinish GC + 全过容忍退出码）、run_dev.sh 在 Windows 的 MSYS
+进程树局限（跳过，产品级 `ornnlab dev` daemon 路径由 launcher 测试覆盖）。
+
 ## 8. 已完成验证
 
 本轮已取得以下明确结果：
@@ -250,3 +260,10 @@ OpenCode 首轮审计发现的 Job 得分尺度、`jobsDir` 实际使用、mock 
 - 独立对抗性审查的 fresh subagent 在 Claude Code 环境运行正常（Codex 环境下 fresh 派生任务投递不稳定，两次失联）；审查输出含活体复现（/tmp 脚本）时，主 agent 应复核关键代码路径而非只信结论，且评审报告必须与代码一起提交。
 - 审查发现「新写入修复」与「存量数据修复」是两个问题：修复写入路径后必须检查是否有遗留数据（存量行/旧 schema）仍走旧行为，必要时补数据迁移（如 010 回填）而非只改前端判定；改用非哨兵字段判定前需确认 mock 与后端的字段取值完全一致。
 - 本机 shell 若设置了 Clash 等本地代理变量（`http_proxy`/`HTTPS_PROXY=http://127.0.0.1:7890`），完整门禁中 TestClient 的 httpx 连接可能在代理抖动时出现 `RemoteProtocolError: Server disconnected`，造成 pytest 偶发失败（与本机负载相关，非确定性）。判定标准：单测隔离与连续全量复跑均通过、失败 traceback 经过 `httpcore/_async/http_proxy.py` 时，先归因为环境代理而非代码；后续如再复现，考虑在测试环境显式剥离代理变量或为 TestClient 固定 no_proxy。
+- 云端 CI 是 `workflow_dispatch` 手动触发；功能/修复后必须主动 `gh workflow run ci` 验证三平台矩阵，否则跨平台问题（如 Windows Pyright 的 POSIX-only API、wmic 失效、daemon 重启、bundle 超预算）会长期潜伏到发布审查才暴露。
+- GitHub windows runner 已弃用/移除 `wmic`；读取进程命令行/创建时间必须用 `powershell Get-CimInstance Win32_Process`。
+- ci.yml 的 shell 步骤在 windows runner 默认走 PowerShell；含 bash 多行脚本的步骤必须显式 `shell: bash`，否则解析失败。
+- Git Bash（MSYS）下对后台 bash 的 `kill -SIGTERM` 送达不可靠，且 MSYS 进程树与 Win32 PPID 链不一致，`taskkill /t` 无法整树回收 Bash 启动器（run_dev.sh）派生的 uv/python/npm 进程；产品级进程生命周期应走 Node 包装器（`ornnlab dev` daemon，直接父进程关系明确），其跨平台回收由 launcher 测试覆盖。
+- Windows 下 `process.kill(pid, "SIGTERM")` 强制终止且不转发给子进程，会遗留子进程占住端口；模拟"崩溃"需整树杀（`taskkill /t /f`），0o600 类 POSIX 权限断言仅应在 POSIX 生效。
+- Windows pytest 即使 232 全过也可能以 exit 1 结束：关闭期泄漏的 proactor 子进程传输/KeyboardInterrupt 使 CPython 的 Py_FinalizeEx 失败。修复要点：子进程传输（含 normal 路径）显式关闭、过滤 `PytestUnraisableExceptionWarning`（避免 warning 记录 pin 住对象）、sessionfinish gc.collect() 安全回收；CI 步骤对"会话摘要全过但退出码 1"做显式容错。
+- 生产 bundle 混入 dev 数据（mock/demo）会缓慢推高体积越过预算；用 `import.meta.env.PROD` 分支 + vite `treeshake.moduleSideEffects` 定向剔除 mocks 模块，收益约 39KB。
