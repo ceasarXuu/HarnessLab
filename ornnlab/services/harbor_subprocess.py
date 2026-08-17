@@ -102,6 +102,7 @@ class ManagedSubprocessHarborRunner:
                 )
                 output_task.cancel()
                 await _ignore_cancelled(output_task)
+                _close_pipes(process)
                 raise
             finally:
                 _remove_job_pid_sidecar(sidecar_path)
@@ -200,6 +201,19 @@ def harbor_cli_executable() -> str:
         or shutil.which("harbor")
         or str(Path(sys.executable).parent / "harbor")
     )
+
+
+def _close_pipes(process: asyncio.subprocess.Process) -> None:
+    """Close a cancelled subprocess's pipe transport so it is released.
+
+    On Windows' proactor loop an abandoned subprocess pipe transport is only
+    reclaimed at interpreter shutdown, where its ``__del__`` raises on the
+    already-closed loop and fails the whole process exit code.
+    """
+    transport = getattr(process, "_transport", None)
+    if transport is not None:
+        with contextlib.suppress(OSError):
+            transport.close()
 
 
 async def _mirror_stdout(
