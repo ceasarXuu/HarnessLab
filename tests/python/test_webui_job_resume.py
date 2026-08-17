@@ -130,7 +130,10 @@ def test_cleanup_resume_leftovers_chowns_root_owned_files(tmp_path: Path, monkey
     job_path = tmp_path / "job"
     (job_path / "trial").mkdir(parents=True)
     (job_path / "trial" / "root.txt").write_text("x", encoding="utf-8")
-    monkeypatch.setattr("ornnlab.services.webui_job_resume.os.getuid", lambda: 99999)
+    monkeypatch.setattr(
+        "ornnlab.services.webui_job_resume.current_posix_uid_gid",
+        lambda: (99999, current_posix_uid_gid()[1]),
+    )
 
     calls: list[tuple] = []
 

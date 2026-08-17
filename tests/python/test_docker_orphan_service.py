@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+
+import pytest
 
 from ornnlab.services.docker_orphan_service import DockerOrphanService
 from ornnlab.services.posix_owner import current_posix_uid_gid
@@ -184,6 +187,10 @@ def test_parse_mounts_extracts_only_bind_targets():
     assert service._parse_mounts({"stdout": "", "error": "docker_command_failed"}) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX chown ownership fixups are not applied on Windows",
+)
 def test_cleanup_run_chowns_bind_mounts_before_removing_containers(tmp_path):
     calls = tmp_path / "calls.jsonl"
     script = _docker_fixture(
