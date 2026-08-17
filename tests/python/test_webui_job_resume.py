@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import psutil
+import pytest
 
 from ornnlab.services.posix_owner import current_posix_uid_gid
 from ornnlab.services.webui_job_resume import (
@@ -126,6 +127,10 @@ def test_clear_stale_job_lock_respects_live_containers(settings, tmp_path: Path,
     assert lock.exists()
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="POSIX root-ownership chown fixups are not applied on Windows",
+)
 def test_cleanup_resume_leftovers_chowns_root_owned_files(tmp_path: Path, monkeypatch):
     job_path = tmp_path / "job"
     (job_path / "trial").mkdir(parents=True)

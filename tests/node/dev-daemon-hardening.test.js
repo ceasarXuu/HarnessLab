@@ -186,7 +186,7 @@ test("dev daemon fixes existing log permissions and redacts split secrets", { ti
   const logText = fs.readFileSync(backendLog, "utf8");
   const mode = fs.statSync(backendLog).mode & 0o777;
 
-  assert.equal(mode, 0o600);
+  if (process.platform !== "win32") assert.equal(mode, 0o600);
   assert.doesNotMatch(logText, /chunk-secret|bearer-secret/);
   assert.match(logText, /ANTHROPIC_API_KEY=\[REDACTED\]/);
   assert.match(logText, /Authorization: Bearer \[REDACTED\]/);

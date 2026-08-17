@@ -195,7 +195,7 @@ test("dev daemon restarts a crashed frontend child", { timeout: 60000 }, async (
 
   const statePath = path.join(tempRoot, "dev-service", "state.json");
   const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
-  process.kill(before.frontendPid, "SIGTERM");
+  killProcessTree(before.frontendPid);
   await waitForRestart(statePath, "frontendPid", before.frontendPid);
   await waitForOk(`http://127.0.0.1:${frontendPort}/api/webui/v1/system/health`);
   const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
@@ -218,7 +218,7 @@ test("dev daemon restarts a crashed backend child", { timeout: 60000 }, async ()
 
   const statePath = path.join(tempRoot, "dev-service", "state.json");
   const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
-  process.kill(before.backendPid, "SIGTERM");
+  killProcessTree(before.backendPid);
   await waitForRestart(statePath, "backendPid", before.backendPid);
   await waitForOk(`http://127.0.0.1:${backendPort}/api/webui/v1/system/health`);
 
@@ -268,7 +268,7 @@ test("dev daemon keeps retrying after a crash restart fails", { timeout: 45000 }
 
   const statePath = path.join(tempRoot, "dev-service", "state.json");
   const before = JSON.parse(fs.readFileSync(statePath, "utf8"));
-  process.kill(before.frontendPid, "SIGTERM");
+  killProcessTree(before.frontendPid);
   await waitForState(statePath, "error");
   const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
   assert.match(logText, /"attempt":1/);
@@ -297,7 +297,7 @@ test("dev daemon redacts sensitive child output and restricts log permissions", 
 
   assert.doesNotMatch(logText, /super-secret/);
   assert.match(logText, /ANTHROPIC_API_KEY=\[REDACTED\]/);
-  assert.equal(mode, 0o600);
+  if (process.platform !== "win32") assert.equal(mode, 0o600);
 
   spawnSync(process.execPath, ["bin/ornnlab.js", "dev", "stop"], { cwd: repoRoot, env });
 });
@@ -395,6 +395,14 @@ async function waitForState(statePath, expected) {
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function killProcessTree(pid) {
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(pid), "/t", "/f"], { stdio: "ignore" });
+    return;
+  }
+  process.kill(pid, "SIGTERM");
 }
 
 function isProcessAlive(pid) {
