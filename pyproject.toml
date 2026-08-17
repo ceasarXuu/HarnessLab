@@ -30,6 +30,14 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 pythonpath = ["."]
+filterwarnings = [
+  # A leaked asyncio subprocess transport is reclaimed at interpreter shutdown
+  # on Windows, where its __del__ raises on the already-closed proactor loop
+  # and flips the process exit code to 1 despite a fully green session.
+  # Keeping this warning record would pin the transport past pytest's own
+  # session-end collection; tests/python/conftest.py reclaims it safely.
+  "ignore::pytest.PytestUnraisableExceptionWarning",
+]
 markers = [
   "docker: requires Docker and a real Harbor execution path",
 ]

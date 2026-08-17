@@ -16,14 +16,15 @@ from ornnlab.storage import sqlite
 
 
 def pytest_sessionfinish(session, exitstatus) -> None:
-    """Finalize lingering asyncio transports while pytest's unraisable hook is
-    still active.
+    """Collect lingering asyncio subprocess transports while the interpreter is
+    still healthy.
 
-    On Windows, proactor subprocess transports that are collected only at
-    interpreter shutdown raise inside ``__del__`` (I/O operation on closed
+    On Windows, a proactor subprocess transport that is only reclaimed at
+    interpreter shutdown raises inside ``__del__`` (I/O operation on closed
     pipe), which makes CPython finalize with exit code 1 even after a fully
-    green session. Collecting here downgrades them to the usual
-    ``PytestUnraisableExceptionWarning``.
+    green session. The ``PytestUnraisableExceptionWarning`` filter (see
+    pyproject.toml) stops the warning record from pinning the transport; this
+    collection then releases it safely before finalization.
     """
     gc.collect()
 
