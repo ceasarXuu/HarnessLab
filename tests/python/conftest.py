@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import os
 import sys
 from collections.abc import Iterator
@@ -12,6 +13,19 @@ from fastapi.testclient import TestClient
 from ornnlab.app import create_app
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
+
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    """Finalize lingering asyncio transports while pytest's unraisable hook is
+    still active.
+
+    On Windows, proactor subprocess transports that are collected only at
+    interpreter shutdown raise inside ``__del__`` (I/O operation on closed
+    pipe), which makes CPython finalize with exit code 1 even after a fully
+    green session. Collecting here downgrades them to the usual
+    ``PytestUnraisableExceptionWarning``.
+    """
+    gc.collect()
 
 
 @pytest.fixture(autouse=True)

@@ -158,7 +158,9 @@ test("dev daemon records startup failure and exits instead of idling forever", {
   });
   assert.notEqual(start.status, 0);
 
-  const state = JSON.parse(fs.readFileSync(path.join(tempRoot, "dev-service", "state.json"), "utf8"));
+  const statePath = path.join(tempRoot, "dev-service", "state.json");
+  await waitForState(statePath, "error");
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
   assert.equal(state.status, "error");
   assert.equal(isProcessAlive(state.daemonPid), false);
   const logText = fs.readFileSync(path.join(tempRoot, "dev-service", "logs", "daemon.log"), "utf8");
