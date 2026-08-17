@@ -313,7 +313,7 @@ class DockerOrphanService:
                         container_id,
                         "chown",
                         "-R",
-                        f"{os.getuid()}:{os.getgid()}",
+                        f"{uid}:{gid}",
                         target,
                     ]
                 )
