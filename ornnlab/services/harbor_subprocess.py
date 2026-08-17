@@ -102,9 +102,9 @@ class ManagedSubprocessHarborRunner:
                 )
                 output_task.cancel()
                 await _ignore_cancelled(output_task)
-                _close_pipes(process)
                 raise
             finally:
+                _close_pipes(process)
                 _remove_job_pid_sidecar(sidecar_path)
         if return_code != 0:
             raise RuntimeError(f"harbor subprocess exited with {return_code}: {output[-400:]}")

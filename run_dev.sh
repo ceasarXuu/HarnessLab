@@ -42,9 +42,23 @@ FRONTEND_PID=""
 TAIL_PID=""
 CLEANUP_DONE="false"
 
+is_windows() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 stop_process_tree() {
   local pid="$1"
   local child_pid
+
+  # Windows 下 npm/cmd 包装不会转发信号，kill -TERM 会遗留 node 进程占住端口；
+  # 用 taskkill /t /f 整树终止（Git Bash 下斜杠需写成 //）。
+  if is_windows; then
+    taskkill //pid "$pid" //t //f >/dev/null 2>&1 || true
+    return
+  fi
 
   # uv/npm 都可能再派生实际服务进程；只终止最外层 PID 会遗留监听端口。
   while IFS= read -r child_pid; do
