@@ -11,7 +11,7 @@ from ornnlab.services.experiment_service import _resolve_job_dir
 from ornnlab.services.harbor_engine import _resolve_env
 from ornnlab.services.harbor_results import trial_dto as _trial_dto
 from ornnlab.services.harbor_score import pass_at_one, result_pass_at_one, result_score
-from ornnlab.services.webui_job_service import _job_score
+from ornnlab.services.webui_job_dto import job_score
 from ornnlab.services.webui_operation_service import WebUiOperationService
 from ornnlab.services.webui_profile_service import WebUiProfileService
 from ornnlab.storage import sqlite
@@ -1022,12 +1022,12 @@ def test_copy_job_config_returns_an_editable_draft_without_creating_a_job(client
 
 
 def test_scores_require_an_explicit_harbor_scale():
-    assert _job_score({"stats": {"evals": {"test": {"pass_at_k": {"1": 0.72}}}}}) == {
+    assert job_score({"stats": {"evals": {"test": {"pass_at_k": {"1": 0.72}}}}}) == {
         "kind": "percentage",
         "value": 72.0,
     }
     raw_metric_result = {"score": 87, "stats": {"evals": {"test": {"metrics": [{"sum": 87}]}}}}
-    assert _job_score(raw_metric_result) is None
+    assert job_score(raw_metric_result) is None
     assert (
         _trial_dto(
             "job-1",
@@ -1043,9 +1043,9 @@ def test_scores_require_an_explicit_harbor_scale():
 
 def test_scores_fall_back_to_proportional_metrics_when_pass_at_k_is_absent():
     mean_result = {"stats": {"evals": {"test": {"metrics": [{"mean": 0.6}]}}}}
-    assert _job_score(mean_result) == {"kind": "percentage", "value": 60.0}
+    assert job_score(mean_result) == {"kind": "percentage", "value": 60.0}
     out_of_scale = {"stats": {"evals": {"test": {"metrics": [{"mean": 1.7}]}}}}
-    assert _job_score(out_of_scale) is None
+    assert job_score(out_of_scale) is None
     assert (
         result_score(
             {"stats": {"evals": {"test": {"pass_at_k": {"1": 0.8}, "metrics": [{"mean": 0.5}]}}}}

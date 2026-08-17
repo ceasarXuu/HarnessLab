@@ -36,6 +36,13 @@ export function createWebUiViteConfig(command: ConfigEnv['command']): UserConfig
       port: readPort(process.env.ORNNLAB_PREVIEW_PORT, 4173),
       strictPort: true,
     },
+    build: {
+      rollupOptions: {
+        treeshake: {
+          moduleSideEffects: (id) => !id.includes('/src/mocks/') && !id.includes('/src/api/mockClient'),
+        },
+      },
+    },
   }
 }
 

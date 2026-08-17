@@ -8,7 +8,11 @@ export function createRuntimeWebUiClient(
   mode: WebUiDataMode = readWebUiDataMode(),
   request: typeof fetch = fetch,
 ): WebUiClient {
-  return mode === 'api' ? createWebUiHttpClient('/api/webui/v1', request) : createMockWebUiClient()
+  if (mode === 'api') return createWebUiHttpClient('/api/webui/v1', request)
+  if (import.meta.env.PROD) {
+    throw new Error('mock data mode is unavailable in production builds')
+  }
+  return createMockWebUiClient()
 }
 
 export function readWebUiDataMode(): WebUiDataMode {

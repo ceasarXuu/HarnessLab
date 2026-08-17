@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 
 from ornnlab.models.experiment import ExperimentCreate
@@ -15,32 +14,31 @@ from ornnlab.services.harbor_results import (
     pending_trial_dto,
     running_trial_descriptors,
     running_trial_dto,
-    token_usage_m,
     trial_dir_epoch,
     trial_dto,
     trial_result_payloads,
     trial_start_epoch,
 )
-from ornnlab.services.harbor_score import result_score
 from ornnlab.services.harbor_subprocess import harbor_cli_executable
-from ornnlab.services.model_pricing import calculate_cost, pricing_snapshot
+from ornnlab.services.model_pricing import pricing_snapshot
 from ornnlab.services.queue_service import QueueService
 from ornnlab.services.recovery_service import RunRecoveryService
 from ornnlab.services.webui_dataset_service import WebUiDatasetService
 from ornnlab.services.webui_job_copy import load_job_copy_config
-from ornnlab.services.webui_job_logs import event_log_path, job_log_payload
-from ornnlab.services.webui_job_progress import (
-    TERMINAL_STATUSES,
-    execution_completed,
-    job_trial_progress,
-    runtime_seconds,
-    trial_progress_total,
+from ornnlab.services.webui_job_dto import (
+    dataset_ref,
+    event_level,
+    exception_list,
+    job_dto,
+    join_ref,
 )
+from ornnlab.services.webui_job_leaderboard import leaderboard, leaderboard_datasets
+from ornnlab.services.webui_job_logs import job_log_payload
+from ornnlab.services.webui_job_progress import TERMINAL_STATUSES
 from ornnlab.services.webui_job_query import JOB_SELECT
 from ornnlab.services.webui_job_resume import (
     active_resume_operation,
     agent_env,
-    can_resume_job,
     cleanup_resume_leftovers,
     clear_stale_job_lock,
     environment_env,
@@ -79,7 +77,7 @@ class WebUiJobService:
                 conn,
                 JOB_SELECT + "WHERE experiments.status != 'deleted' ORDER BY runs.created_at DESC",
             )
-        jobs = [_job_dto(row) for row in rows]
+        jobs = [job_dto(row) for row in rows]
         if not query:
             return jobs
         needle = query.lower()
@@ -92,7 +90,7 @@ class WebUiJobService:
             rows = sqlite.rows(conn, JOB_SELECT + "WHERE runs.id = ?", (job_id,))
         if not rows:
             raise KeyError(job_id)
-        return _job_dto(rows[0])
+        return job_dto(rows[0])
 
     def copy_job_config(self, job_id: str) -> dict:
         return load_job_copy_config(self.settings, job_id)
@@ -104,7 +102,7 @@ class WebUiJobService:
             raise ValueError("selected model is not configured for this Agent")
         pricing = pricing_snapshot(agent, config.model_name)
         environment = self.profiles.get_environment(config.environment_preset_id)
-        benchmark_name, benchmark_version = _dataset_ref(config.dataset_ref)
+        benchmark_name, benchmark_version = dataset_ref(config.dataset_ref)
         selected_tasks = config.selected_task_names
         dataset_download_dir = await WebUiDatasetService(self.settings).register_dataset_for_job(
             config.dataset_ref
@@ -133,8 +131,8 @@ class WebUiJobService:
             "debug": config.debug,
             "retry": {
                 "max_retries": config.max_retries,
-                "include_exceptions": _exception_list(config.retry_include),
-                "exclude_exceptions": _exception_list(config.retry_exclude),
+                "include_exceptions": exception_list(config.retry_include),
+                "exclude_exceptions": exception_list(config.retry_exclude),
                 "wait_multiplier": config.retry_wait_multiplier,
                 "min_wait_sec": config.retry_min_wait_seconds,
                 "max_wait_sec": config.retry_max_wait_seconds,
@@ -283,14 +281,14 @@ class WebUiJobService:
         operation = self.operations.complete(
             "update-job-leaderboard", "job", job_id, "Leaderboard inclusion updated"
         )
-        return self.get_job(job_id), operation, self.leaderboard(job["datasetRef"])
+        return self.get_job(job_id), operation, leaderboard(self.settings, job["datasetRef"])
 
     def events_for_job(self, job_id: str) -> list[dict]:
         run = self.experiments.get_run(job_id)
         events = self.events.list_after_many([job_id, run["experiment_id"]], 0)
         return [
             {
-                "level": _event_level(event.severity),
+                "level": event_level(event.severity),
                 "message": event.event_type,
                 "occurredAt": event.ts,
             }
@@ -320,7 +318,7 @@ class WebUiJobService:
                 )
             )
             started.add(descriptor["task_name"])
-        ref = _join_ref(str(run.get("benchmark_name") or ""), run.get("benchmark_version"))
+        ref = join_ref(str(run.get("benchmark_name") or ""), run.get("benchmark_version"))
         for task_name in await pending_task_names(
             self.settings, ref, started, load_job_result(run).get("n_total_trials")
         ):
@@ -334,76 +332,10 @@ class WebUiJobService:
     def leaderboard(
         self, dataset_ref: str, query: str | None = None, metric: str | None = None
     ) -> list[dict]:
-        benchmark, version = _dataset_ref(dataset_ref)
-        with sqlite.connect(self.settings) as conn:
-            rows = sqlite.rows(
-                conn,
-                "SELECT runs.*, webui_job_configs.config_json FROM runs "
-                "LEFT JOIN webui_job_configs ON webui_job_configs.run_id = runs.id "
-                "WHERE runs.status = 'completed' AND runs.leaderboard_eligible = 1 "
-                f"AND runs.benchmark_name = ? AND {_version_filter(version)} "
-                "ORDER BY runs.finished_at DESC",
-                (benchmark,) if version is None else (benchmark, version),
-            )
-        entries = []
-        for row in rows:
-            job = _job_dto(row)
-            config = _config(row)
-            if (
-                metric
-                and config.get("harbor_overrides", {}).get("metrics", [{}])[0].get("type") != metric
-            ):
-                continue
-            entry = {
-                "agentName": job["agentName"],
-                "comparabilityKey": row.get("comparability_key") or "",
-                "costUsd": job["costUsd"],
-                "datasetRef": job["datasetRef"],
-                "harness": job["harness"],
-                "jobId": job["id"],
-                "metric": config.get("harbor_overrides", {})
-                .get("metrics", [{}])[0]
-                .get("type", "mean"),
-                "model": job["model"],
-                "rank": 0,
-                "reportPath": row.get("report_path"),
-                "runtimeSeconds": job["runtimeSeconds"],
-                "score": job["score"],
-                "submittedAt": row.get("finished_at") or row["created_at"],
-                "tokenUsageM": job["tokenUsageM"],
-                "trial": job["trial"],
-            }
-            if (
-                not query
-                or query.lower() in " ".join(str(value) for value in entry.values()).lower()
-            ):
-                entries.append(entry)
-        entries.sort(
-            key=lambda entry: (
-                entry["score"] is None,
-                -entry["score"]["value"] if entry["score"] else 0,
-                entry["submittedAt"],
-            )
-        )
-        for rank, entry in enumerate(entries, start=1):
-            entry["rank"] = rank
-        return entries
+        return leaderboard(self.settings, dataset_ref, query, metric)
 
     def leaderboard_datasets(self) -> list[dict]:
-        with sqlite.connect(self.settings) as conn:
-            rows = sqlite.rows(
-                conn,
-                "SELECT DISTINCT benchmark_name, benchmark_version FROM runs "
-                "WHERE status != 'deleted'",
-            )
-        return [
-            {
-                "name": row["benchmark_name"],
-                "version": row["benchmark_version"] or "latest",
-                "ref": _join_ref(row["benchmark_name"], row["benchmark_version"]),
-            }
-            for row in rows
-        ]
+        return leaderboard_datasets(self.settings)
 
     async def _resume_harbor_job(
         self,
@@ -433,87 +365,3 @@ class WebUiJobService:
                 conn, "SELECT config_json FROM webui_job_configs WHERE run_id = ?", (job_id,)
             )
         return json.loads(rows[0]["config_json"]) if rows else {}
-
-
-def _job_dto(row: dict) -> dict:
-    config = _config(row)
-    result = load_job_result(row)
-    status = str(row["status"])
-    expected_total = trial_progress_total(row)
-    if status in TERMINAL_STATUSES and execution_completed(result, expected_total):
-        status = "completed"
-    stats = result.get("stats", {})
-    trial = job_trial_progress(
-        result,
-        expected_total=expected_total,
-        terminal_without_result=status in {"completed", "failed", "cancelled", "interrupted"},
-    )
-    return {
-        "id": row["id"],
-        "name": config.get("job_name", row.get("experiment_name", row["id"])),
-        "status": status,
-        "datasetRef": _join_ref(row["benchmark_name"], row["benchmark_version"]),
-        "agentName": config.get("agent_name", row.get("agent_profile_name", row["agent_id"])),
-        "harness": config.get("agent_harness", row["agent_id"]),
-        "model": config.get("model", ""),
-        "environmentName": config.get("environment_name", config.get("environment_preset_id", "")),
-        "trial": trial,
-        "score": _job_score(result),
-        "costUsd": calculate_cost(stats, config.get("pricing")),
-        "tokenUsageM": token_usage_m(stats),
-        "runtimeSeconds": runtime_seconds(row.get("started_at"), row.get("finished_at")),
-        "createdAt": row["created_at"],
-        "includeInLeaderboard": bool(row["leaderboard_eligible"]),
-        "canResume": can_resume_job(row, status),
-        "jobDir": row.get("job_dir"),
-        "eventLogPath": event_log_path(row, config),
-        "artifactPaths": _artifacts(row),
-        "failureCode": row.get("failure_code"),
-    }
-
-
-def _config(row: dict) -> dict:
-    return json.loads(row["config_json"]) if row.get("config_json") else {}
-
-
-def _dataset_ref(ref: str) -> tuple[str, str | None]:
-    name, separator, version = ref.rpartition("@")
-    return (name, version) if separator else (ref, None)
-
-
-def _join_ref(name: str, version: str | None) -> str:
-    return f"{name}@{version}" if version else name
-
-
-def _exception_list(value: str) -> list[str] | None:
-    values = [item.strip() for item in value.replace(",", "\n").splitlines() if item.strip()]
-    return values or None
-
-
-def _event_level(severity: str) -> str:
-    return {"error": "error", "warning": "warning"}.get(
-        severity, "success" if severity == "info" else "info"
-    )
-
-
-def _job_score(result: dict) -> dict | None:
-    """Expose scores whose 0..1 scale is explicit in Harbor's result payload."""
-    value = result_score(result)
-    if value is not None:
-        return {"kind": "percentage", "value": value * 100}
-    return None
-
-
-def _version_filter(version: str | None) -> str:
-    return "runs.benchmark_version IS NULL" if version is None else "runs.benchmark_version = ?"
-
-
-def _artifacts(row: dict) -> list[str]:
-    values = [row.get("result_path"), row.get("report_path")]
-    if row.get("job_dir"):
-        values.append(str(Path(row["job_dir"]) / "harbor.config.json"))
-    return [value for value in values if value]
-
-
-def _now() -> str:
-    return datetime.now().astimezone().isoformat()

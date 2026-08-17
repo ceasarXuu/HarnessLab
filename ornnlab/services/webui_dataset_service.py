@@ -8,7 +8,6 @@ from pathlib import Path
 
 from ornnlab.models.webui import DatasetImportInput
 from ornnlab.services.clock import now_iso
-from ornnlab.services.container_image_platforms import resolve_local_task
 from ornnlab.services.dataset_directory import (
     assert_managed_directory,
     join_ref,
@@ -23,10 +22,10 @@ from ornnlab.services.dataset_download_state import (
     merge_active_downloads,
     remote_dataset_dto,
     stored_dataset_dto,
-    stored_dataset_runtime,
 )
 from ornnlab.services.dataset_environment import parse_local_tasks
-from ornnlab.services.dataset_task_catalog import LocalDatasetTaskCatalog, page_offset
+from ornnlab.services.webui_dataset_tasks import get_task as browse_task
+from ornnlab.services.webui_dataset_tasks import list_tasks as browse_tasks
 from ornnlab.settings import Settings
 from ornnlab.storage import sqlite
 
@@ -41,7 +40,6 @@ class WebUiDatasetService:
         self._registry_cache: list[dict] | None = None
         self._registry_cache_lock = asyncio.Lock()
         self._registry_cache_updated_at = 0.0
-        self._task_catalog = LocalDatasetTaskCatalog()
 
     async def list_datasets(self, query: str | None = None) -> list[dict]:
         local = self._local_datasets()
@@ -93,62 +91,10 @@ class WebUiDatasetService:
         cursor: str | None = None,
         limit: int = 20,
     ) -> dict:
-        offset = page_offset(cursor, limit)
-        local = stored_dataset_runtime(self._dataset_row(ref))
-        if local and local["download"]["status"] == "downloaded":
-            started_at = time.perf_counter()
-            page = self._task_catalog.list_page(
-                Path(local["download"]["path"]), ref, query, offset, limit
-            )
-            logger.info(
-                "Loaded Dataset Task page ref=%s offset=%s limit=%s total=%s returned=%s "
-                "index_cache_hit=%s elapsed_ms=%.1f",
-                ref,
-                offset,
-                limit,
-                page.total,
-                len(page.items),
-                page.cache_hit,
-                (time.perf_counter() - started_at) * 1000,
-            )
-            return {
-                "items": page.items,
-                "nextCursor": page.next_cursor,
-                "total": page.total,
-            }
-        elif local and local["source"] == "local":
-            task_names: list[str] = []
-        else:
-            name, version = split_ref(ref)
-            metadata = (
-                await _registry_client_factory()
-                .create()
-                .get_dataset_metadata(join_ref(name, version))
-            )
-            task_names = [task_id.get_name() for task_id in metadata.task_ids]
-        if query:
-            needle = query.casefold()
-            task_names = [task_name for task_name in task_names if needle in task_name.casefold()]
-        selected = task_names[offset : offset + limit]
-        next_cursor = str(offset + limit) if offset + limit < len(task_names) else None
-        return {
-            "items": [
-                {
-                    "datasetRef": ref,
-                    "description": "",
-                    "environment": None,
-                    "name": task_name,
-                }
-                for task_name in selected
-            ],
-            "nextCursor": next_cursor,
-            "total": len(task_names),
-        }
+        return await browse_tasks(self.settings, ref, query=query, cursor=cursor, limit=limit)
 
     async def get_task(self, ref: str, task_name: str) -> dict | None:
-        return await resolve_local_task(
-            stored_dataset_runtime(self._dataset_row(ref)), ref, task_name
-        )
+        return await browse_task(self.settings, ref, task_name)
 
     async def download(self, ref: str, parent_path: str, progress) -> None:
         if self._dataset_row(ref):

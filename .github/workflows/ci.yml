@@ -46,6 +46,23 @@ jobs:
       - name: Diff whitespace check
         run: git diff --check
 
+  npm-packages:
+    name: Npm Package Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install root dependencies
+        run: npm ci
+      - name: Npm reservation package
+        run: bash scripts/verify-npm-reservation-package.sh
+      - name: HarnessLab transition package
+        run: bash scripts/verify-harnesslab-transition-package.sh
+
   frontend-web:
     name: Frontend Web Gate (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -86,6 +103,8 @@ jobs:
         run: node scripts/test-webui-build-config.js
       - name: Cross-platform launcher API smoke
         run: npm run test:launcher
+      - name: Full-stack run_dev startup regression
+        run: bash scripts/test-run-dev-api.sh
       - name: Storybook smoke
         run: npm run storybook:test
         working-directory: frontend
