@@ -65,7 +65,7 @@ test("default backend child receives the daemon restart command", () => {
     const { commandFor } = require("../../lib/dev-daemon");
     const backend = commandFor("backend");
 
-    assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /ornnlab\.js dev _restart-detached$/);
+    assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /ornnlab\.js"? dev _restart-detached$/);
     if (process.platform !== "win32") assert.match(backend.env.ORNNLAB_RESTART_COMMAND, /^\/usr\/bin\/env node /);
   } finally {
     if (original === undefined) delete process.env.ORNNLAB_DEV_BACKEND_COMMAND;
