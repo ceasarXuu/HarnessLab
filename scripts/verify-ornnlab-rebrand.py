@@ -57,6 +57,7 @@ DOC_INVENTORY = {
     "docs/releases/v1.0.5/first-round-walkthrough/issues.md": "rename-now",
     "docs/releases/v1.0.5/job-task-state-machine/README.md": "rename-now",
     "docs/releases/v1.0.5/job-task-state-machine/engineering-plan.md": "rename-now",
+    "docs/releases/v1.0.5/ornnlab-1.0.5.md": "rename-now",
     "docs/releases/v1.0.5/prd/2026-08-07-env-value-visibility.md": "rename-now",
     "docs/releases/v1.0.5/prd.md": "rename-now",
     "docs/releases/v1.0.5/system-health/README.md": "rename-now",

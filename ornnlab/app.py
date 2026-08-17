@@ -58,7 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await app.state.worker.close()
         await app.state.container_proxy.close()
 
-    app = FastAPI(title="OrnnLab", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="OrnnLab", version="1.0.5", lifespan=lifespan)
     app.state.settings = active_settings
     app.state.startup_recovery = startup_recovery
     app.state.startup_docker_cleanup = startup_docker_cleanup
