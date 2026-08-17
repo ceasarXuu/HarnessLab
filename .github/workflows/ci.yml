@@ -38,6 +38,7 @@ jobs:
       - name: Pyright
         run: uv run pyright
       - name: Pytest
+        shell: bash
         run: |
           uv run pytest tests/python > pytest.log 2>&1
           status=$?
