@@ -1,6 +1,6 @@
 [project]
 name = "ornnlab"
-version = "0.2.0"
+version = "1.0.5"
 description = "Local Harbor-powered WebUI for agent evaluation workflows"
 readme = "README.md"
 requires-python = ">=3.12"

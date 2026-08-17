@@ -31,6 +31,7 @@ ALLOWED_LITERAL_FILES: set[str] = {
     "docs/releases/v0.1.3/prd.md",
     "docs/releases/v0.1.3/technical-design.md",
     "docs/releases/v0.1.3/engineering-plan.md",
+    "docs/releases/v1.0.5/ornnlab-1.0.5.md",
     "docs/playbooks/npm-package-reservation.md",
     "docs/plans/2026-06-15-ornnlab-rebrand-checklist.md",
     "prd/2026-06-15-ornnlab-npm-distribution.md",

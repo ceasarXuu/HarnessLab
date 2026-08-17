@@ -9,6 +9,7 @@ v1.0.5 将 OrnnLab 建设为基于 Harbor 的本地实验控制台。当前前�
 
 | 文档 | 负责内容 |
 |---|---|
+| [发布笔记](ornnlab-1.0.5.md) | v1.0.5 Build Set 组成、能力摘要、发布门禁证据与已知边界 |
 | [PRD](prd.md) | 产品定位、范围、页面职责、交互与验收口径 |
 | [技术设计](technical-design.md) | 当前架构、Harbor 映射、数据边界、测试与 Storybook 治理 |
 | [工程计划](engineering-plan.md) | 阶段状态、验收项、执行记录、风险与下一步 |
