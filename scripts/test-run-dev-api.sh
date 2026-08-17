@@ -96,7 +96,7 @@ if VITE_ORNNLAB_DATA_MODE=invalid bash run_dev.sh >"$INVALID_LOG" 2>&1; then
   echo "run_dev.sh accepted an invalid API data mode" >&2
   exit 1
 fi
-rg -q 'VITE_ORNNLAB_DATA_MODE 必须为 api 或 mock' "$INVALID_LOG"
+grep -q 'VITE_ORNNLAB_DATA_MODE 必须为 api 或 mock' "$INVALID_LOG"
 
 BACKEND_PORT="$(find_free_port)"
 FRONTEND_PORT="$(find_free_port)"
@@ -126,10 +126,10 @@ curl -sf "$FRONTEND_HEALTH" | uv run python -c 'import json, sys; assert json.lo
 # run_dev.sh prints its summary box after its own proxy health check;
 # wait for the patterns to appear rather than racing the log write.
 for _ in {1..40}; do
-  if rg -q '前端模式 : api' "$TEST_ROOT/run-dev.log" 2>/dev/null; then
+  if grep -q '前端模式 : api' "$TEST_ROOT/run-dev.log" 2>/dev/null; then
     break
   fi
   sleep 0.25
 done
-rg -q '前端模式 : api' "$TEST_ROOT/run-dev.log"
-rg -q '前端 proxy' "$TEST_ROOT/run-dev.log"
+grep -q '前端模式 : api' "$TEST_ROOT/run-dev.log"
+grep -q '前端 proxy' "$TEST_ROOT/run-dev.log"

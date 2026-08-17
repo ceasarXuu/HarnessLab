@@ -54,10 +54,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - name: Install root dependencies
-        run: npm ci
       - name: Npm reservation package
         run: bash scripts/verify-npm-reservation-package.sh
       - name: HarnessLab transition package
