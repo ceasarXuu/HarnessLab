@@ -67,7 +67,14 @@ assert_services_stopped() {
 cleanup() {
   local exit_code=$?
   if [[ -n "$RUN_PID" ]] && kill -0 "$RUN_PID" 2>/dev/null; then
-    kill -TERM "$RUN_PID" 2>/dev/null || true
+    # Git Bash on Windows does not reliably deliver SIGTERM to a backgrounded
+    # bash; use taskkill /t /f (the documented Windows process-tree kill).
+    # On POSIX prefer the graceful SIGTERM path.
+    if is_windows; then
+      cmd //c "taskkill /pid $RUN_PID /t /f" >/dev/null 2>&1 || true
+    else
+      kill -TERM "$RUN_PID" 2>/dev/null || true
+    fi
     for _ in {1..40}; do
       if ! kill -0 "$RUN_PID" 2>/dev/null; then
         break
@@ -75,7 +82,7 @@ cleanup() {
       sleep 0.25
     done
     if kill -0 "$RUN_PID" 2>/dev/null; then
-      echo "run_dev.sh did not stop after SIGTERM" >&2
+      echo "run_dev.sh did not stop after termination" >&2
       kill -KILL "$RUN_PID" 2>/dev/null || true
       exit_code=1
     fi
@@ -88,6 +95,13 @@ cleanup() {
   exit "$exit_code"
 }
 trap cleanup EXIT INT TERM
+
+is_windows() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 cd "$REPO_ROOT"
 
