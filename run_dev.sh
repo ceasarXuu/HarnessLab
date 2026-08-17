@@ -54,9 +54,9 @@ stop_process_tree() {
   local child_pid
 
   # Windows 下 npm/cmd 包装不会转发信号，kill -TERM 会遗留 node 进程占住端口；
-  # 用 taskkill /t /f 整树终止（Git Bash 下斜杠需写成 //）。
+  # 用 taskkill /t /f 整树终止。经 cmd 包裹避免 Git Bash 的路径斜杠改写。
   if is_windows; then
-    taskkill //pid "$pid" //t //f >/dev/null 2>&1 || true
+    cmd //c "taskkill /pid $pid /t /f" >/dev/null 2>&1 || true
     return
   fi
 
