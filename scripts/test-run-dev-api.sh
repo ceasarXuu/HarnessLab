@@ -66,6 +66,10 @@ assert_services_stopped() {
 
 cleanup() {
   local exit_code=$?
+  if [[ -z "$RUN_PID" ]]; then
+    # 提前跳过（如 Windows MSYS 路径），从未启动服务，无需清理与断言。
+    exit 0
+  fi
   if [[ -n "$RUN_PID" ]] && kill -0 "$RUN_PID" 2>/dev/null; then
     # Git Bash on Windows does not reliably deliver SIGTERM to a backgrounded
     # bash; use taskkill /t /f (the documented Windows process-tree kill).
