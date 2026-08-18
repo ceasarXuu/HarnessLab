@@ -5,6 +5,7 @@
 | 文档版本 | 工程版本 | 更新 | 变更 |
 |---|---|---|---|
 | 1.0 | ornnlab v1.1.0 | 2026-08-19 | 新建：Harbor 0.13.2 → 0.21.0 升级兼容分析与方案 |
+| 1.1 | ornnlab v1.1.0 | 2026-08-19 | 实施完成：依赖升级、兼容改造、门禁与真实 Docker 冒烟证据（见第 8 节） |
 
 ## 1. 现状盘点
 
@@ -100,11 +101,34 @@
 - **result / lock 布局漂移**：0.17.0 起的 lock 变化需真实 job 冒烟复核；若取消/结果解析/目录布局发生变化，按既有失败策略停止升级、保留原 pin，等待专项兼容补丁。
 - **回滚**：遵循 `docs/releases/v0.1.3/checklist.md` 回滚章节（停止后端 → 备份 → 记录归档 → 版本回退 → `doctor --logs` 验证 → 必要时 `backup import` 恢复），并还原 `pyproject.toml` 与 `uv.lock`。
 
-## 8. 待办清单
+## 8. 实施记录与验证证据
 
-- [ ] 工程计划确认升级范围与目标约束
-- [ ] 更新 `pyproject.toml` + `uv lock`
-- [ ] 改造 `hub_connection` 认证探测 + 单测
-- [ ] 跑 Harbor 兼容性测试与全量门禁
-- [ ] Docker 真实 Harbor 冒烟与产物复核
-- [ ] 更新技术决策记录、工程计划与发布笔记台账
+| 实施项 | 变更/证据 |
+|---|---|
+| 依赖约束 | `pyproject.toml`：`harbor>=0.13,<0.14` → `harbor>=0.21,<0.22`；`uv lock` 已锁定 `harbor 0.21.0` |
+| `hub_connection` 认证探测 | `webui_system_service.py:39`：改用 `harbor.auth.credentials.read_stored_credentials()`；不再吞异常静默降级 |
+| `AgentFactory` 兼容 | `agent_capabilities.py:_harbor_agent_class`：`AgentFactory._AGENTS`（0.13 已移除）→ `AgentName(harness)` + `AgentFactory.get_agent_class(name)` |
+| `DockerEnvironment` 覆写 | `owned_docker_environment.py:_run_docker_compose_command`：补齐 Harbor 0.21 新增的 `stdin_data` / `on_output` 参数并透传 |
+| claude-code 能力变化 | `max_thinking_tokens` 从参数迁移为 `MAX_THINKING_TOKENS` 环境变量（Harbor 0.21 上游变更），`tests/python/test_webui_api.py` 断言已同步 |
+| 新增单测 | `tests/python/test_system_api.py`：`hub_connection` 已认证/未认证两种状态 |
+
+### 门禁结果（2026-08-19，本地）
+
+- pytest（非 docker）：**248 passed / 4 deselected**
+- 真实 Harbor Docker 冒烟：`test_harbor_real_smoke.py` 1 passed、`test_real_harbor_cancel_recovery.py` 2 passed、`test_real_docker_ownership_cleanup.py` 1 passed
+- ruff：All checks passed；pyright：0 errors / 0 warnings
+- 前端：Vitest 135 passed、ESLint、`tsc --noEmit` 全绿
+
+### 已知遗留（非阻断）
+
+- Harbor 0.21 对 `memory`/`storage` → `memory_mb`/`storage_mb` 与 `Task.checksum` 发出弃用告警；ornnlab 已使用新字段（`dataset_environment.py:66-67`），仅 Harbor 内部自身告警，无需改动。
+
+## 9. 待办清单
+
+- [x] 更新 `pyproject.toml` + `uv lock`（锁定 0.21.0）
+- [x] 改造 `hub_connection` 认证探测 + 单测
+- [x] 修复 `AgentFactory` / `DockerEnvironment` 兼容
+- [x] 跑 Harbor 兼容性测试与全量门禁
+- [x] Docker 真实 Harbor 冒烟与产物复核
+- [x] 更新技术决策记录、升级流程、安装快速入门与工程台账
+- [ ] v1.1.0 工程计划确认是否接入 0.21.0 增量能力（regrade / leaderboard 版本过滤 / `harbor version`）

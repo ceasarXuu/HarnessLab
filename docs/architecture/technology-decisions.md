@@ -9,6 +9,7 @@
 | 1.2 | `ornnlab` npm `0.1.3`; Python app `0.2.0` | 2026-06-28 | Replaced Vue demo frontend decision with the v1.0.5 Harbor official Viewer-aligned React/Vite demo. |
 | 1.3 | v1.0.5 | 2026-07-10 | Upgraded the backend directly to the WebUI contract and retired Playwright from the active gate. |
 | 1.4 | Python app `0.2.0`; Harbor `0.13.x` | 2026-07-19 | 统一新建与恢复 Job 的 Harbor CLI 可执行文件解析。 |
+| 1.5 | v1.1.0 | 2026-08-19 | Harbor 运行时依赖升级到 0.21.x（0.13.2 → 0.21.0），并完成认证探测与 AgentFactory 兼容改造。 |
 
 The previous Rust single-binary technology decision record was archived on
 2026-06-15.
@@ -20,7 +21,7 @@ The previous Rust single-binary technology decision record was archived on
 
 | Area | Decision |
 |---|---|
-| Execution engine | Harbor 0.13.x |
+| Execution engine | Harbor 0.21.x |
 | Backend | Python + FastAPI |
 | Frontend | React + Vite, aligned with Harbor official Viewer |
 | Metadata | Local SQLite |

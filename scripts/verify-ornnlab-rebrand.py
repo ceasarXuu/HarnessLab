@@ -63,6 +63,8 @@ DOC_INVENTORY = {
     "docs/releases/v1.0.5/system-health/README.md": "rename-now",
     "docs/releases/v1.0.5/system-health/implementation-design.md": "rename-now",
     "docs/releases/v1.0.5/technical-design.md": "rename-now",
+    "docs/releases/v1.1.0/harbor-upgrade/README.md": "rename-now",
+    "docs/releases/v1.1.0/harbor-upgrade/compatibility-analysis.md": "rename-now",
     "docs/spikes/2026-06-15-harbor-lifecycle-spike.md": "rename-now",
     "docs/architecture/technology-decisions.md": "rename-now",
     "docs/architecture/test-engineering.md": "rename-now",

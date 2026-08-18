@@ -6,8 +6,9 @@
 |---|---|---|---|
 | 1.0 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-15 | Defined Harbor dependency upgrade checks and rollback expectations. |
 | 1.1 | Python app `0.2.0`; Harbor `0.13.x` | 2026-06-16 | Linked Harbor upgrade procedure to document version governance. |
+| 1.2 | v1.1.0; Harbor `0.21.x` | 2026-08-19 | Harbor pin 升级为 `>=0.21,<0.22`（0.13.2 → 0.21.0），认证探测与 AgentFactory 兼容已改造，真实 Docker 冒烟通过。 |
 
-OrnnLab pins Harbor as `harbor>=0.13,<0.14`. Any Harbor dependency bump must
+OrnnLab pins Harbor as `harbor>=0.21,<0.22`. Any Harbor dependency bump must
 go through this procedure before merging.
 
 ## Scope

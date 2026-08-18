@@ -49,10 +49,19 @@ class OwnedDockerEnvironment(DockerEnvironment):
             paths.append(self._ownership_compose_path)
         return paths
 
-    async def _run_docker_compose_command(self, command, check=True, timeout_sec=None):
+    async def _run_docker_compose_command(
+        self,
+        command,
+        check=True,
+        timeout_sec=None,
+        stdin_data=None,
+        on_output=None,
+    ):
         if self._ownership_compose_path is None:
             await self._prepare_ownership_compose_file()
-        return await super()._run_docker_compose_command(command, check, timeout_sec)
+        return await super()._run_docker_compose_command(
+            command, check, timeout_sec, stdin_data, on_output
+        )
 
     async def stop(self, delete: bool):
         try:

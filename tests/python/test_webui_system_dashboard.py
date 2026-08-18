@@ -23,7 +23,7 @@ def test_system_health_distinguishes_installed_docker_cli_from_running_daemon(
         DoctorService,
         "status",
         lambda _self: {
-            "harbor_version": "0.13.2",
+            "harbor_version": "0.21.0",
             "docker": {
                 "available": True,
                 "cli": "docker",

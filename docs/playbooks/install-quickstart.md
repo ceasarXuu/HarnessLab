@@ -68,7 +68,7 @@ If the npm registry serves an older launcher, check `docs/releases/` and
 - Python 3.12 available through `uv`
 - Node.js 22 for the npm launcher, frontend gate, and CI parity
 - Docker for Harbor benchmark execution through the default subprocess path
-- Harbor resolved from `pyproject.toml` as `harbor>=0.13,<0.14`
+- Harbor resolved from `pyproject.toml` as `harbor>=0.21,<0.22`
 
 ## Fresh Checkout
 

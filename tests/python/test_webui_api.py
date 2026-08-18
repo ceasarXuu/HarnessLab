@@ -153,15 +153,8 @@ def test_webui_agent_and_environment_crud(client):
         "max_turns",
         "reasoning_effort",
         "allowed_tools",
-        "max_thinking_tokens",
     } <= built_in_parameters
-    max_thinking_tokens = next(
-        item
-        for item in claude_harness["capabilities"]["parameters"]
-        if item["key"] == "max_thinking_tokens"
-    )
-    assert max_thinking_tokens["kind"] == "number"
-    assert "MAX_THINKING_TOKENS" not in claude_harness["capabilities"]["environmentVariables"]
+    assert "MAX_THINKING_TOKENS" in claude_harness["capabilities"]["environmentVariables"]
     claude_auth_modes = {
         item["value"]: item["environmentVariables"]
         for item in claude_harness["capabilities"]["authenticationModes"]
@@ -187,6 +180,7 @@ def test_webui_agent_and_environment_crud(client):
     assert claude_harness["capabilities"]["environmentVariables"] == [
         "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING",
         "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+        "MAX_THINKING_TOKENS",
     ]
 
     qwen_harness = next(item for item in harnesses if item["name"] == "qwen-coder")

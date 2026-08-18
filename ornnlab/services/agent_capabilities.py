@@ -128,8 +128,16 @@ def _harbor_environment_kwargs(harness: str) -> set[str]:
 
 def _harbor_agent_class(harness: str) -> Any | None:
     from harbor.agents.factory import AgentFactory
+    from harbor.models.agent.name import AgentName
 
-    return next((item for item in AgentFactory._AGENTS if item.name() == harness), None)
+    try:
+        name = AgentName(harness)
+    except ValueError:
+        return None
+    try:
+        return AgentFactory.get_agent_class(name)
+    except ValueError:
+        return None
 
 
 def _authentication_modes(harness: str) -> list[dict[str, Any]]:

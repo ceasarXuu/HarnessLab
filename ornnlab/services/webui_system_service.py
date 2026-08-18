@@ -37,12 +37,9 @@ class WebUiSystemService:
         return components
 
     async def hub_connection(self) -> dict:
-        try:
-            from harbor.auth.handler import get_auth_handler
+        from harbor.auth.credentials import read_stored_credentials
 
-            authenticated = await (await get_auth_handler()).is_authenticated()
-        except Exception:
-            return {"status": "disconnected"}
+        authenticated = read_stored_credentials() is not None
         return {"status": "connected" if authenticated else "disconnected"}
 
     async def check_update(self) -> dict:

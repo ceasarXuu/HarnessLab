@@ -6,7 +6,8 @@ from types import SimpleNamespace
 from ornnlab.models.experiment import ExperimentCreate
 from ornnlab.services.doctor_service import DoctorService
 from ornnlab.services.experiment_service import ExperimentService
-from ornnlab.services.webui_system_service import _choose_native_directory
+from ornnlab.services.webui_operation_service import WebUiOperationService
+from ornnlab.services.webui_system_service import WebUiSystemService, _choose_native_directory
 from tests.python.support import create_test_agent
 
 
@@ -64,6 +65,36 @@ def test_system_docker_orphans_returns_cleanup_plan(settings, monkeypatch, tmp_p
     assert payload["count"] == 1
     assert payload["cleanup_plan"][0]["dry_run"] is True
     assert payload["cleanup_plan"][0]["manual_review_required"] is False
+
+
+def test_hub_connection_reports_connected_when_api_key_stored(settings, monkeypatch):
+    async def run():
+        service = WebUiSystemService(settings, WebUiOperationService(settings, {}))
+        return await service.hub_connection()
+
+    monkeypatch.setattr(
+        "harbor.auth.credentials.read_stored_credentials",
+        lambda path=None: SimpleNamespace(api_key="hb_ptk_abc"),
+    )
+    assert run_now(run) == {"status": "connected"}
+
+
+def test_hub_connection_reports_disconnected_without_credentials(settings, monkeypatch):
+    async def run():
+        service = WebUiSystemService(settings, WebUiOperationService(settings, {}))
+        return await service.hub_connection()
+
+    monkeypatch.setattr(
+        "harbor.auth.credentials.read_stored_credentials",
+        lambda path=None: None,
+    )
+    assert run_now(run) == {"status": "disconnected"}
+
+
+def run_now(coro):
+    import asyncio
+
+    return asyncio.run(coro())
 
 
 def test_system_doctor_logs_reports_latest_failed_run(settings):
