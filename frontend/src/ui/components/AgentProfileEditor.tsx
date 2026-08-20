@@ -383,7 +383,6 @@ export function DirectoryListControl({
         itemAriaLabel={() => label}
         label={label}
         readOnly={readOnly}
-        showAddAction={false}
         values={paths}
         onChange={commit}
         extraActions={(

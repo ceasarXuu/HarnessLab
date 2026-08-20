@@ -217,7 +217,7 @@ export const zhMessages = {
     capabilityTimeouts: '超时',
     harnessParameters: 'Harness 参数',
     skillsConfig: 'Skills 来源',
-    skillsConfigDescription: '填写一个或多个 skill 来源：可以是包含 SKILL.md 的单个 skill 目录，也可以是包含多个 skill 子目录的文件夹。',
+    skillsConfigDescription: '填写一个或多个 skill 来源：可以是包含 SKILL.md 的单个 skill 目录，也可以是包含多个 skill 子目录的文件夹。请填写后端可访问的绝对路径（如 /home/user/.ornnlab/skills/my-skill）；浏览器“选择文件夹”只能取到文件夹名，需手动补全为绝对路径。也支持 Harbor 注册表简写 org/name[@ref] 或 git URL。',
     mcpConfigSection: 'MCP Servers',
     addMcpServer: '新增 MCP Server',
     deleteMcpServer: '删除 MCP Server',

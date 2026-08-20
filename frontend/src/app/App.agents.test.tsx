@@ -94,7 +94,7 @@ describe('App agents and leaderboard', () => {
     expect(agentForm.queryByText('Capability config')).not.toBeInTheDocument()
     fireEvent.click(agentForm.getByRole('tab', { name: 'Skills' }))
     expect(agentForm.getByText('Skills sources')).toBeInTheDocument()
-    expect(agentForm.getByText('Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.')).toBeInTheDocument()
+    expect(agentForm.getByText(/Enter one or more skill sources: a single skill directory with SKILL\.md/)).toBeInTheDocument()
     expect(agentForm.getByLabelText('skills')).toHaveValue('~/.ornnlab/skills/repair')
     expect(agentForm.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument()
     fireEvent.click(agentForm.getByRole('tab', { name: 'MCPs' }))

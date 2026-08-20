@@ -52,13 +52,13 @@ describe('AgentProfileEditor', () => {
     expect(screen.getByRole('spinbutton', { name: 'Max thinking tokens' })).toBeInTheDocument()
   })
 
-  it('uses folder selection as the only way to add a Skills source', () => {
+  it('allows choosing a folder and manually adding a skill source path', () => {
     render(<ClaudeEditorFixture />)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
 
     expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
   })
 })
 

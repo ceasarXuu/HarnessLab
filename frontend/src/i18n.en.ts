@@ -215,7 +215,7 @@ export const enMessages = {
     capabilityTimeouts: 'timeouts',
     harnessParameters: 'Harness parameters',
     skillsConfig: 'Skills sources',
-    skillsConfigDescription: 'Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories.',
+    skillsConfigDescription: 'Enter one or more skill sources: a single skill directory with SKILL.md, or a folder containing multiple skill directories. Use an absolute path the backend can reach (e.g. /home/user/.ornnlab/skills/my-skill); the browser folder picker only captures the folder name, so complete it to an absolute path manually. Harbor registry shorthand org/name[@ref] or git URLs are also accepted.',
     mcpConfigSection: 'MCP Servers',
     addMcpServer: 'Add MCP Server',
     deleteMcpServer: 'Delete MCP Server',
